@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "chrome",
+      "request": "launch",
+      "name": "Run Vite + Open Browser",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/bible-typing-game",
+      "preLaunchTask": "Run Vite Dev Server",
+      "postDebugTask": "Kill Vite Dev Server"
+    }
+  ]
+}
