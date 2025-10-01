@@ -1,8 +1,7 @@
 import * as PIXI from 'pixi.js';
-import { loadAssets } from './assets.js';
 import { ScoreUI } from './ScoreUI.js';
-import { theme } from './styles/theme.js';
-import { WordBox } from './objects/WordBox.js';
+import { theme } from './styles/Theme.js';
+import { WordBox } from './objects/TextBox.js';
 
 export class GameApp {
   constructor() {
@@ -15,9 +14,9 @@ export class GameApp {
   async init() {
     this.app = new PIXI.Application();
     await this.app.init({
-      width: window.innerWidth,
-      height: window.innerHeight,
-      background: theme.colors.background,
+        width: window.innerWidth,
+        height: window.innerHeight,
+        backgroundColor: theme.colors.background,
     });
 
     document.body.appendChild(this.app.canvas);

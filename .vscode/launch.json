@@ -6,7 +6,7 @@
       "request": "launch",
       "name": "Run Vite + Open Browser",
       "url": "http://localhost:5173",
-      "webRoot": "${workspaceFolder}/bible-typing-game",
+      "webRoot": "${workspaceFolder}",
       "preLaunchTask": "Run Vite Dev Server",
       "postDebugTask": "Kill Vite Dev Server"
     }

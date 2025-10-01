@@ -6,7 +6,7 @@
       "type": "shell",
       "command": "npm run dev",
       "options": {
-        "cwd": "${workspaceFolder}/bible-typing-game"
+        "cwd": "${workspaceFolder}"
       },
       "isBackground": true,
       "problemMatcher": {

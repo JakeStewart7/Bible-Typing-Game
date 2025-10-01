@@ -1,19 +1,20 @@
-import { TextStyle } from 'pixi.js';
-import { theme } from './theme.js';
+import { theme } from './Theme.js';
 
 export const textStyles = {
-  wordTarget: new TextStyle({
+  wordTarget: {
     fontFamily: theme.fonts.main,
     fontSize: theme.fonts.headingSize,
     fill: theme.colors.text,
-    stroke: theme.colors.stroke,
-    strokeThickness: 4,
     align: 'center',
-  }),
-  wordTyped: new TextStyle({
+    stroke: {
+      color: theme.colors.stroke,
+      width: 4,
+    },
+  },
+  wordTyped: {
     fontFamily: theme.fonts.main,
     fontSize: theme.fonts.bodySize,
     fill: theme.colors.highlight,
     align: 'center',
-  }),
+  },
 };
