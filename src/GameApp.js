@@ -52,8 +52,8 @@ export class GameApp {
   }
 
   resizeGame() {
-    if (this.bunny) {
-      this.bunny.center(this.app.screen.width, this.app.screen.height);
+    if (this.textBox) {
+      this.textBox.setPosition(this.app.renderer.width / 2, 100);
     }
   }
 }
