@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js';
 import { ScoreUI } from './ScoreUI.js';
 import { theme } from './styles/Theme.js';
-import { WordBox } from './objects/TextBox.js';
+import { TextBox } from './objects/TextBox.js';
 
 export class GameApp {
   constructor() {
@@ -21,15 +21,15 @@ export class GameApp {
 
     document.body.appendChild(this.app.canvas);
 
-    this.wordBox = new WordBox("Genesis");
-    this.wordBox.setPosition(this.app.renderer.width / 2, 100);
-    this.app.stage.addChild(this.wordBox);
+    this.textBox = new TextBox("Genesis is the first book of the Bible.");
+    this.textBox.setPosition(this.app.renderer.width / 2, 100);
+    this.app.stage.addChild(this.textBox);
 
     window.addEventListener("keydown", (e) => {
-      const done = this.wordBox.handleKey(e.key);
+      const done = this.textBox.handleKey(e);
       if (done) {
         console.log("Word complete!");
-        this.wordBox.reset("Exodus");
+        this.textBox.set("Exodus is the second book of the Bible.");
       }
     });
 

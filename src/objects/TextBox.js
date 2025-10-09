@@ -1,24 +1,23 @@
 import { Container, Text } from 'pixi.js';
 import { textStyles } from '../styles/TextStyles.js';
+import { TextFactory } from './TextFactory.js';
 
 export class TextBox extends Container {
+
   constructor(passage) {
     super();
 
-    this.passage = passage;
-    passageArray = passage.split(" ");
-    passageIndex = 0;
+    this.passageArray = passage.split(" ");
+    this.passageIndex = 0;
 
-    targetWord = passageArray[passageIndex];
-    typedWord = "";
+    this.targetWord = this.passageArray[this.passageIndex];
+    this.typedWord = "";
 
-    // Target word
-    targetText = TextFactory.create(targetWord, textStyles.wordTarget, { y: -30 });
-    this.addChild(targetText);
+    this.targetText = TextFactory.create(passage, textStyles.wordTarget, { y: -30 });
+    this.addChild(this.targetText);
 
-    // Typed word
-    typedText = TextFactory.create("", textStyles.wordTyped, { y: 30 });
-    this.addChild(typedText);
+    this.typedText = TextFactory.create("", textStyles.wordTyped, { y: 30 });
+    this.addChild(this.typedText);
   }
 
   setPosition(x, y) {
@@ -26,37 +25,50 @@ export class TextBox extends Container {
     this.y = y;
   }
 
-  reset(word) {
-    targetWord = word;
-    typedWord = "";
-    targetText.text = word;
-    typedText.text = "";
+  set(passage) {
+    this.passageArray = passage.split(" ");
+    this.passageIndex = 0;
+
+    this.targetWord = this.passageArray[this.passageIndex];
+    this.typedWord = "";
+
+    this.targetText.text = passage;
+    this.typedText.text = "";
   }
 
-  handleKey(key) {
+  handleKey(e) {
+    const key = e.key;
+    const ctrl = e.ctrlKey || e.metaKey; // ctrl (Windows/Linux) or cmd (Mac)
+
     if (key === "Backspace") {
-      this.typedWord = this.typedWord.slice(0, -1);
+      if (ctrl) {
+        // Delete the last "word" from typedWord
+        // Match last sequence of non-space characters
+        this.typedWord = this.typedWord.replace(/\S+$/g, '');
+      } else {
+        // Remove last character
+        this.typedWord = this.typedWord.slice(0, -1);
+      }
     } else if (key.length === 1) {
+      // Add typed character
       this.typedWord += key;
     }
 
     this.typedText.text = this.typedWord;
 
-    // Check if current "word" (or space) is complete
     if (this.typedWord === this.targetWord) {
       this.passageIndex++;
 
       if (this.passageIndex < this.passageArray.length) {
         this.targetWord = this.passageArray[this.passageIndex];
-        this.targetText.text = this.targetWord.replace(/\s/g, '␣'); // optional visual space
+        this.targetText.text = this.targetWord.replace(/\s/g, '␣');
         this.typedWord = "";
         this.typedText.text = "";
       } else {
         this.targetText.text = "✅";
         this.typedText.text = "";
+        return true; // Passage complete
       }
-
-      return true;
     }
 
     return false;
