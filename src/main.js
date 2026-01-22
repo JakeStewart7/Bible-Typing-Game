@@ -87,3 +87,4 @@ startHUDUpdates();
 // Auto-focus
 document.addEventListener("click", () => inputEl.focus());
 inputEl.focus();
+
