@@ -20,6 +20,7 @@ export function updateCaretPosition(container: HTMLElement, game: Game) {
 
   caret.style.width = Math.max(2, cRect.width * 0.08) + 'px';
   caret.style.height = cRect.height + 'px';
+  caret.style.opacity = '1';
 
   // Remove idle pulse during active typing
   caret.classList.remove('idle');
