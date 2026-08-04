@@ -103,9 +103,9 @@ label {
 /* Slightly increase spacing for readability */
 .char { letter-spacing: 0.02em; }
 
-/* Floating caret with pulsing animation and glow */
+/* Floating caret with glow and gentle idle pulse */
 @keyframes caretPulse {
-  0%, 100% { opacity: 1; }
+  0%, 100% { opacity: 0.8; }
   50% { opacity: 0.4; }
 }
 
@@ -120,6 +120,10 @@ label {
   pointer-events: none;
   z-index: 5;
   box-shadow: 0 0 6px rgba(191, 243, 232, 0.6), 0 0 12px rgba(45, 212, 191, 0.3);
+  opacity: 0.8;
+}
+
+.floating-caret.idle {
   animation: caretPulse 1.2s ease-in-out infinite;
 }
 

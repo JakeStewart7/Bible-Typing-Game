@@ -3,6 +3,7 @@ import type { Game } from '../game/state';
 let caretAnimationId: number | null = null;
 let lastTargetX = 0;
 let lastTargetY = 0;
+let idleTimeoutId: any = null;
 const CARET_ANIM_DURATION = 140;
 
 export function updateCaretPosition(container: HTMLElement, game: Game) {
@@ -20,9 +21,16 @@ export function updateCaretPosition(container: HTMLElement, game: Game) {
   caret.style.width = Math.max(2, cRect.width * 0.08) + 'px';
   caret.style.height = cRect.height + 'px';
 
+  // Remove idle pulse during active typing
+  caret.classList.remove('idle');
+  clearTimeout(idleTimeoutId);
+  idleTimeoutId = setTimeout(() => {
+    caret.classList.add('idle');
+  }, 500);
+
   if (caretAnimationId) cancelAnimationFrame(caretAnimationId);
 
-  // Animate from the last target position to the new target
+  // Animate from the last target position to the new target with fluid easing
   const startX = lastTargetX;
   const startY = lastTargetY;
   lastTargetX = targetX;
@@ -34,7 +42,7 @@ export function updateCaretPosition(container: HTMLElement, game: Game) {
     const elapsed = now - startTime;
     const progress = Math.min(1, elapsed / CARET_ANIM_DURATION);
 
-    // ease-in-out-quad
+    // cubic-bezier for more fluid, natural motion
     const easeProgress = progress < 0.5
       ? 2 * progress * progress
       : -1 + (4 - 2 * progress) * progress;
