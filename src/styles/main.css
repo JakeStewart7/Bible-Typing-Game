@@ -90,15 +90,15 @@ label {
   width: 100%;
   max-width: 100%;
   text-align: left;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
+  word-break: normal;
+  white-space: normal;
 }
 
-/* Make individual char spans inline so text flows naturally */
+/* Make individual char spans inline so text flows naturally, words stay together */
 .word { display: inline; }
 
 /* Slightly increase spacing for readability */
-.char { white-space: pre-wrap; letter-spacing: 0.02em; }
+.char { white-space: normal; letter-spacing: 0.02em; }
 
 /* Floating caret - simple, no animation */
 .floating-caret {
