@@ -12,22 +12,40 @@ import { fetchChapter, fetchRange } from "./bible-api.js";
 const app = document.getElementById("app");
 app.innerHTML = `
   <div class="controls">
-    <select id="translation">
-      <option value="kjv">KJV</option>
-      <option value="web">WEB</option>
-    </select>
+    <div class="control-row">
+      <label for="translation">Version</label>
+      <select id="translation" class="select">
+        <option value="kjv">KJV</option>
+        <option value="web">WEB</option>
+        <option value="asv">ASV</option>
+      </select>
 
-    <select id="book"></select>
-    <input id="chapter" type="number" min="1" value="1" />
-    <select id="start-verse"></select>
-    <select id="end-verse"></select>
-    <button id="load-passage">Load Passage</button>
+      <label for="book">Book</label>
+      <select id="book" class="select"></select>
+
+      <label for="chapter">Chapter</label>
+      <input id="chapter" type="number" min="1" value="1" class="number" />
+    </div>
+
+    <div class="control-row">
+      <label for="start-verse">From</label>
+      <select id="start-verse" class="select"></select>
+
+      <label for="end-verse">To</label>
+      <select id="end-verse" class="select"></select>
+
+      <button id="load-passage" class="btn">Load Passage</button>
+    </div>
   </div>
 
   <div class="game">
-    <div id="hud" class="hud"></div>
+    <div class="game-header">
+      <h1>Bible Typing Game</h1>
+      <div id="hud" class="hud"></div>
+    </div>
+
     <div id="text" class="text-display"></div>
-    <input id="input" autocomplete="off" />
+    <input id="input" autocomplete="off" placeholder="Start typing the passage here..." />
   </div>
 `;
 
