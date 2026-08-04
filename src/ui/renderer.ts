@@ -1,6 +1,8 @@
 import type { Game } from '../game/state';
 
 let caretAnimationId: number | null = null;
+let lastTargetX = 0;
+let lastTargetY = 0;
 const CARET_ANIM_DURATION = 140;
 
 export function updateCaretPosition(container: HTMLElement, game: Game) {
@@ -18,16 +20,13 @@ export function updateCaretPosition(container: HTMLElement, game: Game) {
   caret.style.width = Math.max(2, cRect.width * 0.08) + 'px';
   caret.style.height = cRect.height + 'px';
 
-  // Read current transform to handle mid-animation interruption
-  const currentTransform = caret.style.transform.match(/translate\(([^,]+)px,\s*([^)]+)px\)/);
-  let startX = targetX;
-  let startY = targetY;
-  if (currentTransform) {
-    startX = parseFloat(currentTransform[1]);
-    startY = parseFloat(currentTransform[2]);
-  }
-
   if (caretAnimationId) cancelAnimationFrame(caretAnimationId);
+
+  // Animate from the last target position to the new target
+  const startX = lastTargetX;
+  const startY = lastTargetY;
+  lastTargetX = targetX;
+  lastTargetY = targetY;
 
   const startTime = performance.now();
 
