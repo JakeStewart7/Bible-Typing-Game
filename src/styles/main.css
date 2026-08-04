@@ -79,28 +79,26 @@ label {
   padding: 18px 20px;
   border-radius: 10px;
   line-height: 1.65;
-  /* Use a softer-looking monospace for passage text */
   font-family: var(--mono-font);
-  font-size: 1.125rem; /* slightly larger for readability */
+  font-size: 1.125rem;
   min-height: 160px;
   max-height: 220px;
-  overflow-y: auto; /* scroll down only */
-  overflow-x: hidden; /* hide horizontal overflow */
+  overflow-y: auto;
+  overflow-x: hidden;
   scroll-behavior: smooth;
   box-shadow: inset 0 -18px 40px rgba(2,6,23,0.6);
   width: 100%;
   max-width: 100%;
   text-align: left;
-  hyphens: none;
-  word-break: normal;
-  white-space: normal; /* allow wrapping */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Make individual char spans inline so text flows naturally */
-.word { display: inline; white-space: normal; }
+.word { display: inline; }
 
 /* Slightly increase spacing for readability */
-.char { letter-spacing: 0.02em; }
+.char { white-space: pre-wrap; letter-spacing: 0.02em; }
 
 /* Floating caret - simple, no animation */
 .floating-caret {

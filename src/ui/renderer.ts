@@ -1,10 +1,5 @@
 import type { Game } from '../game/state';
 
-let caretAnimationId: number | null = null;
-let lastTargetX = 0;
-let lastTargetY = 0;
-const CARET_ANIM_DURATION = 220;
-
 export function updateCaretPosition(container: HTMLElement, game: Game) {
   let caret = container.querySelector('.floating-caret') as HTMLElement | null;
   if (!caret) return;
@@ -14,39 +9,12 @@ export function updateCaretPosition(container: HTMLElement, game: Game) {
 
   const cRect = caretEl.getBoundingClientRect();
   const parentRect = container.getBoundingClientRect();
-  const targetX = cRect.left - parentRect.left + container.scrollLeft;
-  const targetY = cRect.top - parentRect.top + container.scrollTop;
+  const left = cRect.left - parentRect.left + container.scrollLeft;
+  const top = cRect.top - parentRect.top + container.scrollTop;
 
   caret.style.width = Math.max(2, cRect.width * 0.08) + 'px';
   caret.style.height = cRect.height + 'px';
-
-  if (caretAnimationId) cancelAnimationFrame(caretAnimationId);
-
-  const startX = lastTargetX;
-  const startY = lastTargetY;
-  lastTargetX = targetX;
-  lastTargetY = targetY;
-
-  const startTime = performance.now();
-
-  function animateFrame(now: number) {
-    const elapsed = now - startTime;
-    const progress = Math.min(1, elapsed / CARET_ANIM_DURATION);
-
-    const easeProgress = 1 - Math.pow(1 - progress, 3);
-
-    const x = startX + (targetX - startX) * easeProgress;
-    const y = startY + (targetY - startY) * easeProgress;
-    caret.style.transform = `translate(${x}px, ${y}px)`;
-
-    if (progress < 1) {
-      caretAnimationId = requestAnimationFrame(animateFrame);
-    } else {
-      caretAnimationId = null;
-    }
-  }
-
-  caretAnimationId = requestAnimationFrame(animateFrame);
+  caret.style.transform = `translate(${left}px, ${top}px)`;
 }
 
 export function renderText(container: HTMLElement, game: Game) {
