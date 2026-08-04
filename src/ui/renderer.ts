@@ -1,10 +1,14 @@
 import type { Game } from '../game/state';
 
 let caretAnimationId: number | null = null;
-let lastTargetX = 0;
-let lastTargetY = 0;
+let currentX = 0;
+let currentY = 0;
+let targetX = 0;
+let targetY = 0;
+let animationStartTime = 0;
 let idleTimeoutId: any = null;
-const CARET_ANIM_DURATION = 220;
+let isAnimating = false;
+const BASE_ANIM_DURATION = 200;
 
 export function updateCaretPosition(container: HTMLElement, game: Game) {
   let caret = container.querySelector('.floating-caret') as HTMLElement | null;
@@ -15,53 +19,72 @@ export function updateCaretPosition(container: HTMLElement, game: Game) {
 
   const cRect = caretEl.getBoundingClientRect();
   const parentRect = container.getBoundingClientRect();
-  const targetX = cRect.left - parentRect.left + container.scrollLeft;
-  const targetY = cRect.top - parentRect.top + container.scrollTop;
+  targetX = cRect.left - parentRect.left + container.scrollLeft;
+  targetY = cRect.top - parentRect.top + container.scrollTop;
 
   caret.style.width = Math.max(2, cRect.width * 0.08) + 'px';
   caret.style.height = cRect.height + 'px';
   caret.style.opacity = '1';
 
-  // Remove idle pulse during active typing
+  // Don't pulse during typing, but keep glow steady
   caret.classList.remove('idle');
   clearTimeout(idleTimeoutId);
   idleTimeoutId = setTimeout(() => {
     caret.classList.add('idle');
-  }, 500);
+  }, 600);
 
-  if (caretAnimationId) cancelAnimationFrame(caretAnimationId);
+  if (!isAnimating) {
+    // Start new animation
+    currentX = targetX;
+    currentY = targetY;
+    animationStartTime = performance.now();
+    isAnimating = true;
+    startCaretAnimation(caret);
+  }
+  // If already animating, just update the target and the animation continues smoothly
+}
 
-  // Animate from the last target position to the new target with fluid easing
-  const startX = lastTargetX;
-  const startY = lastTargetY;
-  lastTargetX = targetX;
-  lastTargetY = targetY;
-
-  const startTime = performance.now();
-
+function startCaretAnimation(caret: HTMLElement) {
   function animateFrame(now: number) {
-    const elapsed = now - startTime;
-    const progress = Math.min(1, elapsed / CARET_ANIM_DURATION);
+    const elapsed = now - animationStartTime;
+    const progress = Math.min(1, elapsed / BASE_ANIM_DURATION);
 
-    // Smoother easing: cubic bezier-like function for natural motion
-    const easeProgress = progress < 0.5
-      ? 4 * progress * progress * progress
-      : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+    // Cubic ease-out for acceleration feel
+    const easeProgress = 1 - Math.pow(1 - progress, 3);
 
-    const x = startX + (targetX - startX) * easeProgress;
-    const y = startY + (targetY - startY) * easeProgress;
+    const x = currentX + (targetX - currentX) * easeProgress;
+    const y = currentY + (targetY - currentY) * easeProgress;
     caret.style.transform = `translate(${x}px, ${y}px)`;
 
     if (progress < 1) {
       caretAnimationId = requestAnimationFrame(animateFrame);
     } else {
+      isAnimating = false;
+      currentX = targetX;
+      currentY = targetY;
       caretAnimationId = null;
     }
   }
 
   caretAnimationId = requestAnimationFrame(animateFrame);
+}
 
-  const caretCenter = targetX + (cRect.width / 2);
+export function updateCaretPosition_old(container: HTMLElement, game: Game) {
+  let caret = container.querySelector('.floating-caret') as HTMLElement | null;
+  if (!caret) return;
+
+  const caretEl = container.querySelector('.char.current') as HTMLElement | null;
+  if (!caretEl) return;
+
+  const cRect = caretEl.getBoundingClientRect();
+  const parentRect = container.getBoundingClientRect();
+  const newTargetX = cRect.left - parentRect.left + container.scrollLeft;
+  const newTargetY = cRect.top - parentRect.top + container.scrollTop;
+
+  caret.style.width = Math.max(2, cRect.width * 0.08) + 'px';
+  caret.style.height = cRect.height + 'px';
+
+  const caretCenter = newTargetX + (cRect.width / 2);
   const viewLeft = container.scrollLeft;
   const viewRight = viewLeft + container.clientWidth;
   if (caretCenter < viewLeft + 60) {
