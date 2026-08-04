@@ -1,14 +1,10 @@
 import type { Game } from '../game/state';
 
 let caretAnimationId: number | null = null;
-let currentX = 0;
-let currentY = 0;
-let targetX = 0;
-let targetY = 0;
-let animationStartTime = 0;
+let lastTargetX = 0;
+let lastTargetY = 0;
 let idleTimeoutId: any = null;
-let isAnimating = false;
-const BASE_ANIM_DURATION = 200;
+const CARET_ANIM_DURATION = 220;
 
 export function updateCaretPosition(container: HTMLElement, game: Game) {
   let caret = container.querySelector('.floating-caret') as HTMLElement | null;
@@ -19,72 +15,50 @@ export function updateCaretPosition(container: HTMLElement, game: Game) {
 
   const cRect = caretEl.getBoundingClientRect();
   const parentRect = container.getBoundingClientRect();
-  targetX = cRect.left - parentRect.left + container.scrollLeft;
-  targetY = cRect.top - parentRect.top + container.scrollTop;
+  const targetX = cRect.left - parentRect.left + container.scrollLeft;
+  const targetY = cRect.top - parentRect.top + container.scrollTop;
 
   caret.style.width = Math.max(2, cRect.width * 0.08) + 'px';
   caret.style.height = cRect.height + 'px';
   caret.style.opacity = '1';
 
-  // Don't pulse during typing, but keep glow steady
-  caret.classList.remove('idle');
+  // Don't add idle class during typing, but keep glow visible
   clearTimeout(idleTimeoutId);
+  caret.classList.remove('idle');
   idleTimeoutId = setTimeout(() => {
     caret.classList.add('idle');
   }, 600);
 
-  if (!isAnimating) {
-    // Start new animation
-    currentX = targetX;
-    currentY = targetY;
-    animationStartTime = performance.now();
-    isAnimating = true;
-    startCaretAnimation(caret);
-  }
-  // If already animating, just update the target and the animation continues smoothly
-}
+  if (caretAnimationId) cancelAnimationFrame(caretAnimationId);
 
-function startCaretAnimation(caret: HTMLElement) {
+  const startX = lastTargetX;
+  const startY = lastTargetY;
+  lastTargetX = targetX;
+  lastTargetY = targetY;
+
+  const startTime = performance.now();
+
   function animateFrame(now: number) {
-    const elapsed = now - animationStartTime;
-    const progress = Math.min(1, elapsed / BASE_ANIM_DURATION);
+    const elapsed = now - startTime;
+    const progress = Math.min(1, elapsed / CARET_ANIM_DURATION);
 
     // Cubic ease-out for acceleration feel
     const easeProgress = 1 - Math.pow(1 - progress, 3);
 
-    const x = currentX + (targetX - currentX) * easeProgress;
-    const y = currentY + (targetY - currentY) * easeProgress;
+    const x = startX + (targetX - startX) * easeProgress;
+    const y = startY + (targetY - startY) * easeProgress;
     caret.style.transform = `translate(${x}px, ${y}px)`;
 
     if (progress < 1) {
       caretAnimationId = requestAnimationFrame(animateFrame);
     } else {
-      isAnimating = false;
-      currentX = targetX;
-      currentY = targetY;
       caretAnimationId = null;
     }
   }
 
   caretAnimationId = requestAnimationFrame(animateFrame);
-}
 
-export function updateCaretPosition_old(container: HTMLElement, game: Game) {
-  let caret = container.querySelector('.floating-caret') as HTMLElement | null;
-  if (!caret) return;
-
-  const caretEl = container.querySelector('.char.current') as HTMLElement | null;
-  if (!caretEl) return;
-
-  const cRect = caretEl.getBoundingClientRect();
-  const parentRect = container.getBoundingClientRect();
-  const newTargetX = cRect.left - parentRect.left + container.scrollLeft;
-  const newTargetY = cRect.top - parentRect.top + container.scrollTop;
-
-  caret.style.width = Math.max(2, cRect.width * 0.08) + 'px';
-  caret.style.height = cRect.height + 'px';
-
-  const caretCenter = newTargetX + (cRect.width / 2);
+  const caretCenter = targetX + (cRect.width / 2);
   const viewLeft = container.scrollLeft;
   const viewRight = viewLeft + container.clientWidth;
   if (caretCenter < viewLeft + 60) {
