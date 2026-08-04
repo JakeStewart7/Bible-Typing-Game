@@ -1,4 +1,3 @@
-import { game } from "../main.js";
 
 export function handleInput(game, inputValue) {
   if (!game.startTime) game.startTime = Date.now();

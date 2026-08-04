@@ -1,4 +1,3 @@
-import { game } from "../main.js";
 
 export function renderText(container, game) {
   container.innerHTML = "";

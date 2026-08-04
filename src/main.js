@@ -1,5 +1,5 @@
 import "./styles/main.css";
-import { createGame } from "./game/engine.js";
+import { createGame } from "./game/state.js";
 import { handleInput } from "./game/input.js";
 import { renderText } from "./ui/renderer.js";
 import { renderStats } from "./ui/hud.js";
