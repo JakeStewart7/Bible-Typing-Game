@@ -1,6 +1,6 @@
 import { Game } from './state';
 import { handleInput } from './input';
-import { renderText } from '../ui/renderer';
+import { renderText, updateCaretPosition } from '../ui/renderer';
 import { renderTypedBar } from '../ui/typedBar';
 import { renderStats } from '../ui/hud';
 import { calculateStats } from './stats';
@@ -39,6 +39,7 @@ export function initGameControllers(game: Game, controls: Controls) {
     inputEl.disabled = false;
 
     renderText(textEl, game);
+    updateCaretPosition(textEl, game);
     renderStats(hudEl, calculateStats(game), restartGame);
 
     startHUDUpdates();
@@ -72,6 +73,7 @@ export function initGameControllers(game: Game, controls: Controls) {
     }
 
     renderText(textEl, game);
+    updateCaretPosition(textEl, game);
     renderTypedBar(typedBarEl, game);
 
     inputEl.value = game.typed.join('');
@@ -126,6 +128,7 @@ export function initGameControllers(game: Game, controls: Controls) {
   chapterEl.addEventListener('change', populateVerses);
 
   renderText(textEl, game);
+  updateCaretPosition(textEl, game);
   renderStats(hudEl, calculateStats(game), restartGame);
   startHUDUpdates();
 

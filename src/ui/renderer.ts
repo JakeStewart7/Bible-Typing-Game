@@ -1,44 +1,61 @@
 import type { Game } from '../game/state';
 
 let caretAnimationId: number | null = null;
-let caretStartPos: { x: number; y: number } | null = null;
-let caretTargetPos: { x: number; y: number } | null = null;
-let caretAnimationStart = 0;
+let lastCaretPos: { x: number; y: number } = { x: 0, y: 0 };
 const CARET_ANIM_DURATION = 140;
 
-function smoothCaret(caret: HTMLElement, targetX: number, targetY: number) {
+export function updateCaretPosition(container: HTMLElement, game: Game) {
+  let caret = container.querySelector('.floating-caret') as HTMLElement | null;
+  if (!caret) return;
+
+  const caretEl = container.querySelector('.char.current') as HTMLElement | null;
+  if (!caretEl) return;
+
+  const cRect = caretEl.getBoundingClientRect();
+  const parentRect = container.getBoundingClientRect();
+  const targetX = cRect.left - parentRect.left + container.scrollLeft;
+  const targetY = cRect.top - parentRect.top + container.scrollTop;
+
+  caret.style.width = Math.max(2, cRect.width * 0.08) + 'px';
+  caret.style.height = cRect.height + 'px';
+
   if (caretAnimationId) cancelAnimationFrame(caretAnimationId);
 
-  const currentTransform = caret.style.transform.match(/translate\(([^,]+)px,\s*([^)]+)px\)/);
-  caretStartPos = {
-    x: currentTransform ? parseFloat(currentTransform[1]) : targetX,
-    y: currentTransform ? parseFloat(currentTransform[2]) : targetY
-  };
-  caretTargetPos = { x: targetX, y: targetY };
-  caretAnimationStart = performance.now();
+  const startX = lastCaretPos.x;
+  const startY = lastCaretPos.y;
+  const startTime = performance.now();
 
   function animateFrame(now: number) {
-    const elapsed = now - caretAnimationStart;
+    const elapsed = now - startTime;
     const progress = Math.min(1, elapsed / CARET_ANIM_DURATION);
 
-    if (caretStartPos && caretTargetPos) {
-      const easeProgress = progress < 0.5
-        ? 2 * progress * progress
-        : -1 + (4 - 2 * progress) * progress;
+    // ease-in-out-quad
+    const easeProgress = progress < 0.5
+      ? 2 * progress * progress
+      : -1 + (4 - 2 * progress) * progress;
 
-      const x = caretStartPos.x + (caretTargetPos.x - caretStartPos.x) * easeProgress;
-      const y = caretStartPos.y + (caretTargetPos.y - caretStartPos.y) * easeProgress;
-      caret.style.transform = `translate(${x}px, ${y}px)`;
-    }
+    const x = startX + (targetX - startX) * easeProgress;
+    const y = startY + (targetY - startY) * easeProgress;
+    caret.style.transform = `translate(${x}px, ${y}px)`;
 
     if (progress < 1) {
       caretAnimationId = requestAnimationFrame(animateFrame);
     } else {
       caretAnimationId = null;
+      lastCaretPos = { x: targetX, y: targetY };
     }
   }
 
   caretAnimationId = requestAnimationFrame(animateFrame);
+
+  const caretCenter = targetX + (cRect.width / 2);
+  const viewLeft = container.scrollLeft;
+  const viewRight = viewLeft + container.clientWidth;
+  if (caretCenter < viewLeft + 60) {
+    container.scrollTo({ left: Math.max(0, caretCenter - 60), behavior: 'smooth' });
+  } else if (caretCenter > viewRight - 60) {
+    container.scrollTo({ left: caretCenter - container.clientWidth + 60, behavior: 'smooth' });
+  }
 }
 
 export function renderText(container: HTMLElement, game: Game) {
@@ -115,37 +132,6 @@ export function renderText(container: HTMLElement, game: Game) {
     caret = document.createElement('div');
     caret.className = 'floating-caret';
     caret.style.opacity = '0';
-    caret.style.transition = 'none';
     container.appendChild(caret);
-  }
-
-  const caretEl = container.querySelector('.char.current') as HTMLElement | null;
-  if (caretEl) {
-    const cRect = caretEl.getBoundingClientRect();
-    const parentRect = container.getBoundingClientRect();
-    const left = cRect.left - parentRect.left + container.scrollLeft;
-    const top = cRect.top - parentRect.top + container.scrollTop;
-    caret.style.width = Math.max(2, cRect.width * 0.08) + 'px';
-    caret.style.height = cRect.height + 'px';
-
-    if (caret.style.transition === 'none') {
-      caret.style.transform = `translate(${left}px, ${top}px)`;
-      caret.offsetHeight;
-      caret.style.transition = 'width 120ms ease-out, background 100ms ease, box-shadow 100ms ease';
-      caret.style.opacity = '1';
-      caretStartPos = { x: left, y: top };
-      caretTargetPos = { x: left, y: top };
-    } else {
-      smoothCaret(caret, left, top);
-    }
-
-    const caretCenter = left + (cRect.width / 2);
-    const viewLeft = container.scrollLeft;
-    const viewRight = viewLeft + container.clientWidth;
-    if (caretCenter < viewLeft + 60) {
-      container.scrollTo({ left: Math.max(0, caretCenter - 60), behavior: 'smooth' });
-    } else if (caretCenter > viewRight - 60) {
-      container.scrollTo({ left: caretCenter - container.clientWidth + 60, behavior: 'smooth' });
-    }
   }
 }
