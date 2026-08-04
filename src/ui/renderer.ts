@@ -4,7 +4,7 @@ let caretAnimationId: number | null = null;
 let lastTargetX = 0;
 let lastTargetY = 0;
 let idleTimeoutId: any = null;
-const CARET_ANIM_DURATION = 140;
+const CARET_ANIM_DURATION = 220;
 
 export function updateCaretPosition(container: HTMLElement, game: Game) {
   let caret = container.querySelector('.floating-caret') as HTMLElement | null;
@@ -43,10 +43,10 @@ export function updateCaretPosition(container: HTMLElement, game: Game) {
     const elapsed = now - startTime;
     const progress = Math.min(1, elapsed / CARET_ANIM_DURATION);
 
-    // cubic-bezier for more fluid, natural motion
+    // Smoother easing: cubic bezier-like function for natural motion
     const easeProgress = progress < 0.5
-      ? 2 * progress * progress
-      : -1 + (4 - 2 * progress) * progress;
+      ? 4 * progress * progress * progress
+      : 1 - Math.pow(-2 * progress + 2, 3) / 2;
 
     const x = startX + (targetX - startX) * easeProgress;
     const y = startY + (targetY - startY) * easeProgress;
