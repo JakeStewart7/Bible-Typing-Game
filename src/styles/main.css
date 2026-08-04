@@ -1,10 +1,22 @@
+:root {
+  --chars-per-line: 72; /* target characters per line in the passage window */
+  --ui-font: 'IBM Plex Sans', 'Rubik', Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  --mono-font: 'IBM Plex Mono', 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;600&family=Space+Mono:wght@400;700&display=swap');
+/* IBM Plex Sans & Mono from Google Fonts (softer, friendly) */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;600&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
 body {
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  font-family: var(--ui-font);
   background: linear-gradient(180deg, #071029 0%, #08142a 100%);
   color: #e6eef8;
   display: flex;
   justify-content: center;
   padding: 48px;
+  font-size: 18px; /* slightly larger base text */
+  line-height: 1.4;
 }
 
 .game {
@@ -58,18 +70,94 @@ label {
 .game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .game-header h1 { font-size: 1.2rem; margin: 0; color: #f1fafb; }
 
+.music-controls { display: flex; gap: 8px; align-items: center; }
+.music-controls .music-btn { padding: 6px 10px; font-size: 0.9rem; }
+.volume-slider { width: 110px; }
+
 .text-display {
   background: linear-gradient(180deg, #021023 0%, #03061a 100%);
-  padding: 22px;
+  padding: 18px 20px;
   border-radius: 10px;
-  line-height: 1.6;
-  font-size: 1.12rem;
+  line-height: 1.65;
+  font-family: var(--mono-font);
+  font-size: 1.125rem;
   min-height: 160px;
   max-height: 220px;
   overflow-y: auto;
+  overflow-x: hidden;
   scroll-behavior: smooth;
   box-shadow: inset 0 -18px 40px rgba(2,6,23,0.6);
+  width: 100%;
+  max-width: 100%;
+  text-align: left;
+  word-break: normal;
+  white-space: normal;
 }
+
+/* Make individual char spans inline so text flows naturally, words stay together */
+.word { display: inline; white-space: normal; }
+
+/* Slightly increase spacing for readability */
+.char { letter-spacing: 0.02em; }
+
+/* Floating caret - simple, no animation */
+.floating-caret {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2px;
+  background: #bff3e8;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.floating-caret.idle {
+  animation: caretPulse 1.2s ease-in-out infinite;
+}
+
+/* Pressed character animation */
+@keyframes pressedAnim {
+  0% { transform: scale(1.25); opacity: 0.95; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.char.pressed {
+  animation: pressedAnim 220ms ease-out;
+}
+
+/* Typed bar at bottom */
+.typed-area { margin-top: 12px; display: flex; align-items: center; gap: 8px; }
+.typed-bar {
+  flex: 1;
+  background: rgba(255,255,255,0.03);
+  padding: 10px 14px;
+  border-radius: 10px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.typed-word { font-family: var(--mono-font); font-size: 1rem; padding-right: 6px; }
+.typed-word.completed { color: rgba(255,255,255,0.7); }
+.typed-word.current { color: #ffffff; font-weight:600 }
+.typed-word.current.incorrect { color: #fb7185; }
+.typed-space { opacity: 0.6 }
+.typed-hint { color: rgba(255,255,255,0.35); font-style: italic }
+.hidden-input { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+
+/* Stats styling */
+.hud { display: flex; gap: 18px; align-items: center; padding: 10px 14px; background: rgba(2,6,23,0.6); border-radius: 10px; font-size: 0.95rem; }
+.stats-left { display:flex; align-items:center; gap:8px; }
+.stat-big { font-size: 1.4rem; font-weight:700; color: #bff3e8; }
+.stat-label { font-size: 0.85rem; color: #9ccedb; }
+.stats-middle { display:flex; flex-direction:column; gap:4px; }
+.stat-item { font-size:0.9rem; color:#cfeff6 }
+.badge { background: rgba(255,255,255,0.06); padding:4px 8px; border-radius:8px; margin-left:8px; font-weight:600 }
+.badge.muted { opacity:0.7 }
+.stats-right { display:flex; flex-direction:column; align-items:flex-end; gap:6px }
+.btn.small { padding:6px 10px; font-size:0.85rem }
 
 input#input {
   margin-top: 12px;
@@ -82,15 +170,16 @@ input#input {
   font-size: 1rem;
 }
 
-.char { white-space: pre; }
+.char { letter-spacing: 0.02em; }
 .char.correct { color: #34d399; }
 .char.incorrect { color: #fb7185; }
 .char.current { position: relative; }
-.char.current::before { content: ""; position: absolute; left: -1px; top: 0; width: 2px; height: 100%; background: #fff; animation: blink 1s infinite; }
-.letter-underline { border-bottom: 2px solid rgba(255,255,255,0.5); }
+/* Disable per-char pseudo caret; use single floating caret instead */
+.char.current::before { display: none; }
 .error-highlight { background-color: rgba(255, 99, 71, 0.15); }
 
 .hud { display: flex; gap: 18px; align-items: center; padding: 10px 14px; background: rgba(2,6,23,0.6); border-radius: 10px; font-size: 0.95rem; }
 .hud div { font-weight: 600; }
+.hud { width: 420px; flex: 0 0 420px; }
 
 @keyframes blink { 0%,50% { opacity: 1 } 51%,100% { opacity: 0 } }
