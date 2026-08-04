@@ -15,6 +15,7 @@ app.innerHTML = `
     <div class="control-row">
       <label for="translation">Version</label>
       <select id="translation" class="select">
+        <option value="esv">ESV</option>
         <option value="kjv">KJV</option>
         <option value="web">WEB</option>
         <option value="asv">ASV</option>
@@ -219,3 +220,42 @@ startHUDUpdates();
 // Auto-focus
 document.addEventListener("click", () => inputEl.focus());
 inputEl.focus();
+
+// ----------------------------
+// Music: play a random track from assets/music
+// ----------------------------
+function setupMusic() {
+  const tracks = [
+    '/assets/music/determination.mp3',
+    '/assets/music/apple_cider.ogg'
+  ];
+
+  // Choose a random track
+  const choice = tracks[Math.floor(Math.random() * tracks.length)];
+  const audio = new Audio(choice);
+  audio.loop = true;
+  audio.volume = 0.42;
+
+  // Try autoplay; browsers may block it. If blocked, show a play button.
+  audio.play().catch(() => {
+    const btn = document.createElement('button');
+    btn.id = 'music-play';
+    btn.className = 'btn';
+    btn.textContent = 'Play Music';
+    btn.style.marginLeft = '8px';
+    const header = document.querySelector('.game-header');
+    if (header) {
+      header.appendChild(btn);
+    }
+    btn.addEventListener('click', async () => {
+      try {
+        await audio.play();
+        btn.remove();
+      } catch (e) {
+        console.error('Audio play failed', e);
+      }
+    });
+  });
+}
+
+setupMusic();

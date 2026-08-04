@@ -1,10 +1,12 @@
 :root {
   --chars-per-line: 72; /* target characters per line in the passage window */
-  --ui-font: 'Rubik', Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  --mono-font: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
+  --ui-font: 'IBM Plex Sans', 'Rubik', Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  --mono-font: 'IBM Plex Mono', 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
 }
 
 @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;600&family=Space+Mono:wght@400;700&display=swap');
+/* IBM Plex Sans & Mono from Google Fonts (softer, friendly) */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;600&family=IBM+Plex+Mono:wght@400;600&display=swap');
 
 body {
   font-family: var(--ui-font);
