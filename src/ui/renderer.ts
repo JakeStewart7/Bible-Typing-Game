@@ -19,7 +19,6 @@ export function updateCaretPosition(container: HTMLElement, game: Game) {
 
   caret.style.width = Math.max(2, cRect.width * 0.08) + 'px';
   caret.style.height = cRect.height + 'px';
-  caret.style.opacity = '1';
 
   if (caretAnimationId) cancelAnimationFrame(caretAnimationId);
 
@@ -34,7 +33,6 @@ export function updateCaretPosition(container: HTMLElement, game: Game) {
     const elapsed = now - startTime;
     const progress = Math.min(1, elapsed / CARET_ANIM_DURATION);
 
-    // Cubic ease-out for acceleration feel
     const easeProgress = 1 - Math.pow(1 - progress, 3);
 
     const x = startX + (targetX - startX) * easeProgress;
