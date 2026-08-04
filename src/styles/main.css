@@ -103,10 +103,14 @@ label {
 /* Slightly increase spacing for readability */
 .char { letter-spacing: 0.02em; }
 
-/* Floating caret with glow and gentle idle pulse */
-@keyframes caretPulse {
-  0%, 100% { opacity: 0.8; }
-  50% { opacity: 0.4; }
+/* Floating caret with constant glow pulse */
+@keyframes caretGlowPulse {
+  0%, 100% { 
+    box-shadow: 0 0 6px rgba(191, 243, 232, 0.6), 0 0 12px rgba(45, 212, 191, 0.3);
+  }
+  50% { 
+    box-shadow: 0 0 10px rgba(191, 243, 232, 0.9), 0 0 20px rgba(45, 212, 191, 0.5);
+  }
 }
 
 .floating-caret {
@@ -119,8 +123,8 @@ label {
   transform: translate(0,0);
   pointer-events: none;
   z-index: 5;
-  box-shadow: 0 0 6px rgba(191, 243, 232, 0.6), 0 0 12px rgba(45, 212, 191, 0.3);
   opacity: 1;
+  animation: caretGlowPulse 1.4s ease-in-out infinite;
 }
 
 .floating-caret.idle {
