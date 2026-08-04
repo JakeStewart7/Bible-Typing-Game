@@ -95,10 +95,10 @@ label {
 }
 
 /* Make individual char spans inline so text flows naturally, words stay together */
-.word { display: inline; }
+.word { display: inline; white-space: normal; }
 
 /* Slightly increase spacing for readability */
-.char { white-space: normal; letter-spacing: 0.02em; }
+.char { letter-spacing: 0.02em; }
 
 /* Floating caret - simple, no animation */
 .floating-caret {
@@ -170,13 +170,12 @@ input#input {
   font-size: 1rem;
 }
 
-.char { white-space: pre; }
+.char { letter-spacing: 0.02em; }
 .char.correct { color: #34d399; }
 .char.incorrect { color: #fb7185; }
 .char.current { position: relative; }
 /* Disable per-char pseudo caret; use single floating caret instead */
 .char.current::before { display: none; }
-.letter-underline { border-bottom: 2px solid rgba(255,255,255,0.5); }
 .error-highlight { background-color: rgba(255, 99, 71, 0.15); }
 
 .hud { display: flex; gap: 18px; align-items: center; padding: 10px 14px; background: rgba(2,6,23,0.6); border-radius: 10px; font-size: 0.95rem; }
