@@ -1,5 +1,46 @@
 import type { Game } from '../game/state';
 
+let caretAnimationId: number | null = null;
+let caretStartPos: { x: number; y: number } | null = null;
+let caretTargetPos: { x: number; y: number } | null = null;
+let caretAnimationStart = 0;
+const CARET_ANIM_DURATION = 140;
+
+function smoothCaret(caret: HTMLElement, targetX: number, targetY: number) {
+  if (caretAnimationId) cancelAnimationFrame(caretAnimationId);
+
+  const currentTransform = caret.style.transform.match(/translate\(([^,]+)px,\s*([^)]+)px\)/);
+  caretStartPos = {
+    x: currentTransform ? parseFloat(currentTransform[1]) : targetX,
+    y: currentTransform ? parseFloat(currentTransform[2]) : targetY
+  };
+  caretTargetPos = { x: targetX, y: targetY };
+  caretAnimationStart = performance.now();
+
+  function animateFrame(now: number) {
+    const elapsed = now - caretAnimationStart;
+    const progress = Math.min(1, elapsed / CARET_ANIM_DURATION);
+
+    if (caretStartPos && caretTargetPos) {
+      const easeProgress = progress < 0.5
+        ? 2 * progress * progress
+        : -1 + (4 - 2 * progress) * progress;
+
+      const x = caretStartPos.x + (caretTargetPos.x - caretStartPos.x) * easeProgress;
+      const y = caretStartPos.y + (caretTargetPos.y - caretStartPos.y) * easeProgress;
+      caret.style.transform = `translate(${x}px, ${y}px)`;
+    }
+
+    if (progress < 1) {
+      caretAnimationId = requestAnimationFrame(animateFrame);
+    } else {
+      caretAnimationId = null;
+    }
+  }
+
+  caretAnimationId = requestAnimationFrame(animateFrame);
+}
+
 export function renderText(container: HTMLElement, game: Game) {
   container.innerHTML = '';
   container.style.position = container.style.position || 'relative';
@@ -90,10 +131,12 @@ export function renderText(container: HTMLElement, game: Game) {
     if (caret.style.transition === 'none') {
       caret.style.transform = `translate(${left}px, ${top}px)`;
       caret.offsetHeight;
-      caret.style.transition = 'transform 140ms cubic-bezier(0.34, 1.56, 0.64, 1), width 120ms ease-out, background 100ms ease, box-shadow 100ms ease';
+      caret.style.transition = 'width 120ms ease-out, background 100ms ease, box-shadow 100ms ease';
       caret.style.opacity = '1';
+      caretStartPos = { x: left, y: top };
+      caretTargetPos = { x: left, y: top };
     } else {
-      caret.style.transform = `translate(${left}px, ${top}px)`;
+      smoothCaret(caret, left, top);
     }
 
     const caretCenter = left + (cRect.width / 2);
