@@ -172,18 +172,44 @@ function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 function renderTypedBar(container, game) {
   if (!container) return;
   container.innerHTML = '';
-  for (let i = 0; i < game.typed.length; i++) {
-    const ch = game.typed[i];
+  const typed = game.typed.join('');
+  const expected = game.chars.join('');
+  const words = typed.split(' ');
+  let pos = 0;
+  for (let wi = 0; wi < words.length; wi++) {
+    const w = words[wi];
     const span = document.createElement('span');
-    span.className = 'typed-char ' + ((ch === game.chars[i]) ? 'correct' : 'incorrect');
-    span.textContent = ch;
+    span.className = 'typed-word';
+    const expectedSlice = expected.slice(pos, pos + w.length);
+    const isCorrect = w === expectedSlice;
+n    // Completed words (not the current last word)
+    if (wi < words.length - 1) {
+      span.classList.add('completed');
+      span.textContent = w + ' ';
+    } else {
+      // Current word in-progress
+      if (w.length === 0) {
+        // If current word is empty (user just typed space), show a small space marker
+        span.classList.add('current');
+        span.textContent = ' ';
+      } else {
+        span.classList.add('current');
+        if (!isCorrect) span.classList.add('incorrect');
+        span.textContent = w;
+      }
+    }
+
     container.appendChild(span);
+    pos += w.length + 1; // +1 for space
   }
-  // pad with a subtle caret hint for the next char
-  const hint = document.createElement('span');
-  hint.className = 'typed-caret-hint';
-  hint.textContent = '';
-  container.appendChild(hint);
+
+  // If nothing typed yet, show placeholder hint
+  if (typed.length === 0) {
+    const hint = document.createElement('div');
+    hint.className = 'typed-hint';
+    hint.textContent = 'Type here...';
+    container.appendChild(hint);
+  }
 }
 
 // ----------------------------

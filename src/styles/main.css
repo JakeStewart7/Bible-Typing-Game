@@ -140,9 +140,12 @@ label {
   overflow: hidden;
   white-space: nowrap;
 }
-.typed-char { font-family: var(--mono-font); font-size: 1rem; }
-.typed-char.correct { color: #34d399; }
-.typed-char.incorrect { color: #fb7185; text-decoration: underline wavy rgba(251,113,133,0.6); }
+.typed-word { font-family: var(--mono-font); font-size: 1rem; padding-right: 6px; }
+.typed-word.completed { color: rgba(255,255,255,0.7); }
+.typed-word.current { color: #ffffff; font-weight:600 }
+.typed-word.current.incorrect { color: #fb7185; }
+.typed-space { opacity: 0.6 }
+.typed-hint { color: rgba(255,255,255,0.35); font-style: italic }
 .hidden-input { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 
 /* Stats styling */
@@ -172,11 +175,13 @@ input#input {
 .char.correct { color: #34d399; }
 .char.incorrect { color: #fb7185; }
 .char.current { position: relative; }
-.char.current::before { content: ""; position: absolute; left: -1px; top: 0; width: 2px; height: 100%; background: #fff; animation: blink 1s infinite; }
+/* Disable per-char pseudo caret; use single floating caret instead */
+.char.current::before { display: none; }
 .letter-underline { border-bottom: 2px solid rgba(255,255,255,0.5); }
 .error-highlight { background-color: rgba(255, 99, 71, 0.15); }
 
 .hud { display: flex; gap: 18px; align-items: center; padding: 10px 14px; background: rgba(2,6,23,0.6); border-radius: 10px; font-size: 0.95rem; }
 .hud div { font-weight: 600; }
+.hud { width: 420px; flex: 0 0 420px; }
 
 @keyframes blink { 0%,50% { opacity: 1 } 51%,100% { opacity: 0 } }

@@ -69,13 +69,22 @@ export function renderText(container, game) {
     // Add space after word (only error highlight if typed wrong)
     const spaceSpan = document.createElement("span");
     spaceSpan.textContent = " ";
+    // Ensure spaces are treated as chars so the caret can appear on them
+    spaceSpan.classList.add('char');
+
     if (
       charIndex <= lastTypedIndex &&
       firstErrorIndex !== -1 &&
       charIndex >= firstErrorIndex
     ) {
+      spaceSpan.classList.add("incorrect");
       spaceSpan.classList.add("error-highlight");
     }
+n    // Caret on space
+    if (charIndex === game.typed.length) {
+      spaceSpan.classList.add('current');
+    }
+
     wordSpan.appendChild(spaceSpan);
     charIndex++;
 
@@ -87,6 +96,9 @@ export function renderText(container, game) {
   if (!caret) {
     caret = document.createElement('div');
     caret.className = 'floating-caret';
+    // Start invisible and with no transition to avoid a long slide animation from origin
+    caret.style.opacity = '0';
+    caret.style.transition = 'none';
     container.appendChild(caret);
   }
 
@@ -98,7 +110,18 @@ export function renderText(container, game) {
     const top = cRect.top - parentRect.top + container.scrollTop;
     caret.style.width = Math.max(2, cRect.width * 0.08) + 'px';
     caret.style.height = cRect.height + 'px';
-    caret.style.transform = `translate(${left}px, ${top}px)`;
+    // Apply transform without transition on first placement
+    if (caret.style.transition === 'none') {
+      caret.style.transform = `translate(${left}px, ${top}px)`;
+      // Force a reflow then re-enable transition so subsequent moves animate smoothly
+      // eslint-disable-next-line no-unused-expressions
+      caret.offsetHeight;
+      caret.style.transition = 'transform 130ms cubic-bezier(.2,.9,.2,1), width 120ms ease, opacity 160ms ease';
+      caret.style.opacity = '1';
+    } else {
+      caret.style.transform = `translate(${left}px, ${top}px)`;
+    }
+
     // Also ensure caret is visible within horizontal scroll
     const caretCenter = left + (cRect.width / 2);
     const viewLeft = container.scrollLeft;
