@@ -5,6 +5,8 @@ import { renderText } from "./ui/renderer.js";
 import { renderStats } from "./ui/hud.js";
 import { calculateStats } from "./game/stats.js";
 import { fetchChapter, fetchRange } from "./bible-api.js";
+import trackDetermination from "../assets/music/determination.mp3";
+import trackApple from "../assets/music/apple_cider.ogg";
 
 // ----------------------------
 // DOM setup
@@ -222,39 +224,72 @@ document.addEventListener("click", () => inputEl.focus());
 inputEl.focus();
 
 // ----------------------------
-// Music: play a random track from assets/music
+// Music: play a random track from assets/music (imported so Vite bundles them)
 // ----------------------------
 function setupMusic() {
-  const tracks = [
-    '/assets/music/determination.mp3',
-    '/assets/music/apple_cider.ogg'
-  ];
-
-  // Choose a random track
+  const tracks = [trackDetermination, trackApple];
   const choice = tracks[Math.floor(Math.random() * tracks.length)];
-  const audio = new Audio(choice);
+
+  const audio = new Audio();
+  audio.src = choice;
   audio.loop = true;
   audio.volume = 0.42;
+  audio.preload = 'auto';
+  audio.crossOrigin = 'anonymous';
 
-  // Try autoplay; browsers may block it. If blocked, show a play button.
-  audio.play().catch(() => {
-    const btn = document.createElement('button');
-    btn.id = 'music-play';
-    btn.className = 'btn';
-    btn.textContent = 'Play Music';
-    btn.style.marginLeft = '8px';
-    const header = document.querySelector('.game-header');
-    if (header) {
-      header.appendChild(btn);
+  // Create persistent controls in the header
+  const header = document.querySelector('.game-header');
+  if (!header) return;
+
+  const controls = document.createElement('div');
+  controls.className = 'music-controls';
+
+  const playBtn = document.createElement('button');
+  playBtn.className = 'btn music-btn';
+  playBtn.textContent = 'Play Music';
+  controls.appendChild(playBtn);
+
+  const vol = document.createElement('input');
+  vol.type = 'range';
+  vol.min = 0; vol.max = 1; vol.step = 0.01; vol.value = String(audio.volume);
+  vol.className = 'volume-slider';
+  controls.appendChild(vol);
+
+  header.appendChild(controls);
+
+  // Toggle play/pause
+  async function playAudio() {
+    try {
+      await audio.play();
+      playBtn.textContent = 'Pause Music';
+    } catch (e) {
+      console.warn('Autoplay prevented; user interaction required.');
+      playBtn.textContent = 'Play Music';
     }
-    btn.addEventListener('click', async () => {
-      try {
-        await audio.play();
-        btn.remove();
-      } catch (e) {
-        console.error('Audio play failed', e);
-      }
-    });
+  }
+
+  function pauseAudio() {
+    audio.pause();
+    playBtn.textContent = 'Play Music';
+  }
+
+  playBtn.addEventListener('click', async () => {
+    if (audio.paused) {
+      await playAudio();
+    } else {
+      pauseAudio();
+    }
+  });
+
+  vol.addEventListener('input', () => {
+    audio.volume = Number(vol.value);
+  });
+
+  // Try autoplay once; if allowed, update button state
+  audio.play().then(() => {
+    playBtn.textContent = 'Pause Music';
+  }).catch(() => {
+    playBtn.textContent = 'Play Music';
   });
 }
 

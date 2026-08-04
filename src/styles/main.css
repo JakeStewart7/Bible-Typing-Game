@@ -70,6 +70,10 @@ label {
 .game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .game-header h1 { font-size: 1.2rem; margin: 0; color: #f1fafb; }
 
+.music-controls { display: flex; gap: 8px; align-items: center; }
+.music-controls .music-btn { padding: 6px 10px; font-size: 0.9rem; }
+.volume-slider { width: 110px; }
+
 .text-display {
   background: linear-gradient(180deg, #021023 0%, #03061a 100%);
   padding: 18px 20px;
