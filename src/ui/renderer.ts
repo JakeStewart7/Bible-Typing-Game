@@ -90,7 +90,6 @@ export function renderText(container: HTMLElement, game: Game) {
   if (!caret) {
     caret = document.createElement('div');
     caret.className = 'floating-caret';
-    caret.style.opacity = '0';
     container.appendChild(caret);
   }
 }
