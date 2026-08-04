@@ -65,6 +65,9 @@ label {
   line-height: 1.6;
   font-size: 1.12rem;
   min-height: 160px;
+  max-height: 220px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
   box-shadow: inset 0 -18px 40px rgba(2,6,23,0.6);
 }
 

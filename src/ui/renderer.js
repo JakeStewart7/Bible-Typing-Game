@@ -36,12 +36,12 @@ export function renderText(container, game) {
       span.textContent = word[i];
       span.classList.add("char");
 
-      // ✅ Letter underline: only if this is the caret word
+      // Letter underline: only if this is the caret word
       if (wIdx === caretWordIndex) {
         span.classList.add("letter-underline");
       }
 
-      // ✅ Cascading errors: green before first error, red after
+      // Cascading errors: green before first error, red after
       if (charIndex <= lastTypedIndex) {
         if (firstErrorIndex === -1 || charIndex < firstErrorIndex) {
           span.classList.add("correct");
@@ -51,7 +51,7 @@ export function renderText(container, game) {
         }
       }
 
-      // ✅ Caret
+      // Caret
       if (charIndex === game.typed.length) {
         span.classList.add("current");
       }
@@ -75,4 +75,11 @@ export function renderText(container, game) {
 
     container.appendChild(wordSpan);
   });
+
+  // Auto-scroll so the caret stays centered in the visible window
+  const caretEl = container.querySelector('.char.current');
+  if (caretEl) {
+    // Use smooth scrolling and center the caret vertically within the text container
+    caretEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+  }
 }
