@@ -90,7 +90,7 @@ export function renderText(container: HTMLElement, game: Game) {
     if (caret.style.transition === 'none') {
       caret.style.transform = `translate(${left}px, ${top}px)`;
       caret.offsetHeight;
-      caret.style.transition = 'transform 130ms cubic-bezier(.2,.9,.2,1), width 120ms ease, opacity 160ms ease';
+      caret.style.transition = 'transform 140ms cubic-bezier(0.34, 1.56, 0.64, 1), width 120ms ease-out, background 100ms ease, box-shadow 100ms ease';
       caret.style.opacity = '1';
     } else {
       caret.style.transform = `translate(${left}px, ${top}px)`;
