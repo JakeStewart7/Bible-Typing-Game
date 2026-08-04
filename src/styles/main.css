@@ -120,7 +120,7 @@ label {
   pointer-events: none;
   z-index: 5;
   box-shadow: 0 0 6px rgba(191, 243, 232, 0.6), 0 0 12px rgba(45, 212, 191, 0.3);
-  opacity: 0.8;
+  opacity: 1;
 }
 
 .floating-caret.idle {
