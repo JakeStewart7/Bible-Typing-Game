@@ -1,6 +1,8 @@
 
 export function renderText(container, game) {
+  // Ensure container is set up for absolute caret positioning
   container.innerHTML = "";
+  container.style.position = container.style.position || 'relative';
 
   const words = game.text.split(" ");
   let charIndex = 0;
@@ -29,8 +31,6 @@ export function renderText(container, game) {
     // Normal white-space — the container controls wrapping/overflow for the passage window.
     wordSpan.style.whiteSpace = "normal";
 
-    const wordStartIndex = charIndex;
-
     // Add letters
     for (let i = 0; i < word.length; i++) {
       const span = document.createElement("span");
@@ -57,6 +57,11 @@ export function renderText(container, game) {
         span.classList.add("current");
       }
 
+      // Recently pressed animation key
+      if (typeof game.lastPressedIndex === 'number' && charIndex === game.lastPressedIndex) {
+        span.classList.add('pressed');
+      }
+
       wordSpan.appendChild(span);
       charIndex++;
     }
@@ -77,10 +82,31 @@ export function renderText(container, game) {
     container.appendChild(wordSpan);
   });
 
-  // Auto-scroll so the caret stays centered in the visible window
+  // Ensure there's a single caret element we move around smoothly
+  let caret = container.querySelector('.floating-caret');
+  if (!caret) {
+    caret = document.createElement('div');
+    caret.className = 'floating-caret';
+    container.appendChild(caret);
+  }
+
   const caretEl = container.querySelector('.char.current');
   if (caretEl) {
-    // Use smooth scrolling and center the caret vertically within the text container
-    caretEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    const cRect = caretEl.getBoundingClientRect();
+    const parentRect = container.getBoundingClientRect();
+    const left = cRect.left - parentRect.left + container.scrollLeft;
+    const top = cRect.top - parentRect.top + container.scrollTop;
+    caret.style.width = Math.max(2, cRect.width * 0.08) + 'px';
+    caret.style.height = cRect.height + 'px';
+    caret.style.transform = `translate(${left}px, ${top}px)`;
+    // Also ensure caret is visible within horizontal scroll
+    const caretCenter = left + (cRect.width / 2);
+    const viewLeft = container.scrollLeft;
+    const viewRight = viewLeft + container.clientWidth;
+    if (caretCenter < viewLeft + 60) {
+      container.scrollTo({ left: Math.max(0, caretCenter - 60), behavior: 'smooth' });
+    } else if (caretCenter > viewRight - 60) {
+      container.scrollTo({ left: caretCenter - container.clientWidth + 60, behavior: 'smooth' });
+    }
   }
 }

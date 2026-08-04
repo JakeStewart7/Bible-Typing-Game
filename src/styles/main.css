@@ -103,6 +103,60 @@ label {
 /* Slightly increase spacing for readability */
 .char { letter-spacing: 0.02em; }
 
+/* Floating caret that smoothly moves between characters */
+.floating-caret {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2px;
+  background: #fff;
+  border-radius: 2px;
+  transform: translate(0,0);
+  transition: transform 130ms cubic-bezier(.2,.9,.2,1), width 120ms ease;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Pressed character animation */
+@keyframes pressedAnim {
+  0% { transform: scale(1.25); opacity: 0.95; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.char.pressed {
+  animation: pressedAnim 220ms ease-out;
+}
+
+/* Typed bar at bottom */
+.typed-area { margin-top: 12px; display: flex; align-items: center; gap: 8px; }
+.typed-bar {
+  flex: 1;
+  background: rgba(255,255,255,0.03);
+  padding: 10px 14px;
+  border-radius: 10px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.typed-char { font-family: var(--mono-font); font-size: 1rem; }
+.typed-char.correct { color: #34d399; }
+.typed-char.incorrect { color: #fb7185; text-decoration: underline wavy rgba(251,113,133,0.6); }
+.hidden-input { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+
+/* Stats styling */
+.hud { display: flex; gap: 18px; align-items: center; padding: 10px 14px; background: rgba(2,6,23,0.6); border-radius: 10px; font-size: 0.95rem; }
+.stats-left { display:flex; align-items:center; gap:8px; }
+.stat-big { font-size: 1.4rem; font-weight:700; color: #bff3e8; }
+.stat-label { font-size: 0.85rem; color: #9ccedb; }
+.stats-middle { display:flex; flex-direction:column; gap:4px; }
+.stat-item { font-size:0.9rem; color:#cfeff6 }
+.badge { background: rgba(255,255,255,0.06); padding:4px 8px; border-radius:8px; margin-left:8px; font-weight:600 }
+.badge.muted { opacity:0.7 }
+.stats-right { display:flex; flex-direction:column; align-items:flex-end; gap:6px }
+.btn.small { padding:6px 10px; font-size:0.85rem }
+
 input#input {
   margin-top: 12px;
   width: 100%;

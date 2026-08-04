@@ -48,13 +48,18 @@ app.innerHTML = `
     </div>
 
     <div id="text" class="text-display"></div>
-    <input id="input" autocomplete="off" placeholder="Start typing the passage here..." />
+
+    <div class="typed-area">
+      <div id="typed-bar" class="typed-bar" aria-hidden="true"></div>
+      <input id="input" autocomplete="off" class="hidden-input" aria-label="Typing input" />
+    </div>
   </div>
 `;
 
 const hudEl = document.getElementById("hud");
 const textEl = document.getElementById("text");
 const inputEl = document.getElementById("input");
+const typedBarEl = document.getElementById("typed-bar");
 
 const translationEl = document.getElementById("translation");
 const bookEl = document.getElementById("book");
@@ -135,17 +140,51 @@ export function restartGame() {
 // ----------------------------
 // Input handling
 // ----------------------------
-inputEl.addEventListener("input", () => {
-  handleInput(game, inputEl.value);
-  renderText(textEl, game);
+// Keep the hidden input focused so keyboard events go there. Clicking anywhere focuses it.
+document.addEventListener('click', () => inputEl.focus());
+inputEl.focus();
 
-  // Always reflect typed letters
+inputEl.addEventListener("input", () => {
+  const prevLen = game.typed.length;
+  handleInput(game, inputEl.value);
+
+  // If the user added a character, mark it for the pressed animation
+  if (game.typed.length > prevLen) {
+    game.lastPressedIndex = game.typed.length - 1;
+    // clear after animation so it can re-apply on next press
+    setTimeout(() => { game.lastPressedIndex = undefined; }, 260);
+  }
+
+  // Update rendered passage and typed-bar
+  renderText(textEl, game);
+  renderTypedBar(typedBarEl, game);
+
+  // Keep the hidden input value in sync (but not shown)
   inputEl.value = game.typed.join("");
 
   // Disable input only if everything is correct
   const allCorrect = game.typed.join("") === game.chars.join("");
   inputEl.disabled = allCorrect;
 });
+
+// helper to render the typed bar (mirrors game.typed but styled)
+function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function renderTypedBar(container, game) {
+  if (!container) return;
+  container.innerHTML = '';
+  for (let i = 0; i < game.typed.length; i++) {
+    const ch = game.typed[i];
+    const span = document.createElement('span');
+    span.className = 'typed-char ' + ((ch === game.chars[i]) ? 'correct' : 'incorrect');
+    span.textContent = ch;
+    container.appendChild(span);
+  }
+  // pad with a subtle caret hint for the next char
+  const hint = document.createElement('span');
+  hint.className = 'typed-caret-hint';
+  hint.textContent = '';
+  container.appendChild(hint);
+}
 
 // ----------------------------
 // HUD live updates
@@ -188,11 +227,13 @@ loadBtn.addEventListener('click', async () => {
     let text = (data.verses || []).map(v => v.text).join(' ');
     // Sanitize text to remove untypable or problematic characters
     text = sanitizeText(text);
-n    if (!text) {
+
+    if (!text) {
       alert('No verses returned for that range.');
       return;
     }
-n    // Update game text and restart
+
+    // Update game text and restart
     game.text = text;
     game.chars = text.split('');
     restartGame();
