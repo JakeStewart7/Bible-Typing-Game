@@ -84,17 +84,16 @@ label {
   font-size: 1.125rem; /* slightly larger for readability */
   min-height: 160px;
   max-height: 220px;
-  overflow-y: hidden; /* hide vertical overflow; we want horizontal spill */
-  overflow-x: auto; /* allow long lines to spill horizontally */
+  overflow-y: auto; /* scroll down only */
+  overflow-x: hidden; /* hide horizontal overflow */
   scroll-behavior: smooth;
   box-shadow: inset 0 -18px 40px rgba(2,6,23,0.6);
   width: 100%;
   max-width: 100%;
   text-align: left;
   hyphens: none;
-  word-break: normal; /* avoid breaking words */
-  white-space: nowrap; /* force single-line flow so long text spills horizontally */
-  padding-right: 20px; /* give room for horizontal scrollbar */
+  word-break: normal;
+  white-space: normal; /* allow wrapping */
 }
 
 /* Make individual char spans inline so text flows naturally */
@@ -103,18 +102,7 @@ label {
 /* Slightly increase spacing for readability */
 .char { letter-spacing: 0.02em; }
 
-/* Floating caret - pulse only */
-@keyframes caretPulse {
-  0%, 100% { 
-    opacity: 1;
-    box-shadow: 0 0 6px rgba(191, 243, 232, 0.6), 0 0 12px rgba(45, 212, 191, 0.3);
-  }
-  50% { 
-    opacity: 0.5;
-    box-shadow: 0 0 10px rgba(191, 243, 232, 0.9), 0 0 20px rgba(45, 212, 191, 0.5);
-  }
-}
-
+/* Floating caret - simple, no animation */
 .floating-caret {
   position: absolute;
   left: 0;
@@ -124,7 +112,6 @@ label {
   border-radius: 2px;
   pointer-events: none;
   z-index: 5;
-  animation: caretPulse 1.4s ease-in-out infinite;
 }
 
 .floating-caret.idle {

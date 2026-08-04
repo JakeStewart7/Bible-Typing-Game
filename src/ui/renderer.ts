@@ -47,15 +47,6 @@ export function updateCaretPosition(container: HTMLElement, game: Game) {
   }
 
   caretAnimationId = requestAnimationFrame(animateFrame);
-
-  const caretCenter = targetX + (cRect.width / 2);
-  const viewLeft = container.scrollLeft;
-  const viewRight = viewLeft + container.clientWidth;
-  if (caretCenter < viewLeft + 60) {
-    container.scrollTo({ left: Math.max(0, caretCenter - 60), behavior: 'smooth' });
-  } else if (caretCenter > viewRight - 60) {
-    container.scrollTo({ left: caretCenter - container.clientWidth + 60, behavior: 'smooth' });
-  }
 }
 
 export function renderText(container: HTMLElement, game: Game) {
