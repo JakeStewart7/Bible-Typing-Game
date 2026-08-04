@@ -182,7 +182,10 @@ loadBtn.addEventListener('click', async () => {
       data = { verses: sliced };
     }
 
-    const text = (data.verses || []).map(v => v.text).join(' ');
+    let text = (data.verses || []).map(v => v.text).join(' ');
+    // Remove any hard line breaks and collapse excess whitespace so typing is predictable
+    text = text.replace(/\s+/g, ' ').trim();
+
     if (!text) {
       alert('No verses returned for that range.');
       return;
