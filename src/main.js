@@ -1,5 +1,5 @@
 import "./styles/main.css";
-import { createGame } from "./game/state.js";
+import { createGame, sanitizeText } from "./game/state.js";
 import { handleInput } from "./game/input.js";
 import { renderText } from "./ui/renderer.js";
 import { renderStats } from "./ui/hud.js";
@@ -186,15 +186,13 @@ loadBtn.addEventListener('click', async () => {
     }
 
     let text = (data.verses || []).map(v => v.text).join(' ');
-    // Remove any hard line breaks and collapse excess whitespace so typing is predictable
-    text = text.replace(/\s+/g, ' ').trim();
-
-    if (!text) {
+    // Sanitize text to remove untypable or problematic characters
+    text = sanitizeText(text);
+n    if (!text) {
       alert('No verses returned for that range.');
       return;
     }
-
-    // Update game text and restart
+n    // Update game text and restart
     game.text = text;
     game.chars = text.split('');
     restartGame();
@@ -233,9 +231,20 @@ function setupMusic() {
   const audio = new Audio();
   audio.src = choice;
   audio.loop = true;
-  audio.volume = 0.42;
+  const targetVolume = 0.42;
+  audio.volume = 0; // start muted for fade-in
   audio.preload = 'auto';
   audio.crossOrigin = 'anonymous';
+
+  function fadeIn(a, target = targetVolume, duration = 2000) {
+    const start = performance.now();
+    function step(now) {
+      const t = Math.min(1, (now - start) / duration);
+      a.volume = t * target;
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
 
   // Create persistent controls in the header
   const header = document.querySelector('.game-header');
@@ -261,6 +270,7 @@ function setupMusic() {
   async function playAudio() {
     try {
       await audio.play();
+      fadeIn(audio);
       playBtn.textContent = 'Pause Music';
     } catch (e) {
       console.warn('Autoplay prevented; user interaction required.');
@@ -285,8 +295,9 @@ function setupMusic() {
     audio.volume = Number(vol.value);
   });
 
-  // Try autoplay once; if allowed, update button state
+  // Try autoplay once; if allowed, update button state and fade in
   audio.play().then(() => {
+    fadeIn(audio);
     playBtn.textContent = 'Pause Music';
   }).catch(() => {
     playBtn.textContent = 'Play Music';
