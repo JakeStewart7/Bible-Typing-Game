@@ -26,7 +26,8 @@ export function renderText(container, game) {
   words.forEach((word, wIdx) => {
     const wordSpan = document.createElement("span");
     wordSpan.classList.add("word");
-    wordSpan.style.whiteSpace = "pre";
+    // allow wrapping inside the word span so the container's ch-based width produces consistent line lengths
+    wordSpan.style.whiteSpace = "pre-wrap";
 
     const wordStartIndex = charIndex;
 
