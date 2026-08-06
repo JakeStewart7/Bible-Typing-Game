@@ -67,10 +67,7 @@ const STATIC_BOOK_NAME_ALIASES: Record<string, string[]> = {
 const staticBiblePromises = new Map<string, Promise<StaticBible>>();
 const STATIC_TRANSLATIONS: Record<string, string> = {
   kjv: 'kjv.json',
-  asv: 'asv.json',
-  ylt: 'ylt.json',
-  darby: 'darby.json',
-  nheb: 'nheb.json'
+  asv: 'asv.json'
 };
 
 async function loadStaticBible(translation: string) {

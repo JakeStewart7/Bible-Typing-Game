@@ -71,9 +71,6 @@ export function initControls() {
             <select id="translation">
               <option value="kjv">KJV · King James Version</option>
               <option value="asv">ASV · American Standard Version</option>
-              <option value="nheb">NHEB · New Heart English Bible</option>
-              <option value="ylt">YLT · Young's Literal Translation</option>
-              <option value="darby">Darby Bible</option>
             </select>
             <div class="field-grid">
               <div><label for="book">Book</label><select id="book"></select></div>
