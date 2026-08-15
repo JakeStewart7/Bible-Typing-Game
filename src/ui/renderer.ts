@@ -4,36 +4,61 @@ type CaretMotion = {
   element: HTMLElement;
   x: number;
   y: number;
+  height: number;
   targetX: number;
   targetY: number;
-  height: number;
   targetHeight: number;
+  velocityX: number;
+  velocityY: number;
+  velocityHeight: number;
+  lastTime: number;
   frame: number;
 };
 
 const caretMotions = new WeakMap<HTMLElement, CaretMotion>();
 
-function animateCaret(motion: CaretMotion) {
-  const smoothing = 0.32;
-  motion.x += (motion.targetX - motion.x) * smoothing;
-  motion.y += (motion.targetY - motion.y) * smoothing;
-  motion.height += (motion.targetHeight - motion.height) * smoothing;
-  motion.element.style.transform = `translate(${motion.x}px, ${motion.y}px)`;
-  motion.element.style.height = `${motion.height}px`;
+function animateCaret(motion: CaretMotion, now: number): void {
+  const delta = Math.min(2, Math.max(.25, (now - motion.lastTime) / 16.67));
+  motion.lastTime = now;
+  const acceleration = .03 * delta;
+  const damping = Math.pow(.86, delta);
 
-  const moving = Math.abs(motion.targetX - motion.x) > 0.1 ||
-    Math.abs(motion.targetY - motion.y) > 0.1 ||
-    Math.abs(motion.targetHeight - motion.height) > 0.1;
-  if (moving) {
-    motion.frame = requestAnimationFrame(() => animateCaret(motion));
+  motion.velocityX = (motion.velocityX + (motion.targetX - motion.x) * acceleration) * damping;
+  motion.velocityY = (motion.velocityY + (motion.targetY - motion.y) * acceleration) * damping;
+  motion.velocityHeight = (motion.velocityHeight + (motion.targetHeight - motion.height) * acceleration) * damping;
+  motion.x = moveWithoutOvershoot(motion.x, motion.targetX, motion.velocityX * delta);
+  motion.y = moveWithoutOvershoot(motion.y, motion.targetY, motion.velocityY * delta);
+  motion.height = moveWithoutOvershoot(motion.height, motion.targetHeight, motion.velocityHeight * delta);
+  if (motion.x === motion.targetX) motion.velocityX = 0;
+  if (motion.y === motion.targetY) motion.velocityY = 0;
+  if (motion.height === motion.targetHeight) motion.velocityHeight = 0;
+  renderCaretPosition(motion);
+
+  const distance = Math.abs(motion.targetX - motion.x) + Math.abs(motion.targetY - motion.y);
+  const speed = Math.abs(motion.velocityX) + Math.abs(motion.velocityY);
+  if (distance > .15 || speed > .05) {
+    motion.frame = requestAnimationFrame(time => animateCaret(motion, time));
   } else {
     motion.x = motion.targetX;
     motion.y = motion.targetY;
     motion.height = motion.targetHeight;
-    motion.element.style.transform = `translate(${motion.x}px, ${motion.y}px)`;
-    motion.element.style.height = `${motion.height}px`;
+    motion.velocityX = 0;
+    motion.velocityY = 0;
+    motion.velocityHeight = 0;
     motion.frame = 0;
+    renderCaretPosition(motion);
   }
+}
+
+function moveWithoutOvershoot(current: number, target: number, movement: number): number {
+  const remaining = target - current;
+  if (remaining === 0 || Math.sign(movement) !== Math.sign(remaining)) return current;
+  return Math.abs(movement) >= Math.abs(remaining) ? target : current + movement;
+}
+
+function renderCaretPosition(motion: CaretMotion): void {
+  motion.element.style.transform = `translate3d(${motion.x}px, ${motion.y}px, 0)`;
+  motion.element.style.height = `${motion.height}px`;
 }
 
 export function updateCaretPosition(container: HTMLElement, game: Game) {
@@ -43,7 +68,7 @@ export function updateCaretPosition(container: HTMLElement, game: Game) {
   const anchor = caretEl || fallbackEl;
   if (!anchor) return;
   const cRect = anchor.getBoundingClientRect();
-  const targetX = cRect.left - parentRect.left + container.scrollLeft + (caretEl ? 0 : cRect.width);
+  const targetX = cRect.left - parentRect.left + container.scrollLeft + (caretEl ? -1 : cRect.width - 1);
   const targetY = cRect.top - parentRect.top + container.scrollTop;
   const visibleTop = targetY - container.scrollTop;
   if (visibleTop < 24 || visibleTop > container.clientHeight - cRect.height - 24) {
@@ -54,26 +79,24 @@ export function updateCaretPosition(container: HTMLElement, game: Game) {
   if (!motion) {
     const element = document.createElement('div');
     element.className = 'floating-caret';
-    container.appendChild(element);
     motion = {
-      element,
-      x: targetX,
-      y: targetY,
-      targetX,
-      targetY,
-      height: cRect.height,
-      targetHeight: cRect.height,
-      frame: 0
+      element, x: targetX, y: targetY, height: cRect.height,
+      targetX, targetY, targetHeight: cRect.height,
+      velocityX: 0, velocityY: 0, velocityHeight: 0,
+      lastTime: performance.now(), frame: 0
     };
     caretMotions.set(container, motion);
-    element.style.transform = `translate(${targetX}px, ${targetY}px)`;
-    element.style.height = `${cRect.height}px`;
+    container.appendChild(element);
+    renderCaretPosition(motion);
   } else {
     if (!motion.element.isConnected) container.appendChild(motion.element);
     motion.targetX = targetX;
     motion.targetY = targetY;
     motion.targetHeight = cRect.height;
-    if (!motion.frame) motion.frame = requestAnimationFrame(() => animateCaret(motion!));
+    if (!motion.frame) {
+      motion.lastTime = performance.now();
+      motion.frame = requestAnimationFrame(time => animateCaret(motion!, time));
+    }
   }
   motion.element.classList.toggle('complete', !caretEl);
 }
@@ -85,6 +108,8 @@ export function renderText(container: HTMLElement, game: Game) {
   container.style.position = container.style.position || 'relative';
 
   const words = game.text.split(' ');
+  const memoryMode = container.closest<HTMLElement>('[data-mode="memory"]');
+  const memoryVisibility = Number(memoryMode?.style.getPropertyValue('--memory-visibility') || 50);
   let charIndex = 0;
 
   const firstErrorIndex = game.typed.findIndex((c, i) => c !== game.chars[i]);
@@ -105,11 +130,20 @@ export function renderText(container: HTMLElement, game: Game) {
     const wordSpan = document.createElement('span');
     wordSpan.classList.add('word');
     wordSpan.style.whiteSpace = 'normal';
+    const wordStartIndex = charIndex;
+    const wordEndIndex = wordStartIndex + word.length;
+    if (firstErrorIndex >= wordStartIndex && firstErrorIndex < wordEndIndex) {
+      wordSpan.classList.add('incorrect-word');
+    }
 
     for (let i = 0; i < word.length; i++) {
       const span = document.createElement('span');
       span.textContent = word[i];
       span.classList.add('char');
+      if (memoryMode && shouldHideMemoryCharacter(charIndex, memoryVisibility)) {
+        span.classList.add('memory-hidden');
+        span.textContent = memoryVisibility === 0 ? '' : '·';
+      }
 
       if (wIdx === caretWordIndex) span.classList.add('letter-underline');
 
@@ -117,8 +151,13 @@ export function renderText(container: HTMLElement, game: Game) {
         if (firstErrorIndex === -1 || charIndex < firstErrorIndex) {
           span.classList.add('correct');
         } else {
-          span.classList.add('incorrect');
           span.classList.add('error-highlight');
+        }
+
+        function shouldHideMemoryCharacter(index: number, visibility: number): boolean {
+          if (visibility >= 100) return false;
+          if (visibility <= 0) return true;
+          return ((index * 37 + 17) % 100) >= visibility;
         }
       }
 
@@ -137,7 +176,6 @@ export function renderText(container: HTMLElement, game: Game) {
     spaceSpan.classList.add('char');
 
     if (charIndex <= lastTypedIndex && firstErrorIndex !== -1 && charIndex >= firstErrorIndex) {
-      spaceSpan.classList.add('incorrect');
       spaceSpan.classList.add('error-highlight');
     }
 

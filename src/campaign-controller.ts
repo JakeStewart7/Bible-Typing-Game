@@ -30,8 +30,8 @@ export function createCampaignController(
   function renderSummary(): void {
     const summary = getCampaignProgress(progress);
     view.totalStarsEl.textContent = `${summary.stars} ★`;
-    view.totalProgressEl.textContent = `${summary.completed} of ${summary.total} chunks`;
-    view.sidebarProgressEl.textContent = `${summary.completed} / ${summary.total} chunks`;
+    view.totalProgressEl.textContent = `${summary.completed} of ${summary.total} passages`;
+    view.sidebarProgressEl.innerHTML = `${summary.completedChapters} / 1,189 chapters<br>${summary.completedBooks} / 66 books`;
   }
 
   function renderBooks(): void {
@@ -69,12 +69,15 @@ export function createCampaignController(
       const completed = chapterChunks.filter(chunk => (progress[chunk.id] ?? 0) > 0).length;
       section.innerHTML = `<header><div><small>CHAPTER</small><strong>${chapter}</strong></div><span>${completed}/${chapterChunks.length} complete</span></header>`;
       const chunkGrid = document.createElement('div');
-      chunkGrid.className = 'chunk-grid';
+      chunkGrid.className = 'passage-grid';
       for (const chunk of chapterChunks) {
         const stars = progress[chunk.id] ?? 0;
         const button = document.createElement('button');
-        button.className = stars ? 'chunk-tile complete' : 'chunk-tile';
-        button.innerHTML = `<strong>${chunk.startVerse}–${chunk.endVerse}</strong><span>${'★'.repeat(stars)}${'☆'.repeat(5 - stars)}</span>`;
+        button.className = stars ? 'passage-tile complete' : 'passage-tile';
+        const passageLabel = chunk.startVerse === chunk.endVerse
+          ? `Verse ${chunk.startVerse}`
+          : `Verses ${chunk.startVerse}–${chunk.endVerse}`;
+        button.innerHTML = `<strong>${passageLabel}</strong><span>${'★'.repeat(stars)}${'☆'.repeat(5 - stars)}</span>`;
         button.addEventListener('click', () => void startChunk(chunk, button));
         chunkGrid.appendChild(button);
       }

@@ -85,13 +85,18 @@ async function loadStaticBible(translation: string) {
 async function getStaticPassage(book: string, chapter: number, translation: string, start?: number, end?: number): Promise<BibleResponse> {
   const bible = await loadStaticBible(translation);
   const aliases = STATIC_BOOK_NAME_ALIASES[book] || [STATIC_BOOK_NAMES[book] || book];
-  const staticBook = bible.books.find(item => aliases.includes(item.name));
+  const normalizedAliases = aliases.map(normalizeBookName);
+  const staticBook = bible.books.find(item => normalizedAliases.includes(normalizeBookName(item.name)));
   const staticChapter = staticBook?.chapters.find(item => Number(item.chapter) === chapter);
   if (!staticChapter) throw new Error(`Static passage not found: ${book} ${chapter}`);
   const verses = start === undefined
     ? staticChapter.verses
     : staticChapter.verses.filter(verse => verse.verse >= start && verse.verse <= (end ?? start));
   return { verses, _translation: translation, _fallback: false };
+}
+
+function normalizeBookName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^iii/, '3').replace(/^ii/, '2').replace(/^i/, '1');
 }
 
 export async function fetchChapter(book: string, chapter: number, translation = 'kjv', allowFallback = true) {

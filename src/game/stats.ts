@@ -8,13 +8,20 @@ export function calculateStats(game: Game, now = Date.now()): GameStats {
   }
 
   const elapsed = ((game.completedAt || now) - game.startTime) / 1000;
-  const typedLength = game.typed.length;
+  const scoredLength = getScoredLength(game);
+  const wpm = elapsed > 0 ? Math.round(((scoredLength / 5) / elapsed) * 60) : 0;
+  const accuracy = game.accuracyTotal === 0 ? 100 : Math.round((game.accuracyCorrect / game.accuracyTotal) * 100);
 
-  const wpm = elapsed > 0 ? Math.round(((typedLength / 5) / elapsed) * 60) : 0;
+  const currentProgress = game.chars.length === 0 ? 0 : Math.round((scoredLength / game.chars.length) * 100);
+  game.maxProgress = Math.max(game.maxProgress, currentProgress);
 
-  const accuracy = typedLength === 0 ? 100 : Math.max(0, Math.round(((typedLength - game.errors) / typedLength) * 100));
+  return { time: Math.floor(elapsed), wpm, accuracy, progress: game.maxProgress };
+}
 
-  const progress = game.chars.length === 0 ? 0 : Math.round((typedLength / game.chars.length) * 100);
+function getScoredLength(game: Game): number {
+  const mismatchIndex = game.typed.findIndex((character, index) => character !== game.chars[index]);
+  if (mismatchIndex < 0) return game.typed.length;
 
-  return { time: Math.floor(elapsed), wpm, accuracy, progress };
+  const wordStart = game.text.lastIndexOf(' ', mismatchIndex - 1) + 1;
+  return wordStart;
 }
