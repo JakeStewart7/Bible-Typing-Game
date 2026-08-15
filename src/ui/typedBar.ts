@@ -1,14 +1,13 @@
-import { Game } from '../game/state';
+import type { Game } from '../game/state';
 
-export function renderTypedBar(container: HTMLElement, game: Game) {
-  if (!container) return;
+export function renderTypedBar(container: HTMLElement, game: Game): void {
   container.innerHTML = '';
   const typed = game.typed.join('');
   const expected = game.chars.join('');
   const words = typed.split(' ');
   let pos = 0;
   for (let wi = 0; wi < words.length; wi++) {
-    const w = words[wi];
+    const w = words[wi] ?? '';
     const span = document.createElement('span');
     span.className = 'typed-word';
     const expectedSlice = expected.slice(pos, pos + w.length);

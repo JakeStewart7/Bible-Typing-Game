@@ -6,6 +6,7 @@ import { handleInput } from '../src/game/input.ts';
 import { calculateStats } from '../src/game/stats.ts';
 import { getVerseCount, VERSE_COUNTS } from '../src/verse-counts.ts';
 import { advanceEnemy, buyUpgrade, completeDefense, createDefenseState, typeCharacter } from '../src/game/minigame.ts';
+import { createCampaignChunks, getBookProgress, nextChunk, starsForWpm } from '../src/campaign.ts';
 
 type Test = { name: string; run: () => void };
 const tests: Test[] = [];
@@ -148,6 +149,27 @@ test('completing defense awards a victory bonus', () => {
   completeDefense(state);
   equal(state.status, 'won');
   equal(state.faith, 150);
+});
+
+test('campaign chunks never cross chapter boundaries', () => {
+  const chunks = createCampaignChunks('John');
+  equal(chunks[0], { id: 'John:1:1-3', book: 'John', chapter: 1, startVerse: 1, endVerse: 3 });
+  equal(chunks.filter(chunk => chunk.chapter === 1).at(-1)?.endVerse, 51);
+  equal(chunks.some((chunk, index) => index > 0 && chunk.chapter !== chunks[index - 1]?.chapter && chunk.startVerse !== 1), false);
+});
+
+test('campaign stars use researched speed and accuracy thresholds', () => {
+  equal(starsForWpm(24, 100), 0);
+  equal(starsForWpm(40, 100), 2);
+  equal(starsForWpm(100, 100), 5);
+  equal(starsForWpm(100, 89), 2);
+});
+
+test('campaign progress and next passage are deterministic', () => {
+  const chunks = createCampaignChunks('Obadiah');
+  const progress = { [chunks[0]!.id]: 3 };
+  equal(getBookProgress('Obadiah', progress).completed, 1);
+  equal(nextChunk(chunks[0]!), chunks[1]);
 });
 
 let failed = 0;

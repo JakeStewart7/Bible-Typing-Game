@@ -1,6 +1,6 @@
-type Stats = { time: number; wpm: number; accuracy: number; progress: number };
+import type { GameStats } from '../game/stats';
 
-export function renderStats(container: HTMLElement, stats: Stats) {
+export function renderStats(container: HTMLElement, stats: GameStats): void {
   const items = [
     ['⚡', stats.wpm, 'WPM'],
     ['◎', `${stats.accuracy}%`, 'Accuracy'],
