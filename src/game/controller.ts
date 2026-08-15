@@ -1,4 +1,5 @@
-import { Game, sanitizeText } from './state';
+import { sanitizeText } from './state';
+import type { Game } from './state';
 import { handleInput } from './input';
 import { renderText, updateCaretPosition } from '../ui/renderer';
 import { renderTypedBar } from '../ui/typedBar';
@@ -6,7 +7,15 @@ import { renderStats } from '../ui/hud';
 import { calculateStats } from './stats';
 import { fetchChapter, fetchRange } from '../bible-api';
 import { playComplete, playKey } from '../audio/effects';
-import { advanceEnemy, buyUpgrade, completeDefense, createDefenseState, DefenseState, typeCharacter, upgradeCost, UpgradeId } from './minigame';
+import { advanceEnemy, buyUpgrade, completeDefense, createDefenseState, typeCharacter } from './minigame';
+import type { DefenseState, UpgradeId } from './minigame';
+import { isChapterComplete, nextChunk, starsForWpm } from '../campaign';
+import type { CampaignChunk, CampaignProgress } from '../campaign';
+import { createCampaignChunks } from '../campaign';
+import { MODE_BONUSES, MODE_LABELS, parseGameMode } from './modes';
+import { readProfile, recordSession } from '../profile';
+import { renderProfile } from '../ui/profile-view';
+import { createDefenseView } from '../ui/defense-view';
 
 type Controls = {
   hudEl: HTMLElement; textEl: HTMLElement; inputEl: HTMLInputElement; typedBarEl: HTMLElement;
@@ -39,66 +48,21 @@ export function initGameControllers(game: Game, controls: Controls) {
   let defenseFrame = 0;
   let previousFrame = performance.now();
   let defenseTimer = 0;
-  const enemyElements = new Map<number, HTMLElement>();
-  const projectileElements = new Map<number, HTMLElement>();
+  const defenseView = createDefenseView({
+    faith: faithCountEl, fortress: fortressHealthEl, wave: waveCountEl,
+    defeated: defeatedCountEl, path: battlePathEl, message: battleMessageEl
+  });
+  let campaignChunk: CampaignChunk | null = null;
+  let campaignHooks: {
+    save: (chunk: CampaignChunk, stars: number) => void;
+    progress: () => CampaignProgress;
+    celebrateBook: (book: string) => void;
+    returnToMenu: (book: string) => void;
+    startNext: (chunk: CampaignChunk) => void;
+  } | null = null;
 
   function renderDefense() {
-    faithCountEl.textContent = String(defense.faith);
-    fortressHealthEl.textContent = String(defense.fortress);
-    waveCountEl.textContent = String(defense.wave);
-    defeatedCountEl.textContent = String(defense.enemiesDefeated);
-    const path = battlePathEl;
-    const activeEnemyIds = new Set(defense.enemies.map(enemy => enemy.id));
-    const activeProjectileIds = new Set(defense.projectiles.map(projectile => projectile.id));
-    enemyElements.forEach((element, id) => {
-      if (!activeEnemyIds.has(id)) {
-        element.remove();
-        enemyElements.delete(id);
-      }
-    });
-    projectileElements.forEach((element, id) => {
-      if (!activeProjectileIds.has(id)) {
-        element.remove();
-        projectileElements.delete(id);
-      }
-    });
-    defense.enemies.forEach(enemy => {
-      let element = enemyElements.get(enemy.id);
-      if (!element) {
-        element = document.createElement('div');
-        element.className = 'enemy';
-        element.innerHTML = '<span>☁</span><div class="enemy-health"><i></i></div>';
-        path.appendChild(element);
-        enemyElements.set(enemy.id, element);
-      }
-      element.style.left = `${enemy.position}%`;
-      element.style.bottom = `${18 + ((enemy.id % 3) - 1) * 2}px`;
-      const health = element.querySelector<HTMLElement>('.enemy-health i');
-      if (health) health.style.width = `${enemy.health / enemy.maxHealth * 100}%`;
-    });
-    defense.projectiles.forEach(projectile => {
-      let element = projectileElements.get(projectile.id);
-      if (!element) {
-        element = document.createElement('i');
-        element.className = 'light-projectile';
-        path.appendChild(element);
-        projectileElements.set(projectile.id, element);
-      }
-      element.style.left = `${projectile.position}%`;
-      const travel = 94 - projectile.position;
-      element.style.bottom = `${30 + travel * Math.tan(projectile.angle * Math.PI / 180) * .22}px`;
-      element.style.transform = `translateX(-50%) rotate(${180 - projectile.angle}deg)`;
-    });
-    document.querySelectorAll<HTMLButtonElement>('[data-upgrade]').forEach(button => {
-      const id = button.dataset.upgrade as UpgradeId;
-      const level = defense[`${id}Level` as 'powerLevel' | 'wardLevel' | 'slowLevel'];
-      const cost = upgradeCost(defense, id);
-      button.disabled = defense.faith < cost || defense.status !== 'playing';
-      button.querySelector(`[data-cost="${id}"]`)!.textContent = String(cost);
-      button.querySelector(`[data-level="${id}"]`)!.textContent = `Lv ${level}`;
-    });
-    if (defense.status === 'lost') battleMessageEl.textContent = 'The fortress fell. Restart the passage to rally again!';
-    else if (defense.status === 'won') battleMessageEl.textContent = 'Victory! The Word held the line.';
+    defenseView.render(defense);
   }
 
   function defenseLoop(now: number) {
@@ -117,27 +81,16 @@ export function initGameControllers(game: Game, controls: Controls) {
   }
 
   function updateProfile() {
-    const xp = Number(localStorage.getItem('verseTypeXp') || 0);
-    const level = Math.floor(xp / 500) + 1;
-    const streak = Number(localStorage.getItem('verseTypeStreak') || 0);
-    levelLabelEl.textContent = `Level ${level}`;
-    xpLabelEl.textContent = `${xp} XP`;
-    xpFillEl.style.width = `${(xp % 500) / 5}%`;
-    personalBestEl.textContent = `Personal best: ${localStorage.getItem('verseTypeBest') || 0} WPM`;
-    streakEl.textContent = `${streak} day${streak === 1 ? '' : 's'} streak`;
+    renderProfile({
+      level: levelLabelEl, xp: xpLabelEl, xpFill: xpFillEl,
+      bestWpm: personalBestEl, streak: streakEl
+    }, readProfile());
   }
 
   function setMode() {
-    const mode = gameModeEl.value;
+    const mode = parseGameMode(gameModeEl.value);
     typingCardEl.dataset.mode = mode;
-    const labels: Record<string, string> = {
-      practice: '🌿 Relaxed practice',
-      precision: '🎯 Precision mode: mistakes glow red while you keep moving',
-      sprint: '⚡ Sprint mode: finish before the clock hits 1:00',
-      memory: '🧠 Memory mode: completed words fade away'
-      ,defense: '🛡 Scripture Defense: type to repel the advancing shadows'
-    };
-    challengeBannerEl.textContent = labels[mode];
+    challengeBannerEl.textContent = MODE_LABELS[mode];
     defenseGameEl.classList.toggle('is-hidden', mode !== 'defense');
     renderDefense();
   }
@@ -158,10 +111,7 @@ export function initGameControllers(game: Game, controls: Controls) {
     game.completedAt = undefined;
     hasCompleted = false;
     defense = createDefenseState();
-    enemyElements.forEach(element => element.remove());
-    projectileElements.forEach(element => element.remove());
-    enemyElements.clear();
-    projectileElements.clear();
+    defenseView.reset();
     window.clearTimeout(sprintTimeout);
     inputEl.value = '';
     inputEl.disabled = false;
@@ -186,22 +136,23 @@ export function initGameControllers(game: Game, controls: Controls) {
       [`${stats.accuracy}%`, 'Accuracy'],
       [`${stats.time}s`, 'Time']
     ].map(([value, label]) => `<div class="result-stat"><strong>${value}</strong><span>${label}</span></div>`).join('');
-    const modeBonus: Record<string, number> = { practice: 1, precision: 1.4, sprint: 1.6, memory: 1.8, defense: 2 };
-    const earnedXp = Math.max(25, Math.round((stats.wpm + stats.accuracy + game.text.length / 10) * modeBonus[gameModeEl.value]));
-    localStorage.setItem('verseTypeXp', String(Number(localStorage.getItem('verseTypeXp') || 0) + earnedXp));
+    const mode = parseGameMode(gameModeEl.value);
+    const earnedXp = Math.max(25, Math.round((stats.wpm + stats.accuracy + game.text.length / 10) * MODE_BONUSES[mode]));
     rewardMessageEl.textContent = `✦ +${earnedXp} XP · ${gameModeEl.options[gameModeEl.selectedIndex].text.split(' — ')[0]} completed`;
+    if (campaignChunk && campaignHooks) {
+      const stars = starsForWpm(stats.wpm, stats.accuracy);
+      campaignHooks.save(campaignChunk, Math.max(1, stars));
+      rewardMessageEl.textContent = `${'★'.repeat(Math.max(1, stars))}${'☆'.repeat(5 - Math.max(1, stars))} · ${campaignChunk.book} ${campaignChunk.chapter}:${campaignChunk.startVerse}–${campaignChunk.endVerse}`;
+      const completedChapter = isChapterComplete(campaignChunk, campaignHooks.progress());
+      const following = nextChunk(campaignChunk);
+      const completedBook = !following && getBookProgressComplete(campaignChunk.book, campaignHooks.progress());
+      if (completedBook) campaignHooks.celebrateBook(campaignChunk.book);
+      const nextButton = document.getElementById('next-passage');
+      if (nextButton) nextButton.textContent = completedChapter || !following ? 'Back to campaign' : 'Next passage';
+    }
     resultsEl.classList.remove('is-hidden');
     playComplete();
-    const best = Number(localStorage.getItem('verseTypeBest') || 0);
-    if (stats.wpm > best) localStorage.setItem('verseTypeBest', String(stats.wpm));
-    const today = new Date();
-    const previous = localStorage.getItem('verseTypeLastPlayed');
-    const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
-    const currentStreak = Number(localStorage.getItem('verseTypeStreak') || 0);
-    if (previous !== today.toDateString()) {
-      localStorage.setItem('verseTypeStreak', String(previous === yesterday.toDateString() ? currentStreak + 1 : 1));
-    }
-    localStorage.setItem('verseTypeLastPlayed', today.toDateString());
+    recordSession(stats.wpm, earnedXp);
     updateProfile();
   }
 
@@ -235,6 +186,14 @@ export function initGameControllers(game: Game, controls: Controls) {
   document.getElementById('restart')?.addEventListener('click', restartGame);
   document.getElementById('try-again')?.addEventListener('click', restartGame);
   document.getElementById('next-passage')?.addEventListener('click', () => {
+    if (campaignChunk && campaignHooks) {
+      const completed = campaignChunk;
+      const following = nextChunk(completed);
+      if (following && following.chapter === completed.chapter) campaignHooks.startNext(following);
+      else campaignHooks.returnToMenu(completed.book);
+      resultsEl.classList.add('is-hidden');
+      return;
+    }
     resultsEl.classList.add('is-hidden');
     document.querySelector('.passage-panel')?.scrollIntoView({ behavior: 'smooth' });
   });
@@ -307,9 +266,24 @@ export function initGameControllers(game: Game, controls: Controls) {
 
   return {
     restartGame,
+    startCampaignChunk: (chunk: CampaignChunk, text: string) => {
+      campaignChunk = chunk;
+      game.text = sanitizeText(text);
+      game.chars = game.text.split('');
+      passageTitleEl.textContent = `${chunk.book} ${chunk.chapter}:${chunk.startVerse}–${chunk.endVerse}`;
+      gameModeEl.value = 'practice';
+      setMode();
+      restartGame();
+    },
+    setCampaignHooks: (hooks: NonNullable<typeof campaignHooks>) => { campaignHooks = hooks; },
+    leaveCampaign: () => { campaignChunk = null; },
     stop: () => {
       cancelAnimationFrame(defenseFrame);
       clearInterval(defenseTimer);
     }
   };
+}
+
+function getBookProgressComplete(book: string, progress: CampaignProgress): boolean {
+  return createCampaignChunks(book).every(chunk => (progress[chunk.id] ?? 0) > 0);
 }

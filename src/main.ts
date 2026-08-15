@@ -2,11 +2,15 @@
 // and delegates behavior. Avoid adding business logic here — put it in focused modules.
 
 import './styles/main.css';
-import { createGame, Game } from './game/state';
+import { createGame } from './game/state';
+import type { Game } from './game/state';
 import { initControls } from './ui/controls';
 import { initGameControllers } from './game/controller';
 import { setupMusic } from './audio/music';
 import { toggleEffects } from './audio/effects';
+import { createCampaignController } from './campaign-controller';
+import type { CampaignChunk } from './campaign';
+import { fetchRange } from './bible-api';
 
 import trackDetermination from '../assets/music/determination.mp3';
 import trackApple from '../assets/music/apple_cider.ogg';
@@ -23,6 +27,9 @@ const {
   levelLabelEl, xpLabelEl, xpFillEl, personalBestEl,
   defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
   battlePathEl, battleMessageEl,
+  campaignScreenEl, campaignContentEl, campaignBackEl, campaignBreadcrumbEl,
+  campaignTotalStarsEl, campaignTotalProgressEl, campaignDevToolsEl,
+  sidebarCampaignProgressEl, celebrationEl,
   populateBooks, populateChapters, populateVerses, constrainEndVerses
 } = initControls();
 
@@ -32,7 +39,7 @@ const {
 export const game: Game = createGame('Typing games help improve speed and accuracy through practice and focus.');
 
 // Wire controllers (moves logic out of main.ts into game/controller.ts)
-initGameControllers(game, {
+const gameController = initGameControllers(game, {
   hudEl, textEl, inputEl, typedBarEl,
   translationEl, bookEl, chapterEl, startVerseEl, endVerseEl, loadBtn,
   statusEl, passageTitleEl, resultsEl, resultStatsEl, progressFillEl,
@@ -45,24 +52,50 @@ initGameControllers(game, {
 
 setupMusic(document.getElementById('music-slot'));
 
-function showPractice() {
-  document.getElementById('welcome')?.classList.add('is-hidden');
+let startCampaignChunk: (chunk: CampaignChunk, text: string) => void = () => undefined;
+const campaignController = createCampaignController({
+  contentEl: campaignContentEl, backEl: campaignBackEl, breadcrumbEl: campaignBreadcrumbEl,
+  totalStarsEl: campaignTotalStarsEl, totalProgressEl: campaignTotalProgressEl,
+  devToolsEl: campaignDevToolsEl, sidebarProgressEl: sidebarCampaignProgressEl, celebrationEl
+}, (chunk, text) => startCampaignChunk(chunk, text));
+
+startCampaignChunk = (chunk, text) => {
+  showWorkspace('practice');
+  gameController.startCampaignChunk(chunk, text);
+};
+gameController.setCampaignHooks({
+  save: campaignController.saveChunk,
+  progress: campaignController.getProgress,
+  celebrateBook: campaignController.celebrateBook,
+  returnToMenu: book => {
+    showWorkspace('campaign');
+    campaignController.renderBook(book);
+  },
+  startNext: chunk => {
+    void fetchCampaignChunk(chunk);
+  }
+});
+
+async function fetchCampaignChunk(chunk: CampaignChunk): Promise<void> {
+  const data = await fetchRange(chunk.book, chunk.chapter, chunk.startVerse, chunk.endVerse, 'kjv', false);
+  startCampaignChunk(chunk, data.verses?.map(verse => verse.text).join(' ') ?? '');
+}
+
+function showWorkspace(workspace: string): void {
   document.getElementById('game-screen')?.classList.remove('is-hidden');
-  document.getElementById('home-nav')?.classList.remove('active');
-  document.getElementById('practice-nav')?.classList.add('active');
-  document.getElementById('input')?.focus();
+  campaignScreenEl.classList.toggle('is-hidden', workspace !== 'campaign');
+  document.getElementById('game-screen')?.classList.toggle('is-hidden', workspace === 'campaign');
+  document.querySelectorAll('.mode-nav').forEach(button => button.classList.toggle('active', (button as HTMLElement).dataset.workspace === workspace));
+  if (workspace === 'defense') {
+    const mode = document.getElementById('game-mode') as HTMLSelectElement | null;
+    if (mode) { mode.value = 'defense'; mode.dispatchEvent(new Event('change')); }
+  } else if (workspace === 'practice') {
+    gameController.leaveCampaign();
+  } else campaignController.renderBooks();
 }
 
-function showHome() {
-  document.getElementById('game-screen')?.classList.add('is-hidden');
-  document.getElementById('welcome')?.classList.remove('is-hidden');
-  document.getElementById('practice-nav')?.classList.remove('active');
-  document.getElementById('home-nav')?.classList.add('active');
-}
-
-document.getElementById('begin-button')?.addEventListener('click', showPractice);
-document.getElementById('practice-nav')?.addEventListener('click', showPractice);
-document.getElementById('home-nav')?.addEventListener('click', showHome);
+document.querySelectorAll<HTMLElement>('.mode-nav').forEach(button => button.addEventListener('click', () => showWorkspace(button.dataset.workspace ?? 'practice')));
+document.getElementById('sidebar-toggle')?.addEventListener('click', () => document.getElementById('mode-sidebar')?.classList.toggle('collapsed'));
 
 document.getElementById('sound-toggle')?.addEventListener('click', event => {
   const button = event.currentTarget as HTMLButtonElement;

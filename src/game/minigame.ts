@@ -11,8 +11,16 @@ export type DefenseState = {
 };
 
 export const UPGRADE_COSTS: Record<UpgradeId, number> = { power: 35, ward: 45, slow: 55 };
-export function upgradeCost(state: DefenseState, id: UpgradeId) {
-  return UPGRADE_COSTS[id] + state[`${id}Level` as 'powerLevel' | 'wardLevel' | 'slowLevel'] * 20;
+const UPGRADE_LEVEL_KEYS = {
+  power: 'powerLevel',
+  ward: 'wardLevel',
+  slow: 'slowLevel'
+} as const satisfies Record<UpgradeId, keyof DefenseState>;
+const PROJECTILE_ANGLES = [-7, 4, -2, 8, 1, -5, 6, -1] as const;
+
+export function upgradeCost(state: DefenseState, id: UpgradeId): number {
+  const level = state[UPGRADE_LEVEL_KEYS[id]];
+  return UPGRADE_COSTS[id] + (typeof level === 'number' ? level : 0) * 20;
 }
 
 export function createDefenseState(): DefenseState {
@@ -25,12 +33,11 @@ export function createDefenseState(): DefenseState {
   };
 }
 
-export function typeCharacter(state: DefenseState, correct: boolean) {
+export function typeCharacter(state: DefenseState, correct: boolean): DefenseState {
   if (state.status !== 'playing') return state;
   if (correct) {
     state.faith += 1 + Math.floor(state.wave / 3);
-    const anglePattern = [-7, 4, -2, 8, 1, -5, 6, -1];
-    const angle = anglePattern[(state.nextProjectileId - 1) % anglePattern.length];
+    const angle = PROJECTILE_ANGLES[(state.nextProjectileId - 1) % PROJECTILE_ANGLES.length] ?? 0;
     state.projectiles.push({ id: state.nextProjectileId++, position: 94, angle, damage: 1 + state.powerLevel });
   } else {
     state.faith = Math.max(0, state.faith - 2);
@@ -39,7 +46,7 @@ export function typeCharacter(state: DefenseState, correct: boolean) {
   return state;
 }
 
-export function advanceEnemy(state: DefenseState, deltaSeconds: number) {
+export function advanceEnemy(state: DefenseState, deltaSeconds: number): DefenseState {
   if (state.status !== 'playing') return state;
   const enemySpeed = Math.max(2.4, 6.2 + state.wave * .35 - state.slowLevel * 1.15);
   state.spawnTimer -= deltaSeconds;
@@ -81,15 +88,16 @@ export function advanceEnemy(state: DefenseState, deltaSeconds: number) {
   return state;
 }
 
-export function buyUpgrade(state: DefenseState, id: UpgradeId) {
+export function buyUpgrade(state: DefenseState, id: UpgradeId): boolean {
   const cost = upgradeCost(state, id);
   if (state.faith < cost || state.status !== 'playing') return false;
   state.faith -= cost;
-  state[`${id}Level` as 'powerLevel' | 'wardLevel' | 'slowLevel']++;
+  const levelKey = UPGRADE_LEVEL_KEYS[id];
+  state[levelKey]++;
   return true;
 }
 
-export function completeDefense(state: DefenseState) {
+export function completeDefense(state: DefenseState): void {
   if (state.status === 'playing') {
     state.status = 'won';
     state.faith += 50 + state.fortress;

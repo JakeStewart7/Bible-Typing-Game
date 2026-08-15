@@ -19,7 +19,7 @@ export function sanitizeText(raw: unknown): string {
   s = s.replace(/\s+/g, ' ').trim();
   try {
     s = s.normalize('NFKD').replace(/\p{M}/gu, '');
-  } catch (e) {
+  } catch {
     // ignore
   }
   s = s.replace(/[\u0000-\u001F\u007F]/g, '');
@@ -34,6 +34,5 @@ export function createGame(text: unknown): Game {
     typed: [],
     errors: 0,
     startTime: null,
-    completedAt: undefined,
   };
 }

@@ -1,6 +1,7 @@
 import { BOOKS, getChapterCount } from '../bible-data';
 import { chooseVerseRange, filterEndVerses } from '../passage-selector';
 import { getVerseCount } from '../verse-counts';
+import { requireElement } from '../shared/dom';
 
 export function initControls() {
   const app = document.getElementById('app') as HTMLElement;
@@ -16,49 +17,26 @@ export function initControls() {
           <span class="brand-mark">✦</span>
           <span>Verse<span>Type</span></span>
         </a>
-        <div class="desktop-nav">
-          <button id="home-nav" class="nav-item active">⌂ Home</button>
-          <button id="practice-nav" class="nav-item">⌨ Practice</button>
-          <span class="nav-item disabled">◫ Library</span>
-        </div>
+        <button id="sidebar-toggle" class="icon-btn sidebar-toggle" aria-label="Toggle navigation">☰</button>
         <div class="top-actions">
           <button id="sound-toggle" class="icon-btn" aria-label="Toggle sound effects">🔊</button>
           <div id="music-slot"></div>
         </div>
       </nav>
 
-      <section id="welcome" class="welcome">
-        <div class="welcome-workspace">
-          <section class="welcome-hero">
-            <div class="eyebrow">Scripture at your fingertips</div>
-            <h1>Type the Word.<br><span>Keep it in your heart.</span></h1>
-            <p>Build speed, focus, and familiarity with Scripture through a calm, rewarding typing experience.</p>
-            <button id="begin-button" class="primary-btn large">Start a session <span>→</span></button>
-          </section>
-          <aside class="welcome-sidebar">
-            <div class="daily-card">
-              <div class="daily-icon">☀</div>
-              <div>
-                <small>Verse of the day</small>
-                <strong>“For God so loved the world...”</strong>
-                <span>John 3:16</span>
-              </div>
-            </div>
-            <div class="desktop-quick-card">
-              <small>QUICK START</small>
-              <strong>Continue with John 3</strong>
-              <span>Practice · WEB · 5 verses</span>
-            </div>
-          </div>
-          </aside>
-        </div>
-      </section>
-
-      <section id="game-screen" class="game-screen is-hidden">
+      <div class="workspace-shell">
+        <aside id="mode-sidebar" class="mode-sidebar">
+          <div class="sidebar-heading">Modes</div>
+          <button class="mode-nav active" data-workspace="practice"><span>⌨</span><div><strong>Practice</strong><small>Choose any passage</small></div></button>
+          <button class="mode-nav" data-workspace="defense"><span>🛡</span><div><strong>Defense</strong><small>Repel the shadows</small></div></button>
+          <button class="mode-nav" data-workspace="campaign"><span>✦</span><div><strong>Campaign</strong><small>Journey through Scripture</small></div></button>
+          <div class="sidebar-profile"><strong id="sidebar-campaign-progress">0 / 0 chunks</strong><small>Campaign journey</small></div>
+        </aside>
+      <section id="game-screen" class="game-screen">
         <header class="game-intro">
           <div>
             <div class="eyebrow">Practice session</div>
-            <h2>Choose your passage</h2>
+            <h2 id="workspace-title">Choose your passage</h2>
           </div>
           <div class="streak-pill">🔥 <span id="streak">0 day streak</span></div>
         </header>
@@ -119,6 +97,26 @@ export function initControls() {
                 <button data-upgrade="slow"><span>❄</span><div><strong>Still Waters</strong><small>Slow approaching foes · <b data-cost="slow">55</b> faith</small></div><i data-level="slow">Lv 0</i></button>
               </div>
             </section>
+            <section id="campaign-screen" class="campaign-screen is-hidden">
+              <header class="campaign-header">
+                <div><div class="eyebrow">The Scripture Journey</div><h2>Campaign</h2><p>Complete every passage, chapter, and book—one comfortable session at a time.</p></div>
+                <div class="campaign-summary"><strong id="campaign-total-stars">0 ★</strong><span id="campaign-total-progress">0 of 0 chunks</span></div>
+              </header>
+              <div class="campaign-toolbar">
+                <button id="campaign-back" class="secondary-btn is-hidden">← All books</button>
+                <div id="campaign-breadcrumb">66 books · 1,189 chapters</div>
+                <button id="dev-tools-toggle" class="ghost-btn">Development tools</button>
+              </div>
+              <div id="campaign-dev-tools" class="campaign-dev-tools is-hidden">
+                <strong>Campaign development tools</strong>
+                <button data-dev-action="complete-book">Complete selected book</button>
+                <button data-dev-action="reset-book">Reset selected book</button>
+                <button data-dev-action="complete-all">Complete all books</button>
+                <button data-dev-action="reset-all">Reset all progress</button>
+              </div>
+              <div id="campaign-content" class="campaign-content"></div>
+            </section>
+            </div>
             <div id="hud" class="hud"></div>
             <div id="challenge-banner" class="challenge-banner">🌿 Relaxed practice</div>
             <article id="typing-card" class="typing-card card">
@@ -150,18 +148,18 @@ export function initControls() {
             <button id="try-again" class="secondary-btn">Try again</button>
             <button id="next-passage" class="primary-btn">Choose another</button>
           </div>
+          <div id="celebration" class="celebration is-hidden" aria-live="polite"></div>
         </section>
       </div>
     </main>`;
 
-  const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-  const bookEl = byId<HTMLSelectElement>('book');
-  const chapterEl = byId<HTMLSelectElement>('chapter');
-  const translationEl = byId<HTMLSelectElement>('translation');
-  const startVerseEl = byId<HTMLSelectElement>('start-verse');
-  const endVerseEl = byId<HTMLSelectElement>('end-verse');
-  const statusEl = byId<HTMLElement>('status');
-  const loadBtn = byId<HTMLButtonElement>('load-passage');
+  const bookEl = requireElement('book', HTMLSelectElement);
+  const chapterEl = requireElement('chapter', HTMLSelectElement);
+  const translationEl = requireElement('translation', HTMLSelectElement);
+  const startVerseEl = requireElement('start-verse', HTMLSelectElement);
+  const endVerseEl = requireElement('end-verse', HTMLSelectElement);
+  const statusEl = requireElement('status', HTMLElement);
+  const loadBtn = requireElement('load-passage', HTMLButtonElement);
 
   function populateBooks() {
     bookEl.innerHTML = BOOKS.map(book => `<option value="${book}">${book}</option>`).join('');
@@ -203,21 +201,30 @@ export function initControls() {
   }
 
   return {
-    hudEl: byId<HTMLElement>('hud'), textEl: byId<HTMLElement>('text'),
-    inputEl: byId<HTMLInputElement>('input'), typedBarEl: byId<HTMLElement>('typed-bar'),
+    hudEl: requireElement('hud', HTMLElement), textEl: requireElement('text', HTMLElement),
+    inputEl: requireElement('input', HTMLInputElement), typedBarEl: requireElement('typed-bar', HTMLElement),
     translationEl, bookEl, chapterEl, startVerseEl, endVerseEl,
     loadBtn, statusEl,
-    passageTitleEl: byId<HTMLElement>('passage-title'), resultsEl: byId<HTMLElement>('results'),
-    resultStatsEl: byId<HTMLElement>('result-stats'), progressFillEl: byId<HTMLElement>('progress-fill'),
-    gameModeEl: byId<HTMLSelectElement>('game-mode'), challengeBannerEl: byId<HTMLElement>('challenge-banner'),
-    typingCardEl: byId<HTMLElement>('typing-card'), rewardMessageEl: byId<HTMLElement>('reward-message'),
-    streakEl: byId<HTMLElement>('streak'), levelLabelEl: byId<HTMLElement>('level-label'),
-    xpLabelEl: byId<HTMLElement>('xp-label'), xpFillEl: byId<HTMLElement>('xp-fill'),
-    personalBestEl: byId<HTMLElement>('personal-best'),
-    defenseGameEl: byId<HTMLElement>('defense-game'), faithCountEl: byId<HTMLElement>('faith-count'),
-    fortressHealthEl: byId<HTMLElement>('fortress-health'), waveCountEl: byId<HTMLElement>('wave-count'),
-    defeatedCountEl: byId<HTMLElement>('defeated-count'), battlePathEl: byId<HTMLElement>('battle-path'),
-    battleMessageEl: byId<HTMLElement>('battle-message'),
+    passageTitleEl: requireElement('passage-title', HTMLElement), resultsEl: requireElement('results', HTMLElement),
+    resultStatsEl: requireElement('result-stats', HTMLElement), progressFillEl: requireElement('progress-fill', HTMLElement),
+    gameModeEl: requireElement('game-mode', HTMLSelectElement), challengeBannerEl: requireElement('challenge-banner', HTMLElement),
+    typingCardEl: requireElement('typing-card', HTMLElement), rewardMessageEl: requireElement('reward-message', HTMLElement),
+    streakEl: requireElement('streak', HTMLElement), levelLabelEl: requireElement('level-label', HTMLElement),
+    xpLabelEl: requireElement('xp-label', HTMLElement), xpFillEl: requireElement('xp-fill', HTMLElement),
+    personalBestEl: requireElement('personal-best', HTMLElement),
+    defenseGameEl: requireElement('defense-game', HTMLElement), faithCountEl: requireElement('faith-count', HTMLElement),
+    fortressHealthEl: requireElement('fortress-health', HTMLElement), waveCountEl: requireElement('wave-count', HTMLElement),
+    defeatedCountEl: requireElement('defeated-count', HTMLElement), battlePathEl: requireElement('battle-path', HTMLElement),
+    battleMessageEl: requireElement('battle-message', HTMLElement),
+    campaignScreenEl: requireElement('campaign-screen', HTMLElement),
+    campaignContentEl: requireElement('campaign-content', HTMLElement),
+    campaignBackEl: requireElement('campaign-back', HTMLButtonElement),
+    campaignBreadcrumbEl: requireElement('campaign-breadcrumb', HTMLElement),
+    campaignTotalStarsEl: requireElement('campaign-total-stars', HTMLElement),
+    campaignTotalProgressEl: requireElement('campaign-total-progress', HTMLElement),
+    campaignDevToolsEl: requireElement('campaign-dev-tools', HTMLElement),
+    sidebarCampaignProgressEl: requireElement('sidebar-campaign-progress', HTMLElement),
+    celebrationEl: requireElement('celebration', HTMLElement),
     populateBooks, populateChapters, populateVerses, constrainEndVerses
   };
 }

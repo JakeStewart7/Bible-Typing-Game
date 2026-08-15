@@ -100,7 +100,7 @@ export async function fetchChapter(book: string, chapter: number, translation = 
   if (translation in STATIC_TRANSLATIONS) return getStaticPassage(book, chapter, translation);
   const q = encodeURIComponent(`${book} ${chapter}`);
   const candidates = allowFallback ? [...new Set([translation, 'kjv', 'web'])] : [translation];
-  let lastErr: any;
+  let lastError: unknown;
   for (const t of candidates) {
     try {
       const data = await tryFetch(q, t);
@@ -108,10 +108,10 @@ export async function fetchChapter(book: string, chapter: number, translation = 
       data._fallback = t !== translation;
       return data;
     } catch (err) {
-      lastErr = err;
+      lastError = err;
     }
   }
-  throw lastErr || new Error('Failed to fetch chapter');
+  throw lastError instanceof Error ? lastError : new Error('Failed to fetch chapter');
 }
 
 export async function fetchRange(book: string, chapter: number, start: number, end: number, translation = 'kjv', allowFallback = true) {
@@ -120,7 +120,7 @@ export async function fetchRange(book: string, chapter: number, start: number, e
   if (translation in STATIC_TRANSLATIONS) return getStaticPassage(book, chapter, translation, start, end);
   const q = encodeURIComponent(`${book} ${chapter}:${start}-${end}`);
   const candidates = allowFallback ? [...new Set([translation, 'kjv', 'web'])] : [translation];
-  let lastErr: any;
+  let lastError: unknown;
   for (const t of candidates) {
     try {
       const data = await tryFetch(q, t);
@@ -128,8 +128,8 @@ export async function fetchRange(book: string, chapter: number, start: number, e
       data._fallback = t !== translation;
       return data;
     } catch (err) {
-      lastErr = err;
+      lastError = err;
     }
   }
-  throw lastErr || new Error('Failed to fetch range');
+  throw lastError instanceof Error ? lastError : new Error('Failed to fetch range');
 }
