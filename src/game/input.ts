@@ -4,18 +4,30 @@ export function handleInput(game: Game, inputValue: string): void {
   if (!game.startTime) game.startTime = Date.now();
 
   const chars = inputValue.slice(0, game.chars.length).split('');
-  game.typed = [];
-  game.errors = 0;
+  const previousLength = game.typed.length;
 
-  for (let i = 0; i < chars.length; i++) {
-    const expectedChar = game.chars[i] ?? '';
-    const typedChar = chars[i] ?? '';
-
-    if (typedChar === expectedChar) {
-      game.typed.push(typedChar);
-    } else {
-      game.typed.push(typedChar);
-      game.errors++;
+  if (game.blockedAccuracyIndex !== null) {
+    const index = game.blockedAccuracyIndex;
+    if (chars[index] === game.chars[index]) {
+      game.blockedAccuracyIndex = null;
+      game.accuracyCursor = index + 1;
     }
   }
+
+  while (game.blockedAccuracyIndex === null && game.accuracyCursor < chars.length) {
+    const index = game.accuracyCursor;
+    const correct = chars[index] === game.chars[index];
+    game.attempted[index] = true;
+    game.firstAttemptCorrect[index] = correct;
+    game.accuracyTotal++;
+    if (correct) {
+      game.accuracyCorrect++;
+      game.accuracyCursor++;
+    } else {
+      game.blockedAccuracyIndex = index;
+    }
+  }
+
+  game.typed = chars;
+  game.errors = game.accuracyTotal - game.accuracyCorrect;
 }

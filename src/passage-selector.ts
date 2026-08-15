@@ -39,3 +39,11 @@ export function isValidPassageSelection(selection: PassageSelection, verses: rea
 export function filterEndVerses(verses: readonly number[], start: number): number[] {
   return verses.filter(verse => verse >= start);
 }
+
+export function chooseRandomVerseRange(verseCount: number, length: number, random = Math.random): VerseRange {
+  if (verseCount <= 0 || length <= 0) return { start: 0, end: 0 };
+  const rangeLength = Math.min(verseCount, length);
+  const lastStart = verseCount - rangeLength + 1;
+  const start = Math.floor(random() * lastStart) + 1;
+  return { start, end: start + rangeLength - 1 };
+}

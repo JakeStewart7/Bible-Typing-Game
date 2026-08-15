@@ -7,30 +7,46 @@ export function initControls() {
   const app = document.getElementById('app') as HTMLElement;
   app.innerHTML = `
     <main class="app-shell">
-      <div class="titlebar">
-        <span class="titlebar-title">VerseType</span>
-        <span class="titlebar-context">Bible typing studio</span>
-        <div class="window-dots" aria-hidden="true"><i></i><i></i><i></i></div>
-      </div>
       <nav class="topbar">
         <a class="brand" href="#" aria-label="Verse Type home">
           <span class="brand-mark">✦</span>
           <span>Verse<span>Type</span></span>
         </a>
-        <button id="sidebar-toggle" class="icon-btn sidebar-toggle" aria-label="Toggle navigation">☰</button>
+        <div></div>
         <div class="top-actions">
-          <button id="sound-toggle" class="icon-btn" aria-label="Toggle sound effects">🔊</button>
-          <div id="music-slot"></div>
+          <div class="header-profile">
+            <div class="level-summary"><strong id="level-label">Level 1</strong><span id="xp-label" class="is-hidden"></span></div>
+            <div class="xp-track"><div id="xp-fill"></div></div>
+            <div class="speed-summary">
+              <small id="personal-best"><span>Best</span><strong>0 WPM</strong></small>
+              <small id="lifetime-wpm"><span>Lifetime</span><strong>0 WPM</strong></small>
+              <small id="recent-wpm"><span>Recent</span><strong>0 WPM</strong></small>
+            </div>
+          </div>
+          <div class="settings">
+            <button id="settings-toggle" class="settings-toggle" type="button" aria-label="Settings" aria-expanded="false" aria-controls="settings-menu">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.8 7.8 0 0 0 0-3l2-1.5-2-3.4-2.4 1a8 8 0 0 0-2.6-1.5L14.1 2h-4.2l-.4 3.1A8 8 0 0 0 7 6.6l-2.4-1-2 3.4 2 1.5a7.8 7.8 0 0 0 0 3l-2 1.5 2 3.4 2.4-1a8 8 0 0 0 2.6 1.5l.4 3.1h4.2l.4-3.1a8 8 0 0 0 2.6-1.5l2.4 1 2-3.4-2.2-1.5Z"/></svg>
+            </button>
+            <div id="settings-menu" class="settings-menu is-hidden">
+              <header><div><small>Preferences</small><strong>Audio settings</strong></div></header>
+              <div class="setting-row">
+                <div><strong>Sound effects</strong><small>Typing and completion feedback</small></div>
+                <button id="sound-toggle" class="sound-switch" aria-label="Toggle sound effects" aria-pressed="true"><i></i><span>On</span></button>
+              </div>
+              <div class="setting-row music-setting"><div><strong>Background music</strong><small>Playback and volume</small></div><div id="music-slot"></div></div>
+            </div>
+          </div>
         </div>
       </nav>
 
       <div class="workspace-shell">
-        <aside id="mode-sidebar" class="mode-sidebar">
+        <aside id="mode-sidebar" class="mode-sidebar" aria-label="Game modes">
+          <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Collapse navigation" aria-controls="mode-sidebar" aria-expanded="true"><span aria-hidden="true">‹</span><b>Hide menu</b></button>
           <div class="sidebar-heading">Modes</div>
-          <button class="mode-nav active" data-workspace="practice"><span>⌨</span><div><strong>Practice</strong><small>Choose any passage</small></div></button>
-          <button class="mode-nav" data-workspace="defense"><span>🛡</span><div><strong>Defense</strong><small>Repel the shadows</small></div></button>
-          <button class="mode-nav" data-workspace="campaign"><span>✦</span><div><strong>Campaign</strong><small>Journey through Scripture</small></div></button>
-          <div class="sidebar-profile"><strong id="sidebar-campaign-progress">0 / 0 chunks</strong><small>Campaign journey</small></div>
+          <button class="mode-nav active" data-workspace="practice" data-mode="practice"><span>⌨</span><div><strong>Practice</strong><small>Relaxed typing</small></div></button>
+          <button class="mode-nav" data-workspace="practice" data-mode="memory"><span>◫</span><div><strong>Memory</strong><small>Words fade away</small></div></button>
+          <button class="mode-nav" data-workspace="defense" data-mode="defense"><span>◇</span><div><strong>Defense</strong><small>Repel the shadows</small></div></button>
+          <button class="mode-nav" data-workspace="campaign"><span>✦</span><div><strong>Campaign</strong><small id="sidebar-campaign-progress">0 / 0 passages</small></div></button>
         </aside>
       <section id="game-screen" class="game-screen">
         <header class="game-intro">
@@ -38,43 +54,33 @@ export function initControls() {
             <div class="eyebrow">Practice session</div>
             <h2 id="workspace-title">Choose your passage</h2>
           </div>
-          <div class="streak-pill">🔥 <span id="streak">0 day streak</span></div>
         </header>
 
-        <div class="layout">
-          <aside class="passage-panel card">
-            <h3>Passage</h3>
-            <p class="panel-copy">Select any chapter and verse range to practice.</p>
-            <label for="translation">Translation</label>
-            <select id="translation">
-              <option value="kjv">KJV · King James Version</option>
-              <option value="asv">ASV · American Standard Version</option>
-            </select>
-            <div class="field-grid">
+        <div class="practice-workspace">
+          <section class="passage-panel card">
+            <div class="passage-panel-heading"><h3>Passage</h3><p>Select a reference to practice.</p></div>
+            <div class="passage-fields">
+              <div class="translation-field"><label for="translation">Translation</label><select id="translation">
+                <option value="kjv">KJV · King James Version</option>
+                <option value="asv">ASV · American Standard Version</option>
+              </select></div>
               <div><label for="book">Book</label><select id="book"></select></div>
               <div><label for="chapter">Chapter</label><select id="chapter"></select></div>
-            </div>
-            <div class="field-grid">
-              <div><label for="start-verse">From verse</label><select id="start-verse"></select></div>
-              <div><label for="end-verse">To verse</label><select id="end-verse"></select></div>
+              <div><label for="start-verse">From</label><select id="start-verse"></select></div>
+              <div><label for="end-verse">To</label><select id="end-verse"></select></div>
             </div>
             <button id="load-passage" class="primary-btn">Load passage</button>
-            <label for="game-mode">Game mode</label>
-            <select id="game-mode">
-              <option value="practice">🌿 Practice — relaxed</option>
-              <option value="precision">🎯 Precision — highlight mistakes</option>
-              <option value="sprint">⚡ Sprint — beat 60 seconds</option>
-              <option value="memory">🧠 Memory — words fade as you type</option>
-              <option value="defense">🛡 Scripture Defense — minigame</option>
+            <select id="game-mode" class="is-hidden" aria-hidden="true">
+              <option value="practice">Practice — relaxed</option>
+              <option value="memory">Memory — words fade as you type</option>
+              <option value="defense">Scripture Defense — minigame</option>
             </select>
-            <div class="profile-card">
-              <div class="level-row"><strong id="level-label">Level 1</strong><span id="xp-label">0 XP</span></div>
-              <div class="xp-track"><div id="xp-fill"></div></div>
-              <small id="personal-best">Personal best: 0 WPM</small>
-            </div>
             <div id="status" class="status" role="status"></div>
-            <div class="tip"><span>⌨</span><p><strong>Typing tip</strong>Keep your eyes on the text, not the keyboard.</p></div>
-          </aside>
+            <div id="memory-controls" class="memory-controls is-hidden">
+              <label for="memory-visibility">Letters shown <strong id="memory-visibility-value">50%</strong></label>
+              <input id="memory-visibility" type="range" min="0" max="100" step="10" value="50">
+            </div>
+          </section>
 
           <section class="play-area">
             <section id="defense-game" class="defense-game is-hidden">
@@ -92,33 +98,14 @@ export function initControls() {
                 <div id="battle-message" class="battle-message">Type correctly to send light across the field!</div>
               </div>
               <div class="upgrade-dock">
-                <button data-upgrade="power"><span>⚡</span><div><strong>Word Power</strong><small>More damage · <b data-cost="power">35</b> faith</small></div><i data-level="power">Lv 0</i></button>
-                <button data-upgrade="ward"><span>🛡</span><div><strong>Stone Ward</strong><small>Less fortress damage · <b data-cost="ward">45</b> faith</small></div><i data-level="ward">Lv 0</i></button>
+                <button data-upgrade="power"><span>»</span><div><strong>Word Power</strong><small>More damage · <b data-cost="power">35</b> faith</small></div><i data-level="power">Lv 0</i></button>
+                <button data-upgrade="ward"><span>◇</span><div><strong>Stone Ward</strong><small>Less fortress damage · <b data-cost="ward">45</b> faith</small></div><i data-level="ward">Lv 0</i></button>
                 <button data-upgrade="slow"><span>❄</span><div><strong>Still Waters</strong><small>Slow approaching foes · <b data-cost="slow">55</b> faith</small></div><i data-level="slow">Lv 0</i></button>
               </div>
             </section>
-            <section id="campaign-screen" class="campaign-screen is-hidden">
-              <header class="campaign-header">
-                <div><div class="eyebrow">The Scripture Journey</div><h2>Campaign</h2><p>Complete every passage, chapter, and book—one comfortable session at a time.</p></div>
-                <div class="campaign-summary"><strong id="campaign-total-stars">0 ★</strong><span id="campaign-total-progress">0 of 0 chunks</span></div>
-              </header>
-              <div class="campaign-toolbar">
-                <button id="campaign-back" class="secondary-btn is-hidden">← All books</button>
-                <div id="campaign-breadcrumb">66 books · 1,189 chapters</div>
-                <button id="dev-tools-toggle" class="ghost-btn">Development tools</button>
-              </div>
-              <div id="campaign-dev-tools" class="campaign-dev-tools is-hidden">
-                <strong>Campaign development tools</strong>
-                <button data-dev-action="complete-book">Complete selected book</button>
-                <button data-dev-action="reset-book">Reset selected book</button>
-                <button data-dev-action="complete-all">Complete all books</button>
-                <button data-dev-action="reset-all">Reset all progress</button>
-              </div>
-              <div id="campaign-content" class="campaign-content"></div>
-            </section>
             </div>
             <div id="hud" class="hud"></div>
-            <div id="challenge-banner" class="challenge-banner">🌿 Relaxed practice</div>
+            <div id="challenge-banner" class="challenge-banner is-hidden"></div>
             <article id="typing-card" class="typing-card card">
               <div class="passage-heading">
                 <div><small>NOW TYPING</small><h3 id="passage-title">John 3:16</h3></div>
@@ -131,21 +118,42 @@ export function initControls() {
                 <input id="input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Type the passage here">
               </div>
               <div class="typing-footer"><span>Click the passage or start typing</span><button id="restart" class="text-btn">↻ Restart</button></div>
+              <button id="dev-complete-passage" class="dev-complete-btn" type="button">Dev: Complete passage</button>
             </article>
           </section>
         </div>
       </section>
+      <section id="campaign-screen" class="campaign-screen is-hidden">
+        <header class="campaign-header">
+          <div><div class="eyebrow">The Scripture Journey</div><h2>Campaign</h2><p>Complete every passage, chapter, and book—one comfortable session at a time.</p></div>
+          <div class="campaign-summary"><strong id="campaign-total-stars">0 ★</strong><span id="campaign-total-progress">0 of 0 passages</span></div>
+        </header>
+        <div class="campaign-toolbar">
+          <button id="campaign-back" class="secondary-btn is-hidden">← All books</button>
+          <div id="campaign-breadcrumb">66 books · 1,189 chapters</div>
+          <button id="dev-tools-toggle" class="ghost-btn">Development tools</button>
+        </div>
+        <div id="campaign-dev-tools" class="campaign-dev-tools is-hidden">
+          <strong>Campaign development tools</strong>
+          <button data-dev-action="complete-book">Complete selected book</button>
+          <button data-dev-action="reset-book">Reset selected book</button>
+          <button data-dev-action="complete-all">Complete all books</button>
+          <button data-dev-action="reset-all">Reset all progress</button>
+        </div>
+        <div id="campaign-content" class="campaign-content"></div>
+      </section>
+      </div>
 
       <div id="results" class="modal-backdrop is-hidden">
         <section class="results-card">
           <div class="success-mark">✓</div>
-          <div class="eyebrow">Passage complete</div>
-          <h2>Beautiful work!</h2>
-          <p>You carried this verse from the page to your memory.</p>
+          <h2 id="results-title">Passage complete</h2>
+          <p id="results-copy"></p>
           <div id="reward-message" class="reward-message"></div>
           <div id="result-stats" class="result-stats"></div>
           <div class="result-actions">
             <button id="try-again" class="secondary-btn">Try again</button>
+            <button id="chapter-select" class="secondary-btn">Chapter select</button>
             <button id="next-passage" class="primary-btn">Choose another</button>
           </div>
           <div id="celebration" class="celebration is-hidden" aria-live="polite"></div>
@@ -209,9 +217,11 @@ export function initControls() {
     resultStatsEl: requireElement('result-stats', HTMLElement), progressFillEl: requireElement('progress-fill', HTMLElement),
     gameModeEl: requireElement('game-mode', HTMLSelectElement), challengeBannerEl: requireElement('challenge-banner', HTMLElement),
     typingCardEl: requireElement('typing-card', HTMLElement), rewardMessageEl: requireElement('reward-message', HTMLElement),
-    streakEl: requireElement('streak', HTMLElement), levelLabelEl: requireElement('level-label', HTMLElement),
+    levelLabelEl: requireElement('level-label', HTMLElement),
     xpLabelEl: requireElement('xp-label', HTMLElement), xpFillEl: requireElement('xp-fill', HTMLElement),
     personalBestEl: requireElement('personal-best', HTMLElement),
+    lifetimeWpmEl: requireElement('lifetime-wpm', HTMLElement),
+    recentWpmEl: requireElement('recent-wpm', HTMLElement),
     defenseGameEl: requireElement('defense-game', HTMLElement), faithCountEl: requireElement('faith-count', HTMLElement),
     fortressHealthEl: requireElement('fortress-health', HTMLElement), waveCountEl: requireElement('wave-count', HTMLElement),
     defeatedCountEl: requireElement('defeated-count', HTMLElement), battlePathEl: requireElement('battle-path', HTMLElement),

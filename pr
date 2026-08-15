@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v gh >/dev/null 2>&1; then
+  echo "GitHub CLI (gh) is required. Install it, then run: gh auth login" >&2
+  exit 1
+fi
+
+message="${*:-Release development to main}"
+
+git fetch origin development main
+
+existing="$(gh pr list \
+  --base main \
+  --head development \
+  --state open \
+  --json url \
+  --jq '.[0].url')"
+
+if [[ -n "$existing" ]]; then
+  echo "An open development-to-main pull request already exists:"
+  echo "$existing"
+  exit 0
+fi
+
+gh pr create \
+  --base main \
+  --head development \
+  --title "$message" \
+  --body "$message"

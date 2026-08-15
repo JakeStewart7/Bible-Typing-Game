@@ -2,7 +2,7 @@ import type { GameStats } from '../game/stats';
 
 export function renderStats(container: HTMLElement, stats: GameStats): void {
   const items = [
-    ['⚡', stats.wpm, 'WPM'],
+    ['»', stats.wpm, 'WPM'],
     ['◎', `${stats.accuracy}%`, 'Accuracy'],
     ['◷', formatTime(stats.time), 'Time'],
     ['✓', `${stats.progress}%`, 'Complete']

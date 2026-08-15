@@ -48,10 +48,24 @@ export function getBookProgress(book: string, progress: CampaignProgress) {
 
 export function getCampaignProgress(progress: CampaignProgress) {
   const summaries = BOOKS.map(book => getBookProgress(book, progress));
+  const completedChapters = BOOKS.reduce((total, book) => {
+    const chapters = new Set(
+      createCampaignChunks(book)
+        .filter(chunk => (progress[chunk.id] ?? 0) > 0)
+        .map(chunk => chunk.chapter)
+    );
+    return total + [...chapters].filter(chapter =>
+      createCampaignChunks(book)
+        .filter(chunk => chunk.chapter === chapter)
+        .every(chunk => (progress[chunk.id] ?? 0) > 0)
+    ).length;
+  }, 0);
   return {
     total: summaries.reduce((total, summary) => total + summary.total, 0),
     completed: summaries.reduce((total, summary) => total + summary.completed, 0),
-    stars: summaries.reduce((total, summary) => total + summary.stars, 0)
+    stars: summaries.reduce((total, summary) => total + summary.stars, 0),
+    completedBooks: summaries.filter(summary => summary.percent === 100).length,
+    completedChapters
   };
 }
 

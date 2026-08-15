@@ -5,13 +5,19 @@ export type ProfileElements = {
   xp: HTMLElement;
   xpFill: HTMLElement;
   bestWpm: HTMLElement;
-  streak: HTMLElement;
+  lifetimeWpm: HTMLElement;
+  recentWpm: HTMLElement;
 };
 
 export function renderProfile(elements: ProfileElements, profile: PlayerProfile): void {
   elements.level.textContent = `Level ${profile.level}`;
-  elements.xp.textContent = `${profile.xp} XP`;
   elements.xpFill.style.width = `${(profile.xp % 500) / 5}%`;
-  elements.bestWpm.textContent = `Personal best: ${profile.bestWpm} WPM`;
-  elements.streak.textContent = `${profile.streak} day${profile.streak === 1 ? '' : 's'} streak`;
+  setSpeed(elements.bestWpm, profile.bestWpm);
+  setSpeed(elements.lifetimeWpm, profile.lifetimeWpm);
+  setSpeed(elements.recentWpm, profile.recentWpm);
+}
+
+function setSpeed(element: HTMLElement, value: number): void {
+  const valueElement = element.querySelector('strong');
+  if (valueElement) valueElement.textContent = `${value} WPM`;
 }

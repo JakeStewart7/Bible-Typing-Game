@@ -1,12 +1,13 @@
 import { BOOKS, getChapterCount } from '../src/bible-data.ts';
 import { getSampleVerseNumbers } from '../src/bible-api.ts';
-import { chooseVerseRange, filterEndVerses, isValidPassageSelection, normalizeVerseNumbers } from '../src/passage-selector.ts';
+import { chooseRandomVerseRange, chooseVerseRange, filterEndVerses, isValidPassageSelection, normalizeVerseNumbers } from '../src/passage-selector.ts';
 import { createGame } from '../src/game/state.ts';
 import { handleInput } from '../src/game/input.ts';
 import { calculateStats } from '../src/game/stats.ts';
 import { getVerseCount, VERSE_COUNTS } from '../src/verse-counts.ts';
 import { advanceEnemy, buyUpgrade, completeDefense, createDefenseState, typeCharacter } from '../src/game/minigame.ts';
-import { createCampaignChunks, getBookProgress, nextChunk, starsForWpm } from '../src/campaign.ts';
+import { createCampaignChunks, getBookProgress, getCampaignProgress, nextChunk, starsForWpm } from '../src/campaign.ts';
+import { readProfile, recordSession } from '../src/profile.ts';
 
 type Test = { name: string; run: () => void };
 const tests: Test[] = [];
@@ -47,6 +48,12 @@ test('switching from a long chapter resets stale verse choices', () => {
   equal(chooseVerseRange([1, 2, 3], 16, 17), { start: 1, end: 3 });
 });
 
+test('random defense ranges contain seven verses within chapter boundaries', () => {
+  equal(chooseRandomVerseRange(36, 7, () => 0), { start: 1, end: 7 });
+  equal(chooseRandomVerseRange(36, 7, () => .999), { start: 30, end: 36 });
+  equal(chooseRandomVerseRange(4, 7, () => .5), { start: 1, end: 4 });
+});
+
 test('selector rejects reversed and unavailable ranges', () => {
   const base = { book: 'John', chapter: 3, translation: 'web' };
   equal(isValidPassageSelection({ ...base, startVerse: 16, endVerse: 17 }, [16, 17]), true);
@@ -71,7 +78,55 @@ test('typing engine calculates progress and errors', () => {
   const game = createGame('Faith');
   handleInput(game, 'Faitx');
   equal(game.errors, 1);
+  equal(calculateStats(game).progress, 0);
+  handleInput(game, 'Faith');
   equal(calculateStats(game).progress, 100);
+  equal(calculateStats(game).accuracy, 80);
+});
+
+test('typing past a mistake does not affect scoring until its word is corrected', () => {
+  const game = createGame('Faith grows');
+  handleInput(game, 'Faixh grows');
+  const blocked = calculateStats(game, game.startTime! + 60_000);
+  equal(blocked.progress, 0);
+  equal(blocked.wpm, 0);
+  equal(blocked.accuracy, 75);
+
+  handleInput(game, 'Faith grows');
+  const corrected = calculateStats(game, game.startTime! + 60_000);
+  equal(corrected.progress, 100);
+  equal(corrected.wpm, 2);
+  equal(corrected.accuracy, 91);
+});
+
+test('progress freezes instead of moving backward after an error', () => {
+  const game = createGame('Faith grows');
+  handleInput(game, 'Faith ');
+  equal(calculateStats(game).progress, 55);
+  handleInput(game, 'Faith x');
+  equal(calculateStats(game).progress, 55);
+});
+
+test('accuracy freezes at the last correct scoring position', () => {
+  const game = createGame('Faith grows');
+  handleInput(game, 'Faith ');
+  const beforeError = calculateStats(game).accuracy;
+  handleInput(game, 'Faith xrows');
+  equal(calculateStats(game).accuracy, 86);
+  handleInput(game, 'Faith grows');
+  equal(calculateStats(game).accuracy, 91);
+});
+
+test('backspacing freezes accuracy until a new unscored letter is typed', () => {
+  const game = createGame('Faith');
+  handleInput(game, 'Fai');
+  equal(calculateStats(game).accuracy, 100);
+  handleInput(game, 'F');
+  equal(calculateStats(game).accuracy, 100);
+  handleInput(game, 'Fai');
+  equal(calculateStats(game).accuracy, 100);
+  handleInput(game, 'Faith');
+  equal(calculateStats(game).accuracy, 100);
 });
 
 test('defense typing earns faith and damages enemies', () => {
@@ -170,6 +225,26 @@ test('campaign progress and next passage are deterministic', () => {
   const progress = { [chunks[0]!.id]: 3 };
   equal(getBookProgress('Obadiah', progress).completed, 1);
   equal(nextChunk(chunks[0]!), chunks[1]);
+});
+
+test('campaign summary counts completed books', () => {
+  const progress = Object.fromEntries(createCampaignChunks('Obadiah').map(chunk => [chunk.id, 1]));
+  equal(getCampaignProgress(progress).completedBooks, 1);
+  equal(getCampaignProgress(progress).completedChapters, 1);
+});
+
+test('profile records lifetime and recent completed-passage WPM', () => {
+  const values = new Map<string, string>();
+  globalThis.localStorage = {
+    getItem: key => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value)
+  } as Storage;
+  recordSession(40, 25);
+  recordSession(60, 25);
+  const profile = readProfile();
+  equal(profile.lifetimeWpm, 50);
+  equal(profile.recentWpm, 50);
+  equal(profile.bestWpm, 60);
 });
 
 let failed = 0;

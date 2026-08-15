@@ -3,6 +3,13 @@ export interface Game {
   chars: string[];
   typed: string[];
   errors: number;
+  attempted: boolean[];
+  firstAttemptCorrect: boolean[];
+  accuracyCorrect: number;
+  accuracyTotal: number;
+  accuracyCursor: number;
+  blockedAccuracyIndex: number | null;
+  maxProgress: number;
   startTime: number | null;
   lastPressedIndex?: number;
   completedAt?: number;
@@ -33,6 +40,13 @@ export function createGame(text: unknown): Game {
     chars: clean.split(''),
     typed: [],
     errors: 0,
+    attempted: [],
+    firstAttemptCorrect: [],
+    accuracyCorrect: 0,
+    accuracyTotal: 0,
+    accuracyCursor: 0,
+    blockedAccuracyIndex: null,
+    maxProgress: 0,
     startTime: null,
   };
 }

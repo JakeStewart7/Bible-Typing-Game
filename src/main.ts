@@ -23,8 +23,8 @@ const {
   hudEl, textEl, inputEl, typedBarEl,
   translationEl, bookEl, chapterEl, startVerseEl, endVerseEl, loadBtn,
   statusEl, passageTitleEl, resultsEl, resultStatsEl, progressFillEl,
-  gameModeEl, challengeBannerEl, typingCardEl, rewardMessageEl, streakEl,
-  levelLabelEl, xpLabelEl, xpFillEl, personalBestEl,
+  gameModeEl, challengeBannerEl, typingCardEl, rewardMessageEl,
+  levelLabelEl, xpLabelEl, xpFillEl, personalBestEl, lifetimeWpmEl, recentWpmEl,
   defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
   battlePathEl, battleMessageEl,
   campaignScreenEl, campaignContentEl, campaignBackEl, campaignBreadcrumbEl,
@@ -43,8 +43,8 @@ const gameController = initGameControllers(game, {
   hudEl, textEl, inputEl, typedBarEl,
   translationEl, bookEl, chapterEl, startVerseEl, endVerseEl, loadBtn,
   statusEl, passageTitleEl, resultsEl, resultStatsEl, progressFillEl,
-  gameModeEl, challengeBannerEl, typingCardEl, rewardMessageEl, streakEl,
-  levelLabelEl, xpLabelEl, xpFillEl, personalBestEl,
+  gameModeEl, challengeBannerEl, typingCardEl, rewardMessageEl,
+  levelLabelEl, xpLabelEl, xpFillEl, personalBestEl, lifetimeWpmEl, recentWpmEl,
   defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
   battlePathEl, battleMessageEl,
   populateBooks, populateChapters, populateVerses, constrainEndVerses
@@ -60,7 +60,7 @@ const campaignController = createCampaignController({
 }, (chunk, text) => startCampaignChunk(chunk, text));
 
 startCampaignChunk = (chunk, text) => {
-  showWorkspace('practice');
+  showWorkspace('campaign-play');
   gameController.startCampaignChunk(chunk, text);
 };
 gameController.setCampaignHooks({
@@ -81,23 +81,62 @@ async function fetchCampaignChunk(chunk: CampaignChunk): Promise<void> {
   startCampaignChunk(chunk, data.verses?.map(verse => verse.text).join(' ') ?? '');
 }
 
-function showWorkspace(workspace: string): void {
-  document.getElementById('game-screen')?.classList.remove('is-hidden');
+function showWorkspace(workspace: string, selectedMode?: string): void {
+  const gameScreen = document.getElementById('game-screen');
   campaignScreenEl.classList.toggle('is-hidden', workspace !== 'campaign');
-  document.getElementById('game-screen')?.classList.toggle('is-hidden', workspace === 'campaign');
-  document.querySelectorAll('.mode-nav').forEach(button => button.classList.toggle('active', (button as HTMLElement).dataset.workspace === workspace));
+  gameScreen?.classList.toggle('is-hidden', workspace === 'campaign');
+  gameScreen?.classList.toggle('campaign-play', workspace === 'campaign-play');
+  document.querySelectorAll<HTMLElement>('.mode-nav').forEach(button => {
+    const campaignActive = (workspace === 'campaign' || workspace === 'campaign-play') && button.dataset.workspace === 'campaign';
+    const modeActive = Boolean(selectedMode) && button.dataset.mode === selectedMode;
+    button.classList.toggle('active', campaignActive || modeActive);
+  });
   if (workspace === 'defense') {
     const mode = document.getElementById('game-mode') as HTMLSelectElement | null;
-    if (mode) { mode.value = 'defense'; mode.dispatchEvent(new Event('change')); }
+    if (mode && mode.value !== 'defense') {
+      mode.value = 'defense';
+      mode.dispatchEvent(new Event('change'));
+    }
   } else if (workspace === 'practice') {
     gameController.leaveCampaign();
-  } else campaignController.renderBooks();
+  } else if (workspace === 'campaign') campaignController.renderBooks();
 }
 
-document.querySelectorAll<HTMLElement>('.mode-nav').forEach(button => button.addEventListener('click', () => showWorkspace(button.dataset.workspace ?? 'practice')));
-document.getElementById('sidebar-toggle')?.addEventListener('click', () => document.getElementById('mode-sidebar')?.classList.toggle('collapsed'));
+document.querySelectorAll<HTMLElement>('.mode-nav').forEach(button => button.addEventListener('click', () => {
+  const mode = button.dataset.mode;
+  if (mode) {
+    gameModeEl.value = mode;
+    gameModeEl.dispatchEvent(new Event('change'));
+  }
+  showWorkspace(button.dataset.workspace ?? 'practice', mode);
+}));
+const sidebar = document.getElementById('mode-sidebar');
+const sidebarToggle = document.getElementById('sidebar-toggle');
+sidebarToggle?.addEventListener('click', () => {
+  const collapsed = sidebar?.classList.toggle('collapsed') ?? false;
+  sidebarToggle.setAttribute('aria-expanded', String(!collapsed));
+  sidebarToggle.setAttribute('aria-label', collapsed ? 'Expand navigation' : 'Collapse navigation');
+  const label = sidebarToggle.querySelector('b');
+  if (label) label.textContent = collapsed ? 'Show menu' : 'Hide menu';
+});
+const settingsMenu = document.getElementById('settings-menu');
+const settingsToggle = document.getElementById('settings-toggle');
+settingsToggle?.addEventListener('click', event => {
+  event.stopPropagation();
+  const open = settingsMenu?.classList.toggle('is-hidden') === false;
+  settingsToggle.setAttribute('aria-expanded', String(open));
+});
+document.addEventListener('click', event => {
+  if (!(event.target as Element).closest('.settings')) {
+    settingsMenu?.classList.add('is-hidden');
+    settingsToggle?.setAttribute('aria-expanded', 'false');
+  }
+});
 
 document.getElementById('sound-toggle')?.addEventListener('click', event => {
   const button = event.currentTarget as HTMLButtonElement;
-  button.textContent = toggleEffects() ? '🔊' : '🔇';
+  const enabled = toggleEffects();
+  button.setAttribute('aria-pressed', String(enabled));
+  const label = button.querySelector('span');
+  if (label) label.textContent = enabled ? 'On' : 'Off';
 });
