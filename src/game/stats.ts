@@ -5,7 +5,7 @@ export function calculateStats(game: Game) {
     return { time: 0, wpm: 0, accuracy: 100, progress: 0 };
   }
 
-  const elapsed = (Date.now() - game.startTime) / 1000;
+  const elapsed = ((game.completedAt || Date.now()) - game.startTime) / 1000;
   const typedLength = game.typed.length;
 
   const wpm = elapsed > 0 ? Math.round(((typedLength / 5) / elapsed) * 60) : 0;

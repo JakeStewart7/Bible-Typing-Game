@@ -5,6 +5,7 @@ export interface Game {
   errors: number;
   startTime: number | null;
   lastPressedIndex?: number;
+  completedAt?: number;
 }
 
 export function sanitizeText(raw: unknown): string {
@@ -33,5 +34,6 @@ export function createGame(text: unknown): Game {
     typed: [],
     errors: 0,
     startTime: null,
+    completedAt: undefined,
   };
 }

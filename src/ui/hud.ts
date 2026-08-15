@@ -1,19 +1,17 @@
-export function renderStats(container: HTMLElement, stats: any, onRestart: () => void) {
-  container.innerHTML = `
-    <div class="stats-left">
-      <div class="stat-big">${stats.wpm}</div>
-      <div class="stat-label">WPM</div>
-    </div>
-    <div class="stats-middle">
-      <div class="stat-item">Accuracy <span class="badge">${stats.accuracy}%</span></div>
-      <div class="stat-item">Progress <span class="badge muted">${stats.progress}%</span></div>
-    </div>
-    <div class="stats-right">
-      <div class="time">⏱ ${stats.time}s</div>
-      <button id="restart" class="btn small">Restart</button>
-    </div>
-  `;
+type Stats = { time: number; wpm: number; accuracy: number; progress: number };
 
-  const btn = document.getElementById('restart');
-  if (btn) btn.addEventListener('click', onRestart);
+export function renderStats(container: HTMLElement, stats: Stats) {
+  const items = [
+    ['⚡', stats.wpm, 'WPM'],
+    ['◎', `${stats.accuracy}%`, 'Accuracy'],
+    ['◷', formatTime(stats.time), 'Time'],
+    ['✓', `${stats.progress}%`, 'Complete']
+  ];
+  container.innerHTML = items.map(([icon, value, label]) => `
+    <div class="stat"><span class="stat-icon">${icon}</span><div><span class="stat-value">${value}</span><span class="stat-label">${label}</span></div></div>
+  `).join('');
+}
+
+function formatTime(seconds: number) {
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
