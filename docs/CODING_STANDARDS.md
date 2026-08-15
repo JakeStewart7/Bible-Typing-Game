@@ -176,3 +176,16 @@ Before merging:
 
 New work must improve these boundaries. Do not add more behavior to an already
 oversized module; extract the relevant responsibility first.
+
+## Version control
+
+- Commit completed, verified units of work frequently rather than accumulating
+  unrelated changes in one large commit.
+- Create a milestone commit after each independently useful fix, feature, or
+  refactor once its targeted checks pass.
+- Keep each commit focused, buildable, and safe to review or revert.
+- Do not mix unrelated cleanup into a feature or bug-fix commit.
+- Use concise imperative commit subjects that describe the outcome.
+- Never commit failing or incomplete work merely to satisfy a time interval.
+- Do not amend, squash, force-push, or commit user-authored changes without
+  explicit approval.
