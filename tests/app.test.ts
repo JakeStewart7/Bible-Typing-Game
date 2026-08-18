@@ -8,6 +8,7 @@ import { getVerseCount, VERSE_COUNTS } from '../src/verse-counts.ts';
 import { advanceEnemy, buyUpgrade, completeDefense, createDefenseState, typeCharacter } from '../src/game/minigame.ts';
 import { createCampaignChunks, getBookProgress, getCampaignProgress, nextChunk, starsForWpm } from '../src/campaign.ts';
 import { readProfile, recordSession } from '../src/profile.ts';
+import { narrationRate } from '../src/audio/narration-policy.ts';
 
 type Test = { name: string; run: () => void };
 const tests: Test[] = [];
@@ -245,6 +246,13 @@ test('profile records lifetime and recent completed-passage WPM', () => {
   equal(profile.lifetimeWpm, 50);
   equal(profile.recentWpm, 50);
   equal(profile.bestWpm, 60);
+});
+
+test('narrator rate follows typing pace within natural limits', () => {
+  equal(narrationRate(1200), .75);
+  equal(narrationRate(550), 1);
+  equal(narrationRate(250), 2.2);
+  equal(narrationRate(100), 2.2);
 });
 
 let failed = 0;
