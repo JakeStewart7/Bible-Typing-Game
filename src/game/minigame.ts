@@ -1,5 +1,12 @@
 export type UpgradeId = 'power' | 'ward' | 'slow';
-export type Enemy = { id: number; position: number; health: number; maxHealth: number };
+export type EnemyKind = 'wisp' | 'rusher' | 'warden' | 'titan';
+export type Enemy = {
+  id: number;
+  position: number;
+  health: number;
+  maxHealth: number;
+  kind?: EnemyKind;
+};
 export type Projectile = {
   id: number;
   position: number;
@@ -13,6 +20,7 @@ export type Projectile = {
 export type DefenseState = {
   faith: number; fortress: number; wave: number; enemiesDefeated: number;
   powerLevel: number; wardLevel: number; slowLevel: number;
+  combo: number;
   enemies: Enemy[]; projectiles: Projectile[];
   nextEnemyId: number; nextProjectileId: number; spawnTimer: number;
   status: 'playing' | 'won' | 'lost';
@@ -38,7 +46,7 @@ export function upgradeCost(state: DefenseState, id: UpgradeId): number {
 export function createDefenseState(): DefenseState {
   return {
     faith: 0, fortress: 100, wave: 1, enemiesDefeated: 0,
-    powerLevel: 0, wardLevel: 0, slowLevel: 0,
+    powerLevel: 0, wardLevel: 0, slowLevel: 0, combo: 0,
     enemies: [createEnemy(1, 1)], projectiles: [],
     nextEnemyId: 2, nextProjectileId: 1, spawnTimer: 1.4,
     status: 'playing'
@@ -52,6 +60,7 @@ export function typeCharacter(
 ): DefenseState {
   if (state.status !== 'playing') return state;
   if (correct) {
+    state.combo++;
     state.faith += 1 + Math.floor(state.wave / 3);
     const targets = [...state.enemies].sort((a, b) => a.position - b.position);
     const volleyId = state.nextProjectileId;
@@ -64,11 +73,12 @@ export function typeCharacter(
         launchPosition: 94,
         targetPosition,
         arcHeight: MIN_ARC_HEIGHT + random() * ARC_HEIGHT_RANGE,
-        damage: 1 + state.powerLevel,
+        damage: 1 + state.powerLevel + Math.floor(state.combo / 8),
         volleyId
       });
     }
   } else {
+    state.combo = 0;
     state.faith = Math.max(0, state.faith - 2);
   }
   return state;
@@ -83,7 +93,10 @@ export function advanceEnemy(state: DefenseState, deltaSeconds: number): Defense
     state.spawnTimer += Math.max(.75, 2.15 - state.wave * .1);
   }
 
-  state.enemies.forEach(enemy => { enemy.position = Math.min(100, enemy.position + enemySpeed * deltaSeconds); });
+  state.enemies.forEach(enemy => {
+    const profile = enemyProfile(enemy.kind);
+    enemy.position = Math.min(100, enemy.position + enemySpeed * profile.speed * deltaSeconds);
+  });
   state.projectiles.forEach(projectile => { projectile.position -= 55 * deltaSeconds; });
 
   const removedProjectiles = new Set<number>();
@@ -135,8 +148,25 @@ export function completeDefense(state: DefenseState): void {
 }
 
 function createEnemy(id: number, wave: number): Enemy {
-  const health = Math.min(8, 4 + Math.floor(wave / 3));
-  return { id, position: 5, health, maxHealth: health };
+  const kind = enemyKindFor(id, wave);
+  const profile = enemyProfile(kind);
+  return { id, position: 5, health: profile.health, maxHealth: profile.health, kind };
+}
+
+function enemyKindFor(id: number, wave: number): EnemyKind {
+  if (wave >= 4 && id % 9 === 0) return 'titan';
+  if (wave >= 2 && id % 5 === 0) return 'warden';
+  if (id % 3 === 0) return 'rusher';
+  return 'wisp';
+}
+
+function enemyProfile(kind: EnemyKind | undefined): { health: number; speed: number } {
+  switch (kind) {
+    case 'rusher': return { health: 2, speed: 1.65 };
+    case 'warden': return { health: 7, speed: .72 };
+    case 'titan': return { health: 11, speed: .48 };
+    default: return { health: 4, speed: 1 };
+  }
 }
 
 function centeredRandom(random: RandomSource): number {

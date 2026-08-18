@@ -24,6 +24,7 @@ export function createDefenseView(elements: DefenseElements) {
 
     for (const enemy of state.enemies) {
       const element = getEnemyElement(enemy.id);
+      element.dataset.kind = enemy.kind ?? 'wisp';
       element.style.left = `${enemy.position}%`;
       element.style.bottom = `${18 + ((enemy.id % 3) - 1) * 2}px`;
       const health = element.querySelector<HTMLElement>('.enemy-health i');
@@ -39,8 +40,15 @@ export function createDefenseView(elements: DefenseElements) {
       element.style.transform = `translateX(-50%) rotate(${165 + progress * 30}deg)`;
     }
     renderUpgrades(state);
-    if (state.status === 'lost') elements.message.textContent = 'The fortress fell. Restart the passage to rally again!';
-    if (state.status === 'won') elements.message.textContent = 'Victory! The Word held the line.';
+    if (state.status === 'lost') {
+      elements.message.textContent = 'The fortress fell. Restart the passage to rally again!';
+    } else if (state.status === 'won') {
+      elements.message.textContent = 'Victory! The Word held the line.';
+    } else if (state.combo >= 8) {
+      elements.message.textContent = `Light streak ×${state.combo} · empowered volley`;
+    } else {
+      elements.message.textContent = 'Type correctly to send light across the field!';
+    }
   }
 
   function reset(): void {
@@ -55,7 +63,7 @@ export function createDefenseView(elements: DefenseElements) {
     if (existing) return existing;
     const element = document.createElement('div');
     element.className = 'enemy';
-    element.innerHTML = '<span>☁</span><div class="enemy-health"><i></i></div>';
+    element.innerHTML = '<span class="enemy-core" aria-hidden="true"></span><div class="enemy-health"><i></i></div>';
     elements.path.appendChild(element);
     enemyElements.set(id, element);
     return element;
