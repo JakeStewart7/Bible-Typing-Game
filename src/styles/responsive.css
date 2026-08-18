@@ -1,27 +1,27 @@
 @media (min-width: 58.01rem) {
-  .app-shell:is([data-theme="practice"], [data-theme="memory"], [data-theme="arcade"]) #game-screen {
+  .app-shell:is([data-theme="practice"], [data-theme="memory"]) #game-screen {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     overflow: hidden;
   }
-  .app-shell:is([data-theme="practice"], [data-theme="memory"], [data-theme="arcade"]) .practice-workspace {
+  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .practice-workspace {
     height: 100%;
     min-height: 0;
     grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
     align-items: stretch;
   }
-  .app-shell:is([data-theme="practice"], [data-theme="memory"], [data-theme="arcade"]) .passage-panel {
+  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .passage-panel {
     min-height: 0;
     grid-template-columns: 1fr;
     align-content: start;
     align-items: stretch;
     overflow-y: auto;
   }
-  .app-shell:is([data-theme="practice"], [data-theme="memory"], [data-theme="arcade"]) .passage-fields {
+  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .passage-fields {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     overflow: visible;
   }
-  .app-shell:is([data-theme="practice"], [data-theme="memory"], [data-theme="arcade"]) .status,
+  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .status,
   .app-shell[data-theme="memory"] .memory-controls {
     grid-column: 1;
   }
@@ -33,45 +33,22 @@
     grid-column: 1;
     grid-template-columns: 1fr;
   }
-  .app-shell:is([data-theme="practice"], [data-theme="memory"], [data-theme="arcade"]) .play-area {
+  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .play-area {
     min-height: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
-  .app-shell:is([data-theme="practice"], [data-theme="memory"], [data-theme="arcade"]) .typing-card {
+  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .typing-card {
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: column;
   }
-  .app-shell:is([data-theme="practice"], [data-theme="memory"], [data-theme="arcade"]) .text-display {
+  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .text-display {
     flex: 1;
     min-height: 0;
     max-height: none;
-  }
-  .app-shell[data-theme="arcade"] .defense-game {
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-    margin: 0;
-    border-radius: 24px;
-    background: #07152d;
-    box-shadow: 0 18px 50px #06122980;
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto;
-  }
-  .app-shell[data-theme="arcade"] .battlefield {
-    position: relative;
-    inset: auto;
-    height: auto;
-    margin: 0;
-    min-height: 0;
-    border: 0;
-    border-radius: 0;
   }
   .app-shell[data-theme="arcade"] .battlefield::after {
     background: #020a1dcc;
@@ -91,136 +68,9 @@
     color: #9e79df;
     text-shadow: 0 0 12px #7650c0;
   }
-  .app-shell[data-theme="arcade"] .defense-topbar {
-    position: relative;
-    z-index: 3;
-    gap: .75rem;
-    padding: .75rem 1rem;
-    min-height: 5.75rem;
-    background: #061127;
-  }
-  .app-shell[data-theme="arcade"] .defense-topbar .resource {
-    min-width: 0;
-    flex-direction: column;
-    gap: .25rem;
-    padding: .25rem .5rem;
-    border: 1px solid #31547766;
-    border-radius: 12px;
-    background: #102a4b66;
-    text-align: center;
-  }
-  .app-shell[data-theme="arcade"] .defense-topbar .resource > span {
-    display: grid;
-    place-items: center;
-    width: 2rem;
-    height: 2rem;
-    border-radius: .65rem;
-    color: #ffe889;
-    background: #ffe8891c;
-    font-size: 1.35rem;
-  }
-  .app-shell[data-theme="arcade"] .defense-topbar .resource div {
-    display: flex;
-    align-items: baseline;
-    gap: .35rem;
-  }
-  .app-shell[data-theme="arcade"] .defense-topbar .resource strong {
-    color: #f1f8ff;
-    font-size: 1.2rem;
-    line-height: 1;
-  }
-  .app-shell[data-theme="arcade"] .defense-topbar .resource small {
-    color: #8ccfff;
-    font-size: .56rem;
-    letter-spacing: .1em;
-  }
-  .app-shell[data-theme="arcade"] .play-area {
-    position: relative;
-    min-height: 0;
-    height: 100%;
-    container-type: size;
-  }
-  .app-shell[data-theme="arcade"] .game-intro,
-  .app-shell[data-theme="arcade"] .passage-panel {
-    display: none;
-  }
-  .app-shell[data-theme="arcade"] #game-screen {
-    grid-template-rows: minmax(0, 1fr);
-  }
-  .app-shell[data-theme="arcade"] .practice-workspace {
-    display: block;
-    height: 100%;
-    min-height: 0;
-  }
   .app-shell[data-theme="arcade"] .defense-game {
     --arcade-unit: clamp(.72rem, 1.2cqw, 1.15rem);
     font-size: var(--arcade-unit);
-    height: 100%;
-    margin: auto;
-  }
-  .app-shell[data-theme="arcade"] .typing-card {
-    position: absolute;
-    inset: 0;
-    z-index: 8;
-    display: block;
-    padding: 1.5rem;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
-    pointer-events: none;
-  }
-  .app-shell[data-theme="arcade"] .typing-card > :not(.text-display):not(.typed-area) {
-    display: none;
-  }
-  .app-shell[data-theme="arcade"] #text {
-    position: absolute !important;
-    top: clamp(6.5rem, 18%, 10rem);
-    right: clamp(.75rem, 8cqw, 5rem);
-    left: clamp(.75rem, 8cqw, 5rem);
-    width: auto;
-    height: clamp(4rem, 18%, 8rem);
-    min-height: 0;
-    margin: 0;
-    overflow: visible;
-    font-size: clamp(.78rem, 1.55cqw, 1.55rem);
-    line-height: 1.55;
-    text-align: center;
-    transform: none;
-  }
-  .app-shell[data-theme="arcade"] .typing-card .char.correct {
-    color: #e6f5ff;
-  }
-  .app-shell[data-theme="arcade"] .typing-card .char.error-highlight {
-    color: #ffb5bd;
-    background: #9b304766;
-    box-shadow: inset 0 -2px #ff6f86;
-  }
-  .app-shell[data-theme="arcade"] .typing-card .typed-area {
-    position: absolute;
-    right: clamp(.75rem, 2cqw, 1.5rem);
-    top: 68cqh;
-    bottom: auto;
-    left: clamp(.75rem, 2cqw, 1.5rem);
-    pointer-events: auto;
-  }
-  .app-shell[data-theme="arcade"] #input {
-    height: clamp(2.5rem, 7cqh, 3.25rem);
-    padding-inline: clamp(.6rem, 1.5cqw, 1rem);
-    font-size: clamp(.72rem, 1.1cqw, .95rem);
-    border-color: #6ebeff88;
-    color: #eaf6ff;
-    background: #07152dcc;
-    box-shadow: 0 0 20px #399fff33;
-  }
-  .app-shell[data-theme="arcade"] .upgrade-dock {
-    position: relative;
-    z-index: 10;
-    padding: .45rem .75rem .75rem;
-    background: #07152d;
-  }
-  .app-shell[data-theme="arcade"] #hud,
-  .app-shell[data-theme="arcade"] #challenge-banner {
-    display: none;
   }
   .app-shell[data-theme="arcade"] .upgrade-dock button {
     min-height: clamp(2.5rem, 6cqh, 3rem);
@@ -251,41 +101,6 @@
   .passage-panel > .primary-btn { justify-self: stretch; }
   .status { grid-column: 1; }
   .page-header { align-items: flex-start; }
-  .app-shell[data-theme="arcade"] .game-intro,
-  .app-shell[data-theme="arcade"] .passage-panel { display: none; }
-  .app-shell[data-theme="arcade"] #game-screen { grid-template-rows: minmax(0, 1fr); }
-  .app-shell[data-theme="arcade"] .practice-workspace,
-  .app-shell[data-theme="arcade"] .play-area { height: 100%; min-height: 0; }
-  .app-shell[data-theme="arcade"] .play-area { position: relative; }
-  .app-shell[data-theme="arcade"] .defense-game {
-    position: relative;
-    height: 100%;
-    min-height: 32rem;
-    margin: 0;
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto;
-  }
-  .app-shell[data-theme="arcade"] .battlefield {
-    position: relative;
-    inset: auto;
-    height: auto;
-    min-height: 0;
-    margin: 0;
-    border: 0;
-    border-radius: 0;
-  }
-  .app-shell[data-theme="arcade"] .typing-card {
-    position: absolute;
-    inset: 0;
-  }
-  .app-shell[data-theme="arcade"] .typing-card .typed-area { top: 68cqh; bottom: auto; }
-  .app-shell[data-theme="arcade"] .upgrade-dock {
-    position: relative;
-    right: auto;
-    bottom: auto;
-    left: auto;
-    padding: .45rem .75rem .75rem;
-  }
 }
 
 @media (max-width: 44rem) {
@@ -308,26 +123,41 @@
   .campaign-summary { text-align: left; }
   .campaign-dev-tools { display: grid; }
   .result-actions { flex-direction: column; }
+  .app-shell[data-theme="arcade"] .header-profile { display: none; }
+  .app-shell[data-theme="arcade"] .top-actions {
+    grid-column: auto;
+    grid-row: auto;
+    width: auto;
+    padding: 0;
+    border: 0;
+  }
+  .app-shell[data-theme="arcade"] .mode-sidebar {
+    width: var(--rail-width);
+    min-width: var(--rail-width);
+    padding: 3.5rem .5rem 1rem;
+  }
+  .app-shell[data-theme="arcade"] .mode-sidebar .sidebar-heading,
+  .app-shell[data-theme="arcade"] .mode-sidebar .mode-nav div {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .app-shell[data-theme="arcade"] .mode-sidebar .sidebar-toggle {
+    right: .65rem;
+    padding-inline: .6rem;
+  }
+  .app-shell[data-theme="arcade"] .mode-sidebar .sidebar-toggle b { display: none; }
+  .app-shell[data-theme="arcade"] .mode-sidebar .mode-nav {
+    justify-content: center;
+    padding-inline: .35rem;
+  }
+  .app-shell[data-theme="arcade"] .mode-sidebar .mode-nav > span { flex-basis: 2rem; }
   .defense-topbar { grid-template-columns: repeat(2, 1fr); }
-  .app-shell[data-theme="arcade"] .defense-topbar {
-    gap: .5rem;
-    padding: .6rem;
-    min-height: 7rem;
-  }
-  .app-shell[data-theme="arcade"] .defense-topbar .resource {
-    flex-direction: row;
-    justify-content: flex-start;
-    gap: .5rem;
-    text-align: left;
-  }
-  .app-shell[data-theme="arcade"] .defense-topbar .resource > span {
-    flex: 0 0 2rem;
-  }
+  .app-shell[data-theme="arcade"] .defense-topbar { grid-template-columns: repeat(4, 1fr); }
   .upgrade-dock { grid-template-columns: 1fr; }
-  .app-shell[data-theme="arcade"] .defense-game { min-height: calc(100vh - 10rem); }
-  .app-shell[data-theme="arcade"] #text { top: clamp(7.5rem, 18%, 10rem); right: 1rem; left: 1rem; height: clamp(4rem, 18%, 7rem); }
-  .app-shell[data-theme="arcade"] .typing-card .typed-area { top: 68cqh; bottom: auto; }
-  .app-shell[data-theme="arcade"] .upgrade-dock { grid-template-columns: 1fr; }
+  .app-shell[data-theme="arcade"] .defense-game { min-height: 36rem; }
+  .app-shell[data-theme="arcade"] #text { top: clamp(6.5rem, 18%, 10rem); right: 2rem; left: 2rem; height: clamp(4rem, 18%, 7rem); }
+  .app-shell[data-theme="arcade"] .typing-card .typed-area { top: 68%; bottom: auto; }
+  .app-shell[data-theme="arcade"] .upgrade-dock { grid-template-columns: repeat(3, 1fr); }
 }
 
 @media (max-width: 28rem) {

@@ -185,6 +185,10 @@ export function initGameControllers(
     progressFillEl.style.width = `${stats.progress}%`;
   }
 
+  function focusInput(): void {
+    inputEl.focus({ preventScroll: gameModeEl.value === 'defense' });
+  }
+
   function restartGame() {
     game.typed = [];
     game.errors = 0;
@@ -208,7 +212,7 @@ export function initGameControllers(
     updateUI(false);
     window.clearInterval(hudInterval);
     hudInterval = window.setInterval(() => renderStats(hudEl, calculateStats(game)), 250);
-    inputEl.focus();
+    focusInput();
     showReadyIndicator();
     updateHintState();
   }
@@ -291,7 +295,7 @@ export function initGameControllers(
     if (game.typed.join('') === game.text) finishGame();
   });
 
-  textEl.addEventListener('click', () => inputEl.focus());
+  textEl.addEventListener('click', focusInput);
   document.getElementById('restart')?.addEventListener('click', restartGame);
   if (config.isDevelopment) {
     document.getElementById('dev-complete-passage')?.addEventListener('click', () => {
@@ -337,7 +341,7 @@ export function initGameControllers(
       hintButtonEl.textContent = 'Hint';
       updateHintState();
     }, 1_800);
-    inputEl.focus();
+    focusInput();
   });
   favoritePassageEl.addEventListener('click', () => {
     if (!activePassage) return;
