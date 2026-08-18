@@ -49,8 +49,8 @@ export function initControls() {
           <button class="mode-nav" data-workspace="defense" data-mode="defense"><span>◇</span><div><strong>Arcade</strong><small>Repel the shadows</small></div></button>
         </aside>
         <div class="page-viewport">
-      <section id="game-screen" class="game-screen is-hidden">
-        <header class="game-intro">
+      <section id="game-screen" class="app-page game-screen is-hidden">
+        <header class="page-header game-intro">
           <div>
             <div class="eyebrow">Practice session</div>
             <h2 id="workspace-title">Choose your passage</h2>
@@ -104,7 +104,6 @@ export function initControls() {
                 <button data-upgrade="slow"><span>❄</span><div><strong>Still Waters</strong><small>Slow approaching foes · <b data-cost="slow">55</b> faith</small></div><i data-level="slow">Lv 0</i></button>
               </div>
             </section>
-            </div>
             <div id="hud" class="hud"></div>
             <div id="challenge-banner" class="challenge-banner is-hidden"></div>
             <article id="typing-card" class="typing-card card">
@@ -124,8 +123,8 @@ export function initControls() {
           </section>
         </div>
       </section>
-      <section id="campaign-screen" class="campaign-screen is-hidden">
-        <header class="campaign-header">
+      <section id="campaign-screen" class="app-page campaign-screen is-hidden">
+        <header class="page-header campaign-header">
           <div><div class="eyebrow">The Scripture Journey</div><h2>Journey</h2><p>Complete every passage, chapter, and book—one comfortable session at a time.</p></div>
           <div class="campaign-summary"><strong id="campaign-total-stars">0 ★</strong><span id="campaign-total-progress">0 of 0 passages</span></div>
         </header>
