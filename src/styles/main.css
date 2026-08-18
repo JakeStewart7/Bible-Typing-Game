@@ -407,7 +407,7 @@ select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px va
   }
   .app-shell[data-theme="arcade"] .battlefield {
     position: absolute;
-    inset: 3.5rem 0 4.7rem;
+    inset: 2.65rem 0 4.7rem;
     height: auto;
     margin: 0;
     border: 0;
@@ -440,7 +440,24 @@ select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px va
   .app-shell[data-theme="arcade"] .defense-topbar {
     position: relative;
     z-index: 3;
+    gap: 0;
+    padding: .35rem .7rem;
     background: #061127;
+  }
+  .app-shell[data-theme="arcade"] .defense-topbar .resource {
+    gap: .35rem;
+  }
+  .app-shell[data-theme="arcade"] .defense-topbar .resource > span {
+    font-size: .85rem;
+  }
+  .app-shell[data-theme="arcade"] .defense-topbar .resource div {
+    gap: .25rem;
+  }
+  .app-shell[data-theme="arcade"] .defense-topbar .resource strong {
+    font-size: .78rem;
+  }
+  .app-shell[data-theme="arcade"] .defense-topbar .resource small {
+    font-size: .5rem;
   }
   .app-shell[data-theme="arcade"] .play-area {
     position: relative;
@@ -483,7 +500,7 @@ select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px va
   }
   .app-shell[data-theme="arcade"] .typing-card .text-display {
     position: absolute;
-    inset: 5.5rem 8% auto;
+    inset: 4.4rem 8% auto;
     height: clamp(8rem, 25cqh, 15rem);
     min-height: 0;
     max-height: none;
@@ -520,6 +537,10 @@ select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px va
     bottom: .75rem;
     left: .75rem;
     padding: 0;
+  }
+  .app-shell[data-theme="arcade"] #hud,
+  .app-shell[data-theme="arcade"] #challenge-banner {
+    display: none;
   }
   .app-shell[data-theme="arcade"] .upgrade-dock button {
     min-height: 3rem;
