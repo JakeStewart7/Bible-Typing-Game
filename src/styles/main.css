@@ -196,6 +196,11 @@ select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px #1
 .memory-controls { grid-column: 2; display: grid; grid-template-columns: auto minmax(10rem, 1fr); align-items: center; gap: .75rem; }
 .memory-controls label { margin: 0; white-space: nowrap; }
 .memory-controls input { width: 100%; accent-color: var(--green); }
+.memory-library { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; border-top: 1px solid var(--border); padding-top: .75rem; }
+.memory-library h4 { margin: 0 0 .4rem; color: var(--muted); font-size: var(--text-label); text-transform: uppercase; letter-spacing: .08em; }
+.memory-passage-list { display: flex; flex-wrap: wrap; gap: .4rem; }
+.memory-passage-list button { border: 1px solid var(--border); border-radius: 99px; padding: .4rem .65rem; background: #fff; color: var(--green-dark); font-size: .7rem; }
+.memory-passage-empty { color: var(--muted); font-size: .72rem; }
 .tip { display: flex; gap: 10px; border-top: 1px solid var(--border); padding-top: 18px; margin-top: 10px; color: var(--muted); }
 .tip > span { color: var(--green); font-size: 1.3rem; }
 .tip p { margin: 0; font-size: .72rem; line-height: 1.5; }
@@ -250,14 +255,16 @@ select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px #1
 .ghost-btn { border: 1px solid var(--border); padding: 8px 11px; border-radius: 10px; }
 .progress-track { width: 100%; height: 5px; background: #edf3ef; border-radius: 99px; margin: 22px 0 30px; overflow: hidden; }
 .progress-track div { width: 0; height: 100%; background: linear-gradient(90deg, var(--green), #53c9a5); transition: width .25s; }
+.ready-indicator { display: flex; align-items: center; justify-content: center; gap: .5rem; min-height: 2rem; margin: -1rem 0 .75rem; color: var(--green-dark); opacity: 0; transform: translateY(.3rem); pointer-events: none; }
+.ready-indicator.show { animation: readyPulse 1.7s ease-out both; }
+.ready-indicator span { display: grid; place-items: center; width: 1.65rem; height: 1.65rem; border-radius: 50%; background: var(--mint); }
+@keyframes readyPulse { 0% { opacity: 0; transform: translateY(.3rem) scale(.96); } 18%, 70% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-.2rem); } }
 .text-display { position: relative; min-height: 220px; max-height: calc(100vh - 440px); overflow-y: auto; font: 500 clamp(1.2rem, 1.55vw, 1.55rem)/1.9 DM Mono, monospace; color: #879792; letter-spacing: -.025em; outline: none; }
 .word { display: inline; }
 .char { transition: color .12s, background .12s; }
 .char.correct { color: var(--ink); }
 .typing-card[data-mode="memory"] .char.correct:not(.memory-hidden) { color: var(--ink); background: transparent; }
-.typing-card[data-mode="memory"] .char.memory-hidden { display: inline-block; min-width: .55em; color: #a6b3af; background: transparent; text-align: center; }
-.typing-card[data-mode="memory"][style*="--memory-visibility: 0"] .word { display: inline-block; width: 1.2rem; height: 1.2rem; margin-right: .65rem; border-radius: 50%; background: #e1e9e5; vertical-align: middle; }
-.typing-card[data-mode="memory"][style*="--memory-visibility: 0"] .char.memory-hidden { display: none; }
+.typing-card[data-mode="memory"] .char.memory-hidden { color: transparent; background: linear-gradient(transparent 73%, #d9e3de 73% 82%, transparent 82%); text-shadow: none; }
 .incorrect-word { color: var(--coral); background: #ffe9e7; border-radius: 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 .incorrect-word .char { color: inherit; }
 .floating-caret { position: absolute; left: 0; top: 0; width: 2px; opacity: .78; background: linear-gradient(180deg, #50d8b0, var(--green-dark)); border-radius: 99px; pointer-events: none; z-index: 5; will-change: transform; transition: opacity 90ms; box-shadow: 0 0 5px #20b78e55; animation: caretGlow 1.4s ease-in-out infinite; }
@@ -268,6 +275,11 @@ select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px #1
 #input { width: 100%; height: 52px; padding: 0 16px; border: 1px solid var(--border); border-radius: 13px; color: var(--ink); background: #f9fcf9; font-family: DM Mono, monospace; outline: none; }
 #input:focus { border-color: var(--green); box-shadow: 0 0 0 4px #159a7813; }
 .typing-footer { display: flex; justify-content: space-between; align-items: center; color: #667c77; font-size: var(--text-small); padding-top: 13px; }
+.typing-footer > div { display: flex; align-items: center; gap: .6rem; }
+.hint-button { border: 1px solid var(--border); border-radius: 9px; padding: .45rem .75rem; background: #fff; color: var(--muted); font-weight: 800; }
+.hint-button.hint-ready { border-color: #d6aa4c; color: #856115; animation: hintGlow 1.35s ease-in-out infinite alternate; }
+.hint-button:disabled { opacity: .55; }
+@keyframes hintGlow { to { box-shadow: 0 0 0 4px #e5ba5422, 0 0 18px #d6aa4c55; transform: translateY(-1px); } }
 .dev-complete-btn { display: block; margin: 10px 0 0 auto; padding: 6px 9px; border: 1px dashed #d6aa4c; border-radius: 8px; color: #8b671b; background: #fff9e7; font-size: .6rem; }
 .modal-backdrop { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 20px; background: #143d3575; backdrop-filter: blur(12px); }
 .results-card { width: min(490px, 100%); background: var(--cream); border-radius: 28px; padding: 40px; text-align: center; box-shadow: 0 30px 90px #153d3540; }
@@ -279,6 +291,9 @@ select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px #1
 .result-stat { background: #f0f6f2; border-radius: 14px; padding: 15px 8px; }
 .result-stat strong { display: block; font-size: 1.35rem; color: var(--green-dark); }
 .result-stat span { font-size: var(--text-label); color: var(--muted); text-transform: uppercase; }
+.result-analysis { display: grid; gap: .55rem; margin: -10px 0 24px; text-align: left; }
+.result-insight { padding: .7rem .85rem; border-radius: 12px; background: #f6faf7; color: var(--muted); font-size: .78rem; line-height: 1.45; }
+.result-insight strong { color: var(--ink); }
 .result-actions { display: flex; gap: 10px; }
 .result-actions button { flex: 1; }
 .reward-message { margin: 18px 0 -10px; color: #a06e0d; font-weight: 800; font-size: .82rem; }

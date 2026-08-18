@@ -1,4 +1,5 @@
 import type { Game } from '../game/state';
+import { shouldHideMemoryCharacter } from '../memory/domain/visibility';
 
 type CaretMotion = {
   element: HTMLElement;
@@ -140,9 +141,10 @@ export function renderText(container: HTMLElement, game: Game) {
       const span = document.createElement('span');
       span.textContent = word[i];
       span.classList.add('char');
-      if (memoryMode && shouldHideMemoryCharacter(charIndex, memoryVisibility)) {
+      const hiddenInMemory = Boolean(memoryMode) && shouldHideMemoryCharacter(charIndex, memoryVisibility);
+      if (hiddenInMemory && charIndex >= game.typed.length) {
         span.classList.add('memory-hidden');
-        span.textContent = memoryVisibility === 0 ? '' : '·';
+        span.textContent = '·';
       }
 
       if (wIdx === caretWordIndex) span.classList.add('letter-underline');
@@ -154,11 +156,6 @@ export function renderText(container: HTMLElement, game: Game) {
           span.classList.add('error-highlight');
         }
 
-        function shouldHideMemoryCharacter(index: number, visibility: number): boolean {
-          if (visibility >= 100) return false;
-          if (visibility <= 0) return true;
-          return ((index * 37 + 17) % 100) >= visibility;
-        }
       }
 
       if (charIndex === game.typed.length) span.classList.add('current');

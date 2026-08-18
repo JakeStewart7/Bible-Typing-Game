@@ -6,7 +6,7 @@ import { renderTypedBar } from '../ui/typedBar';
 import { renderStats } from '../ui/hud';
 import { calculateStats } from './stats';
 import { fetchChapter, fetchRange } from '../bible-api';
-import { playComplete, playKey } from '../audio/effects';
+import { playComplete, playKey, playReady } from '../audio/effects';
 import { advanceEnemy, buyUpgrade, completeDefense, createDefenseState, typeCharacter } from './minigame';
 import type { DefenseState, UpgradeId } from './minigame';
 import { isChapterComplete, nextChunk, starsForWpm } from '../campaign';
@@ -22,6 +22,18 @@ import { chooseRandomVerseRange } from '../passage-selector';
 import type { AppConfig } from '../config';
 import type { AppStateRepository, PassageReference } from '../persistence/app-state';
 import type { ProfileRepository } from '../persistence/profile-repository';
+import { getCurrentWord, isHintAvailable } from './hint';
+import { analyzeSession } from './analysis';
+import { BrowserSessionHistoryRepository } from './session-history';
+import {
+  createPassageId,
+  isFavoritePassage,
+  recordRecentPassage,
+  toMemoryPassage,
+  toggleFavoritePassage
+} from '../memory/domain/practice-library';
+import type { MemoryLibraryRepository, MemoryPassage } from '../memory/domain/practice-library';
+import { BrowserMemoryLibraryRepository } from '../memory/infrastructure/browser-memory-library';
 
 type Controls = {
   hudEl: HTMLElement; textEl: HTMLElement; inputEl: HTMLInputElement; typedBarEl: HTMLElement;
@@ -36,6 +48,9 @@ type Controls = {
   defenseGameEl: HTMLElement; faithCountEl: HTMLElement; fortressHealthEl: HTMLElement;
   waveCountEl: HTMLElement; defeatedCountEl: HTMLElement; battlePathEl: HTMLElement;
   battleMessageEl: HTMLElement;
+  readyIndicatorEl: HTMLElement; hintButtonEl: HTMLButtonElement; favoritePassageEl: HTMLButtonElement;
+  memoryLibraryEl: HTMLElement; memoryFavoritesEl: HTMLElement; memoryRecentEl: HTMLElement;
+  resultAnalysisEl: HTMLElement;
   populateBooks: () => void; populateChapters: (preferred?: number) => void;
   populateVerses: () => Promise<void>; constrainEndVerses: () => void;
 };
@@ -53,6 +68,8 @@ export function initGameControllers(
     rewardMessageEl, levelLabelEl, xpLabelEl, xpFillEl, personalBestEl, lifetimeWpmEl, recentWpmEl,
     defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
     battlePathEl, battleMessageEl,
+    readyIndicatorEl, hintButtonEl, favoritePassageEl, memoryLibraryEl,
+    memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
     populateBooks, populateChapters, populateVerses, constrainEndVerses } = controls;
   let hudInterval: number | undefined;
   let hasCompleted = false;
@@ -61,6 +78,11 @@ export function initGameControllers(
   let previousFrame = performance.now();
   let defenseTimer = 0;
   let memoryVisibility = 50;
+  let activePassage: PassageReference | null = null;
+  let lastProgressAt = Date.now();
+  let hintTimer = 0;
+  const memoryLibrary = new BrowserMemoryLibraryRepository();
+  const sessionHistory = new BrowserSessionHistoryRepository();
   const defenseView = createDefenseView({
     faith: faithCountEl, fortress: fortressHealthEl, wave: waveCountEl,
     defeated: defeatedCountEl, path: battlePathEl, message: battleMessageEl
@@ -126,6 +148,9 @@ export function initGameControllers(
     challengeBannerEl.textContent = MODE_LABELS[mode];
     defenseGameEl.classList.toggle('is-hidden', mode !== 'defense');
     document.getElementById('memory-controls')?.classList.toggle('is-hidden', mode !== 'memory');
+    memoryLibraryEl.classList.toggle('is-hidden', mode !== 'memory');
+    favoritePassageEl.classList.toggle('is-hidden', mode !== 'memory' || !activePassage);
+    if (mode === 'memory') renderMemoryLibrary();
     renderDefense();
     if (mode === 'defense') void loadRandomDefensePassage();
   }
@@ -152,6 +177,7 @@ export function initGameControllers(
     game.startTime = null;
     game.completedAt = undefined;
     hasCompleted = false;
+    lastProgressAt = Date.now();
     defense = createDefenseState();
     defenseView.reset();
     inputEl.value = '';
@@ -162,6 +188,8 @@ export function initGameControllers(
     window.clearInterval(hudInterval);
     hudInterval = window.setInterval(() => renderStats(hudEl, calculateStats(game)), 250);
     inputEl.focus();
+    showReadyIndicator();
+    updateHintState();
   }
 
   function finishGame() {
@@ -178,6 +206,9 @@ export function initGameControllers(
       [`${stats.accuracy}%`, 'Accuracy'],
       [`${stats.time}s`, 'Time']
     ].map(([value, label]) => `<div class="result-stat"><strong>${value}</strong><span>${label}</span></div>`).join('');
+    const previousSession = sessionHistory.readPrevious();
+    const analysis = analyzeSession(game, stats, previousSession);
+    resultAnalysisEl.replaceChildren(...renderAnalysis(analysis));
     const mode = parseGameMode(gameModeEl.value);
     const resultsTitle = document.getElementById('results-title');
     const resultsCopy = document.getElementById('results-copy');
@@ -205,6 +236,12 @@ export function initGameControllers(
     }
     resultsEl.classList.remove('is-hidden');
     playComplete();
+    sessionHistory.save(stats);
+    if (mode === 'memory' && activePassage) {
+      const snapshot = recordRecentPassage(memoryLibrary.read(), toMemoryPassage(activePassage, Date.now()));
+      memoryLibrary.write(snapshot);
+      renderMemoryLibrary();
+    }
     recordSession(stats.wpm, earnedXp, profileRepository);
     updateProfile();
   }
@@ -214,6 +251,7 @@ export function initGameControllers(
     const previousLength = game.typed.length;
     handleInput(game, inputEl.value);
     if (game.typed.length > previousLength) {
+      lastProgressAt = Date.now();
       const index = game.typed.length - 1;
       const correct = game.typed[index] === game.chars[index];
       playKey(correct);
@@ -224,6 +262,7 @@ export function initGameControllers(
       }
     }
     updateUI();
+    updateHintState();
     if (game.typed.join('') === game.text) finishGame();
   });
 
@@ -264,6 +303,23 @@ export function initGameControllers(
   document.getElementById('focus-button')?.addEventListener('click', () => {
     document.getElementById('game-screen')?.classList.toggle('focus-mode');
   });
+  hintButtonEl.addEventListener('click', () => {
+    if (!isHintAvailable(lastProgressAt, Date.now())) return;
+    hintButtonEl.textContent = getCurrentWord(game) || 'Hint';
+    hintButtonEl.classList.remove('hint-ready');
+    lastProgressAt = Date.now();
+    window.setTimeout(() => {
+      hintButtonEl.textContent = 'Hint';
+      updateHintState();
+    }, 1_800);
+    inputEl.focus();
+  });
+  favoritePassageEl.addEventListener('click', () => {
+    if (!activePassage) return;
+    const passage = toMemoryPassage(activePassage, Date.now());
+    memoryLibrary.write(toggleFavoritePassage(memoryLibrary.read(), passage));
+    renderMemoryLibrary();
+  });
 
   loadBtn.addEventListener('click', async () => {
     const start = Number(startVerseEl.value);
@@ -281,6 +337,7 @@ export function initGameControllers(
       if (!text) throw new Error('No verses were returned.');
       game.text = text;
       game.chars = text.split('');
+      activePassage = { book: bookEl.value, chapter: Number(chapterEl.value), startVerse: start, endVerse: end, translation: translationEl.value };
       passageTitleEl.textContent = `${bookEl.value} ${chapterEl.value}:${start}${end > start ? `–${end}` : ''}`;
       stateRepository.recordRecentPassage(currentPassageReference());
       statusEl.textContent = '';
@@ -318,14 +375,6 @@ export function initGameControllers(
     typingCardEl.style.setProperty('--memory-visibility', String(memoryVisibility));
     updateUI();
   });
-  document.getElementById('favorite-passage')?.addEventListener('click', () => {
-    const passage = currentPassageReference();
-    const favorites = stateRepository.readMemoryFavorites();
-    const exists = favorites.some(item => samePassage(item, passage));
-    stateRepository.writeMemoryFavorites(exists
-      ? favorites.filter(item => !samePassage(item, passage))
-      : [passage, ...favorites]);
-  });
   document.querySelectorAll<HTMLButtonElement>('[data-upgrade]').forEach(button => {
     button.addEventListener('click', () => {
       const id = button.dataset.upgrade as UpgradeId;
@@ -343,6 +392,7 @@ export function initGameControllers(
       scheduleDefenseFrame();
     }
   }, 50);
+  hintTimer = window.setInterval(updateHintState, 250);
 
   return {
     restartGame,
@@ -351,6 +401,7 @@ export function initGameControllers(
       game.text = sanitizeText(text);
       game.chars = game.text.split('');
       passageTitleEl.textContent = `${chunk.book} ${chunk.chapter}:${chunk.startVerse}–${chunk.endVerse}`;
+      activePassage = { book: chunk.book, chapter: chunk.chapter, startVerse: chunk.startVerse, endVerse: chunk.endVerse, translation: 'kjv' };
       gameModeEl.value = 'practice';
       setMode();
       restartGame();
@@ -360,24 +411,92 @@ export function initGameControllers(
     stop: () => {
       cancelAnimationFrame(defenseFrame);
       clearInterval(defenseTimer);
+      clearInterval(hintTimer);
     }
   };
 
-  function currentPassageReference(): PassageReference {
-    return {
-      book: bookEl.value,
-      chapter: Number(chapterEl.value),
-      startVerse: Number(startVerseEl.value),
-      endVerse: Number(endVerseEl.value),
-      translation: translationEl.value
-    };
+  function showReadyIndicator(): void {
+    readyIndicatorEl.classList.remove('show');
+    void readyIndicatorEl.offsetWidth;
+    readyIndicatorEl.classList.add('show');
+    playReady();
+  }
+
+  function updateHintState(): void {
+    const available = !hasCompleted && game.typed.length < game.chars.length
+      && isHintAvailable(lastProgressAt, Date.now());
+    hintButtonEl.disabled = hasCompleted || game.chars.length === 0;
+    hintButtonEl.classList.toggle('hint-ready', available);
+  }
+
+  function renderMemoryLibrary(): void {
+    const snapshot = memoryLibrary.read();
+    renderPassageList(memoryFavoritesEl, snapshot.favorites);
+    renderPassageList(memoryRecentEl, snapshot.recent);
+    const id = activePassage ? createPassageId(activePassage) : '';
+    const favorite = Boolean(id) && isFavoritePassage(snapshot, id);
+    favoritePassageEl.setAttribute('aria-pressed', String(favorite));
+    favoritePassageEl.textContent = favorite ? '★ Favorited' : '☆ Favorite';
+  }
+
+  function renderPassageList(container: HTMLElement, passages: MemoryPassage[]): void {
+    if (!passages.length) {
+      const empty = document.createElement('span');
+      empty.className = 'memory-passage-empty';
+      empty.textContent = 'No passages yet';
+      container.replaceChildren(empty);
+      return;
+    }
+    container.replaceChildren(...passages.map(passage => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = formatPassageLabel(passage);
+      button.addEventListener('click', () => {
+        translationEl.value = passage.translation;
+        bookEl.value = passage.book;
+        populateChapters(passage.chapter);
+        void populateVerses().then(() => {
+          startVerseEl.value = String(passage.startVerse);
+          constrainEndVerses();
+          endVerseEl.value = String(passage.endVerse);
+          loadBtn.click();
+        });
+      });
+      return button;
+    }));
   }
 }
 
-function samePassage(left: PassageReference, right: PassageReference): boolean {
-  return left.book === right.book && left.chapter === right.chapter &&
-    left.startVerse === right.startVerse && left.endVerse === right.endVerse &&
-    left.translation === right.translation;
+function formatPassageLabel(passage: PassageReference): string {
+  const verses = passage.startVerse === passage.endVerse
+    ? passage.startVerse
+    : `${passage.startVerse}–${passage.endVerse}`;
+  return `${passage.book} ${passage.chapter}:${verses}`;
+}
+
+function renderAnalysis(analysis: ReturnType<typeof analyzeSession>): HTMLElement[] {
+  const insights = [
+    analysis.difficultWords.length
+      ? `<strong>Review:</strong> ${analysis.difficultWords.join(', ')}`
+      : '<strong>Clean recall:</strong> no words needed a correction.',
+    analysis.strongestWords.length
+      ? `<strong>Strong words:</strong> ${analysis.strongestWords.join(', ')}`
+      : `<strong>Corrections:</strong> ${analysis.mistakeCount}`,
+    analysis.comparison
+      ? `<strong>Compared with last session:</strong> ${formatDifference(analysis.comparison.wpmDifference, 'WPM')}, ${formatDifference(analysis.comparison.accuracyDifference, 'accuracy points')}`
+      : '<strong>Baseline saved:</strong> your next session will show a comparison.'
+  ];
+  return insights.map(content => {
+    const item = document.createElement('div');
+    item.className = 'result-insight';
+    item.innerHTML = content;
+    return item;
+  });
+}
+
+function formatDifference(value: number, label: string): string {
+  if (value === 0) return `even ${label}`;
+  return `${value > 0 ? '+' : ''}${value} ${label}`;
 }
 
 function getBookProgressComplete(book: string, progress: CampaignProgress): boolean {

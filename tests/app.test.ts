@@ -11,6 +11,14 @@ import { AppStorage } from '../src/persistence/storage.ts';
 import { AppStateRepository } from '../src/persistence/app-state.ts';
 import { ProfileRepository } from '../src/persistence/profile-repository.ts';
 import { filterJourneyBooks, findJourneyContinuation, groupJourneyBooks, isJourneyBookUnlocked, journeyCurrency } from '../src/journey.ts';
+import { shouldHideMemoryCharacter } from '../src/memory/domain/visibility.ts';
+import {
+  createPassageId,
+  recordRecentPassage,
+  toggleFavoritePassage
+} from '../src/memory/domain/practice-library.ts';
+import { getCurrentWordRange, isHintAvailable } from '../src/game/hint.ts';
+import { analyzeSession } from '../src/game/analysis.ts';
 
 type Test = { name: string; run: () => void };
 const tests: Test[] = [];
@@ -130,6 +138,44 @@ test('backspacing freezes accuracy until a new unscored letter is typed', () => 
   equal(calculateStats(game).accuracy, 100);
   handleInput(game, 'Faith');
   equal(calculateStats(game).accuracy, 100);
+});
+
+test('Memory visibility is deterministic and supports its full range', () => {
+  equal(Array.from({ length: 20 }, (_, index) => shouldHideMemoryCharacter(index, 100)).some(Boolean), false);
+  equal(Array.from({ length: 20 }, (_, index) => shouldHideMemoryCharacter(index, 0)).every(Boolean), true);
+  equal(shouldHideMemoryCharacter(0, 50), false);
+  equal(shouldHideMemoryCharacter(1, 50), true);
+});
+
+test('hint timing and current-word selection are deterministic', () => {
+  equal(getCurrentWordRange('Faith grows here', 7), { start: 6, end: 11 });
+  equal(getCurrentWordRange('Faith grows here', 17), { start: 12, end: 16 });
+  equal(isHintAvailable(1_000, 3_000), false);
+  equal(isHintAvailable(1_000, 3_001), true);
+});
+
+test('Memory library keeps unique recent passages and toggles favorites', () => {
+  const reference = { book: 'John', chapter: 3, startVerse: 16, endVerse: 17, translation: 'kjv' };
+  const passage = { ...reference, id: createPassageId(reference), practicedAt: 100 };
+  const empty = { favorites: [], recent: [] };
+  const recent = recordRecentPassage(recordRecentPassage(empty, passage), { ...passage, practicedAt: 200 });
+  equal(recent.recent.length, 1);
+  equal(recent.recent[0]?.practicedAt, 200);
+  const favorite = toggleFavoritePassage(recent, passage);
+  equal(favorite.favorites.map(item => item.id), [passage.id]);
+  equal(toggleFavoritePassage(favorite, passage).favorites, []);
+});
+
+test('session analysis identifies difficult words and comparisons', () => {
+  const game = createGame('Faith grows strong');
+  handleInput(game, 'Faixh grows strong');
+  handleInput(game, 'Faith grows strong');
+  const stats = calculateStats(game, game.startTime! + 60_000);
+  const analysis = analyzeSession(game, stats, { wpm: 2, accuracy: 80 });
+  equal(analysis.difficultWords, ['Faith']);
+  equal(analysis.strongestWords, ['strong', 'grows']);
+  equal(analysis.mistakeCount, 1);
+  equal(analysis.comparison, { wpmDifference: 2, accuracyDifference: 14 });
 });
 
 test('defense typing earns faith and damages enemies', () => {

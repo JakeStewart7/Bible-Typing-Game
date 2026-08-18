@@ -31,6 +31,8 @@ const {
   levelLabelEl, xpLabelEl, xpFillEl, personalBestEl, lifetimeWpmEl, recentWpmEl,
   defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
   battlePathEl, battleMessageEl,
+  readyIndicatorEl, hintButtonEl, favoritePassageEl,
+  memoryLibraryEl, memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
   campaignScreenEl, campaignContentEl, campaignBackEl, campaignBreadcrumbEl,
   campaignTotalStarsEl, campaignTotalProgressEl, campaignDevToolsEl,
   sidebarCampaignProgressEl, celebrationEl,
@@ -54,6 +56,8 @@ const gameController = initGameControllers(game, {
   levelLabelEl, xpLabelEl, xpFillEl, personalBestEl, lifetimeWpmEl, recentWpmEl,
   defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
   battlePathEl, battleMessageEl,
+  readyIndicatorEl, hintButtonEl, favoritePassageEl,
+  memoryLibraryEl, memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
   populateBooks, populateChapters, populateVerses, constrainEndVerses
 }, stateRepository, profileRepository, appConfig);
 

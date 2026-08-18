@@ -96,6 +96,10 @@ export function initControls(config: AppConfig) {
               <input id="memory-visibility" type="range" min="0" max="100" step="10" value="50">
               <button id="favorite-passage" class="ghost-btn" type="button">Favorite passage</button>
             </div>
+            <div id="memory-library" class="memory-library is-hidden">
+              <section><h4>Favorites</h4><div id="memory-favorites" class="memory-passage-list"></div></section>
+              <section><h4>Recently practiced</h4><div id="memory-recent" class="memory-passage-list"></div></section>
+            </div>
           </section>
 
           <section class="play-area">
@@ -127,12 +131,22 @@ export function initControls(config: AppConfig) {
                 <button id="focus-button" class="ghost-btn">Focus mode</button>
               </div>
               <div class="progress-track"><div id="progress-fill"></div></div>
+              <div id="ready-indicator" class="ready-indicator" role="status" aria-live="polite">
+                <span aria-hidden="true">✦</span><strong>Ready to type</strong>
+              </div>
               <div id="text" class="text-display" tabindex="0"></div>
               <div class="typed-area">
                 <div id="typed-bar" class="typed-bar" aria-hidden="true"></div>
                 <input id="input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Type the passage here">
               </div>
-              <div class="typing-footer"><span>Click the passage or start typing</span><button id="restart" class="text-btn">↻ Restart</button></div>
+              <div class="typing-footer">
+                <span>Click the passage or start typing</span>
+                <div>
+                  <button id="favorite-passage" class="text-btn is-hidden" type="button" aria-pressed="false">☆ Favorite</button>
+                  <button id="hint-button" class="hint-button" type="button" disabled>Hint</button>
+                  <button id="restart" class="text-btn">↻ Restart</button>
+                </div>
+              </div>
               ${developerControls}
             </article>
           </section>
@@ -163,6 +177,7 @@ export function initControls(config: AppConfig) {
           <p id="results-copy"></p>
           <div id="reward-message" class="reward-message"></div>
           <div id="result-stats" class="result-stats"></div>
+          <div id="result-analysis" class="result-analysis"></div>
           <div class="result-actions">
             <button id="try-again" class="secondary-btn">Try again</button>
             <button id="chapter-select" class="secondary-btn">Chapter select</button>
@@ -238,6 +253,13 @@ export function initControls(config: AppConfig) {
     fortressHealthEl: requireElement('fortress-health', HTMLElement), waveCountEl: requireElement('wave-count', HTMLElement),
     defeatedCountEl: requireElement('defeated-count', HTMLElement), battlePathEl: requireElement('battle-path', HTMLElement),
     battleMessageEl: requireElement('battle-message', HTMLElement),
+    readyIndicatorEl: requireElement('ready-indicator', HTMLElement),
+    hintButtonEl: requireElement('hint-button', HTMLButtonElement),
+    favoritePassageEl: requireElement('favorite-passage', HTMLButtonElement),
+    memoryLibraryEl: requireElement('memory-library', HTMLElement),
+    memoryFavoritesEl: requireElement('memory-favorites', HTMLElement),
+    memoryRecentEl: requireElement('memory-recent', HTMLElement),
+    resultAnalysisEl: requireElement('result-analysis', HTMLElement),
     campaignScreenEl: requireElement('campaign-screen', HTMLElement),
     campaignContentEl: requireElement('campaign-content', HTMLElement),
     campaignBackEl: requireElement('campaign-back', HTMLButtonElement),
