@@ -359,9 +359,13 @@ export function initGameControllers(
       game.chars = text.split('');
       activePassage = { book: bookEl.value, chapter: Number(chapterEl.value), startVerse: start, endVerse: end, translation: translationEl.value };
       passageTitleEl.textContent = `${bookEl.value} ${chapterEl.value}:${start}${end > start ? `–${end}` : ''}`;
-      stateRepository.recordRecentPassage(currentPassageReference());
+      stateRepository.recordRecentPassage(activePassage);
       statusEl.textContent = '';
       restartGame();
+      if (gameModeEl.value === 'memory') {
+        favoritePassageEl.classList.remove('is-hidden');
+        renderMemoryLibrary();
+      }
     } catch (error) {
       console.error(error);
       statusEl.textContent = 'We could not load that passage. Please try again.';
