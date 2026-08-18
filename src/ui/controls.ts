@@ -43,10 +43,10 @@ export function initControls() {
         <aside id="mode-sidebar" class="mode-sidebar" aria-label="Game modes">
           <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Collapse navigation" aria-controls="mode-sidebar" aria-expanded="true"><span aria-hidden="true">‹</span><b>Hide menu</b></button>
           <div class="sidebar-heading">Modes</div>
-          <button class="mode-nav active" data-workspace="campaign"><span>✦</span><div><strong>Journey</strong><small id="sidebar-campaign-progress">0 / 0 passages</small></div></button>
-          <button class="mode-nav" data-workspace="practice" data-mode="practice"><span>⌨</span><div><strong>Practice</strong><small>Relaxed typing</small></div></button>
-          <button class="mode-nav" data-workspace="practice" data-mode="memory"><span>◫</span><div><strong>Memory</strong><small>Words fade away</small></div></button>
-          <button class="mode-nav" data-workspace="defense" data-mode="defense"><span>◇</span><div><strong>Arcade</strong><small>Repel the shadows</small></div></button>
+          <button class="mode-nav active" data-workspace="campaign" aria-label="Journey" title="Journey"><span>✦</span><div><strong>Journey</strong><small id="sidebar-campaign-progress">0 / 0 passages</small></div></button>
+          <button class="mode-nav" data-workspace="practice" data-mode="practice" aria-label="Practice" title="Practice"><span>⌨</span><div><strong>Practice</strong><small>Relaxed typing</small></div></button>
+          <button class="mode-nav" data-workspace="practice" data-mode="memory" aria-label="Memory" title="Memory"><span>◫</span><div><strong>Memory</strong><small>Words fade away</small></div></button>
+          <button class="mode-nav" data-workspace="defense" data-mode="defense" aria-label="Arcade" title="Arcade"><span>◇</span><div><strong>Arcade</strong><small>Repel the shadows</small></div></button>
         </aside>
         <div class="page-viewport">
       <section id="game-screen" class="app-page game-screen is-hidden">

@@ -86,6 +86,10 @@ function showWorkspace(workspace: string, selectedMode?: string): void {
   campaignScreenEl.classList.toggle('is-hidden', workspace !== 'campaign');
   gameScreen?.classList.toggle('is-hidden', workspace === 'campaign');
   gameScreen?.classList.toggle('campaign-play', workspace === 'campaign-play');
+  const theme = workspace === 'campaign' || workspace === 'campaign-play'
+    ? 'journey'
+    : selectedMode === 'memory' ? 'memory' : selectedMode === 'defense' ? 'arcade' : 'practice';
+  document.querySelector('.app-shell')?.setAttribute('data-theme', theme);
   document.querySelectorAll<HTMLElement>('.mode-nav').forEach(button => {
     const campaignActive = (workspace === 'campaign' || workspace === 'campaign-play') && button.dataset.workspace === 'campaign';
     const modeActive = Boolean(selectedMode) && button.dataset.mode === selectedMode;
