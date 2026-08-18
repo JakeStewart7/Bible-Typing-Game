@@ -2,8 +2,9 @@ import type { Game } from '../game/state';
 import { narrationRate } from './narration-policy';
 
 const STORAGE_KEY = 'verseTypeNarratorEnabled';
-const STALE_AFTER_MS = 900;
+const SPEED_STORAGE_KEY = 'verseTypeNarratorSpeed';
 let enabled = localStorage.getItem(STORAGE_KEY) !== 'false';
+let speed = Number(localStorage.getItem(SPEED_STORAGE_KEY)) || 1;
 let spokenThrough = 0;
 let lastWordAt = 0;
 let smoothedInterval = 700;
@@ -11,8 +12,7 @@ let selectedVoice: SpeechSynthesisVoice | null = null;
 
 function selectNarratorVoice(): SpeechSynthesisVoice | null {
   const englishVoices = speechSynthesis.getVoices().filter(voice => voice.lang.toLowerCase().startsWith('en'));
-  selectedVoice = englishVoices.find(voice => /natural|neural|online/i.test(voice.name))
-    ?? englishVoices.find(voice => /microsoft (zira|aria|jenny|guy)/i.test(voice.name))
+  selectedVoice = englishVoices.find(voice => /microsoft david/i.test(voice.name))
     ?? englishVoices.find(voice => /microsoft/i.test(voice.name))
     ?? englishVoices[0]
     ?? null;
@@ -21,6 +21,16 @@ function selectNarratorVoice(): SpeechSynthesisVoice | null {
 
 export function narratorVoiceName(): string {
   return (selectedVoice ?? selectNarratorVoice())?.name ?? 'System default';
+}
+
+export function narratorSpeed(): number {
+  return speed;
+}
+
+export function setNarratorSpeed(value: number): number {
+  speed = Math.min(2, Math.max(.6, value));
+  localStorage.setItem(SPEED_STORAGE_KEY, String(speed));
+  return speed;
 }
 
 if ('speechSynthesis' in window) {
@@ -62,13 +72,14 @@ export function narrateCompletedWords(game: Game, now = performance.now()): void
   if (lastWordAt) {
     const interval = now - lastWordAt;
     smoothedInterval = smoothedInterval * .65 + interval * .35;
-    if (speechSynthesis.pending && interval < STALE_AFTER_MS) speechSynthesis.cancel();
   }
   lastWordAt = now;
 
-  const utterance = new SpeechSynthesisUtterance(word);
-  utterance.voice = selectedVoice ?? selectNarratorVoice();
-  utterance.rate = narrationRate(smoothedInterval);
-  utterance.volume = .75;
-  speechSynthesis.speak(utterance);
+  for (const completedWord of words) {
+    const utterance = new SpeechSynthesisUtterance(completedWord);
+    utterance.voice = selectedVoice ?? selectNarratorVoice();
+    utterance.rate = narrationRate(smoothedInterval, speed);
+    utterance.volume = .75;
+    speechSynthesis.speak(utterance);
+  }
 }

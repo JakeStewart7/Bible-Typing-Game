@@ -37,6 +37,10 @@ export function initControls() {
                 <div><strong>Word narrator</strong><small id="narrator-voice">Pronounce each word as you type</small></div>
                 <button id="narrator-toggle" class="sound-switch" aria-label="Toggle word narrator" aria-pressed="true"><i></i><span>On</span></button>
               </div>
+              <div class="setting-row narrator-speed-setting">
+                <label for="narrator-speed">Narrator speed <strong id="narrator-speed-value">1.0×</strong></label>
+                <input id="narrator-speed" type="range" min="0.6" max="2" step="0.1" value="1">
+              </div>
               <div class="setting-row music-setting"><div><strong>Background music</strong><small>Playback and volume</small></div><div id="music-slot"></div></div>
             </div>
           </div>

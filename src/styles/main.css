@@ -85,6 +85,9 @@ button:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focu
 .sound-switch { display: flex; align-items: center; gap: 6px; padding: 4px 8px 4px 4px; border: 0; border-radius: 99px; color: white; background: var(--green); font-size: var(--text-small); font-weight: 800; }
 .sound-switch i { display: block; width: 21px; height: 21px; border-radius: 50%; background: white; box-shadow: 0 2px 6px #173f3830; }
 .sound-switch[aria-pressed="false"] { color: var(--muted); background: #dfe7e3; }
+.narrator-speed-setting { display: grid; align-items: stretch; }
+.narrator-speed-setting label { display: flex; justify-content: space-between; margin: 0; }
+.narrator-speed-setting input { width: 100%; accent-color: var(--green); }
 .music-setting { display: grid; grid-template-columns: 1fr; align-items: stretch; }
 .settings-menu .music-controls { display: grid; grid-template-columns: 100px 1fr; }
 .settings-menu .music-btn { height: 34px; border-radius: 9px; font-size: .64rem; }

@@ -8,7 +8,7 @@ import { initControls } from './ui/controls';
 import { initGameControllers } from './game/controller';
 import { setupMusic } from './audio/music';
 import { toggleEffects } from './audio/effects';
-import { isNarratorEnabled, narratorVoiceName, toggleNarrator } from './audio/narrator';
+import { isNarratorEnabled, narratorSpeed, narratorVoiceName, setNarratorSpeed, toggleNarrator } from './audio/narrator';
 import { createCampaignController } from './campaign-controller';
 import type { CampaignChunk } from './campaign';
 import { fetchRange } from './bible-api';
@@ -158,4 +158,15 @@ if (narratorToggle instanceof HTMLButtonElement) {
   };
   renderVoice();
   speechSynthesis.addEventListener('voiceschanged', renderVoice);
+}
+
+const narratorSpeedInput = document.getElementById('narrator-speed');
+const narratorSpeedValue = document.getElementById('narrator-speed-value');
+if (narratorSpeedInput instanceof HTMLInputElement) {
+  const renderNarratorSpeed = (value: number) => {
+    narratorSpeedInput.value = String(value);
+    if (narratorSpeedValue) narratorSpeedValue.textContent = `${value.toFixed(1)}×`;
+  };
+  renderNarratorSpeed(narratorSpeed());
+  narratorSpeedInput.addEventListener('input', () => renderNarratorSpeed(setNarratorSpeed(Number(narratorSpeedInput.value))));
 }

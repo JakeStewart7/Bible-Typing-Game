@@ -251,6 +251,7 @@ test('profile records lifetime and recent completed-passage WPM', () => {
 test('narrator rate follows typing pace within natural limits', () => {
   equal(narrationRate(1200), .75);
   equal(narrationRate(550), 1);
+  equal(narrationRate(550, 1.5), 1.5);
   equal(narrationRate(250), 2.2);
   equal(narrationRate(100), 2.2);
 });
