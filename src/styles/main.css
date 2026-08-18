@@ -158,25 +158,26 @@ button:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focu
 .app-page button:focus-visible, .app-page select:focus-visible, .app-page input:focus-visible { outline-color: color-mix(in srgb, var(--page-accent) 42%, transparent); }
 .page-header { width: 100%; max-width: var(--content-max); margin: 0 auto 26px; display: flex; justify-content: space-between; align-items: end; gap: 1rem; }
 .campaign-header { margin-bottom: 0; }
+.campaign-header, .campaign-toolbar, .journey-continue, .campaign-dev-tools, .campaign-content { width: 100%; max-width: var(--content-max); margin-inline: auto; }
 .campaign-header .eyebrow { margin-bottom: 4px; }
 .campaign-header h2 { margin: 0; font: 700 2.7rem Playfair Display; }
 .campaign-header p { color: var(--muted); }
 .campaign-summary { display: grid; text-align: right; }
 .campaign-summary strong { color: #b47a08; font-size: 1.4rem; }
 .campaign-summary span { color: var(--muted); font-size: var(--text-small); }
-.campaign-toolbar { max-width: var(--content-max); margin: 1.25rem auto; display: flex; align-items: center; gap: 1rem; }
+.campaign-toolbar { margin-block: 1.25rem; display: flex; align-items: center; gap: 1rem; }
 .campaign-toolbar > div { flex: 1; color: var(--muted); font-size: .875rem; }
 .campaign-search { display: grid; gap: 3px; min-width: min(260px, 100%); color: var(--muted); font-size: .65rem; font-weight: 700; }
 .campaign-search input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: white; }
-.journey-continue { width: 100%; max-width: var(--content-max); margin: 0 auto 1.125rem; padding: 18px; border: 1px solid var(--page-border); border-radius: 16px; color: var(--ink); background: linear-gradient(135deg, var(--page-accent-soft), white); text-align: left; }
+.journey-continue { margin-bottom: 1.125rem; padding: 18px; border: 1px solid var(--page-border); border-radius: 16px; color: var(--ink); background: linear-gradient(135deg, var(--page-accent-soft), white); text-align: left; }
 .journey-continue strong, .journey-continue span { display: block; }
 .journey-continue span { margin-top: 4px; color: var(--muted); }
 .testament-group { margin-bottom: 1.5rem; }
 .testament-group > h3 { margin: 0 0 .75rem; font: 700 1.4rem Playfair Display; }
-.campaign-dev-tools { max-width: var(--content-max); margin: 0 auto 1.125rem; padding: .75rem; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; border: 1px dashed #d6aa4c; border-radius: 12px; background: #fff9e7; }
+.campaign-dev-tools { margin-bottom: 1.125rem; padding: .75rem; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; border: 1px dashed #d6aa4c; border-radius: 12px; background: #fff9e7; }
 .campaign-dev-tools strong { margin-right: auto; font-size: .73rem; }
 .campaign-dev-tools button { border: 1px solid #e2d2ac; border-radius: 8px; padding: 7px 10px; color: var(--ink); background: white; font-size: .63rem; }
-.campaign-content { max-width: var(--content-max); margin: auto; }
+.campaign-content { margin-block: 0; }
 .book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(11rem, 100%), 1fr)); gap: clamp(.75rem, 1.5vw, 1rem); }
 .book-tile { position: relative; min-height: 138px; display: flex; flex-direction: column; justify-content: end; align-items: flex-start; padding: 18px; border: 1px solid var(--border); border-radius: 17px; color: var(--ink); background: white; text-align: left; box-shadow: 0 8px 24px var(--page-shadow); }
 .book-tile:hover { transform: translateY(-2px); border-color: var(--page-accent); box-shadow: 0 12px 28px var(--page-shadow); }
