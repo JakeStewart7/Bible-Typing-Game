@@ -22,6 +22,7 @@ import { chooseRandomVerseRange } from '../passage-selector';
 import type { AppConfig } from '../config';
 import type { AppStateRepository, PassageReference } from '../persistence/app-state';
 import type { ProfileRepository } from '../persistence/profile-repository';
+import type { AppStorage } from '../persistence/storage';
 import { getCurrentWord, isHintAvailable } from './hint';
 import { analyzeSession } from './analysis';
 import { BrowserSessionHistoryRepository } from './session-history';
@@ -33,7 +34,6 @@ import {
   toggleFavoritePassage
 } from '../memory/domain/practice-library';
 import type { MemoryLibraryRepository, MemoryPassage } from '../memory/domain/practice-library';
-import { BrowserMemoryLibraryRepository } from '../memory/infrastructure/browser-memory-library';
 
 type Controls = {
   hudEl: HTMLElement; textEl: HTMLElement; inputEl: HTMLInputElement; typedBarEl: HTMLElement;
@@ -60,6 +60,7 @@ export function initGameControllers(
   controls: Controls,
   stateRepository: AppStateRepository,
   profileRepository: ProfileRepository,
+  storage: AppStorage,
   config: AppConfig
 ) {
   const { hudEl, textEl, inputEl, typedBarEl, translationEl, bookEl, chapterEl,
@@ -81,8 +82,21 @@ export function initGameControllers(
   let activePassage: PassageReference | null = null;
   let lastProgressAt = Date.now();
   let hintTimer = 0;
-  const memoryLibrary = new BrowserMemoryLibraryRepository();
-  const sessionHistory = new BrowserSessionHistoryRepository();
+  const memoryLibrary: MemoryLibraryRepository = {
+    read: () => ({
+      favorites: stateRepository.readMemoryFavorites().map((passage, index) =>
+        toMemoryPassage(passage, Date.now() - index)),
+      recent: stateRepository.readRecentPassages().map((passage, index) =>
+        toMemoryPassage(passage, Date.now() - index))
+    }),
+    write: snapshot => {
+      stateRepository.writeMemoryFavorites(snapshot.favorites);
+      for (const passage of [...snapshot.recent].reverse()) {
+        stateRepository.recordRecentPassage(passage);
+      }
+    }
+  };
+  const sessionHistory = new BrowserSessionHistoryRepository(storage);
   const defenseView = createDefenseView({
     faith: faithCountEl, fortress: fortressHealthEl, wave: waveCountEl,
     defeated: defeatedCountEl, path: battlePathEl, message: battleMessageEl

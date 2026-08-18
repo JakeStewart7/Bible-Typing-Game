@@ -1,33 +1,32 @@
 import type { GameStats } from './stats';
+import { AppStorage, decodeJson, type StoredValue } from '../persistence/storage';
 
 export interface SessionHistoryRepository {
   readPrevious(): Pick<GameStats, 'wpm' | 'accuracy'> | null;
   save(stats: Pick<GameStats, 'wpm' | 'accuracy'>): void;
 }
 
-const STORAGE_KEY = 'verseTypeLastSession';
+type SessionComparison = Pick<GameStats, 'wpm' | 'accuracy'>;
+
+const sessionComparisonValue: StoredValue<SessionComparison> = {
+  key: 'verseTypeLastSession',
+  decode: decodeJson(isSessionComparison)
+};
 
 export class BrowserSessionHistoryRepository implements SessionHistoryRepository {
-  constructor(private readonly storage: Storage = localStorage) {}
+  constructor(private readonly storage: AppStorage) {}
 
-  readPrevious(): Pick<GameStats, 'wpm' | 'accuracy'> | null {
-    try {
-      const value: unknown = JSON.parse(this.storage.getItem(STORAGE_KEY) ?? 'null');
-      if (!isRecord(value)) return null;
-      const wpm = Number(value.wpm);
-      const accuracy = Number(value.accuracy);
-      return Number.isFinite(wpm) && Number.isFinite(accuracy) ? { wpm, accuracy } : null;
-    } catch (error) {
-      console.warn('Could not read the previous typing session.', error);
-      return null;
-    }
+  readPrevious(): SessionComparison | null {
+    return this.storage.read(sessionComparisonValue, null);
   }
 
-  save(stats: Pick<GameStats, 'wpm' | 'accuracy'>): void {
-    this.storage.setItem(STORAGE_KEY, JSON.stringify(stats));
+  save(stats: SessionComparison): void {
+    this.storage.write(sessionComparisonValue, stats);
   }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+function isSessionComparison(value: unknown): value is SessionComparison {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Partial<SessionComparison>;
+  return Number.isFinite(candidate.wpm) && Number.isFinite(candidate.accuracy);
 }

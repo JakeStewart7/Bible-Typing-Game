@@ -59,7 +59,7 @@ const gameController = initGameControllers(game, {
   readyIndicatorEl, hintButtonEl, favoritePassageEl,
   memoryLibraryEl, memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
   populateBooks, populateChapters, populateVerses, constrainEndVerses
-}, stateRepository, profileRepository, appConfig);
+}, stateRepository, profileRepository, storage, appConfig);
 
 setupMusic(document.getElementById('music-slot'));
 
