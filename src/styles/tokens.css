@@ -1,0 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@700&display=swap');
+
+:root {
+  --ink: #173f38;
+  --muted: #667c77;
+  --green: #159a78;
+  --green-dark: #0d755c;
+  --mint: #dff8ec;
+  --cream: #fffdf7;
+  --gold: #f4b83f;
+  --coral: #ee6b62;
+  --border: #dce8e2;
+  /* These are the only values needed to configure page and navigation themes. */
+  --journey-accent: #c58b18;
+  --practice-accent: #159a78;
+  --memory-accent: #7956c8;
+  --arcade-accent: #4b9ed6;
+  --content-max: 92rem;
+  --content-gutter: clamp(1rem, 2.5vw, 2.5rem);
+  --sidebar-width: clamp(13rem, 17vw, 15rem);
+  --rail-width: 4.5rem;
+  --page-accent: #159a78;
+  --page-accent-hover: #25ae8a;
+  --page-accent-soft: #dff8ec;
+  --page-glow: #d9f4e6;
+  --header-height: clamp(4.25rem, 7vh, 4.75rem);
+  --text-small: .75rem;
+  --text-label: .6875rem;
+  font-family: Manrope, sans-serif;
+  color: var(--ink);
+  background: #f7fbf7;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 20rem; min-height: 100vh; overflow: hidden; background: #e8eeea; }
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+button, select, input { min-height: 2.75rem; }
+button:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 3px solid #159a7840; outline-offset: 2px; }
+.is-hidden { display: none !important; }
