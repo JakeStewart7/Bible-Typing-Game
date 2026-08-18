@@ -1,0 +1,182 @@
+@media (min-width: 58.01rem) {
+  .app-shell:is([data-theme="practice"], [data-theme="memory"]) #game-screen {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow: hidden;
+  }
+  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .practice-workspace {
+    height: 100%;
+    min-height: 0;
+    grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .passage-panel {
+    min-height: 0;
+    grid-template-columns: 1fr;
+    align-content: start;
+    align-items: stretch;
+    overflow-y: auto;
+  }
+  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .passage-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+  }
+  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .status,
+  .app-shell[data-theme="memory"] .memory-controls {
+    grid-column: 1;
+  }
+  .app-shell[data-theme="memory"] .memory-controls {
+    grid-template-columns: 1fr;
+    gap: .35rem;
+  }
+  .app-shell[data-theme="memory"] .memory-library {
+    grid-column: 1;
+    grid-template-columns: 1fr;
+  }
+  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .play-area {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .typing-card {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .text-display {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+  }
+  .app-shell[data-theme="arcade"] .battlefield::after {
+    background: #020a1dcc;
+  }
+  .app-shell[data-theme="arcade"] .enemy {
+    color: #c7a9ff;
+    filter: drop-shadow(0 0 8px #8c6dff99);
+  }
+  .app-shell[data-theme="arcade"] .enemy-health {
+    background: #120d2d;
+  }
+  .app-shell[data-theme="arcade"] .fortress {
+    color: #d7efff;
+    text-shadow: 0 0 14px #75c9ff, 0 4px 0 #123c64;
+  }
+  .app-shell[data-theme="arcade"] .shadow-gate {
+    color: #9e79df;
+    text-shadow: 0 0 12px #7650c0;
+  }
+  .app-shell[data-theme="arcade"] .defense-game {
+    --arcade-unit: clamp(.72rem, 1.2cqw, 1.15rem);
+    font-size: var(--arcade-unit);
+  }
+  .app-shell[data-theme="arcade"] .upgrade-dock button {
+    min-height: clamp(2.5rem, 6cqh, 3rem);
+    padding: clamp(.25rem, 1cqh, .4rem) clamp(.35rem, 1cqw, .55rem);
+  }
+}
+
+@media (max-width: 75rem) {
+  .topbar { grid-template-columns: auto 1fr auto; }
+  .brand { font-size: 1.05rem; }
+  .header-profile { width: 20rem; }
+  .passage-panel { grid-template-columns: 1fr auto; }
+  .passage-panel-heading { grid-column: 1 / -1; }
+  .hud { grid-template-columns: repeat(2, 1fr); }
+  .text-display { font-size: 1.15rem; }
+}
+
+@media (max-width: 58rem) {
+  .topbar { grid-template-columns: auto 1fr auto; gap: .625rem; }
+  .brand > span:last-child { display: none; }
+  .header-profile { width: min(20rem, 48vw); }
+  :root { --sidebar-width: var(--rail-width); }
+  .mode-sidebar { overflow-y: auto; }
+  .mode-sidebar:not(.collapsed) { width: 12rem; min-width: 12rem; }
+  .mode-sidebar.collapsed { width: var(--rail-width); min-width: var(--rail-width); }
+  .passage-panel { grid-template-columns: 1fr; align-items: stretch; }
+  .passage-fields { grid-template-columns: minmax(9rem, 1.3fr) minmax(7rem, 1fr) repeat(3, minmax(4.5rem, .55fr)); overflow-x: auto; padding-bottom: .25rem; }
+  .passage-panel > .primary-btn { justify-self: stretch; }
+  .status { grid-column: 1; }
+  .page-header { align-items: flex-start; }
+}
+
+@media (max-width: 44rem) {
+  :root { --header-height: auto; }
+  .app-shell { grid-template-rows: auto minmax(0, 1fr); }
+  .topbar { min-height: 4rem; grid-template-columns: auto 1fr auto; padding: .625rem 1rem; }
+  .top-actions { grid-column: 1 / -1; grid-row: 2; width: 100%; justify-content: space-between; padding-top: .5rem; border-top: 1px solid var(--border); }
+  .header-profile { position: static; width: calc(100% - 3.5rem); height: auto; grid-template-columns: 7rem 1fr; transform: none; }
+  .level-summary { display: flex; }
+  .speed-summary small { padding: 0 .35rem; }
+  .game-intro { margin-bottom: 1rem; }
+  .game-intro h2 { font-size: clamp(1.75rem, 8vw, 2.25rem); }
+  .passage-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; }
+  .translation-field, .passage-fields > div:nth-child(2) { grid-column: span 2; }
+  .hud { gap: .5rem; }
+  .stat { padding: .75rem; }
+  .typing-card { padding: 1.125rem; border-radius: 18px; }
+  .text-display { min-height: 12rem; max-height: none; font-size: 1.05rem; line-height: 1.8; }
+  .campaign-header, .campaign-toolbar { align-items: stretch; flex-direction: column; }
+  .campaign-summary { text-align: left; }
+  .campaign-dev-tools { display: grid; }
+  .result-actions { flex-direction: column; }
+  .app-shell[data-theme="arcade"] .header-profile { display: none; }
+  .app-shell[data-theme="arcade"] .top-actions {
+    grid-column: auto;
+    grid-row: auto;
+    width: auto;
+    padding: 0;
+    border: 0;
+  }
+  .app-shell[data-theme="arcade"] .mode-sidebar {
+    width: var(--rail-width);
+    min-width: var(--rail-width);
+    padding: 3.5rem .5rem 1rem;
+  }
+  .app-shell[data-theme="arcade"] .mode-sidebar .sidebar-heading,
+  .app-shell[data-theme="arcade"] .mode-sidebar .mode-nav div {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .app-shell[data-theme="arcade"] .mode-sidebar .sidebar-toggle {
+    right: .65rem;
+    padding-inline: .6rem;
+  }
+  .app-shell[data-theme="arcade"] .mode-sidebar .sidebar-toggle b { display: none; }
+  .app-shell[data-theme="arcade"] .mode-sidebar .mode-nav {
+    justify-content: center;
+    padding-inline: .35rem;
+  }
+  .app-shell[data-theme="arcade"] .mode-sidebar .mode-nav > span { flex-basis: 2rem; }
+  .defense-topbar { grid-template-columns: repeat(2, 1fr); }
+  .app-shell[data-theme="arcade"] .defense-topbar { grid-template-columns: repeat(4, 1fr); }
+  .upgrade-dock { grid-template-columns: 1fr; }
+  .app-shell[data-theme="arcade"] .defense-game { min-height: 36rem; }
+  .app-shell[data-theme="arcade"] #text { top: clamp(6.5rem, 18%, 10rem); right: 2rem; left: 2rem; height: clamp(4rem, 18%, 7rem); }
+  .app-shell[data-theme="arcade"] .typing-card .typed-area { top: 68%; bottom: auto; }
+  .app-shell[data-theme="arcade"] .upgrade-dock { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 28rem) {
+  .header-profile { grid-template-columns: 1fr; }
+  .header-profile .xp-track, .speed-summary { grid-column: 1; }
+  .speed-summary { grid-row: auto; }
+  .passage-fields { grid-template-columns: 1fr; }
+  .translation-field, .passage-fields > div:nth-child(2) { grid-column: 1; }
+  .hud { grid-template-columns: 1fr; }
+  .passage-heading { align-items: flex-start; gap: .75rem; }
+  .settings-menu { position: fixed; top: 4.25rem; right: 1rem; left: 1rem; width: auto; }
+}
+
+@media (max-height: 800px) {
+  .game-screen { padding-top: 20px; }
+  .game-intro { margin-bottom: 16px; }
+  .game-intro h2 { font-size: 1.8rem; }
+  .passage-panel { padding: 18px; }
+  .tip { display: none; }
+  .typing-card { padding: 24px 30px; }
+  .text-display { min-height: 180px; }
+}

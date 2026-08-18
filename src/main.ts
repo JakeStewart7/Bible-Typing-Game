@@ -11,6 +11,11 @@ import { toggleEffects } from './audio/effects';
 import { createCampaignController } from './campaign-controller';
 import type { CampaignChunk } from './campaign';
 import { fetchRange } from './bible-api';
+import { appConfig } from './config';
+import { AppStateRepository } from './persistence/app-state';
+import { AppStorage } from './persistence/storage';
+import { ProfileRepository } from './persistence/profile-repository';
+import { applyPageTheme, themeForWorkspace } from './ui/page-theme';
 
 import trackDetermination from '../assets/music/determination.mp3';
 import trackApple from '../assets/music/apple_cider.ogg';
@@ -27,11 +32,16 @@ const {
   levelLabelEl, xpLabelEl, xpFillEl, personalBestEl, lifetimeWpmEl, recentWpmEl,
   defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
   battlePathEl, battleMessageEl,
+  readyIndicatorEl, hintButtonEl, favoritePassageEl,
+  memoryLibraryEl, memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
   campaignScreenEl, campaignContentEl, campaignBackEl, campaignBreadcrumbEl,
   campaignTotalStarsEl, campaignTotalProgressEl, campaignDevToolsEl,
   sidebarCampaignProgressEl, celebrationEl,
   populateBooks, populateChapters, populateVerses, constrainEndVerses
-} = initControls();
+} = initControls(appConfig);
+const storage = new AppStorage(window.localStorage);
+const stateRepository = new AppStateRepository(storage);
+const profileRepository = new ProfileRepository(storage);
 
 // ----------------------------
 // Game state (keep instance export for other modules/tests)
@@ -47,8 +57,10 @@ const gameController = initGameControllers(game, {
   levelLabelEl, xpLabelEl, xpFillEl, personalBestEl, lifetimeWpmEl, recentWpmEl,
   defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
   battlePathEl, battleMessageEl,
+  readyIndicatorEl, hintButtonEl, favoritePassageEl,
+  memoryLibraryEl, memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
   populateBooks, populateChapters, populateVerses, constrainEndVerses
-});
+}, stateRepository, profileRepository, storage, appConfig);
 
 setupMusic(document.getElementById('music-slot'));
 
@@ -57,9 +69,10 @@ const campaignController = createCampaignController({
   contentEl: campaignContentEl, backEl: campaignBackEl, breadcrumbEl: campaignBreadcrumbEl,
   totalStarsEl: campaignTotalStarsEl, totalProgressEl: campaignTotalProgressEl,
   devToolsEl: campaignDevToolsEl, sidebarProgressEl: sidebarCampaignProgressEl, celebrationEl
-}, (chunk, text) => startCampaignChunk(chunk, text));
+}, (chunk, text) => startCampaignChunk(chunk, text), stateRepository, appConfig);
 
 startCampaignChunk = (chunk, text) => {
+  stateRepository.writeJourneyPosition(chunk);
   showWorkspace('campaign-play');
   gameController.startCampaignChunk(chunk, text);
 };
@@ -68,7 +81,9 @@ gameController.setCampaignHooks({
   progress: campaignController.getProgress,
   celebrateBook: campaignController.celebrateBook,
   returnToMenu: book => {
+    const journeyPosition = stateRepository.readJourneyPosition();
     showWorkspace('campaign');
+    if (journeyPosition) campaignController.renderBook(journeyPosition.book);
     campaignController.renderBook(book);
   },
   startNext: chunk => {
@@ -86,6 +101,10 @@ function showWorkspace(workspace: string, selectedMode?: string): void {
   campaignScreenEl.classList.toggle('is-hidden', workspace !== 'campaign');
   gameScreen?.classList.toggle('is-hidden', workspace === 'campaign');
   gameScreen?.classList.toggle('campaign-play', workspace === 'campaign-play');
+  const appShell = document.querySelector<HTMLElement>('.app-shell');
+  if (appShell) applyPageTheme(appShell, themeForWorkspace(workspace, selectedMode));
+  gameScreen?.scrollTo({ top: 0 });
+  campaignScreenEl.scrollTo({ top: 0 });
   document.querySelectorAll<HTMLElement>('.mode-nav').forEach(button => {
     const campaignActive = (workspace === 'campaign' || workspace === 'campaign-play') && button.dataset.workspace === 'campaign';
     const modeActive = Boolean(selectedMode) && button.dataset.mode === selectedMode;
@@ -110,6 +129,7 @@ document.querySelectorAll<HTMLElement>('.mode-nav').forEach(button => button.add
   }
   showWorkspace(button.dataset.workspace ?? 'practice', mode);
 }));
+showWorkspace('campaign');
 const sidebar = document.getElementById('mode-sidebar');
 const sidebarToggle = document.getElementById('sidebar-toggle');
 sidebarToggle?.addEventListener('click', () => {

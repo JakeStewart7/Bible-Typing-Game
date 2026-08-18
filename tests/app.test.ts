@@ -7,7 +7,18 @@ import { calculateStats } from '../src/game/stats.ts';
 import { getVerseCount, VERSE_COUNTS } from '../src/verse-counts.ts';
 import { advanceEnemy, buyUpgrade, completeDefense, createDefenseState, typeCharacter } from '../src/game/minigame.ts';
 import { createCampaignChunks, getBookProgress, getCampaignProgress, nextChunk, starsForWpm } from '../src/campaign.ts';
-import { readProfile, recordSession } from '../src/profile.ts';
+import { AppStorage } from '../src/persistence/storage.ts';
+import { AppStateRepository } from '../src/persistence/app-state.ts';
+import { ProfileRepository } from '../src/persistence/profile-repository.ts';
+import { filterJourneyBooks, findJourneyContinuation, groupJourneyBooks, isJourneyBookUnlocked, journeyCurrency } from '../src/journey.ts';
+import { shouldHideMemoryCharacter, shouldMaskMemoryCharacter } from '../src/memory/domain/visibility.ts';
+import {
+  createPassageId,
+  recordRecentPassage,
+  toggleFavoritePassage
+} from '../src/memory/domain/practice-library.ts';
+import { getCurrentWordRange, isHintAvailable } from '../src/game/hint.ts';
+import { analyzeSession } from '../src/game/analysis.ts';
 
 type Test = { name: string; run: () => void };
 const tests: Test[] = [];
@@ -129,17 +140,68 @@ test('backspacing freezes accuracy until a new unscored letter is typed', () => 
   equal(calculateStats(game).accuracy, 100);
 });
 
+test('Memory visibility is deterministic and supports its full range', () => {
+  equal(Array.from({ length: 20 }, (_, index) => shouldHideMemoryCharacter(index, 100)).some(Boolean), false);
+  equal(Array.from({ length: 20 }, (_, index) => shouldHideMemoryCharacter(index, 0)).every(Boolean), true);
+  equal(shouldHideMemoryCharacter(0, 50), false);
+  equal(shouldHideMemoryCharacter(1, 50), true);
+});
+
+test('Memory keeps a hidden letter masked until it is typed correctly', () => {
+  equal(shouldMaskMemoryCharacter(1, 50, undefined, 'a'), true);
+  equal(shouldMaskMemoryCharacter(1, 50, 'x', 'a'), true);
+  equal(shouldMaskMemoryCharacter(1, 50, 'a', 'a'), false);
+});
+
+test('hint timing and current-word selection are deterministic', () => {
+  equal(getCurrentWordRange('Faith grows here', 7), { start: 6, end: 11 });
+  equal(getCurrentWordRange('Faith grows here', 17), { start: 12, end: 16 });
+  equal(isHintAvailable(1_000, 3_000), false);
+  equal(isHintAvailable(1_000, 3_001), true);
+});
+
+test('Memory library keeps unique recent passages and toggles favorites', () => {
+  const reference = { book: 'John', chapter: 3, startVerse: 16, endVerse: 17, translation: 'kjv' };
+  const passage = { ...reference, id: createPassageId(reference), practicedAt: 100 };
+  const empty = { favorites: [], recent: [] };
+  const recent = recordRecentPassage(recordRecentPassage(empty, passage), { ...passage, practicedAt: 200 });
+  equal(recent.recent.length, 1);
+  equal(recent.recent[0]?.practicedAt, 200);
+  const favorite = toggleFavoritePassage(recent, passage);
+  equal(favorite.favorites.map(item => item.id), [passage.id]);
+  equal(toggleFavoritePassage(favorite, passage).favorites, []);
+});
+
+test('session analysis identifies difficult words and comparisons', () => {
+  const game = createGame('Faith grows strong');
+  handleInput(game, 'Faixh grows strong');
+  handleInput(game, 'Faith grows strong');
+  const stats = calculateStats(game, game.startTime! + 60_000);
+  const analysis = analyzeSession(game, stats, { wpm: 2, accuracy: 80 });
+  equal(analysis.difficultWords, ['Faith']);
+  equal(analysis.strongestWords, ['strong', 'grows']);
+  equal(analysis.mistakeCount, 1);
+  equal(analysis.comparison, { wpmDifference: 2, accuracyDifference: 14 });
+});
+
 test('defense typing earns faith and damages enemies', () => {
   const state = createDefenseState();
-  typeCharacter(state, true);
+  typeCharacter(state, true, () => .5);
   equal(state.faith, 1);
-  equal(state.projectiles.length, 1);
+  equal(state.projectiles.length, 3);
   advanceEnemy(state, 2);
   equal(state.enemies[0].health, 3);
   equal(state.projectiles.length, 0);
   typeCharacter(state, false);
   equal(state.faith, 0);
-  equal(Math.round(state.enemies[0].position), 20);
+  equal(Math.round(state.enemies[0].position), 18);
+});
+
+test('incorrect arcade typing does not advance shadows', () => {
+  const state = createDefenseState();
+  const position = state.enemies[0].position;
+  typeCharacter(state, false);
+  equal(state.enemies[0].position, position);
 });
 
 test('defense enemies advance and damage the fortress', () => {
@@ -154,7 +216,7 @@ test('defense upgrades consume resources and improve levels', () => {
   equal(buyUpgrade(state, 'power'), true);
   equal(state.powerLevel, 1);
   equal(state.faith, 65);
-  typeCharacter(state, true);
+  typeCharacter(state, true, () => .5);
   advanceEnemy(state, 2);
   equal(state.enemies[0].health, 2);
 });
@@ -162,7 +224,7 @@ test('defense upgrades consume resources and improve levels', () => {
 test('light is destroyed on contact and defeats low-health shadows', () => {
   const state = createDefenseState();
   state.enemies[0].health = 1;
-  typeCharacter(state, true);
+  typeCharacter(state, true, () => .5);
   advanceEnemy(state, 2);
   equal(state.projectiles.length, 0);
   equal(state.enemiesDefeated, 1);
@@ -185,7 +247,7 @@ test('up to fifteen shadows can occupy the battlefield', () => {
 test('light targets the unified shadow line regardless of visual angle', () => {
   const state = createDefenseState();
   state.enemies.push({ id: 2, position: 10, health: 4, maxHealth: 4 });
-  typeCharacter(state, true);
+  typeCharacter(state, true, () => .5);
   advanceEnemy(state, 2);
   equal(state.projectiles.length, 0);
   equal(state.enemies.some(enemy => enemy.health < enemy.maxHealth), true);
@@ -194,9 +256,34 @@ test('light targets the unified shadow line regardless of visual angle', () => {
 test('missed light disappears after crossing the battlefield', () => {
   const state = createDefenseState();
   state.enemies = [];
-  typeCharacter(state, true);
+  typeCharacter(state, true, () => .5);
   advanceEnemy(state, 2);
   equal(state.projectiles.length, 0);
+});
+
+test('arcade volleys are deterministic and spread across the battlefield', () => {
+  const state = createDefenseState();
+  state.enemies.push({ id: 2, position: 45, health: 4, maxHealth: 4 });
+  const values = [.25, .5, .75, .1, .9, .4];
+  let index = 0;
+  typeCharacter(state, true, () => values[index++ % values.length]!);
+  equal(state.projectiles.map(projectile => ({
+    target: Math.round(projectile.targetPosition),
+    arc: Math.round(projectile.arcHeight)
+  })), [
+    { target: 11, arc: 17 },
+    { target: 55, arc: 38 },
+    { target: 17, arc: 63 }
+  ]);
+});
+
+test('arcade projectiles collide consistently across animation-sized steps', () => {
+  const state = createDefenseState();
+  typeCharacter(state, true, () => .5);
+  equal(state.projectiles.map(projectile => Math.round(projectile.arcHeight)), [20, 38, 60]);
+  for (let step = 0; step < 40; step++) advanceEnemy(state, .05);
+  equal(state.projectiles.length, 0);
+  equal(state.enemies[0].health, 3);
 });
 
 test('completing defense awards a victory bonus', () => {
@@ -233,19 +320,108 @@ test('campaign summary counts completed books', () => {
   equal(getCampaignProgress(progress).completedChapters, 1);
 });
 
-test('profile records lifetime and recent completed-passage WPM', () => {
-  const values = new Map<string, string>();
-  globalThis.localStorage = {
-    getItem: key => values.get(key) ?? null,
-    setItem: (key, value) => values.set(key, value)
-  } as Storage;
-  recordSession(40, 25);
-  recordSession(60, 25);
-  const profile = readProfile();
-  equal(profile.lifetimeWpm, 50);
-  equal(profile.recentWpm, 50);
-  equal(profile.bestWpm, 60);
+test('journey search supports fuzzy typed matching', () => {
+  equal(filterJourneyBooks('mthw').slice(0, 1), ['Matthew']);
+  equal(filterJourneyBooks('song sol').slice(0, 1), ['Song of Solomon']);
 });
+
+test('journey books are grouped into canonical testaments', () => {
+  const groups = groupJourneyBooks(['Genesis', 'Matthew', 'Psalms', 'John']);
+  equal(groups, [
+    { testament: 'Old Testament', books: ['Genesis', 'Psalms'] },
+    { testament: 'New Testament', books: ['Matthew', 'John'] }
+  ]);
+});
+
+test('journey unlocks starting books and progresses deterministically', () => {
+  equal(isJourneyBookUnlocked('Matthew', {}), true);
+  equal(isJourneyBookUnlocked('Genesis', {}), true);
+  equal(isJourneyBookUnlocked('Psalms', {}), true);
+  equal(isJourneyBookUnlocked('Mark', {}), false);
+  const completedMatthew = Object.fromEntries(createCampaignChunks('Matthew').map(chunk => [chunk.id, 1]));
+  equal(isJourneyBookUnlocked('Mark', completedMatthew), true);
+});
+
+test('journey currency counts unique completed passages without using stars', () => {
+  equal(journeyCurrency({ 'Matthew:1:1-3': 5, 'Genesis:1:1-3': 1, invalid: 5, 'Mark:1:1-3': 0 }), 2);
+});
+
+test('journey continuation preserves a valid stored passage and advances completed work', () => {
+  const first = createCampaignChunks('Matthew')[0]!;
+  equal(findJourneyContinuation({}, first), first);
+  equal(findJourneyContinuation({ [first.id]: 1 }, first), createCampaignChunks('Matthew')[1]);
+});
+
+test('profile records lifetime and recent completed-passage WPM', () => {
+  const repository = new ProfileRepository(new AppStorage(createMemoryStorage()));
+  repository.recordSession(40, 25);
+  repository.recordSession(60, 25);
+  equal(repository.read(), {
+    xp: 50,
+    bestWpm: 60,
+    sessions: [40, 60]
+  });
+});
+
+test('profile repository preserves legacy localStorage keys and formats', () => {
+  const storage = createMemoryStorage({
+    verseTypeXp: '525',
+    verseTypeBest: '72',
+    verseTypeWpmSessions: '[40,60]'
+  });
+  const profile = new ProfileRepository(new AppStorage(storage)).read();
+  equal(profile, { xp: 525, bestWpm: 72, sessions: [40, 60] });
+});
+
+test('app state repository validates legacy Journey progress', () => {
+  const storage = createMemoryStorage({
+    verseTypeCampaignProgress: '{"John:3:16-18":4}'
+  });
+  const repository = new AppStateRepository(new AppStorage(storage));
+  equal(repository.readCampaignProgress(), { 'John:3:16-18': 4 });
+  storage.setItem('verseTypeCampaignProgress', '{"bad":99}');
+  equal(repository.readCampaignProgress(), {});
+});
+
+test('recent passages are deduplicated and bounded', () => {
+  const repository = new AppStateRepository(new AppStorage(createMemoryStorage()));
+  for (let chapter = 1; chapter <= 12; chapter++) {
+    repository.recordRecentPassage({
+      book: 'John', chapter, startVerse: 1, endVerse: 3, translation: 'kjv'
+    });
+  }
+  repository.recordRecentPassage({
+    book: 'John', chapter: 5, startVerse: 1, endVerse: 3, translation: 'kjv'
+  });
+  const recent = repository.readRecentPassages();
+  equal(recent.length, 10);
+  equal(recent[0]?.chapter, 5);
+  equal(recent.filter(item => item.chapter === 5).length, 1);
+});
+
+test('Journey position and Memory favorites round-trip through app storage', () => {
+  const repository = new AppStateRepository(new AppStorage(createMemoryStorage()));
+  const position = createCampaignChunks('Obadiah')[0]!;
+  const favorite = {
+    book: 'John', chapter: 3, startVerse: 16, endVerse: 17, translation: 'kjv'
+  };
+  repository.writeJourneyPosition(position);
+  repository.writeMemoryFavorites([favorite]);
+  equal(repository.readJourneyPosition(), position);
+  equal(repository.readMemoryFavorites(), [favorite]);
+});
+
+function createMemoryStorage(initial: Record<string, string> = {}): Storage {
+  const values = new Map(Object.entries(initial));
+  return {
+    get length() { return values.size; },
+    clear: () => values.clear(),
+    getItem: key => values.get(key) ?? null,
+    key: index => [...values.keys()][index] ?? null,
+    removeItem: key => { values.delete(key); },
+    setItem: (key, value) => { values.set(key, value); }
+  };
+}
 
 let failed = 0;
 for (const current of tests) {

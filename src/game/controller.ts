@@ -6,7 +6,7 @@ import { renderTypedBar } from '../ui/typedBar';
 import { renderStats } from '../ui/hud';
 import { calculateStats } from './stats';
 import { fetchChapter, fetchRange } from '../bible-api';
-import { playComplete, playKey } from '../audio/effects';
+import { playComplete, playKey, playReady } from '../audio/effects';
 import { advanceEnemy, buyUpgrade, completeDefense, createDefenseState, typeCharacter } from './minigame';
 import type { DefenseState, UpgradeId } from './minigame';
 import { isChapterComplete, nextChunk, starsForWpm } from '../campaign';
@@ -19,6 +19,22 @@ import { createDefenseView } from '../ui/defense-view';
 import { BOOKS, getChapterCount } from '../bible-data';
 import { getVerseCount } from '../verse-counts';
 import { chooseRandomVerseRange } from '../passage-selector';
+import type { AppConfig } from '../config';
+import type { AppStateRepository, PassageReference } from '../persistence/app-state';
+import type { ProfileRepository } from '../persistence/profile-repository';
+import type { AppStorage } from '../persistence/storage';
+import { getCurrentWord, isHintAvailable } from './hint';
+import { analyzeSession } from './analysis';
+import { BrowserSessionHistoryRepository } from './session-history';
+import {
+  createPassageId,
+  isFavoritePassage,
+  recordRecentPassage,
+  toMemoryPassage,
+  toggleFavoritePassage
+} from '../memory/domain/practice-library';
+import type { MemoryLibraryRepository, MemoryPassage } from '../memory/domain/practice-library';
+import { renderEmptyState } from '../ui/components';
 
 type Controls = {
   hudEl: HTMLElement; textEl: HTMLElement; inputEl: HTMLInputElement; typedBarEl: HTMLElement;
@@ -33,25 +49,54 @@ type Controls = {
   defenseGameEl: HTMLElement; faithCountEl: HTMLElement; fortressHealthEl: HTMLElement;
   waveCountEl: HTMLElement; defeatedCountEl: HTMLElement; battlePathEl: HTMLElement;
   battleMessageEl: HTMLElement;
+  readyIndicatorEl: HTMLElement; hintButtonEl: HTMLButtonElement; favoritePassageEl: HTMLButtonElement;
+  memoryLibraryEl: HTMLElement; memoryFavoritesEl: HTMLElement; memoryRecentEl: HTMLElement;
+  resultAnalysisEl: HTMLElement;
   populateBooks: () => void; populateChapters: (preferred?: number) => void;
   populateVerses: () => Promise<void>; constrainEndVerses: () => void;
 };
 
-export function initGameControllers(game: Game, controls: Controls) {
+export function initGameControllers(
+  game: Game,
+  controls: Controls,
+  stateRepository: AppStateRepository,
+  profileRepository: ProfileRepository,
+  storage: AppStorage,
+  config: AppConfig
+) {
   const { hudEl, textEl, inputEl, typedBarEl, translationEl, bookEl, chapterEl,
     startVerseEl, endVerseEl, loadBtn, statusEl, passageTitleEl, resultsEl,
     resultStatsEl, progressFillEl, gameModeEl, challengeBannerEl, typingCardEl,
     rewardMessageEl, levelLabelEl, xpLabelEl, xpFillEl, personalBestEl, lifetimeWpmEl, recentWpmEl,
     defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
     battlePathEl, battleMessageEl,
+    readyIndicatorEl, hintButtonEl, favoritePassageEl, memoryLibraryEl,
+    memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
     populateBooks, populateChapters, populateVerses, constrainEndVerses } = controls;
   let hudInterval: number | undefined;
   let hasCompleted = false;
   let defense: DefenseState = createDefenseState();
   let defenseFrame = 0;
   let previousFrame = performance.now();
-  let defenseTimer = 0;
   let memoryVisibility = 50;
+  let activePassage: PassageReference | null = null;
+  let lastProgressAt = Date.now();
+  let hintTimer = 0;
+  const memoryLibrary: MemoryLibraryRepository = {
+    read: () => ({
+      favorites: stateRepository.readMemoryFavorites().map((passage, index) =>
+        toMemoryPassage(passage, Date.now() - index)),
+      recent: stateRepository.readRecentPassages().map((passage, index) =>
+        toMemoryPassage(passage, Date.now() - index))
+    }),
+    write: snapshot => {
+      stateRepository.writeMemoryFavorites(snapshot.favorites);
+      for (const passage of [...snapshot.recent].reverse()) {
+        stateRepository.recordRecentPassage(passage);
+      }
+    }
+  };
+  const sessionHistory = new BrowserSessionHistoryRepository(storage);
   const defenseView = createDefenseView({
     faith: faithCountEl, fortress: fortressHealthEl, wave: waveCountEl,
     defeated: defeatedCountEl, path: battlePathEl, message: battleMessageEl
@@ -78,17 +123,23 @@ export function initGameControllers(game: Game, controls: Controls) {
       if (defense.status === 'lost') inputEl.disabled = true;
     }
     defenseFrame = 0;
+    if (gameModeEl.value === 'defense' && game.startTime && defense.status === 'playing') {
+      scheduleDefenseFrame();
+    }
   }
 
   function scheduleDefenseFrame() {
-    if (!defenseFrame) defenseFrame = requestAnimationFrame(defenseLoop);
+    if (!defenseFrame) {
+      previousFrame = performance.now();
+      defenseFrame = requestAnimationFrame(defenseLoop);
+    }
   }
 
   function updateProfile() {
     renderProfile({
       level: levelLabelEl, xp: xpLabelEl, xpFill: xpFillEl,
       bestWpm: personalBestEl, lifetimeWpm: lifetimeWpmEl, recentWpm: recentWpmEl
-    }, readProfile());
+    }, readProfile(profileRepository));
   }
 
   async function loadRandomDefensePassage(): Promise<void> {
@@ -107,7 +158,7 @@ export function initGameControllers(game: Game, controls: Controls) {
       restartGame();
     } catch (error) {
       console.error(error);
-      statusEl.textContent = 'We could not load a defense passage. Please try Defense again.';
+      statusEl.textContent = 'We could not load an Arcade passage. Please try Arcade again.';
     }
   }
 
@@ -117,6 +168,10 @@ export function initGameControllers(game: Game, controls: Controls) {
     challengeBannerEl.textContent = MODE_LABELS[mode];
     defenseGameEl.classList.toggle('is-hidden', mode !== 'defense');
     document.getElementById('memory-controls')?.classList.toggle('is-hidden', mode !== 'memory');
+    memoryLibraryEl.classList.toggle('is-hidden', mode !== 'memory');
+    favoritePassageEl.classList.toggle('is-hidden', mode !== 'memory' || !activePassage);
+    hintButtonEl.classList.toggle('is-hidden', mode !== 'memory');
+    if (mode === 'memory') renderMemoryLibrary();
     renderDefense();
     if (mode === 'defense') void loadRandomDefensePassage();
   }
@@ -128,6 +183,10 @@ export function initGameControllers(game: Game, controls: Controls) {
     updateCaretPosition(textEl, game);
     renderTypedBar(typedBarEl, game);
     progressFillEl.style.width = `${stats.progress}%`;
+  }
+
+  function focusInput(): void {
+    inputEl.focus({ preventScroll: gameModeEl.value === 'defense' });
   }
 
   function restartGame() {
@@ -143,6 +202,7 @@ export function initGameControllers(game: Game, controls: Controls) {
     game.startTime = null;
     game.completedAt = undefined;
     hasCompleted = false;
+    lastProgressAt = Date.now();
     defense = createDefenseState();
     defenseView.reset();
     inputEl.value = '';
@@ -152,7 +212,9 @@ export function initGameControllers(game: Game, controls: Controls) {
     updateUI(false);
     window.clearInterval(hudInterval);
     hudInterval = window.setInterval(() => renderStats(hudEl, calculateStats(game)), 250);
-    inputEl.focus();
+    focusInput();
+    showReadyIndicator();
+    updateHintState();
   }
 
   function finishGame() {
@@ -169,12 +231,15 @@ export function initGameControllers(game: Game, controls: Controls) {
       [`${stats.accuracy}%`, 'Accuracy'],
       [`${stats.time}s`, 'Time']
     ].map(([value, label]) => `<div class="result-stat"><strong>${value}</strong><span>${label}</span></div>`).join('');
+    const previousSession = sessionHistory.readPrevious();
+    const analysis = analyzeSession(game, stats, previousSession);
+    resultAnalysisEl.replaceChildren(...renderAnalysis(analysis));
     const mode = parseGameMode(gameModeEl.value);
     const resultsTitle = document.getElementById('results-title');
     const resultsCopy = document.getElementById('results-copy');
     const nextButton = document.getElementById('next-passage');
     const chapterSelectButton = document.getElementById('chapter-select');
-    if (resultsTitle) resultsTitle.textContent = campaignChunk ? 'Campaign passage complete' : mode === 'defense' ? 'Fortress defended' : mode === 'memory' ? 'Memory passage complete' : 'Practice complete';
+    if (resultsTitle) resultsTitle.textContent = campaignChunk ? 'Journey passage complete' : mode === 'defense' ? 'Arcade complete' : mode === 'memory' ? 'Memory passage complete' : 'Practice complete';
     if (resultsCopy) resultsCopy.textContent = mode === 'defense' ? 'The shadows were repelled.' : mode === 'memory' ? 'You recalled the passage.' : '';
     if (chapterSelectButton) chapterSelectButton.textContent = campaignChunk ? 'Back to selection' : 'Choose passage';
     if (nextButton) nextButton.classList.toggle('is-hidden', !campaignChunk);
@@ -196,15 +261,26 @@ export function initGameControllers(game: Game, controls: Controls) {
     }
     resultsEl.classList.remove('is-hidden');
     playComplete();
-    recordSession(stats.wpm, earnedXp);
+    sessionHistory.save(stats);
+    if (mode === 'memory' && activePassage) {
+      const snapshot = recordRecentPassage(memoryLibrary.read(), toMemoryPassage(activePassage, Date.now()));
+      memoryLibrary.write(snapshot);
+      renderMemoryLibrary();
+    }
+    recordSession(stats.wpm, earnedXp, profileRepository);
     updateProfile();
   }
 
   inputEl.addEventListener('input', () => {
     const mode = gameModeEl.value;
+    const hadStarted = Boolean(game.startTime);
     const previousLength = game.typed.length;
     handleInput(game, inputEl.value);
+    if (mode === 'memory' && !hadStarted && game.startTime && activePassage) {
+      stateRepository.recordRecentPassage(activePassage);
+    }
     if (game.typed.length > previousLength) {
+      lastProgressAt = Date.now();
       const index = game.typed.length - 1;
       const correct = game.typed[index] === game.chars[index];
       playKey(correct);
@@ -215,20 +291,23 @@ export function initGameControllers(game: Game, controls: Controls) {
       }
     }
     updateUI();
+    updateHintState();
     if (game.typed.join('') === game.text) finishGame();
   });
 
-  textEl.addEventListener('click', () => inputEl.focus());
+  textEl.addEventListener('click', focusInput);
   document.getElementById('restart')?.addEventListener('click', restartGame);
-  document.getElementById('dev-complete-passage')?.addEventListener('click', () => {
-    if (hasCompleted) return;
-    game.typed = [...game.chars];
-    game.attempted = game.chars.map(() => true);
-    game.firstAttemptCorrect = game.chars.map(() => true);
-    if (!game.startTime) game.startTime = Date.now() - 30_000;
-    inputEl.value = game.text;
-    finishGame();
-  });
+  if (config.isDevelopment) {
+    document.getElementById('dev-complete-passage')?.addEventListener('click', () => {
+      if (hasCompleted) return;
+      game.typed = [...game.chars];
+      game.attempted = game.chars.map(() => true);
+      game.firstAttemptCorrect = game.chars.map(() => true);
+      if (!game.startTime) game.startTime = Date.now() - 30_000;
+      inputEl.value = game.text;
+      finishGame();
+    });
+  }
   document.getElementById('try-again')?.addEventListener('click', restartGame);
   document.getElementById('chapter-select')?.addEventListener('click', () => {
     resultsEl.classList.add('is-hidden');
@@ -253,6 +332,23 @@ export function initGameControllers(game: Game, controls: Controls) {
   document.getElementById('focus-button')?.addEventListener('click', () => {
     document.getElementById('game-screen')?.classList.toggle('focus-mode');
   });
+  hintButtonEl.addEventListener('click', () => {
+    if (!isHintAvailable(lastProgressAt, Date.now())) return;
+    hintButtonEl.textContent = getCurrentWord(game) || 'Hint';
+    hintButtonEl.classList.remove('hint-ready');
+    lastProgressAt = Date.now();
+    window.setTimeout(() => {
+      hintButtonEl.textContent = 'Hint';
+      updateHintState();
+    }, 1_800);
+    focusInput();
+  });
+  favoritePassageEl.addEventListener('click', () => {
+    if (!activePassage) return;
+    const passage = toMemoryPassage(activePassage, Date.now());
+    memoryLibrary.write(toggleFavoritePassage(memoryLibrary.read(), passage));
+    renderMemoryLibrary();
+  });
 
   loadBtn.addEventListener('click', async () => {
     const start = Number(startVerseEl.value);
@@ -270,9 +366,14 @@ export function initGameControllers(game: Game, controls: Controls) {
       if (!text) throw new Error('No verses were returned.');
       game.text = text;
       game.chars = text.split('');
+      activePassage = { book: bookEl.value, chapter: Number(chapterEl.value), startVerse: start, endVerse: end, translation: translationEl.value };
       passageTitleEl.textContent = `${bookEl.value} ${chapterEl.value}:${start}${end > start ? `–${end}` : ''}`;
       statusEl.textContent = '';
       restartGame();
+      if (gameModeEl.value === 'memory') {
+        favoritePassageEl.classList.remove('is-hidden');
+        renderMemoryLibrary();
+      }
     } catch (error) {
       console.error(error);
       statusEl.textContent = 'We could not load that passage. Please try again.';
@@ -318,11 +419,7 @@ export function initGameControllers(game: Game, controls: Controls) {
   setMode();
   updateProfile();
   restartGame();
-  defenseTimer = window.setInterval(() => {
-    if (gameModeEl.value === 'defense' && game.startTime && defense.status === 'playing') {
-      scheduleDefenseFrame();
-    }
-  }, 50);
+  hintTimer = window.setInterval(updateHintState, 250);
 
   return {
     restartGame,
@@ -331,6 +428,7 @@ export function initGameControllers(game: Game, controls: Controls) {
       game.text = sanitizeText(text);
       game.chars = game.text.split('');
       passageTitleEl.textContent = `${chunk.book} ${chunk.chapter}:${chunk.startVerse}–${chunk.endVerse}`;
+      activePassage = { book: chunk.book, chapter: chunk.chapter, startVerse: chunk.startVerse, endVerse: chunk.endVerse, translation: 'kjv' };
       gameModeEl.value = 'practice';
       setMode();
       restartGame();
@@ -339,9 +437,90 @@ export function initGameControllers(game: Game, controls: Controls) {
     leaveCampaign: () => { campaignChunk = null; },
     stop: () => {
       cancelAnimationFrame(defenseFrame);
-      clearInterval(defenseTimer);
+      clearInterval(hintTimer);
     }
   };
+
+  function showReadyIndicator(): void {
+    readyIndicatorEl.classList.remove('show');
+    void readyIndicatorEl.offsetWidth;
+    readyIndicatorEl.classList.add('show');
+    playReady();
+  }
+
+  function updateHintState(): void {
+    const isMemory = gameModeEl.value === 'memory';
+    const available = !hasCompleted && game.typed.length < game.chars.length
+      && isMemory && isHintAvailable(lastProgressAt, Date.now());
+    hintButtonEl.disabled = !isMemory || hasCompleted || game.chars.length === 0;
+    hintButtonEl.classList.toggle('hint-ready', available);
+  }
+
+  function renderMemoryLibrary(): void {
+    const snapshot = memoryLibrary.read();
+    renderPassageList(memoryFavoritesEl, snapshot.favorites);
+    renderPassageList(memoryRecentEl, snapshot.recent);
+    const id = activePassage ? createPassageId(activePassage) : '';
+    const favorite = Boolean(id) && isFavoritePassage(snapshot, id);
+    favoritePassageEl.setAttribute('aria-pressed', String(favorite));
+    favoritePassageEl.textContent = favorite ? '★ Favorited' : '☆ Favorite';
+  }
+
+  function renderPassageList(container: HTMLElement, passages: MemoryPassage[]): void {
+    if (!passages.length) {
+      renderEmptyState(container, 'No passages yet');
+      return;
+    }
+    container.replaceChildren(...passages.map(passage => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = formatPassageLabel(passage);
+      button.addEventListener('click', () => {
+        translationEl.value = passage.translation;
+        bookEl.value = passage.book;
+        populateChapters(passage.chapter);
+        void populateVerses().then(() => {
+          startVerseEl.value = String(passage.startVerse);
+          constrainEndVerses();
+          endVerseEl.value = String(passage.endVerse);
+          loadBtn.click();
+        });
+      });
+      return button;
+    }));
+  }
+}
+
+function formatPassageLabel(passage: PassageReference): string {
+  const verses = passage.startVerse === passage.endVerse
+    ? passage.startVerse
+    : `${passage.startVerse}–${passage.endVerse}`;
+  return `${passage.book} ${passage.chapter}:${verses}`;
+}
+
+function renderAnalysis(analysis: ReturnType<typeof analyzeSession>): HTMLElement[] {
+  const insights = [
+    analysis.difficultWords.length
+      ? `<strong>Review:</strong> ${analysis.difficultWords.join(', ')}`
+      : '<strong>Clean recall:</strong> no words needed a correction.',
+    analysis.strongestWords.length
+      ? `<strong>Strong words:</strong> ${analysis.strongestWords.join(', ')}`
+      : `<strong>Corrections:</strong> ${analysis.mistakeCount}`,
+    analysis.comparison
+      ? `<strong>Compared with last session:</strong> ${formatDifference(analysis.comparison.wpmDifference, 'WPM')}, ${formatDifference(analysis.comparison.accuracyDifference, 'accuracy points')}`
+      : '<strong>Baseline saved:</strong> your next session will show a comparison.'
+  ];
+  return insights.map(content => {
+    const item = document.createElement('div');
+    item.className = 'result-insight';
+    item.innerHTML = content;
+    return item;
+  });
+}
+
+function formatDifference(value: number, label: string): string {
+  if (value === 0) return `even ${label}`;
+  return `${value > 0 ? '+' : ''}${value} ${label}`;
 }
 
 function getBookProgressComplete(book: string, progress: CampaignProgress): boolean {

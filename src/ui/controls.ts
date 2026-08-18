@@ -2,8 +2,22 @@ import { BOOKS, getChapterCount } from '../bible-data';
 import { chooseVerseRange, filterEndVerses } from '../passage-selector';
 import { getVerseCount } from '../verse-counts';
 import { requireElement } from '../shared/dom';
+import type { AppConfig } from '../config';
 
-export function initControls() {
+export function initControls(config: AppConfig) {
+  const developerControls = config.isDevelopment ? `
+    <button id="dev-complete-passage" class="dev-complete-btn" type="button">Dev: Complete passage</button>` : '';
+  const journeyDeveloperToggle = config.isDevelopment
+    ? '<button id="dev-tools-toggle" class="ghost-btn">Development tools</button>'
+    : '';
+  const journeyDeveloperPanel = config.isDevelopment ? `
+    <div id="campaign-dev-tools" class="campaign-dev-tools is-hidden">
+      <strong>Journey development tools</strong>
+      <button data-dev-action="complete-book">Complete selected book</button>
+      <button data-dev-action="reset-book">Reset selected book</button>
+      <button data-dev-action="complete-all">Complete all books</button>
+      <button data-dev-action="reset-all">Reset all progress</button>
+    </div>` : '<div id="campaign-dev-tools" class="is-hidden"></div>';
   const app = document.getElementById('app') as HTMLElement;
   app.innerHTML = `
     <main class="app-shell">
@@ -43,13 +57,14 @@ export function initControls() {
         <aside id="mode-sidebar" class="mode-sidebar" aria-label="Game modes">
           <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Collapse navigation" aria-controls="mode-sidebar" aria-expanded="true"><span aria-hidden="true">‹</span><b>Hide menu</b></button>
           <div class="sidebar-heading">Modes</div>
-          <button class="mode-nav active" data-workspace="practice" data-mode="practice"><span>⌨</span><div><strong>Practice</strong><small>Relaxed typing</small></div></button>
-          <button class="mode-nav" data-workspace="practice" data-mode="memory"><span>◫</span><div><strong>Memory</strong><small>Words fade away</small></div></button>
-          <button class="mode-nav" data-workspace="defense" data-mode="defense"><span>◇</span><div><strong>Defense</strong><small>Repel the shadows</small></div></button>
-          <button class="mode-nav" data-workspace="campaign"><span>✦</span><div><strong>Campaign</strong><small id="sidebar-campaign-progress">0 / 0 passages</small></div></button>
+          <button class="mode-nav active" data-workspace="campaign" aria-label="Journey" title="Journey"><span>✦</span><div><strong>Journey</strong><small id="sidebar-campaign-progress">0 / 0 passages</small></div></button>
+          <button class="mode-nav" data-workspace="practice" data-mode="practice" aria-label="Practice" title="Practice"><span>⌨</span><div><strong>Practice</strong><small>Relaxed typing</small></div></button>
+          <button class="mode-nav" data-workspace="practice" data-mode="memory" aria-label="Memory" title="Memory"><span>◫</span><div><strong>Memory</strong><small>Words fade away</small></div></button>
+          <button class="mode-nav" data-workspace="defense" data-mode="defense" aria-label="Arcade" title="Arcade"><span>◇</span><div><strong>Arcade</strong><small>Repel the shadows</small></div></button>
         </aside>
-      <section id="game-screen" class="game-screen">
-        <header class="game-intro">
+        <div class="page-viewport">
+      <section id="game-screen" class="app-page game-screen is-hidden">
+        <header class="page-header game-intro">
           <div>
             <div class="eyebrow">Practice session</div>
             <h2 id="workspace-title">Choose your passage</h2>
@@ -73,12 +88,16 @@ export function initControls() {
             <select id="game-mode" class="is-hidden" aria-hidden="true">
               <option value="practice">Practice — relaxed</option>
               <option value="memory">Memory — words fade as you type</option>
-              <option value="defense">Scripture Defense — minigame</option>
+              <option value="defense">Arcade — repel the shadows</option>
             </select>
             <div id="status" class="status" role="status"></div>
             <div id="memory-controls" class="memory-controls is-hidden">
               <label for="memory-visibility">Letters shown <strong id="memory-visibility-value">50%</strong></label>
               <input id="memory-visibility" type="range" min="0" max="100" step="10" value="50">
+            </div>
+            <div id="memory-library" class="memory-library is-hidden">
+              <section><h4>Favorites</h4><div id="memory-favorites" class="memory-passage-list"></div></section>
+              <section><h4>Recently practiced</h4><div id="memory-recent" class="memory-passage-list"></div></section>
             </div>
           </section>
 
@@ -103,7 +122,6 @@ export function initControls() {
                 <button data-upgrade="slow"><span>❄</span><div><strong>Still Waters</strong><small>Slow approaching foes · <b data-cost="slow">55</b> faith</small></div><i data-level="slow">Lv 0</i></button>
               </div>
             </section>
-            </div>
             <div id="hud" class="hud"></div>
             <div id="challenge-banner" class="challenge-banner is-hidden"></div>
             <article id="typing-card" class="typing-card card">
@@ -112,36 +130,43 @@ export function initControls() {
                 <button id="focus-button" class="ghost-btn">Focus mode</button>
               </div>
               <div class="progress-track"><div id="progress-fill"></div></div>
+              <div id="ready-indicator" class="ready-indicator" role="status" aria-live="polite">
+                <span aria-hidden="true">✦</span><strong>Ready to type</strong>
+              </div>
               <div id="text" class="text-display" tabindex="0"></div>
               <div class="typed-area">
                 <div id="typed-bar" class="typed-bar" aria-hidden="true"></div>
                 <input id="input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Type the passage here">
               </div>
-              <div class="typing-footer"><span>Click the passage or start typing</span><button id="restart" class="text-btn">↻ Restart</button></div>
-              <button id="dev-complete-passage" class="dev-complete-btn" type="button">Dev: Complete passage</button>
+              <div class="typing-footer">
+                <span>Click the passage or start typing</span>
+                <div>
+                  <button id="favorite-passage" class="text-btn is-hidden" type="button" aria-pressed="false">☆ Favorite</button>
+                  <button id="hint-button" class="hint-button" type="button" disabled>Hint</button>
+                  <button id="restart" class="text-btn">↻ Restart</button>
+                </div>
+              </div>
+              ${developerControls}
             </article>
           </section>
         </div>
       </section>
-      <section id="campaign-screen" class="campaign-screen is-hidden">
-        <header class="campaign-header">
-          <div><div class="eyebrow">The Scripture Journey</div><h2>Campaign</h2><p>Complete every passage, chapter, and book—one comfortable session at a time.</p></div>
-          <div class="campaign-summary"><strong id="campaign-total-stars">0 ★</strong><span id="campaign-total-progress">0 of 0 passages</span></div>
+      <section id="campaign-screen" class="app-page campaign-screen is-hidden">
+        <header class="page-header campaign-header">
+          <div><div class="eyebrow">The Scripture Journey</div><h2>Journey</h2><p>Complete every passage, chapter, and book—one comfortable session at a time.</p></div>
+          <div class="campaign-summary"><strong id="campaign-total-stars">0 light</strong><span id="campaign-total-progress">0 of 0 passages</span></div>
         </header>
         <div class="campaign-toolbar">
           <button id="campaign-back" class="secondary-btn is-hidden">← All books</button>
           <div id="campaign-breadcrumb">66 books · 1,189 chapters</div>
-          <button id="dev-tools-toggle" class="ghost-btn">Development tools</button>
+          <label class="campaign-search" for="campaign-search"><span>Search books</span><input id="campaign-search" type="search" placeholder="Type a book name…" autocomplete="off"></label>
+          ${journeyDeveloperToggle}
         </div>
-        <div id="campaign-dev-tools" class="campaign-dev-tools is-hidden">
-          <strong>Campaign development tools</strong>
-          <button data-dev-action="complete-book">Complete selected book</button>
-          <button data-dev-action="reset-book">Reset selected book</button>
-          <button data-dev-action="complete-all">Complete all books</button>
-          <button data-dev-action="reset-all">Reset all progress</button>
-        </div>
+        <button id="journey-continue" class="journey-continue is-hidden" type="button"></button>
+        ${journeyDeveloperPanel}
         <div id="campaign-content" class="campaign-content"></div>
       </section>
+        </div>
       </div>
 
       <div id="results" class="modal-backdrop is-hidden">
@@ -151,6 +176,7 @@ export function initControls() {
           <p id="results-copy"></p>
           <div id="reward-message" class="reward-message"></div>
           <div id="result-stats" class="result-stats"></div>
+          <div id="result-analysis" class="result-analysis"></div>
           <div class="result-actions">
             <button id="try-again" class="secondary-btn">Try again</button>
             <button id="chapter-select" class="secondary-btn">Chapter select</button>
@@ -226,6 +252,13 @@ export function initControls() {
     fortressHealthEl: requireElement('fortress-health', HTMLElement), waveCountEl: requireElement('wave-count', HTMLElement),
     defeatedCountEl: requireElement('defeated-count', HTMLElement), battlePathEl: requireElement('battle-path', HTMLElement),
     battleMessageEl: requireElement('battle-message', HTMLElement),
+    readyIndicatorEl: requireElement('ready-indicator', HTMLElement),
+    hintButtonEl: requireElement('hint-button', HTMLButtonElement),
+    favoritePassageEl: requireElement('favorite-passage', HTMLButtonElement),
+    memoryLibraryEl: requireElement('memory-library', HTMLElement),
+    memoryFavoritesEl: requireElement('memory-favorites', HTMLElement),
+    memoryRecentEl: requireElement('memory-recent', HTMLElement),
+    resultAnalysisEl: requireElement('result-analysis', HTMLElement),
     campaignScreenEl: requireElement('campaign-screen', HTMLElement),
     campaignContentEl: requireElement('campaign-content', HTMLElement),
     campaignBackEl: requireElement('campaign-back', HTMLButtonElement),

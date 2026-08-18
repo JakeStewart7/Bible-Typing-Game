@@ -36,3 +36,18 @@ export function playComplete() {
     }, delay);
   });
 }
+
+export function playReady() {
+  if (!enabled) return;
+  context ??= new AudioContext();
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  oscillator.type = 'sine';
+  oscillator.frequency.setValueAtTime(440, context.currentTime);
+  oscillator.frequency.exponentialRampToValueAtTime(660, context.currentTime + 0.18);
+  gain.gain.setValueAtTime(0.035, context.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.22);
+  oscillator.connect(gain).connect(context.destination);
+  oscillator.start();
+  oscillator.stop(context.currentTime + 0.23);
+}
