@@ -16,6 +16,48 @@
 .app-shell[data-theme="arcade"] .page-viewport {
   background: #07152d;
 }
+.app-shell[data-theme="arcade"] .topbar,
+.app-shell[data-theme="arcade"] .mode-sidebar {
+  border-color: #29466a;
+  background: #061127;
+}
+.app-shell[data-theme="arcade"] .brand,
+.app-shell[data-theme="arcade"] .header-profile,
+.app-shell[data-theme="arcade"] .level-summary strong,
+.app-shell[data-theme="arcade"] .speed-summary strong {
+  color: #eaf6ff;
+}
+.app-shell[data-theme="arcade"] .brand > span:last-child span,
+.app-shell[data-theme="arcade"] .header-profile span,
+.app-shell[data-theme="arcade"] .header-profile small {
+  color: #8ccfff;
+}
+.app-shell[data-theme="arcade"] .brand-mark {
+  background: linear-gradient(135deg, #4b9ed6, #3157a8);
+  box-shadow: 0 5px 13px #4b9ed655;
+}
+.app-shell[data-theme="arcade"] .sidebar-heading,
+.app-shell[data-theme="arcade"] .mode-nav small {
+  color: #7895b8;
+}
+.app-shell[data-theme="arcade"] .mode-nav {
+  color: #a5bdd7;
+}
+.app-shell[data-theme="arcade"] .mode-nav:hover,
+.app-shell[data-theme="arcade"] .mode-nav.active {
+  color: #dff3ff;
+  background: #1c477044;
+}
+.app-shell[data-theme="arcade"] .sidebar-toggle,
+.app-shell[data-theme="arcade"] .settings-toggle {
+  border-color: #315477;
+  color: #dff3ff;
+  background: #0d2746;
+}
+.app-shell[data-theme="arcade"] .settings-toggle {
+  border: 0;
+  background: linear-gradient(135deg, #4b9ed6, #3157a8);
+}
 .app-shell[data-theme="arcade"] .practice-workspace {
   max-width: none;
 }

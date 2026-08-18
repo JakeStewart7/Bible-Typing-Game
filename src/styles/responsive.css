@@ -134,8 +134,7 @@
   .app-shell[data-theme="arcade"] .defense-game {
     --arcade-unit: clamp(.72rem, 1.2cqw, 1.15rem);
     font-size: var(--arcade-unit);
-    aspect-ratio: 16 / 10;
-    height: min(100%, 62.5cqw);
+    height: 100%;
     margin: auto;
   }
   .app-shell[data-theme="arcade"] .typing-card {
