@@ -8,7 +8,6 @@ import { initControls } from './ui/controls';
 import { initGameControllers } from './game/controller';
 import { setupMusic } from './audio/music';
 import { toggleEffects } from './audio/effects';
-import { isNarratorEnabled, narratorSpeed, narratorVoiceName, setNarratorSpeed, toggleNarrator } from './audio/narrator';
 import { createCampaignController } from './campaign-controller';
 import type { CampaignChunk } from './campaign';
 import { fetchRange } from './bible-api';
@@ -142,31 +141,3 @@ document.getElementById('sound-toggle')?.addEventListener('click', event => {
   const label = button.querySelector('span');
   if (label) label.textContent = enabled ? 'On' : 'Off';
 });
-
-const narratorToggle = document.getElementById('narrator-toggle');
-if (narratorToggle instanceof HTMLButtonElement) {
-  const setNarratorState = (enabled: boolean) => {
-    narratorToggle.setAttribute('aria-pressed', String(enabled));
-    const label = narratorToggle.querySelector('span');
-    if (label) label.textContent = enabled ? 'On' : 'Off';
-  };
-  setNarratorState(isNarratorEnabled());
-  narratorToggle.addEventListener('click', () => setNarratorState(toggleNarrator()));
-  const voiceLabel = document.getElementById('narrator-voice');
-  const renderVoice = () => {
-    if (voiceLabel) voiceLabel.textContent = narratorVoiceName();
-  };
-  renderVoice();
-  speechSynthesis.addEventListener('voiceschanged', renderVoice);
-}
-
-const narratorSpeedInput = document.getElementById('narrator-speed');
-const narratorSpeedValue = document.getElementById('narrator-speed-value');
-if (narratorSpeedInput instanceof HTMLInputElement) {
-  const renderNarratorSpeed = (value: number) => {
-    narratorSpeedInput.value = String(value);
-    if (narratorSpeedValue) narratorSpeedValue.textContent = `${value.toFixed(1)}×`;
-  };
-  renderNarratorSpeed(narratorSpeed());
-  narratorSpeedInput.addEventListener('input', () => renderNarratorSpeed(setNarratorSpeed(Number(narratorSpeedInput.value))));
-}
