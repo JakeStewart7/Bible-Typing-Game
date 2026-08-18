@@ -257,7 +257,7 @@ select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px va
 .sky-decoration { position: absolute; inset: 10px 22%; color: #fff9; text-align: center; }
 .fortress { position: absolute; z-index: 2; right: 4%; bottom: 18px; color: #f5f1d5; text-shadow: 0 4px 0 var(--page-accent-strong); font-size: 4.4rem; line-height: 1; }
 .fortress i { position: absolute; left: 10%; right: 10%; bottom: -7px; height: 5px; border-radius: 99px; background: var(--page-accent-hover); }
-.battle-path { position: absolute; z-index: 3; left: 10%; right: 10%; bottom: 24px; height: 66px; }
+.battle-path { position: absolute; z-index: 3; inset: 0; pointer-events: none; }
 .enemy { position: absolute; left: 0; bottom: 0; transform: translateX(-50%); color: #573b68; font-size: 2.05rem; filter: drop-shadow(0 5px 2px #27352e44); transition: left 55ms linear; }
 .enemy-health { width: 47px; height: 5px; border-radius: 10px; overflow: hidden; background: #3d263f; }
 .enemy-health i { display: block; height: 100%; background: #ff6e71; transition: width .15s; }
@@ -389,11 +389,99 @@ select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px va
     max-height: none;
   }
   .app-shell[data-theme="arcade"] .defense-game {
-    margin-bottom: .75rem;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    margin: 0;
+    border-radius: 24px;
+    background: #07152d;
+    box-shadow: 0 18px 50px #06122980;
   }
   .app-shell[data-theme="arcade"] .battlefield {
-    height: 8rem;
-    margin: .5rem .75rem;
+    position: absolute;
+    inset: 3.5rem 0 0;
+    height: auto;
+    margin: 0;
+    border: 0;
+    border-radius: 0 0 24px 24px;
+    background:
+      radial-gradient(circle at 76% 18%, #b9ddff33 0 1px, transparent 2px),
+      radial-gradient(circle at 28% 30%, #b9ddff33 0 1px, transparent 2px),
+      radial-gradient(circle at 55% 12%, #ffffff22 0 1px, transparent 2px),
+      linear-gradient(#07152d 0 67%, #0b2548 68% 73%, #102f4d 74%);
+    box-shadow: inset 0 0 60px #020a1dcc;
+  }
+  .app-shell[data-theme="arcade"] .battlefield::after {
+    background: #020a1dcc;
+  }
+  .app-shell[data-theme="arcade"] .enemy {
+    color: #c7a9ff;
+    filter: drop-shadow(0 0 8px #8c6dff99);
+  }
+  .app-shell[data-theme="arcade"] .enemy-health {
+    background: #120d2d;
+  }
+  .app-shell[data-theme="arcade"] .fortress {
+    color: #d7efff;
+    text-shadow: 0 0 14px #75c9ff, 0 4px 0 #123c64;
+  }
+  .app-shell[data-theme="arcade"] .shadow-gate {
+    color: #9e79df;
+    text-shadow: 0 0 12px #7650c0;
+  }
+  .app-shell[data-theme="arcade"] .defense-topbar {
+    position: relative;
+    z-index: 3;
+    background: #061127;
+  }
+  .app-shell[data-theme="arcade"] .play-area {
+    position: relative;
+  }
+  .app-shell[data-theme="arcade"] .typing-card {
+    position: absolute;
+    inset: 0;
+    z-index: 8;
+    display: block;
+    padding: 1.5rem;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    pointer-events: none;
+  }
+  .app-shell[data-theme="arcade"] .typing-card > :not(.text-display):not(.typed-area) {
+    display: none;
+  }
+  .app-shell[data-theme="arcade"] .typing-card .text-display {
+    position: absolute;
+    inset: 4rem 8% auto;
+    height: 12rem;
+    min-height: 0;
+    max-height: none;
+    overflow: hidden;
+    color: #dceeff;
+    text-shadow: 0 0 12px #68bfff99;
+    pointer-events: auto;
+  }
+  .app-shell[data-theme="arcade"] .typing-card .char.correct {
+    color: #e6f5ff;
+  }
+  .app-shell[data-theme="arcade"] .typing-card .char.error-highlight {
+    color: #ffb5bd;
+    background: #9b304766;
+    box-shadow: inset 0 -2px #ff6f86;
+  }
+  .app-shell[data-theme="arcade"] .typing-card .typed-area {
+    position: absolute;
+    right: 1.5rem;
+    bottom: 1.25rem;
+    left: 1.5rem;
+    pointer-events: auto;
+  }
+  .app-shell[data-theme="arcade"] #input {
+    border-color: #6ebeff88;
+    color: #eaf6ff;
+    background: #07152dcc;
+    box-shadow: 0 0 20px #399fff33;
   }
   .app-shell[data-theme="arcade"] .upgrade-dock button {
     min-height: 3rem;
