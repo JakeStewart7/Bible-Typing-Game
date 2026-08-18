@@ -271,10 +271,19 @@ test('arcade volleys are deterministic and spread across the battlefield', () =>
     target: Math.round(projectile.targetPosition),
     arc: Math.round(projectile.arcHeight)
   })), [
-    { target: 3, arc: 39 },
-    { target: 53, arc: 25 },
-    { target: 18, arc: 36 }
+    { target: 11, arc: 17 },
+    { target: 55, arc: 38 },
+    { target: 17, arc: 63 }
   ]);
+});
+
+test('arcade projectiles collide consistently across animation-sized steps', () => {
+  const state = createDefenseState();
+  typeCharacter(state, true, () => .5);
+  equal(state.projectiles.map(projectile => Math.round(projectile.arcHeight)), [20, 38, 60]);
+  for (let step = 0; step < 40; step++) advanceEnemy(state, .05);
+  equal(state.projectiles.length, 0);
+  equal(state.enemies[0].health, 3);
 });
 
 test('completing defense awards a victory bonus', () => {

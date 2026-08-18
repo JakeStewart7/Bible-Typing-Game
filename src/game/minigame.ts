@@ -15,7 +15,11 @@ export type Projectile = {
   targetEnemyId?: number;
   arcHeight: number;
   height: number;
+  elapsed: number;
+  flightDuration: number;
+  horizontalVelocity: number;
   verticalVelocity: number;
+  gravity: number;
   damage: number;
   volleyId: number;
 };
@@ -25,6 +29,7 @@ export type DefenseState = {
   powerLevel: number; wardLevel: number; slowLevel: number;
   combo: number;
   enemies: Enemy[]; projectiles: Projectile[];
+  damagedVolleys: Set<number>;
   nextEnemyId: number; nextProjectileId: number; spawnTimer: number;
   status: 'playing' | 'won' | 'lost';
 };
@@ -36,13 +41,10 @@ const UPGRADE_LEVEL_KEYS = {
   slow: 'slowLevel'
 } as const satisfies Record<UpgradeId, keyof DefenseState>;
 const PROJECTILES_PER_CHARACTER = 3;
-const PROJECTILE_SPREAD = 16;
-const MIN_ARC_HEIGHT = 22;
-const ARC_HEIGHT_RANGE = 34;
-const PROJECTILE_SPEED = 55;
-const GRAVITY = 30;
-const ENEMY_HITBOX_RADIUS = 5;
-const ENEMY_HITBOX_HEIGHT = 24;
+const LOB_ARC_HEIGHTS = [20, 38, 60] as const;
+const LOB_HEIGHT_JITTER = 6;
+const PROJECTILE_GRAVITY = 140;
+const LAUNCH_POSITION = 94;
 export type RandomSource = () => number;
 
 export function upgradeCost(state: DefenseState, id: UpgradeId): number {
@@ -54,7 +56,7 @@ export function createDefenseState(): DefenseState {
   return {
     faith: 0, fortress: 100, wave: 1, enemiesDefeated: 0,
     powerLevel: 0, wardLevel: 0, slowLevel: 0, combo: 0,
-    enemies: [createEnemy(1, 1)], projectiles: [],
+    enemies: [createEnemy(1, 1)], projectiles: [], damagedVolleys: new Set(),
     nextEnemyId: 2, nextProjectileId: 1, spawnTimer: 1.4,
     status: 'playing'
   };
@@ -73,22 +75,30 @@ export function typeCharacter(
     const volleyId = state.nextProjectileId;
     for (let index = 0; index < PROJECTILES_PER_CHARACTER; index++) {
       const target = targets[index % Math.max(1, targets.length)];
-      const targetPosition = clamp((target?.position ?? random() * 72 + 8) + centeredRandom(random) * PROJECTILE_SPREAD, 3, 88);
+      const arcHeight = LOB_ARC_HEIGHTS[index] + centeredRandom(random) * LOB_HEIGHT_JITTER;
+      const flightDuration = 2 * Math.sqrt(2 * arcHeight / PROJECTILE_GRAVITY);
+      const targetVelocity = target ? defenseEnemySpeed(state) * enemyProfile(target.kind).speed : 0;
+      const targetPosition = clamp(
+        target ? target.position + targetVelocity * flightDuration : random() * 72 + 8,
+        3,
+        91
+      );
       state.projectiles.push({
         id: state.nextProjectileId++,
-        position: 94,
-        launchPosition: 94,
+        position: LAUNCH_POSITION,
+        launchPosition: LAUNCH_POSITION,
         targetPosition,
         targetEnemyId: target?.id,
-        arcHeight: MIN_ARC_HEIGHT + random() * ARC_HEIGHT_RANGE,
+        arcHeight,
         height: 0,
-        verticalVelocity: 0,
+        elapsed: 0,
+        flightDuration,
+        horizontalVelocity: (LAUNCH_POSITION - targetPosition) / flightDuration,
+        verticalVelocity: PROJECTILE_GRAVITY * flightDuration / 2,
+        gravity: PROJECTILE_GRAVITY,
         damage: 1 + state.powerLevel + Math.floor(state.combo / 8),
         volleyId
       });
-      const projectile = state.projectiles[state.projectiles.length - 1];
-      const travelTime = (projectile.launchPosition - projectile.targetPosition) / PROJECTILE_SPEED;
-      projectile.verticalVelocity = (2 * projectile.arcHeight) / travelTime;
     }
   } else {
     state.combo = 0;
@@ -99,7 +109,7 @@ export function typeCharacter(
 
 export function advanceEnemy(state: DefenseState, deltaSeconds: number): DefenseState {
   if (state.status !== 'playing') return state;
-  const enemySpeed = Math.max(2.4, 6.2 + state.wave * .35 - state.slowLevel * 1.15);
+  const enemySpeed = defenseEnemySpeed(state);
   state.spawnTimer -= deltaSeconds;
   while (state.spawnTimer <= 0 && state.enemies.length < 15) {
     state.enemies.push(createEnemy(state.nextEnemyId++, state.wave));
@@ -110,26 +120,26 @@ export function advanceEnemy(state: DefenseState, deltaSeconds: number): Defense
     const profile = enemyProfile(enemy.kind);
     enemy.position = Math.min(100, enemy.position + enemySpeed * profile.speed * deltaSeconds);
   });
+  const previousElapsed = new Map<number, number>();
   state.projectiles.forEach(projectile => {
-    projectile.position -= PROJECTILE_SPEED * deltaSeconds;
-    projectile.height = Math.max(0, projectile.height + projectile.verticalVelocity * deltaSeconds);
-    projectile.verticalVelocity -= GRAVITY * deltaSeconds;
+    previousElapsed.set(projectile.id, projectile.elapsed);
+    projectile.elapsed = Math.min(projectile.flightDuration, projectile.elapsed + deltaSeconds);
+    projectile.position = projectile.launchPosition - projectile.horizontalVelocity * projectile.elapsed;
+    projectile.height = ballisticHeight(projectile, projectile.elapsed);
   });
 
   const removedProjectiles = new Set<number>();
   const defeatedEnemies = new Set<number>();
-  const damagedVolleys = new Set<number>();
   for (const projectile of state.projectiles) {
-    if (projectile.position > projectile.targetPosition) continue;
-    const target = state.enemies
+    const candidates = state.enemies
       .filter(enemy => !defeatedEnemies.has(enemy.id))
-      .filter(enemy => projectile.targetEnemyId === undefined || enemy.id === projectile.targetEnemyId)
-      .filter(enemy => Math.abs(enemy.position - projectile.position) <= ENEMY_HITBOX_RADIUS || projectile.position < enemy.position - ENEMY_HITBOX_RADIUS)
-      .filter(enemy => projectileHeightAt(projectile, enemy.position) <= ENEMY_HITBOX_HEIGHT)
-      .sort((a, b) => Math.abs(a.position - projectile.targetPosition) - Math.abs(b.position - projectile.targetPosition))[0];
-    removedProjectiles.add(projectile.id);
-    if (!target || damagedVolleys.has(projectile.volleyId)) continue;
-    damagedVolleys.add(projectile.volleyId);
+      .sort((a, b) => Number(b.id === projectile.targetEnemyId) - Number(a.id === projectile.targetEnemyId));
+    const target = candidates.find(enemy =>
+      projectileIntersectsEnemy(projectile, enemy, previousElapsed.get(projectile.id) ?? 0)
+    );
+    if (target || projectile.elapsed >= projectile.flightDuration) removedProjectiles.add(projectile.id);
+    if (!target || state.damagedVolleys.has(projectile.volleyId)) continue;
+    state.damagedVolleys.add(projectile.volleyId);
     target.health -= projectile.damage;
     if (target.health <= 0) {
       defeatedEnemies.add(target.id);
@@ -137,7 +147,11 @@ export function advanceEnemy(state: DefenseState, deltaSeconds: number): Defense
       state.faith += 5;
     }
   }
-  state.projectiles = state.projectiles.filter(projectile => projectile.position > 0 && !removedProjectiles.has(projectile.id));
+  state.projectiles = state.projectiles.filter(projectile => !removedProjectiles.has(projectile.id));
+  const activeVolleys = new Set(state.projectiles.map(projectile => projectile.volleyId));
+  state.damagedVolleys.forEach(volleyId => {
+    if (!activeVolleys.has(volleyId)) state.damagedVolleys.delete(volleyId);
+  });
   state.enemies = state.enemies.filter(enemy => !defeatedEnemies.has(enemy.id));
   state.wave = Math.floor(state.enemiesDefeated / 5) + 1;
 
@@ -189,6 +203,10 @@ function enemyProfile(kind: EnemyKind | undefined): { health: number; speed: num
   }
 }
 
+function defenseEnemySpeed(state: DefenseState): number {
+  return Math.max(2.4, 6.2 + state.wave * .35 - state.slowLevel * 1.15);
+}
+
 function centeredRandom(random: RandomSource): number {
   return random() * 2 - 1;
 }
@@ -197,8 +215,24 @@ function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
 }
 
-function projectileHeightAt(projectile: Projectile, position: number): number {
-  const distance = projectile.launchPosition - projectile.targetPosition;
-  const progress = clamp((projectile.launchPosition - position) / distance, 0, 1);
-  return 4 * projectile.arcHeight * progress * (1 - progress);
+function ballisticHeight(projectile: Projectile, elapsed: number): number {
+  return Math.max(0, projectile.verticalVelocity * elapsed - projectile.gravity * elapsed ** 2 / 2);
+}
+
+function projectileIntersectsEnemy(projectile: Projectile, enemy: Enemy, previousElapsed: number): boolean {
+  const hitbox = enemyHitbox(enemy.kind);
+  const timeAtEnemy = (projectile.launchPosition - enemy.position) / projectile.horizontalVelocity;
+  const collisionTime = clamp(timeAtEnemy, previousElapsed, projectile.elapsed);
+  const position = projectile.launchPosition - projectile.horizontalVelocity * collisionTime;
+  return Math.abs(position - enemy.position) <= hitbox.radius
+    && ballisticHeight(projectile, collisionTime) <= hitbox.height;
+}
+
+function enemyHitbox(kind: EnemyKind | undefined): { radius: number; height: number } {
+  switch (kind) {
+    case 'rusher': return { radius: 3.5, height: 7 };
+    case 'warden': return { radius: 6, height: 11 };
+    case 'titan': return { radius: 7, height: 14 };
+    default: return { radius: 5, height: 9 };
+  }
 }
