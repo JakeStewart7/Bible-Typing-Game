@@ -32,12 +32,8 @@ export function createDefenseView(elements: DefenseElements) {
     }
     for (const projectile of state.projectiles) {
       const element = getProjectileElement(projectile.id);
-      const distance = projectile.launchPosition - projectile.targetPosition;
-      const progress = Math.min(1, Math.max(0, (projectile.launchPosition - projectile.position) / distance));
-      const height = Math.sin(progress * Math.PI) * projectile.arcHeight;
       element.style.left = `${projectile.position}%`;
-      element.style.bottom = `${30 + height}px`;
-      element.style.transform = `translateX(-50%) rotate(${165 + progress * 30}deg)`;
+      element.style.bottom = `${30 + projectile.height}px`;
     }
     renderUpgrades(state);
     if (state.status === 'lost') {

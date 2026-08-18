@@ -82,7 +82,7 @@
 .enemy[data-kind="titan"] .enemy-core { width: 3.5rem; height: 3.5rem; border-radius: 28%; color: #b66cff; box-shadow: inset 0 0 0 8px #ffffff1c, 0 0 24px currentColor; }
 .enemy-health { width: 47px; height: 5px; border-radius: 10px; overflow: hidden; background: #3d263f; }
 .enemy-health i { display: block; height: 100%; background: #ff6e71; transition: width .15s; }
-.light-projectile { position: absolute; z-index: 4; bottom: 18px; width: 15px; height: 5px; border-radius: 99px; transform: translateX(-50%); background: #fff7a8; box-shadow: 0 0 5px #fff, 0 0 12px #ffe861, -8px 0 15px #fff4a4; transition: left 55ms linear, bottom 55ms linear; }
+.light-projectile { position: absolute; z-index: 4; bottom: 18px; width: 17px; height: 17px; border-radius: 50%; transform: translateX(-50%); background: radial-gradient(circle at 35% 30%, #fff 0 18%, #fff7a8 42%, #ffe861 72%, #f0a52d 100%); box-shadow: 0 0 6px #fff, 0 0 14px #ffe861, 0 0 24px #fff4a4; transition: left 55ms linear, bottom 55ms linear; }
 .shadow-gate { position: absolute; left: 4%; bottom: 22px; font-size: 2.6rem; color: #704d72; }
 .battle-message { position: absolute; z-index: 5; left: 50%; bottom: 7px; transform: translateX(-50%); padding: 4px 12px; border-radius: 99px; color: white; background: var(--page-accent-strong); font-size: var(--text-label); white-space: nowrap; }
 .upgrade-dock { display: grid; grid-template-columns: repeat(3, 1fr); gap: .625rem; padding: 0 .75rem .75rem; background: transparent; }

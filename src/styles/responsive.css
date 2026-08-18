@@ -174,17 +174,18 @@
   }
   .app-shell[data-theme="arcade"] #text {
     position: absolute !important;
-    top: clamp(2.5rem, 12cqh, 6rem);
+    top: clamp(6.5rem, 18%, 10rem);
     right: clamp(.75rem, 8cqw, 5rem);
     left: clamp(.75rem, 8cqw, 5rem);
     width: auto;
-    height: clamp(6rem, 20cqh, 10rem);
+    height: clamp(4rem, 18%, 8rem);
     min-height: 0;
     margin: 0;
+    overflow: visible;
     font-size: clamp(.78rem, 1.55cqw, 1.55rem);
-    line-height: clamp(1.35, 2.8cqh, 1.9);
+    line-height: 1.55;
     text-align: center;
-    transform: translateY(-50%);
+    transform: none;
   }
   .app-shell[data-theme="arcade"] .typing-card .char.correct {
     color: #e6f5ff;
@@ -324,7 +325,7 @@
   }
   .upgrade-dock { grid-template-columns: 1fr; }
   .app-shell[data-theme="arcade"] .defense-game { min-height: calc(100vh - 10rem); }
-  .app-shell[data-theme="arcade"] #text { top: 12cqh; right: 1rem; left: 1rem; height: 9rem; }
+  .app-shell[data-theme="arcade"] #text { top: clamp(7.5rem, 18%, 10rem); right: 1rem; left: 1rem; height: clamp(4rem, 18%, 7rem); }
   .app-shell[data-theme="arcade"] .typing-card .typed-area { top: 68cqh; bottom: auto; }
   .app-shell[data-theme="arcade"] .upgrade-dock { grid-template-columns: 1fr; }
 }

@@ -12,7 +12,10 @@ export type Projectile = {
   position: number;
   launchPosition: number;
   targetPosition: number;
+  targetEnemyId?: number;
   arcHeight: number;
+  height: number;
+  verticalVelocity: number;
   damage: number;
   volleyId: number;
 };
@@ -36,6 +39,10 @@ const PROJECTILES_PER_CHARACTER = 3;
 const PROJECTILE_SPREAD = 16;
 const MIN_ARC_HEIGHT = 22;
 const ARC_HEIGHT_RANGE = 34;
+const PROJECTILE_SPEED = 55;
+const GRAVITY = 30;
+const ENEMY_HITBOX_RADIUS = 5;
+const ENEMY_HITBOX_HEIGHT = 24;
 export type RandomSource = () => number;
 
 export function upgradeCost(state: DefenseState, id: UpgradeId): number {
@@ -72,10 +79,16 @@ export function typeCharacter(
         position: 94,
         launchPosition: 94,
         targetPosition,
+        targetEnemyId: target?.id,
         arcHeight: MIN_ARC_HEIGHT + random() * ARC_HEIGHT_RANGE,
+        height: 0,
+        verticalVelocity: 0,
         damage: 1 + state.powerLevel + Math.floor(state.combo / 8),
         volleyId
       });
+      const projectile = state.projectiles[state.projectiles.length - 1];
+      const travelTime = (projectile.launchPosition - projectile.targetPosition) / PROJECTILE_SPEED;
+      projectile.verticalVelocity = (2 * projectile.arcHeight) / travelTime;
     }
   } else {
     state.combo = 0;
@@ -97,7 +110,11 @@ export function advanceEnemy(state: DefenseState, deltaSeconds: number): Defense
     const profile = enemyProfile(enemy.kind);
     enemy.position = Math.min(100, enemy.position + enemySpeed * profile.speed * deltaSeconds);
   });
-  state.projectiles.forEach(projectile => { projectile.position -= 55 * deltaSeconds; });
+  state.projectiles.forEach(projectile => {
+    projectile.position -= PROJECTILE_SPEED * deltaSeconds;
+    projectile.height = Math.max(0, projectile.height + projectile.verticalVelocity * deltaSeconds);
+    projectile.verticalVelocity -= GRAVITY * deltaSeconds;
+  });
 
   const removedProjectiles = new Set<number>();
   const defeatedEnemies = new Set<number>();
@@ -106,6 +123,9 @@ export function advanceEnemy(state: DefenseState, deltaSeconds: number): Defense
     if (projectile.position > projectile.targetPosition) continue;
     const target = state.enemies
       .filter(enemy => !defeatedEnemies.has(enemy.id))
+      .filter(enemy => projectile.targetEnemyId === undefined || enemy.id === projectile.targetEnemyId)
+      .filter(enemy => Math.abs(enemy.position - projectile.position) <= ENEMY_HITBOX_RADIUS || projectile.position < enemy.position - ENEMY_HITBOX_RADIUS)
+      .filter(enemy => projectileHeightAt(projectile, enemy.position) <= ENEMY_HITBOX_HEIGHT)
       .sort((a, b) => Math.abs(a.position - projectile.targetPosition) - Math.abs(b.position - projectile.targetPosition))[0];
     removedProjectiles.add(projectile.id);
     if (!target || damagedVolleys.has(projectile.volleyId)) continue;
@@ -175,4 +195,10 @@ function centeredRandom(random: RandomSource): number {
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
+}
+
+function projectileHeightAt(projectile: Projectile, position: number): number {
+  const distance = projectile.launchPosition - projectile.targetPosition;
+  const progress = clamp((projectile.launchPosition - position) / distance, 0, 1);
+  return 4 * projectile.arcHeight * progress * (1 - progress);
 }
