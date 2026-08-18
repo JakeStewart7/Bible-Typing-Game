@@ -94,24 +94,45 @@
   .app-shell[data-theme="arcade"] .defense-topbar {
     position: relative;
     z-index: 3;
-    gap: 0;
-    padding: .35rem .7rem;
+    gap: .75rem;
+    padding: .75rem 1rem;
+    min-height: 5.75rem;
     background: #061127;
   }
   .app-shell[data-theme="arcade"] .defense-topbar .resource {
-    gap: .35rem;
+    min-width: 0;
+    flex-direction: column;
+    gap: .25rem;
+    padding: .25rem .5rem;
+    border: 1px solid #31547766;
+    border-radius: 12px;
+    background: #102a4b66;
+    text-align: center;
   }
   .app-shell[data-theme="arcade"] .defense-topbar .resource > span {
-    font-size: .85rem;
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: .65rem;
+    color: #ffe889;
+    background: #ffe8891c;
+    font-size: 1.35rem;
   }
   .app-shell[data-theme="arcade"] .defense-topbar .resource div {
-    gap: .25rem;
+    display: flex;
+    align-items: baseline;
+    gap: .35rem;
   }
   .app-shell[data-theme="arcade"] .defense-topbar .resource strong {
-    font-size: .78rem;
+    color: #f1f8ff;
+    font-size: 1.2rem;
+    line-height: 1;
   }
   .app-shell[data-theme="arcade"] .defense-topbar .resource small {
-    font-size: .5rem;
+    color: #8ccfff;
+    font-size: .56rem;
+    letter-spacing: .1em;
   }
   .app-shell[data-theme="arcade"] .play-area {
     position: relative;
@@ -287,7 +308,20 @@
   .campaign-dev-tools { display: grid; }
   .result-actions { flex-direction: column; }
   .defense-topbar { grid-template-columns: repeat(2, 1fr); }
-  .resource { min-height: 2.75rem; }
+  .app-shell[data-theme="arcade"] .defense-topbar {
+    gap: .5rem;
+    padding: .6rem;
+    min-height: 7rem;
+  }
+  .app-shell[data-theme="arcade"] .defense-topbar .resource {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: .5rem;
+    text-align: left;
+  }
+  .app-shell[data-theme="arcade"] .defense-topbar .resource > span {
+    flex: 0 0 2rem;
+  }
   .upgrade-dock { grid-template-columns: 1fr; }
   .app-shell[data-theme="arcade"] .defense-game { min-height: calc(100vh - 10rem); }
   .app-shell[data-theme="arcade"] #text { top: 12cqh; right: 1rem; left: 1rem; height: 9rem; }
