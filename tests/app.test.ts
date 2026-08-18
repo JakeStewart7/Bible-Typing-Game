@@ -288,18 +288,6 @@ test('recent passages are deduplicated and bounded', () => {
     repository.recordRecentPassage({
       book: 'John', chapter, startVerse: 1, endVerse: 3, translation: 'kjv'
     });
-
-    test('Journey position and Memory favorites round-trip through app storage', () => {
-      const repository = new AppStateRepository(new AppStorage(createMemoryStorage()));
-      const position = createCampaignChunks('Obadiah')[0]!;
-      const favorite = {
-        book: 'John', chapter: 3, startVerse: 16, endVerse: 17, translation: 'kjv'
-      };
-      repository.writeJourneyPosition(position);
-      repository.writeMemoryFavorites([favorite]);
-      equal(repository.readJourneyPosition(), position);
-      equal(repository.readMemoryFavorites(), [favorite]);
-    });
   }
   repository.recordRecentPassage({
     book: 'John', chapter: 5, startVerse: 1, endVerse: 3, translation: 'kjv'
@@ -308,6 +296,18 @@ test('recent passages are deduplicated and bounded', () => {
   equal(recent.length, 10);
   equal(recent[0]?.chapter, 5);
   equal(recent.filter(item => item.chapter === 5).length, 1);
+});
+
+test('Journey position and Memory favorites round-trip through app storage', () => {
+  const repository = new AppStateRepository(new AppStorage(createMemoryStorage()));
+  const position = createCampaignChunks('Obadiah')[0]!;
+  const favorite = {
+    book: 'John', chapter: 3, startVerse: 16, endVerse: 17, translation: 'kjv'
+  };
+  repository.writeJourneyPosition(position);
+  repository.writeMemoryFavorites([favorite]);
+  equal(repository.readJourneyPosition(), position);
+  equal(repository.readMemoryFavorites(), [favorite]);
 });
 
 function createMemoryStorage(initial: Record<string, string> = {}): Storage {
