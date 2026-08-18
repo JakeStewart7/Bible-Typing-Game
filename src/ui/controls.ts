@@ -43,12 +43,13 @@ export function initControls() {
         <aside id="mode-sidebar" class="mode-sidebar" aria-label="Game modes">
           <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Collapse navigation" aria-controls="mode-sidebar" aria-expanded="true"><span aria-hidden="true">‹</span><b>Hide menu</b></button>
           <div class="sidebar-heading">Modes</div>
-          <button class="mode-nav active" data-workspace="practice" data-mode="practice"><span>⌨</span><div><strong>Practice</strong><small>Relaxed typing</small></div></button>
+          <button class="mode-nav active" data-workspace="campaign"><span>✦</span><div><strong>Journey</strong><small id="sidebar-campaign-progress">0 / 0 passages</small></div></button>
+          <button class="mode-nav" data-workspace="practice" data-mode="practice"><span>⌨</span><div><strong>Practice</strong><small>Relaxed typing</small></div></button>
           <button class="mode-nav" data-workspace="practice" data-mode="memory"><span>◫</span><div><strong>Memory</strong><small>Words fade away</small></div></button>
-          <button class="mode-nav" data-workspace="defense" data-mode="defense"><span>◇</span><div><strong>Defense</strong><small>Repel the shadows</small></div></button>
-          <button class="mode-nav" data-workspace="campaign"><span>✦</span><div><strong>Campaign</strong><small id="sidebar-campaign-progress">0 / 0 passages</small></div></button>
+          <button class="mode-nav" data-workspace="defense" data-mode="defense"><span>◇</span><div><strong>Arcade</strong><small>Repel the shadows</small></div></button>
         </aside>
-      <section id="game-screen" class="game-screen">
+        <div class="page-viewport">
+      <section id="game-screen" class="game-screen is-hidden">
         <header class="game-intro">
           <div>
             <div class="eyebrow">Practice session</div>
@@ -73,7 +74,7 @@ export function initControls() {
             <select id="game-mode" class="is-hidden" aria-hidden="true">
               <option value="practice">Practice — relaxed</option>
               <option value="memory">Memory — words fade as you type</option>
-              <option value="defense">Scripture Defense — minigame</option>
+              <option value="defense">Arcade — repel the shadows</option>
             </select>
             <div id="status" class="status" role="status"></div>
             <div id="memory-controls" class="memory-controls is-hidden">
@@ -125,7 +126,7 @@ export function initControls() {
       </section>
       <section id="campaign-screen" class="campaign-screen is-hidden">
         <header class="campaign-header">
-          <div><div class="eyebrow">The Scripture Journey</div><h2>Campaign</h2><p>Complete every passage, chapter, and book—one comfortable session at a time.</p></div>
+          <div><div class="eyebrow">The Scripture Journey</div><h2>Journey</h2><p>Complete every passage, chapter, and book—one comfortable session at a time.</p></div>
           <div class="campaign-summary"><strong id="campaign-total-stars">0 ★</strong><span id="campaign-total-progress">0 of 0 passages</span></div>
         </header>
         <div class="campaign-toolbar">
@@ -134,7 +135,7 @@ export function initControls() {
           <button id="dev-tools-toggle" class="ghost-btn">Development tools</button>
         </div>
         <div id="campaign-dev-tools" class="campaign-dev-tools is-hidden">
-          <strong>Campaign development tools</strong>
+          <strong>Journey development tools</strong>
           <button data-dev-action="complete-book">Complete selected book</button>
           <button data-dev-action="reset-book">Reset selected book</button>
           <button data-dev-action="complete-all">Complete all books</button>
@@ -142,6 +143,7 @@ export function initControls() {
         </div>
         <div id="campaign-content" class="campaign-content"></div>
       </section>
+        </div>
       </div>
 
       <div id="results" class="modal-backdrop is-hidden">

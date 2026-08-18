@@ -110,6 +110,7 @@ document.querySelectorAll<HTMLElement>('.mode-nav').forEach(button => button.add
   }
   showWorkspace(button.dataset.workspace ?? 'practice', mode);
 }));
+showWorkspace('campaign');
 const sidebar = document.getElementById('mode-sidebar');
 const sidebarToggle = document.getElementById('sidebar-toggle');
 sidebarToggle?.addEventListener('click', () => {

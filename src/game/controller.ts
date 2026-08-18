@@ -107,7 +107,7 @@ export function initGameControllers(game: Game, controls: Controls) {
       restartGame();
     } catch (error) {
       console.error(error);
-      statusEl.textContent = 'We could not load a defense passage. Please try Defense again.';
+      statusEl.textContent = 'We could not load an Arcade passage. Please try Arcade again.';
     }
   }
 
@@ -174,7 +174,7 @@ export function initGameControllers(game: Game, controls: Controls) {
     const resultsCopy = document.getElementById('results-copy');
     const nextButton = document.getElementById('next-passage');
     const chapterSelectButton = document.getElementById('chapter-select');
-    if (resultsTitle) resultsTitle.textContent = campaignChunk ? 'Campaign passage complete' : mode === 'defense' ? 'Fortress defended' : mode === 'memory' ? 'Memory passage complete' : 'Practice complete';
+    if (resultsTitle) resultsTitle.textContent = campaignChunk ? 'Journey passage complete' : mode === 'defense' ? 'Arcade complete' : mode === 'memory' ? 'Memory passage complete' : 'Practice complete';
     if (resultsCopy) resultsCopy.textContent = mode === 'defense' ? 'The shadows were repelled.' : mode === 'memory' ? 'You recalled the passage.' : '';
     if (chapterSelectButton) chapterSelectButton.textContent = campaignChunk ? 'Back to selection' : 'Choose passage';
     if (nextButton) nextButton.classList.toggle('is-hidden', !campaignChunk);
