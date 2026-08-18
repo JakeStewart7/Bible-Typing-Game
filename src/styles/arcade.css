@@ -11,6 +11,10 @@
 .app-shell[data-theme="arcade"] .play-area { container-type: size; }
 .app-shell[data-theme="arcade"] #game-screen {
   padding: 0;
+  background: #07152d;
+}
+.app-shell[data-theme="arcade"] .page-viewport {
+  background: #07152d;
 }
 .app-shell[data-theme="arcade"] .practice-workspace {
   max-width: none;
