@@ -1,6 +1,14 @@
 export type UpgradeId = 'power' | 'ward' | 'slow';
 export type Enemy = { id: number; position: number; health: number; maxHealth: number };
-export type Projectile = { id: number; position: number; angle: number; damage: number };
+export type Projectile = {
+  id: number;
+  position: number;
+  launchPosition: number;
+  targetPosition: number;
+  arcHeight: number;
+  damage: number;
+  volleyId: number;
+};
 
 export type DefenseState = {
   faith: number; fortress: number; wave: number; enemiesDefeated: number;
@@ -16,7 +24,11 @@ const UPGRADE_LEVEL_KEYS = {
   ward: 'wardLevel',
   slow: 'slowLevel'
 } as const satisfies Record<UpgradeId, keyof DefenseState>;
-const PROJECTILE_ANGLES = [-7, 4, -2, 8, 1, -5, 6, -1] as const;
+const PROJECTILES_PER_CHARACTER = 3;
+const PROJECTILE_SPREAD = 16;
+const MIN_ARC_HEIGHT = 22;
+const ARC_HEIGHT_RANGE = 34;
+export type RandomSource = () => number;
 
 export function upgradeCost(state: DefenseState, id: UpgradeId): number {
   const level = state[UPGRADE_LEVEL_KEYS[id]];
@@ -33,12 +45,29 @@ export function createDefenseState(): DefenseState {
   };
 }
 
-export function typeCharacter(state: DefenseState, correct: boolean): DefenseState {
+export function typeCharacter(
+  state: DefenseState,
+  correct: boolean,
+  random: RandomSource = Math.random
+): DefenseState {
   if (state.status !== 'playing') return state;
   if (correct) {
     state.faith += 1 + Math.floor(state.wave / 3);
-    const angle = PROJECTILE_ANGLES[(state.nextProjectileId - 1) % PROJECTILE_ANGLES.length] ?? 0;
-    state.projectiles.push({ id: state.nextProjectileId++, position: 94, angle, damage: 1 + state.powerLevel });
+    const targets = [...state.enemies].sort((a, b) => a.position - b.position);
+    const volleyId = state.nextProjectileId;
+    for (let index = 0; index < PROJECTILES_PER_CHARACTER; index++) {
+      const target = targets[index % Math.max(1, targets.length)];
+      const targetPosition = clamp((target?.position ?? random() * 72 + 8) + centeredRandom(random) * PROJECTILE_SPREAD, 3, 88);
+      state.projectiles.push({
+        id: state.nextProjectileId++,
+        position: 94,
+        launchPosition: 94,
+        targetPosition,
+        arcHeight: MIN_ARC_HEIGHT + random() * ARC_HEIGHT_RANGE,
+        damage: 1 + state.powerLevel,
+        volleyId
+      });
+    }
   } else {
     state.faith = Math.max(0, state.faith - 2);
     state.enemies.forEach(enemy => { enemy.position = Math.min(100, enemy.position + 2); });
@@ -60,14 +89,16 @@ export function advanceEnemy(state: DefenseState, deltaSeconds: number): Defense
 
   const removedProjectiles = new Set<number>();
   const defeatedEnemies = new Set<number>();
+  const damagedVolleys = new Set<number>();
   for (const projectile of state.projectiles) {
+    if (projectile.position > projectile.targetPosition) continue;
     const target = state.enemies
       .filter(enemy => !defeatedEnemies.has(enemy.id))
-      .sort((a, b) => b.position - a.position)
-      .find(enemy => projectile.position <= enemy.position);
-    if (!target) continue;
-    target.health -= projectile.damage;
+      .sort((a, b) => Math.abs(a.position - projectile.targetPosition) - Math.abs(b.position - projectile.targetPosition))[0];
     removedProjectiles.add(projectile.id);
+    if (!target || damagedVolleys.has(projectile.volleyId)) continue;
+    damagedVolleys.add(projectile.volleyId);
+    target.health -= projectile.damage;
     if (target.health <= 0) {
       defeatedEnemies.add(target.id);
       state.enemiesDefeated++;
@@ -107,4 +138,12 @@ export function completeDefense(state: DefenseState): void {
 function createEnemy(id: number, wave: number): Enemy {
   const health = Math.min(8, 4 + Math.floor(wave / 3));
   return { id, position: 5, health, maxHealth: health };
+}
+
+function centeredRandom(random: RandomSource): number {
+  return random() * 2 - 1;
+}
+
+function clamp(value: number, minimum: number, maximum: number): number {
+  return Math.min(maximum, Math.max(minimum, value));
 }

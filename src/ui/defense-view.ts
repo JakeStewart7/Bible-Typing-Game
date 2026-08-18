@@ -31,10 +31,12 @@ export function createDefenseView(elements: DefenseElements) {
     }
     for (const projectile of state.projectiles) {
       const element = getProjectileElement(projectile.id);
-      const travel = 94 - projectile.position;
+      const distance = projectile.launchPosition - projectile.targetPosition;
+      const progress = Math.min(1, Math.max(0, (projectile.launchPosition - projectile.position) / distance));
+      const height = Math.sin(progress * Math.PI) * projectile.arcHeight;
       element.style.left = `${projectile.position}%`;
-      element.style.bottom = `${30 + travel * Math.tan(projectile.angle * Math.PI / 180) * .22}px`;
-      element.style.transform = `translateX(-50%) rotate(${180 - projectile.angle}deg)`;
+      element.style.bottom = `${30 + height}px`;
+      element.style.transform = `translateX(-50%) rotate(${165 + progress * 30}deg)`;
     }
     renderUpgrades(state);
     if (state.status === 'lost') elements.message.textContent = 'The fortress fell. Restart the passage to rally again!';

@@ -131,9 +131,9 @@ test('backspacing freezes accuracy until a new unscored letter is typed', () => 
 
 test('defense typing earns faith and damages enemies', () => {
   const state = createDefenseState();
-  typeCharacter(state, true);
+  typeCharacter(state, true, () => .5);
   equal(state.faith, 1);
-  equal(state.projectiles.length, 1);
+  equal(state.projectiles.length, 3);
   advanceEnemy(state, 2);
   equal(state.enemies[0].health, 3);
   equal(state.projectiles.length, 0);
@@ -154,7 +154,7 @@ test('defense upgrades consume resources and improve levels', () => {
   equal(buyUpgrade(state, 'power'), true);
   equal(state.powerLevel, 1);
   equal(state.faith, 65);
-  typeCharacter(state, true);
+  typeCharacter(state, true, () => .5);
   advanceEnemy(state, 2);
   equal(state.enemies[0].health, 2);
 });
@@ -162,7 +162,7 @@ test('defense upgrades consume resources and improve levels', () => {
 test('light is destroyed on contact and defeats low-health shadows', () => {
   const state = createDefenseState();
   state.enemies[0].health = 1;
-  typeCharacter(state, true);
+  typeCharacter(state, true, () => .5);
   advanceEnemy(state, 2);
   equal(state.projectiles.length, 0);
   equal(state.enemiesDefeated, 1);
@@ -185,7 +185,7 @@ test('up to fifteen shadows can occupy the battlefield', () => {
 test('light targets the unified shadow line regardless of visual angle', () => {
   const state = createDefenseState();
   state.enemies.push({ id: 2, position: 10, health: 4, maxHealth: 4 });
-  typeCharacter(state, true);
+  typeCharacter(state, true, () => .5);
   advanceEnemy(state, 2);
   equal(state.projectiles.length, 0);
   equal(state.enemies.some(enemy => enemy.health < enemy.maxHealth), true);
@@ -194,9 +194,25 @@ test('light targets the unified shadow line regardless of visual angle', () => {
 test('missed light disappears after crossing the battlefield', () => {
   const state = createDefenseState();
   state.enemies = [];
-  typeCharacter(state, true);
+  typeCharacter(state, true, () => .5);
   advanceEnemy(state, 2);
   equal(state.projectiles.length, 0);
+});
+
+test('arcade volleys are deterministic and spread across the battlefield', () => {
+  const state = createDefenseState();
+  state.enemies.push({ id: 2, position: 45, health: 4, maxHealth: 4 });
+  const values = [.25, .5, .75, .1, .9, .4];
+  let index = 0;
+  typeCharacter(state, true, () => values[index++ % values.length]!);
+  equal(state.projectiles.map(projectile => ({
+    target: Math.round(projectile.targetPosition),
+    arc: Math.round(projectile.arcHeight)
+  })), [
+    { target: 3, arc: 39 },
+    { target: 53, arc: 25 },
+    { target: 18, arc: 36 }
+  ]);
 });
 
 test('completing defense awards a victory bonus', () => {
