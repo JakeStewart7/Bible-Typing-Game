@@ -104,6 +104,8 @@ function showWorkspace(workspace: string, selectedMode?: string): void {
     ? 'journey'
     : selectedMode === 'memory' ? 'memory' : selectedMode === 'defense' ? 'arcade' : 'practice';
   document.querySelector('.app-shell')?.setAttribute('data-theme', theme);
+  gameScreen?.scrollTo({ top: 0 });
+  campaignScreenEl.scrollTo({ top: 0 });
   document.querySelectorAll<HTMLElement>('.mode-nav').forEach(button => {
     const campaignActive = (workspace === 'campaign' || workspace === 'campaign-play') && button.dataset.workspace === 'campaign';
     const modeActive = Boolean(selectedMode) && button.dataset.mode === selectedMode;
