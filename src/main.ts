@@ -8,6 +8,7 @@ import { initControls } from './ui/controls';
 import { initGameControllers } from './game/controller';
 import { setupMusic } from './audio/music';
 import { toggleEffects } from './audio/effects';
+import { isNarratorEnabled, toggleNarrator } from './audio/narrator';
 import { createCampaignController } from './campaign-controller';
 import type { CampaignChunk } from './campaign';
 import { fetchRange } from './bible-api';
@@ -141,3 +142,14 @@ document.getElementById('sound-toggle')?.addEventListener('click', event => {
   const label = button.querySelector('span');
   if (label) label.textContent = enabled ? 'On' : 'Off';
 });
+
+const narratorToggle = document.getElementById('narrator-toggle');
+if (narratorToggle instanceof HTMLButtonElement) {
+  const setNarratorState = (enabled: boolean) => {
+    narratorToggle.setAttribute('aria-pressed', String(enabled));
+    const label = narratorToggle.querySelector('span');
+    if (label) label.textContent = enabled ? 'On' : 'Off';
+  };
+  setNarratorState(isNarratorEnabled());
+  narratorToggle.addEventListener('click', () => setNarratorState(toggleNarrator()));
+}

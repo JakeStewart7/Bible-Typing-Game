@@ -7,6 +7,7 @@ import { renderStats } from '../ui/hud';
 import { calculateStats } from './stats';
 import { fetchChapter, fetchRange } from '../bible-api';
 import { playComplete, playKey } from '../audio/effects';
+import { narrateCompletedWords, resetNarrator } from '../audio/narrator';
 import { advanceEnemy, buyUpgrade, completeDefense, createDefenseState, typeCharacter } from './minigame';
 import type { DefenseState, UpgradeId } from './minigame';
 import { isChapterComplete, nextChunk, starsForWpm } from '../campaign';
@@ -131,6 +132,7 @@ export function initGameControllers(game: Game, controls: Controls) {
   }
 
   function restartGame() {
+    resetNarrator();
     game.typed = [];
     game.errors = 0;
     game.attempted = [];
@@ -204,6 +206,7 @@ export function initGameControllers(game: Game, controls: Controls) {
     const mode = gameModeEl.value;
     const previousLength = game.typed.length;
     handleInput(game, inputEl.value);
+    narrateCompletedWords(game);
     if (game.typed.length > previousLength) {
       const index = game.typed.length - 1;
       const correct = game.typed[index] === game.chars[index];
