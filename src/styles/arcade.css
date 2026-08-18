@@ -9,6 +9,12 @@
 .resource small { color: color-mix(in srgb, var(--page-accent) 24%, white); font-size: var(--text-label); text-transform: uppercase; }
 .battlefield { position: relative; height: clamp(9rem, 18vh, 12rem); margin: .75rem; overflow: hidden; border: 1px solid var(--page-border); border-radius: 18px; background: linear-gradient(var(--page-accent-soft) 0 58%, color-mix(in srgb, var(--page-accent) 38%, white) 59% 63%, color-mix(in srgb, var(--page-accent) 62%, white) 64%); box-shadow: inset 0 0 30px var(--page-shadow); }
 .app-shell[data-theme="arcade"] .play-area { container-type: size; }
+.app-shell[data-theme="arcade"] #game-screen {
+  padding: 0;
+}
+.app-shell[data-theme="arcade"] .practice-workspace {
+  max-width: none;
+}
 .app-shell[data-theme="arcade"] .battlefield {
   background:
     radial-gradient(circle at 76% 18%, #b9ddff33 0 1px, transparent 2px),
