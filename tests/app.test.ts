@@ -10,6 +10,7 @@ import { createCampaignChunks, getBookProgress, getCampaignProgress, nextChunk, 
 import { AppStorage } from '../src/persistence/storage.ts';
 import { AppStateRepository } from '../src/persistence/app-state.ts';
 import { ProfileRepository } from '../src/persistence/profile-repository.ts';
+import { filterJourneyBooks, findJourneyContinuation, groupJourneyBooks, isJourneyBookUnlocked, journeyCurrency } from '../src/journey.ts';
 
 type Test = { name: string; run: () => void };
 const tests: Test[] = [];
@@ -249,6 +250,38 @@ test('campaign summary counts completed books', () => {
   const progress = Object.fromEntries(createCampaignChunks('Obadiah').map(chunk => [chunk.id, 1]));
   equal(getCampaignProgress(progress).completedBooks, 1);
   equal(getCampaignProgress(progress).completedChapters, 1);
+});
+
+test('journey search supports fuzzy typed matching', () => {
+  equal(filterJourneyBooks('mthw').slice(0, 1), ['Matthew']);
+  equal(filterJourneyBooks('song sol').slice(0, 1), ['Song of Solomon']);
+});
+
+test('journey books are grouped into canonical testaments', () => {
+  const groups = groupJourneyBooks(['Genesis', 'Matthew', 'Psalms', 'John']);
+  equal(groups, [
+    { testament: 'Old Testament', books: ['Genesis', 'Psalms'] },
+    { testament: 'New Testament', books: ['Matthew', 'John'] }
+  ]);
+});
+
+test('journey unlocks starting books and progresses deterministically', () => {
+  equal(isJourneyBookUnlocked('Matthew', {}), true);
+  equal(isJourneyBookUnlocked('Genesis', {}), true);
+  equal(isJourneyBookUnlocked('Psalms', {}), true);
+  equal(isJourneyBookUnlocked('Mark', {}), false);
+  const completedMatthew = Object.fromEntries(createCampaignChunks('Matthew').map(chunk => [chunk.id, 1]));
+  equal(isJourneyBookUnlocked('Mark', completedMatthew), true);
+});
+
+test('journey currency counts unique completed passages without using stars', () => {
+  equal(journeyCurrency({ 'Matthew:1:1-3': 5, 'Genesis:1:1-3': 1, invalid: 5, 'Mark:1:1-3': 0 }), 2);
+});
+
+test('journey continuation preserves a valid stored passage and advances completed work', () => {
+  const first = createCampaignChunks('Matthew')[0]!;
+  equal(findJourneyContinuation({}, first), first);
+  equal(findJourneyContinuation({ [first.id]: 1 }, first), createCampaignChunks('Matthew')[1]);
 });
 
 test('profile records lifetime and recent completed-passage WPM', () => {

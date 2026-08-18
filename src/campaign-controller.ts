@@ -5,9 +5,16 @@ import {
   getBookProgress,
   getCampaignProgress
 } from './campaign';
-import type { CampaignChunk, CampaignProgress } from './campaign';
+import type { CampaignChunk } from './campaign';
 import type { AppStateRepository } from './persistence/app-state';
 import type { AppConfig } from './config';
+import {
+  filterJourneyBooks,
+  findJourneyContinuation,
+  groupJourneyBooks,
+  isJourneyBookUnlocked,
+  journeyCurrency
+} from './journey';
 
 export type CampaignView = {
   contentEl: HTMLElement;
@@ -28,35 +35,61 @@ export function createCampaignController(
 ) {
   let selectedBook: string | null = null;
   let progress = stateRepository.readCampaignProgress();
+  let continuation = findJourneyContinuation(progress, stateRepository.readJourneyPosition());
+  const searchEl = document.getElementById('campaign-search') as HTMLInputElement | null;
+  const continueEl = document.getElementById('journey-continue') as HTMLButtonElement | null;
 
   function renderSummary(): void {
     const summary = getCampaignProgress(progress);
-    view.totalStarsEl.textContent = `${summary.stars} ★`;
+    view.totalStarsEl.textContent = `${journeyCurrency(progress)} light`;
     view.totalProgressEl.textContent = `${summary.completed} of ${summary.total} passages`;
     view.sidebarProgressEl.innerHTML = `${summary.completedChapters} / 1,189 chapters<br>${summary.completedBooks} / 66 books`;
+    continuation = findJourneyContinuation(progress, continuation);
+    if (continueEl) {
+      continueEl.classList.toggle('is-hidden', !continuation);
+      if (continuation) {
+        continueEl.innerHTML = `<strong>Continue Journey</strong><span>${continuation.book} ${continuation.chapter}:${continuation.startVerse}–${continuation.endVerse}</span>`;
+      }
+    }
   }
 
   function renderBooks(): void {
     selectedBook = null;
     view.backEl.classList.add('is-hidden');
     view.breadcrumbEl.textContent = '66 books · 1,189 chapters';
-    view.contentEl.className = 'campaign-content book-grid';
-    view.contentEl.replaceChildren(...BOOKS.map(book => {
-      const summary = getBookProgress(book, progress);
-      const button = document.createElement('button');
-      button.className = `book-tile${summary.percent === 100 ? ' complete' : ''}`;
-      button.innerHTML = `
-        <span class="book-order">${String(BOOKS.indexOf(book) + 1).padStart(2, '0')}</span>
-        <strong>${book}</strong>
-        <span>${summary.completed}/${summary.total} passages · ${summary.stars} ★</span>
-        <i><b style="width:${summary.percent}%"></b></i>`;
-      button.addEventListener('click', () => renderBook(book));
-      return button;
+    view.contentEl.className = 'campaign-content';
+    const groups = groupJourneyBooks(filterJourneyBooks(searchEl?.value ?? ''));
+    view.contentEl.replaceChildren(...groups.map(group => {
+      const section = document.createElement('section');
+      section.className = 'testament-group';
+      const heading = document.createElement('h3');
+      heading.textContent = group.testament;
+      const grid = document.createElement('div');
+      grid.className = 'book-grid';
+      grid.replaceChildren(...group.books.map(book => createBookTile(book)));
+      section.append(heading, grid);
+      return section;
     }));
     renderSummary();
   }
 
+  function createBookTile(book: string): HTMLButtonElement {
+      const summary = getBookProgress(book, progress);
+      const unlocked = isJourneyBookUnlocked(book, progress);
+      const button = document.createElement('button');
+      button.className = `book-tile${summary.percent === 100 ? ' complete' : ''}${unlocked ? '' : ' locked'}`;
+      button.disabled = !unlocked;
+      button.innerHTML = `
+        <span class="book-order">${String(BOOKS.indexOf(book) + 1).padStart(2, '0')}</span>
+        <strong>${book}</strong>
+        <span>${unlocked ? `${summary.completed}/${summary.total} passages` : 'Locked · complete the prior book'}</span>
+        <i><b style="width:${summary.percent}%"></b></i>`;
+      button.addEventListener('click', () => renderBook(book));
+      return button;
+  }
+
   function renderBook(book: string): void {
+    if (!isJourneyBookUnlocked(book, progress)) return;
     selectedBook = book;
     view.backEl.classList.remove('is-hidden');
     const summary = getBookProgress(book, progress);
@@ -96,6 +129,8 @@ export function createCampaignController(
       const data = await fetchRange(chunk.book, chunk.chapter, chunk.startVerse, chunk.endVerse, 'kjv', false);
       const text = data.verses?.map(verse => verse.text).join(' ') ?? '';
       if (!text) throw new Error('Campaign passage was empty.');
+      continuation = chunk;
+      persist();
       onStartChunk(chunk, text);
     } finally {
       button.disabled = false;
@@ -104,7 +139,8 @@ export function createCampaignController(
 
   function saveChunk(chunk: CampaignChunk, stars: number): void {
     progress[chunk.id] = Math.max(progress[chunk.id] ?? 0, stars);
-    stateRepository.writeCampaignProgress(progress);
+    continuation = findJourneyContinuation(progress, null);
+    persist();
     renderSummary();
   }
 
@@ -126,11 +162,22 @@ export function createCampaignController(
         if (action === 'reset-book') delete progress[chunk.id];
       }
     }
-    stateRepository.writeCampaignProgress(progress);
+    continuation = findJourneyContinuation(progress, null);
+    persist();
     selectedBook ? renderBook(selectedBook) : renderBooks();
   }
 
+  function persist(): void {
+    stateRepository.writeCampaignProgress(progress);
+    if (continuation) stateRepository.writeJourneyPosition(continuation);
+  }
+
   view.backEl.addEventListener('click', renderBooks);
+  searchEl?.addEventListener('input', renderBooks);
+  continueEl?.addEventListener('click', () => {
+    if (!continuation) return;
+    void startChunk(continuation, continueEl);
+  });
   if (config.isDevelopment) {
     document.getElementById('dev-tools-toggle')?.addEventListener('click', () => view.devToolsEl.classList.toggle('is-hidden'));
     view.devToolsEl.querySelectorAll<HTMLButtonElement>('[data-dev-action]').forEach(button => {

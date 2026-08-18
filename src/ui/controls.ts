@@ -141,13 +141,15 @@ export function initControls(config: AppConfig) {
       <section id="campaign-screen" class="app-page campaign-screen is-hidden">
         <header class="page-header campaign-header">
           <div><div class="eyebrow">The Scripture Journey</div><h2>Journey</h2><p>Complete every passage, chapter, and book—one comfortable session at a time.</p></div>
-          <div class="campaign-summary"><strong id="campaign-total-stars">0 ★</strong><span id="campaign-total-progress">0 of 0 passages</span></div>
+          <div class="campaign-summary"><strong id="campaign-total-stars">0 light</strong><span id="campaign-total-progress">0 of 0 passages</span></div>
         </header>
         <div class="campaign-toolbar">
           <button id="campaign-back" class="secondary-btn is-hidden">← All books</button>
           <div id="campaign-breadcrumb">66 books · 1,189 chapters</div>
+          <label class="campaign-search" for="campaign-search"><span>Search books</span><input id="campaign-search" type="search" placeholder="Type a book name…" autocomplete="off"></label>
           ${journeyDeveloperToggle}
         </div>
+        <button id="journey-continue" class="journey-continue is-hidden" type="button"></button>
         ${journeyDeveloperPanel}
         <div id="campaign-content" class="campaign-content"></div>
       </section>
