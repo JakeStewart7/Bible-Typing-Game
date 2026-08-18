@@ -267,10 +267,10 @@ select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px #1
 .word { display: inline; }
 .char { transition: color .12s, background .12s; }
 .char.correct { color: var(--ink); }
+.char.error-highlight { color: #b83f38; background: #ffe1de; box-shadow: inset 0 -2px #ee6b62; }
 .typing-card[data-mode="memory"] .char.correct:not(.memory-hidden) { color: var(--ink); background: transparent; }
 .typing-card[data-mode="memory"] .char.memory-hidden { color: transparent; background: linear-gradient(transparent 73%, #d9e3de 73% 82%, transparent 82%); text-shadow: none; }
-.incorrect-word { color: var(--coral); background: #ffe9e7; border-radius: 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
-.incorrect-word .char { color: inherit; }
+.typing-card[data-mode="memory"] .char.memory-hidden.error-highlight { color: transparent; background: #ffe1de; }
 .floating-caret { position: absolute; left: 0; top: 0; width: 2px; opacity: .78; background: linear-gradient(180deg, #50d8b0, var(--green-dark)); border-radius: 99px; pointer-events: none; z-index: 5; will-change: transform; transition: opacity 90ms; box-shadow: 0 0 5px #20b78e55; animation: caretGlow 1.4s ease-in-out infinite; }
 .floating-caret.complete { opacity: 0; }
 @keyframes caretGlow { 50% { opacity: 1; box-shadow: 0 0 8px #20b78e77; } }

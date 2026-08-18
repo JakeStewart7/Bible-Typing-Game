@@ -11,7 +11,7 @@ import { AppStorage } from '../src/persistence/storage.ts';
 import { AppStateRepository } from '../src/persistence/app-state.ts';
 import { ProfileRepository } from '../src/persistence/profile-repository.ts';
 import { filterJourneyBooks, findJourneyContinuation, groupJourneyBooks, isJourneyBookUnlocked, journeyCurrency } from '../src/journey.ts';
-import { shouldHideMemoryCharacter } from '../src/memory/domain/visibility.ts';
+import { shouldHideMemoryCharacter, shouldMaskMemoryCharacter } from '../src/memory/domain/visibility.ts';
 import {
   createPassageId,
   recordRecentPassage,
@@ -145,6 +145,12 @@ test('Memory visibility is deterministic and supports its full range', () => {
   equal(Array.from({ length: 20 }, (_, index) => shouldHideMemoryCharacter(index, 0)).every(Boolean), true);
   equal(shouldHideMemoryCharacter(0, 50), false);
   equal(shouldHideMemoryCharacter(1, 50), true);
+});
+
+test('Memory keeps a hidden letter masked until it is typed correctly', () => {
+  equal(shouldMaskMemoryCharacter(1, 50, undefined, 'a'), true);
+  equal(shouldMaskMemoryCharacter(1, 50, 'x', 'a'), true);
+  equal(shouldMaskMemoryCharacter(1, 50, 'a', 'a'), false);
 });
 
 test('hint timing and current-word selection are deterministic', () => {

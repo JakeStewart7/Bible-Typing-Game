@@ -4,3 +4,12 @@ export function shouldHideMemoryCharacter(index: number, visibility: number): bo
   if (normalizedVisibility <= 0) return true;
   return ((index * 37 + 17) % 100) >= normalizedVisibility;
 }
+
+export function shouldMaskMemoryCharacter(
+  index: number,
+  visibility: number,
+  typedCharacter: string | undefined,
+  expectedCharacter: string
+): boolean {
+  return shouldHideMemoryCharacter(index, visibility) && typedCharacter !== expectedCharacter;
+}

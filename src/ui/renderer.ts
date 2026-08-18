@@ -1,5 +1,5 @@
 import type { Game } from '../game/state';
-import { shouldHideMemoryCharacter } from '../memory/domain/visibility';
+import { shouldMaskMemoryCharacter } from '../memory/domain/visibility';
 
 type CaretMotion = {
   element: HTMLElement;
@@ -131,18 +131,17 @@ export function renderText(container: HTMLElement, game: Game) {
     const wordSpan = document.createElement('span');
     wordSpan.classList.add('word');
     wordSpan.style.whiteSpace = 'normal';
-    const wordStartIndex = charIndex;
-    const wordEndIndex = wordStartIndex + word.length;
-    if (firstErrorIndex >= wordStartIndex && firstErrorIndex < wordEndIndex) {
-      wordSpan.classList.add('incorrect-word');
-    }
-
     for (let i = 0; i < word.length; i++) {
       const span = document.createElement('span');
       span.textContent = word[i];
       span.classList.add('char');
-      const hiddenInMemory = Boolean(memoryMode) && shouldHideMemoryCharacter(charIndex, memoryVisibility);
-      if (hiddenInMemory && charIndex >= game.typed.length) {
+      const hiddenInMemory = Boolean(memoryMode) && shouldMaskMemoryCharacter(
+        charIndex,
+        memoryVisibility,
+        game.typed[charIndex],
+        game.chars[charIndex] ?? ''
+      );
+      if (hiddenInMemory) {
         span.classList.add('memory-hidden');
         span.textContent = '·';
       }
