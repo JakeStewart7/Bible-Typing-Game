@@ -6,8 +6,8 @@ import {
   getCampaignProgress
 } from './campaign';
 import type { CampaignChunk, CampaignProgress } from './campaign';
-
-const STORAGE_KEY = 'verseTypeCampaignProgress';
+import type { AppStateRepository } from './persistence/app-state';
+import type { AppConfig } from './config';
 
 export type CampaignView = {
   contentEl: HTMLElement;
@@ -22,10 +22,12 @@ export type CampaignView = {
 
 export function createCampaignController(
   view: CampaignView,
-  onStartChunk: (chunk: CampaignChunk, text: string) => void
+  onStartChunk: (chunk: CampaignChunk, text: string) => void,
+  stateRepository: AppStateRepository,
+  config: AppConfig
 ) {
   let selectedBook: string | null = null;
-  let progress = loadProgress();
+  let progress = stateRepository.readCampaignProgress();
 
   function renderSummary(): void {
     const summary = getCampaignProgress(progress);
@@ -102,7 +104,7 @@ export function createCampaignController(
 
   function saveChunk(chunk: CampaignChunk, stars: number): void {
     progress[chunk.id] = Math.max(progress[chunk.id] ?? 0, stars);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    stateRepository.writeCampaignProgress(progress);
     renderSummary();
   }
 
@@ -124,23 +126,17 @@ export function createCampaignController(
         if (action === 'reset-book') delete progress[chunk.id];
       }
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    stateRepository.writeCampaignProgress(progress);
     selectedBook ? renderBook(selectedBook) : renderBooks();
   }
 
   view.backEl.addEventListener('click', renderBooks);
-  document.getElementById('dev-tools-toggle')?.addEventListener('click', () => view.devToolsEl.classList.toggle('is-hidden'));
-  view.devToolsEl.querySelectorAll<HTMLButtonElement>('[data-dev-action]').forEach(button => {
-    button.addEventListener('click', () => applyDeveloperAction(button.dataset.devAction ?? ''));
-  });
+  if (config.isDevelopment) {
+    document.getElementById('dev-tools-toggle')?.addEventListener('click', () => view.devToolsEl.classList.toggle('is-hidden'));
+    view.devToolsEl.querySelectorAll<HTMLButtonElement>('[data-dev-action]').forEach(button => {
+      button.addEventListener('click', () => applyDeveloperAction(button.dataset.devAction ?? ''));
+    });
+  }
   renderBooks();
   return { renderBooks, renderBook, saveChunk, celebrateBook, getProgress: () => progress };
-}
-
-function loadProgress(): CampaignProgress {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as CampaignProgress;
-  } catch {
-    return {};
-  }
 }

@@ -11,6 +11,10 @@ import { toggleEffects } from './audio/effects';
 import { createCampaignController } from './campaign-controller';
 import type { CampaignChunk } from './campaign';
 import { fetchRange } from './bible-api';
+import { appConfig } from './config';
+import { AppStateRepository } from './persistence/app-state';
+import { AppStorage } from './persistence/storage';
+import { ProfileRepository } from './persistence/profile-repository';
 
 import trackDetermination from '../assets/music/determination.mp3';
 import trackApple from '../assets/music/apple_cider.ogg';
@@ -31,7 +35,10 @@ const {
   campaignTotalStarsEl, campaignTotalProgressEl, campaignDevToolsEl,
   sidebarCampaignProgressEl, celebrationEl,
   populateBooks, populateChapters, populateVerses, constrainEndVerses
-} = initControls();
+} = initControls(appConfig);
+const storage = new AppStorage(window.localStorage);
+const stateRepository = new AppStateRepository(storage);
+const profileRepository = new ProfileRepository(storage);
 
 // ----------------------------
 // Game state (keep instance export for other modules/tests)
@@ -48,7 +55,7 @@ const gameController = initGameControllers(game, {
   defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
   battlePathEl, battleMessageEl,
   populateBooks, populateChapters, populateVerses, constrainEndVerses
-});
+}, stateRepository, profileRepository, appConfig);
 
 setupMusic(document.getElementById('music-slot'));
 
@@ -57,9 +64,10 @@ const campaignController = createCampaignController({
   contentEl: campaignContentEl, backEl: campaignBackEl, breadcrumbEl: campaignBreadcrumbEl,
   totalStarsEl: campaignTotalStarsEl, totalProgressEl: campaignTotalProgressEl,
   devToolsEl: campaignDevToolsEl, sidebarProgressEl: sidebarCampaignProgressEl, celebrationEl
-}, (chunk, text) => startCampaignChunk(chunk, text));
+}, (chunk, text) => startCampaignChunk(chunk, text), stateRepository, appConfig);
 
 startCampaignChunk = (chunk, text) => {
+  stateRepository.writeJourneyPosition(chunk);
   showWorkspace('campaign-play');
   gameController.startCampaignChunk(chunk, text);
 };
@@ -68,7 +76,9 @@ gameController.setCampaignHooks({
   progress: campaignController.getProgress,
   celebrateBook: campaignController.celebrateBook,
   returnToMenu: book => {
+    const journeyPosition = stateRepository.readJourneyPosition();
     showWorkspace('campaign');
+    if (journeyPosition) campaignController.renderBook(journeyPosition.book);
     campaignController.renderBook(book);
   },
   startNext: chunk => {

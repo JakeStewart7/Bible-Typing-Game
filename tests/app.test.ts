@@ -7,7 +7,9 @@ import { calculateStats } from '../src/game/stats.ts';
 import { getVerseCount, VERSE_COUNTS } from '../src/verse-counts.ts';
 import { advanceEnemy, buyUpgrade, completeDefense, createDefenseState, typeCharacter } from '../src/game/minigame.ts';
 import { createCampaignChunks, getBookProgress, getCampaignProgress, nextChunk, starsForWpm } from '../src/campaign.ts';
-import { readProfile, recordSession } from '../src/profile.ts';
+import { AppStorage } from '../src/persistence/storage.ts';
+import { AppStateRepository } from '../src/persistence/app-state.ts';
+import { ProfileRepository } from '../src/persistence/profile-repository.ts';
 
 type Test = { name: string; run: () => void };
 const tests: Test[] = [];
@@ -250,18 +252,75 @@ test('campaign summary counts completed books', () => {
 });
 
 test('profile records lifetime and recent completed-passage WPM', () => {
-  const values = new Map<string, string>();
-  globalThis.localStorage = {
-    getItem: key => values.get(key) ?? null,
-    setItem: (key, value) => values.set(key, value)
-  } as Storage;
-  recordSession(40, 25);
-  recordSession(60, 25);
-  const profile = readProfile();
-  equal(profile.lifetimeWpm, 50);
-  equal(profile.recentWpm, 50);
-  equal(profile.bestWpm, 60);
+  const repository = new ProfileRepository(new AppStorage(createMemoryStorage()));
+  repository.recordSession(40, 25);
+  repository.recordSession(60, 25);
+  equal(repository.read(), {
+    xp: 50,
+    bestWpm: 60,
+    sessions: [40, 60]
+  });
 });
+
+test('profile repository preserves legacy localStorage keys and formats', () => {
+  const storage = createMemoryStorage({
+    verseTypeXp: '525',
+    verseTypeBest: '72',
+    verseTypeWpmSessions: '[40,60]'
+  });
+  const profile = new ProfileRepository(new AppStorage(storage)).read();
+  equal(profile, { xp: 525, bestWpm: 72, sessions: [40, 60] });
+});
+
+test('app state repository validates legacy Journey progress', () => {
+  const storage = createMemoryStorage({
+    verseTypeCampaignProgress: '{"John:3:16-18":4}'
+  });
+  const repository = new AppStateRepository(new AppStorage(storage));
+  equal(repository.readCampaignProgress(), { 'John:3:16-18': 4 });
+  storage.setItem('verseTypeCampaignProgress', '{"bad":99}');
+  equal(repository.readCampaignProgress(), {});
+});
+
+test('recent passages are deduplicated and bounded', () => {
+  const repository = new AppStateRepository(new AppStorage(createMemoryStorage()));
+  for (let chapter = 1; chapter <= 12; chapter++) {
+    repository.recordRecentPassage({
+      book: 'John', chapter, startVerse: 1, endVerse: 3, translation: 'kjv'
+    });
+
+    test('Journey position and Memory favorites round-trip through app storage', () => {
+      const repository = new AppStateRepository(new AppStorage(createMemoryStorage()));
+      const position = createCampaignChunks('Obadiah')[0]!;
+      const favorite = {
+        book: 'John', chapter: 3, startVerse: 16, endVerse: 17, translation: 'kjv'
+      };
+      repository.writeJourneyPosition(position);
+      repository.writeMemoryFavorites([favorite]);
+      equal(repository.readJourneyPosition(), position);
+      equal(repository.readMemoryFavorites(), [favorite]);
+    });
+  }
+  repository.recordRecentPassage({
+    book: 'John', chapter: 5, startVerse: 1, endVerse: 3, translation: 'kjv'
+  });
+  const recent = repository.readRecentPassages();
+  equal(recent.length, 10);
+  equal(recent[0]?.chapter, 5);
+  equal(recent.filter(item => item.chapter === 5).length, 1);
+});
+
+function createMemoryStorage(initial: Record<string, string> = {}): Storage {
+  const values = new Map(Object.entries(initial));
+  return {
+    get length() { return values.size; },
+    clear: () => values.clear(),
+    getItem: key => values.get(key) ?? null,
+    key: index => [...values.keys()][index] ?? null,
+    removeItem: key => { values.delete(key); },
+    setItem: (key, value) => { values.set(key, value); }
+  };
+}
 
 let failed = 0;
 for (const current of tests) {

@@ -2,8 +2,22 @@ import { BOOKS, getChapterCount } from '../bible-data';
 import { chooseVerseRange, filterEndVerses } from '../passage-selector';
 import { getVerseCount } from '../verse-counts';
 import { requireElement } from '../shared/dom';
+import type { AppConfig } from '../config';
 
-export function initControls() {
+export function initControls(config: AppConfig) {
+  const developerControls = config.isDevelopment ? `
+    <button id="dev-complete-passage" class="dev-complete-btn" type="button">Dev: Complete passage</button>` : '';
+  const journeyDeveloperToggle = config.isDevelopment
+    ? '<button id="dev-tools-toggle" class="ghost-btn">Development tools</button>'
+    : '';
+  const journeyDeveloperPanel = config.isDevelopment ? `
+    <div id="campaign-dev-tools" class="campaign-dev-tools is-hidden">
+      <strong>Journey development tools</strong>
+      <button data-dev-action="complete-book">Complete selected book</button>
+      <button data-dev-action="reset-book">Reset selected book</button>
+      <button data-dev-action="complete-all">Complete all books</button>
+      <button data-dev-action="reset-all">Reset all progress</button>
+    </div>` : '<div id="campaign-dev-tools" class="is-hidden"></div>';
   const app = document.getElementById('app') as HTMLElement;
   app.innerHTML = `
     <main class="app-shell">
@@ -80,6 +94,7 @@ export function initControls() {
             <div id="memory-controls" class="memory-controls is-hidden">
               <label for="memory-visibility">Letters shown <strong id="memory-visibility-value">50%</strong></label>
               <input id="memory-visibility" type="range" min="0" max="100" step="10" value="50">
+              <button id="favorite-passage" class="ghost-btn" type="button">Favorite passage</button>
             </div>
           </section>
 
@@ -118,7 +133,7 @@ export function initControls() {
                 <input id="input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Type the passage here">
               </div>
               <div class="typing-footer"><span>Click the passage or start typing</span><button id="restart" class="text-btn">↻ Restart</button></div>
-              <button id="dev-complete-passage" class="dev-complete-btn" type="button">Dev: Complete passage</button>
+              ${developerControls}
             </article>
           </section>
         </div>
@@ -131,15 +146,9 @@ export function initControls() {
         <div class="campaign-toolbar">
           <button id="campaign-back" class="secondary-btn is-hidden">← All books</button>
           <div id="campaign-breadcrumb">66 books · 1,189 chapters</div>
-          <button id="dev-tools-toggle" class="ghost-btn">Development tools</button>
+          ${journeyDeveloperToggle}
         </div>
-        <div id="campaign-dev-tools" class="campaign-dev-tools is-hidden">
-          <strong>Journey development tools</strong>
-          <button data-dev-action="complete-book">Complete selected book</button>
-          <button data-dev-action="reset-book">Reset selected book</button>
-          <button data-dev-action="complete-all">Complete all books</button>
-          <button data-dev-action="reset-all">Reset all progress</button>
-        </div>
+        ${journeyDeveloperPanel}
         <div id="campaign-content" class="campaign-content"></div>
       </section>
         </div>

@@ -1,8 +1,4 @@
-const STORAGE_KEYS = {
-  xp: 'verseTypeXp',
-  bestWpm: 'verseTypeBest',
-  sessions: 'verseTypeWpmSessions'
-} as const;
+import { ProfileRepository } from './persistence/profile-repository';
 
 export type PlayerProfile = {
   xp: number;
@@ -12,38 +8,24 @@ export type PlayerProfile = {
   recentWpm: number;
 };
 
-export function readProfile(): PlayerProfile {
-  const xp = readNumber(STORAGE_KEYS.xp);
-  const sessions = readSessions();
+export function readProfile(repository: ProfileRepository): PlayerProfile {
+  const { xp, bestWpm, sessions } = repository.read();
   return {
     xp,
     level: Math.floor(xp / 500) + 1,
-    bestWpm: readNumber(STORAGE_KEYS.bestWpm),
+    bestWpm,
     lifetimeWpm: average(sessions),
     recentWpm: average(sessions.slice(-10))
   };
 }
 
-export function recordSession(wpm: number, earnedXp: number): PlayerProfile {
-  const profile = readProfile();
-  localStorage.setItem(STORAGE_KEYS.xp, String(profile.xp + earnedXp));
-  if (wpm > profile.bestWpm) localStorage.setItem(STORAGE_KEYS.bestWpm, String(wpm));
-  localStorage.setItem(STORAGE_KEYS.sessions, JSON.stringify([...readSessions(), wpm]));
-  return readProfile();
-}
-
-function readNumber(key: string): number {
-  const value = Number(localStorage.getItem(key));
-  return Number.isFinite(value) && value >= 0 ? value : 0;
-}
-
-function readSessions(): number[] {
-  try {
-    const value = JSON.parse(localStorage.getItem(STORAGE_KEYS.sessions) ?? '[]');
-    return Array.isArray(value) ? value.filter(item => Number.isFinite(item) && item >= 0) : [];
-  } catch {
-    return [];
-  }
+export function recordSession(
+  wpm: number,
+  earnedXp: number,
+  repository: ProfileRepository
+): PlayerProfile {
+  repository.recordSession(wpm, earnedXp);
+  return readProfile(repository);
 }
 
 function average(values: number[]): number {

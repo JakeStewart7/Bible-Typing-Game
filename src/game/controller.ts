@@ -19,6 +19,9 @@ import { createDefenseView } from '../ui/defense-view';
 import { BOOKS, getChapterCount } from '../bible-data';
 import { getVerseCount } from '../verse-counts';
 import { chooseRandomVerseRange } from '../passage-selector';
+import type { AppConfig } from '../config';
+import type { AppStateRepository, PassageReference } from '../persistence/app-state';
+import type { ProfileRepository } from '../persistence/profile-repository';
 
 type Controls = {
   hudEl: HTMLElement; textEl: HTMLElement; inputEl: HTMLInputElement; typedBarEl: HTMLElement;
@@ -37,7 +40,13 @@ type Controls = {
   populateVerses: () => Promise<void>; constrainEndVerses: () => void;
 };
 
-export function initGameControllers(game: Game, controls: Controls) {
+export function initGameControllers(
+  game: Game,
+  controls: Controls,
+  stateRepository: AppStateRepository,
+  profileRepository: ProfileRepository,
+  config: AppConfig
+) {
   const { hudEl, textEl, inputEl, typedBarEl, translationEl, bookEl, chapterEl,
     startVerseEl, endVerseEl, loadBtn, statusEl, passageTitleEl, resultsEl,
     resultStatsEl, progressFillEl, gameModeEl, challengeBannerEl, typingCardEl,
@@ -88,7 +97,7 @@ export function initGameControllers(game: Game, controls: Controls) {
     renderProfile({
       level: levelLabelEl, xp: xpLabelEl, xpFill: xpFillEl,
       bestWpm: personalBestEl, lifetimeWpm: lifetimeWpmEl, recentWpm: recentWpmEl
-    }, readProfile());
+    }, readProfile(profileRepository));
   }
 
   async function loadRandomDefensePassage(): Promise<void> {
@@ -196,7 +205,7 @@ export function initGameControllers(game: Game, controls: Controls) {
     }
     resultsEl.classList.remove('is-hidden');
     playComplete();
-    recordSession(stats.wpm, earnedXp);
+    recordSession(stats.wpm, earnedXp, profileRepository);
     updateProfile();
   }
 
@@ -220,15 +229,17 @@ export function initGameControllers(game: Game, controls: Controls) {
 
   textEl.addEventListener('click', () => inputEl.focus());
   document.getElementById('restart')?.addEventListener('click', restartGame);
-  document.getElementById('dev-complete-passage')?.addEventListener('click', () => {
-    if (hasCompleted) return;
-    game.typed = [...game.chars];
-    game.attempted = game.chars.map(() => true);
-    game.firstAttemptCorrect = game.chars.map(() => true);
-    if (!game.startTime) game.startTime = Date.now() - 30_000;
-    inputEl.value = game.text;
-    finishGame();
-  });
+  if (config.isDevelopment) {
+    document.getElementById('dev-complete-passage')?.addEventListener('click', () => {
+      if (hasCompleted) return;
+      game.typed = [...game.chars];
+      game.attempted = game.chars.map(() => true);
+      game.firstAttemptCorrect = game.chars.map(() => true);
+      if (!game.startTime) game.startTime = Date.now() - 30_000;
+      inputEl.value = game.text;
+      finishGame();
+    });
+  }
   document.getElementById('try-again')?.addEventListener('click', restartGame);
   document.getElementById('chapter-select')?.addEventListener('click', () => {
     resultsEl.classList.add('is-hidden');
@@ -271,6 +282,7 @@ export function initGameControllers(game: Game, controls: Controls) {
       game.text = text;
       game.chars = text.split('');
       passageTitleEl.textContent = `${bookEl.value} ${chapterEl.value}:${start}${end > start ? `–${end}` : ''}`;
+      stateRepository.recordRecentPassage(currentPassageReference());
       statusEl.textContent = '';
       restartGame();
     } catch (error) {
@@ -305,6 +317,14 @@ export function initGameControllers(game: Game, controls: Controls) {
     document.getElementById('memory-visibility-value')!.textContent = `${memoryVisibility}%`;
     typingCardEl.style.setProperty('--memory-visibility', String(memoryVisibility));
     updateUI();
+  });
+  document.getElementById('favorite-passage')?.addEventListener('click', () => {
+    const passage = currentPassageReference();
+    const favorites = stateRepository.readMemoryFavorites();
+    const exists = favorites.some(item => samePassage(item, passage));
+    stateRepository.writeMemoryFavorites(exists
+      ? favorites.filter(item => !samePassage(item, passage))
+      : [passage, ...favorites]);
   });
   document.querySelectorAll<HTMLButtonElement>('[data-upgrade]').forEach(button => {
     button.addEventListener('click', () => {
@@ -342,6 +362,22 @@ export function initGameControllers(game: Game, controls: Controls) {
       clearInterval(defenseTimer);
     }
   };
+
+  function currentPassageReference(): PassageReference {
+    return {
+      book: bookEl.value,
+      chapter: Number(chapterEl.value),
+      startVerse: Number(startVerseEl.value),
+      endVerse: Number(endVerseEl.value),
+      translation: translationEl.value
+    };
+  }
+}
+
+function samePassage(left: PassageReference, right: PassageReference): boolean {
+  return left.book === right.book && left.chapter === right.chapter &&
+    left.startVerse === right.startVerse && left.endVerse === right.endVerse &&
+    left.translation === right.translation;
 }
 
 function getBookProgressComplete(book: string, progress: CampaignProgress): boolean {
