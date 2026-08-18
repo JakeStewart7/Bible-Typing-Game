@@ -268,8 +268,12 @@ export function initGameControllers(
 
   inputEl.addEventListener('input', () => {
     const mode = gameModeEl.value;
+    const hadStarted = Boolean(game.startTime);
     const previousLength = game.typed.length;
     handleInput(game, inputEl.value);
+    if (mode === 'memory' && !hadStarted && game.startTime && activePassage) {
+      stateRepository.recordRecentPassage(activePassage);
+    }
     if (game.typed.length > previousLength) {
       lastProgressAt = Date.now();
       const index = game.typed.length - 1;
@@ -359,7 +363,6 @@ export function initGameControllers(
       game.chars = text.split('');
       activePassage = { book: bookEl.value, chapter: Number(chapterEl.value), startVerse: start, endVerse: end, translation: translationEl.value };
       passageTitleEl.textContent = `${bookEl.value} ${chapterEl.value}:${start}${end > start ? `–${end}` : ''}`;
-      stateRepository.recordRecentPassage(activePassage);
       statusEl.textContent = '';
       restartGame();
       if (gameModeEl.value === 'memory') {
