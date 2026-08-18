@@ -1,0 +1,45 @@
+/* Reusable UI primitives. Feature styles should compose these instead of
+   recreating spacing, surfaces, badges, or empty states. */
+.surface {
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 18px 50px var(--page-shadow);
+}
+
+.stack {
+  display: grid;
+  gap: var(--stack-gap, 1rem);
+}
+
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cluster-gap, .75rem);
+}
+
+.empty-state {
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.text-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: .2rem .55rem;
+  border-radius: 99px;
+  font-size: var(--text-label);
+  font-weight: 800;
+}
+
+.text-badge--accent {
+  color: var(--page-accent-strong);
+  background: var(--page-accent-soft);
+}
+
+.text-badge--muted {
+  color: var(--muted);
+  background: var(--page-surface-strong);
+}

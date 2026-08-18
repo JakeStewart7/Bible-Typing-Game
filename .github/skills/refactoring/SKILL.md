@@ -52,3 +52,13 @@ Use this import order from `src/styles/main.css`:
 
 Keep selectors and cascade order stable during extraction. New components should
 join the closest feature module instead of returning to a monolithic stylesheet.
+
+## Reusable UI convention
+
+Shared UI behavior belongs in `src/ui/components.ts`; shared page theme
+selection belongs in `src/ui/page-theme.ts`; shared visual primitives belong in
+`src/styles/components.css`. Feature modules may compose these contracts but
+should not duplicate empty states, visibility handling, badges, spacing stacks,
+or theme-selection conditionals. New pages should use the same `data-theme`,
+`.surface`, `.stack`, and `.cluster` contracts before introducing page-specific
+variants.

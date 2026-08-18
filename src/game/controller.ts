@@ -34,6 +34,7 @@ import {
   toggleFavoritePassage
 } from '../memory/domain/practice-library';
 import type { MemoryLibraryRepository, MemoryPassage } from '../memory/domain/practice-library';
+import { renderEmptyState } from '../ui/components';
 
 type Controls = {
   hudEl: HTMLElement; textEl: HTMLElement; inputEl: HTMLInputElement; typedBarEl: HTMLElement;
@@ -463,10 +464,7 @@ export function initGameControllers(
 
   function renderPassageList(container: HTMLElement, passages: MemoryPassage[]): void {
     if (!passages.length) {
-      const empty = document.createElement('span');
-      empty.className = 'memory-passage-empty';
-      empty.textContent = 'No passages yet';
-      container.replaceChildren(empty);
+      renderEmptyState(container, 'No passages yet');
       return;
     }
     container.replaceChildren(...passages.map(passage => {

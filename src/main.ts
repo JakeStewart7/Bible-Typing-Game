@@ -15,6 +15,7 @@ import { appConfig } from './config';
 import { AppStateRepository } from './persistence/app-state';
 import { AppStorage } from './persistence/storage';
 import { ProfileRepository } from './persistence/profile-repository';
+import { applyPageTheme, themeForWorkspace } from './ui/page-theme';
 
 import trackDetermination from '../assets/music/determination.mp3';
 import trackApple from '../assets/music/apple_cider.ogg';
@@ -100,10 +101,8 @@ function showWorkspace(workspace: string, selectedMode?: string): void {
   campaignScreenEl.classList.toggle('is-hidden', workspace !== 'campaign');
   gameScreen?.classList.toggle('is-hidden', workspace === 'campaign');
   gameScreen?.classList.toggle('campaign-play', workspace === 'campaign-play');
-  const theme = workspace === 'campaign' || workspace === 'campaign-play'
-    ? 'journey'
-    : selectedMode === 'memory' ? 'memory' : selectedMode === 'defense' ? 'arcade' : 'practice';
-  document.querySelector('.app-shell')?.setAttribute('data-theme', theme);
+  const appShell = document.querySelector<HTMLElement>('.app-shell');
+  if (appShell) applyPageTheme(appShell, themeForWorkspace(workspace, selectedMode));
   gameScreen?.scrollTo({ top: 0 });
   campaignScreenEl.scrollTo({ top: 0 });
   document.querySelectorAll<HTMLElement>('.mode-nav').forEach(button => {
