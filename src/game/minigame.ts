@@ -70,7 +70,6 @@ export function typeCharacter(
     }
   } else {
     state.faith = Math.max(0, state.faith - 2);
-    state.enemies.forEach(enemy => { enemy.position = Math.min(100, enemy.position + 2); });
   }
   return state;
 }

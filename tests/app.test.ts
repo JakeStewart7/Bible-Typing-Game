@@ -188,7 +188,14 @@ test('defense typing earns faith and damages enemies', () => {
   equal(state.projectiles.length, 0);
   typeCharacter(state, false);
   equal(state.faith, 0);
-  equal(Math.round(state.enemies[0].position), 20);
+  equal(Math.round(state.enemies[0].position), 18);
+});
+
+test('incorrect arcade typing does not advance shadows', () => {
+  const state = createDefenseState();
+  const position = state.enemies[0].position;
+  typeCharacter(state, false);
+  equal(state.enemies[0].position, position);
 });
 
 test('defense enemies advance and damage the fortress', () => {

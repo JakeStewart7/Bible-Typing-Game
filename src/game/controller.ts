@@ -77,7 +77,6 @@ export function initGameControllers(
   let defense: DefenseState = createDefenseState();
   let defenseFrame = 0;
   let previousFrame = performance.now();
-  let defenseTimer = 0;
   let memoryVisibility = 50;
   let activePassage: PassageReference | null = null;
   let lastProgressAt = Date.now();
@@ -123,10 +122,16 @@ export function initGameControllers(
       if (defense.status === 'lost') inputEl.disabled = true;
     }
     defenseFrame = 0;
+    if (gameModeEl.value === 'defense' && game.startTime && defense.status === 'playing') {
+      scheduleDefenseFrame();
+    }
   }
 
   function scheduleDefenseFrame() {
-    if (!defenseFrame) defenseFrame = requestAnimationFrame(defenseLoop);
+    if (!defenseFrame) {
+      previousFrame = performance.now();
+      defenseFrame = requestAnimationFrame(defenseLoop);
+    }
   }
 
   function updateProfile() {
@@ -164,6 +169,7 @@ export function initGameControllers(
     document.getElementById('memory-controls')?.classList.toggle('is-hidden', mode !== 'memory');
     memoryLibraryEl.classList.toggle('is-hidden', mode !== 'memory');
     favoritePassageEl.classList.toggle('is-hidden', mode !== 'memory' || !activePassage);
+    hintButtonEl.classList.toggle('is-hidden', mode !== 'memory');
     if (mode === 'memory') renderMemoryLibrary();
     renderDefense();
     if (mode === 'defense') void loadRandomDefensePassage();
@@ -401,11 +407,6 @@ export function initGameControllers(
   setMode();
   updateProfile();
   restartGame();
-  defenseTimer = window.setInterval(() => {
-    if (gameModeEl.value === 'defense' && game.startTime && defense.status === 'playing') {
-      scheduleDefenseFrame();
-    }
-  }, 50);
   hintTimer = window.setInterval(updateHintState, 250);
 
   return {
@@ -424,7 +425,6 @@ export function initGameControllers(
     leaveCampaign: () => { campaignChunk = null; },
     stop: () => {
       cancelAnimationFrame(defenseFrame);
-      clearInterval(defenseTimer);
       clearInterval(hintTimer);
     }
   };
@@ -437,9 +437,10 @@ export function initGameControllers(
   }
 
   function updateHintState(): void {
+    const isMemory = gameModeEl.value === 'memory';
     const available = !hasCompleted && game.typed.length < game.chars.length
-      && isHintAvailable(lastProgressAt, Date.now());
-    hintButtonEl.disabled = hasCompleted || game.chars.length === 0;
+      && isMemory && isHintAvailable(lastProgressAt, Date.now());
+    hintButtonEl.disabled = !isMemory || hasCompleted || game.chars.length === 0;
     hintButtonEl.classList.toggle('hint-ready', available);
   }
 
