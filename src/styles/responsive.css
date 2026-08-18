@@ -154,7 +154,7 @@
   }
   .app-shell[data-theme="arcade"] #text {
     position: absolute !important;
-    top: 72cqh;
+    top: clamp(2.5rem, 12cqh, 6rem);
     right: clamp(.75rem, 8cqw, 5rem);
     left: clamp(.75rem, 8cqw, 5rem);
     width: auto;
@@ -177,7 +177,8 @@
   .app-shell[data-theme="arcade"] .typing-card .typed-area {
     position: absolute;
     right: clamp(.75rem, 2cqw, 1.5rem);
-    bottom: clamp(3.8rem, 9cqh, 5.2rem);
+    top: 68cqh;
+    bottom: auto;
     left: clamp(.75rem, 2cqw, 1.5rem);
     pointer-events: auto;
   }
@@ -256,7 +257,7 @@
     position: absolute;
     inset: 0;
   }
-  .app-shell[data-theme="arcade"] .typing-card .typed-area { bottom: clamp(4.5rem, 12cqh, 7.4rem); }
+  .app-shell[data-theme="arcade"] .typing-card .typed-area { top: 68cqh; bottom: auto; }
   .app-shell[data-theme="arcade"] .upgrade-dock {
     position: relative;
     right: auto;
@@ -290,8 +291,8 @@
   .resource { min-height: 2.75rem; }
   .upgrade-dock { grid-template-columns: 1fr; }
   .app-shell[data-theme="arcade"] .defense-game { min-height: calc(100vh - 10rem); }
-  .app-shell[data-theme="arcade"] #text { top: 72cqh; right: 1rem; left: 1rem; height: 9rem; }
-  .app-shell[data-theme="arcade"] .typing-card .typed-area { bottom: 8rem; }
+  .app-shell[data-theme="arcade"] #text { top: 12cqh; right: 1rem; left: 1rem; height: 9rem; }
+  .app-shell[data-theme="arcade"] .typing-card .typed-area { top: 68cqh; bottom: auto; }
   .app-shell[data-theme="arcade"] .upgrade-dock { grid-template-columns: 1fr; }
 }
 
