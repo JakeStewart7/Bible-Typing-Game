@@ -34,7 +34,7 @@ export function initControls() {
                 <button id="sound-toggle" class="sound-switch" aria-label="Toggle sound effects" aria-pressed="true"><i></i><span>On</span></button>
               </div>
               <div class="setting-row">
-                <div><strong>Word narrator</strong><small>Pronounce each word as you type</small></div>
+                <div><strong>Word narrator</strong><small id="narrator-voice">Pronounce each word as you type</small></div>
                 <button id="narrator-toggle" class="sound-switch" aria-label="Toggle word narrator" aria-pressed="true"><i></i><span>On</span></button>
               </div>
               <div class="setting-row music-setting"><div><strong>Background music</strong><small>Playback and volume</small></div><div id="music-slot"></div></div>

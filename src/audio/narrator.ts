@@ -7,6 +7,26 @@ let enabled = localStorage.getItem(STORAGE_KEY) !== 'false';
 let spokenThrough = 0;
 let lastWordAt = 0;
 let smoothedInterval = 700;
+let selectedVoice: SpeechSynthesisVoice | null = null;
+
+function selectNarratorVoice(): SpeechSynthesisVoice | null {
+  const englishVoices = speechSynthesis.getVoices().filter(voice => voice.lang.toLowerCase().startsWith('en'));
+  selectedVoice = englishVoices.find(voice => /natural|neural|online/i.test(voice.name))
+    ?? englishVoices.find(voice => /microsoft (zira|aria|jenny|guy)/i.test(voice.name))
+    ?? englishVoices.find(voice => /microsoft/i.test(voice.name))
+    ?? englishVoices[0]
+    ?? null;
+  return selectedVoice;
+}
+
+export function narratorVoiceName(): string {
+  return (selectedVoice ?? selectNarratorVoice())?.name ?? 'System default';
+}
+
+if ('speechSynthesis' in window) {
+  selectNarratorVoice();
+  speechSynthesis.addEventListener('voiceschanged', selectNarratorVoice);
+}
 
 export function isNarratorEnabled(): boolean {
   return enabled && 'speechSynthesis' in window;
@@ -47,6 +67,7 @@ export function narrateCompletedWords(game: Game, now = performance.now()): void
   lastWordAt = now;
 
   const utterance = new SpeechSynthesisUtterance(word);
+  utterance.voice = selectedVoice ?? selectNarratorVoice();
   utterance.rate = narrationRate(smoothedInterval);
   utterance.volume = .75;
   speechSynthesis.speak(utterance);

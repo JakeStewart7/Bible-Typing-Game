@@ -8,7 +8,7 @@ import { initControls } from './ui/controls';
 import { initGameControllers } from './game/controller';
 import { setupMusic } from './audio/music';
 import { toggleEffects } from './audio/effects';
-import { isNarratorEnabled, toggleNarrator } from './audio/narrator';
+import { isNarratorEnabled, narratorVoiceName, toggleNarrator } from './audio/narrator';
 import { createCampaignController } from './campaign-controller';
 import type { CampaignChunk } from './campaign';
 import { fetchRange } from './bible-api';
@@ -152,4 +152,10 @@ if (narratorToggle instanceof HTMLButtonElement) {
   };
   setNarratorState(isNarratorEnabled());
   narratorToggle.addEventListener('click', () => setNarratorState(toggleNarrator()));
+  const voiceLabel = document.getElementById('narrator-voice');
+  const renderVoice = () => {
+    if (voiceLabel) voiceLabel.textContent = narratorVoiceName();
+  };
+  renderVoice();
+  speechSynthesis.addEventListener('voiceschanged', renderVoice);
 }
