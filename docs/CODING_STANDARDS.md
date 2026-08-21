@@ -2,6 +2,25 @@
 
 VerseType follows established object-oriented, functional, and TypeScript design
 principles. These are architectural requirements, not optional style preferences.
+The construction guidance in this document is also informed by Steve McConnell's
+*Code Complete, Second Edition*. The rules below adapt those concepts to this
+codebase; they are not quotations or a substitute for the book.
+
+## Construction readiness
+
+Do not begin implementation until the problem is understood well enough to state
+the expected behavior and prove that the result works.
+
+- Identify the user-visible outcome, inputs, outputs, invariants, failure modes,
+  and compatibility constraints before editing.
+- Resolve requirements that would materially change the design. Do not bury an
+  unresolved product decision in an implementation default.
+- Inspect the relevant architecture, existing abstractions, tests, and nearby
+  conventions before introducing a new path.
+- For risky changes, write down a short implementation sketch or pseudocode
+  before writing syntax. Refine it until each step is at one level of abstraction.
+- Define the smallest check that directly demonstrates the requested behavior.
+- Prefer incremental, reversible construction over a large speculative rewrite.
 
 ## Core principles
 
@@ -88,6 +107,39 @@ infrastructure adapters
 The domain must remain executable without a browser. UI code must not implement
 business rules. Infrastructure failures must be translated at the boundary.
 
+### Manage complexity deliberately
+
+The primary technical goal is to minimize how much a reader must hold in working
+memory at one time.
+
+- Hide incidental details behind cohesive names and narrow interfaces.
+- Decompose by stable responsibilities, not merely to reduce line counts.
+- Keep each routine at one conceptual level; orchestration should read as a
+  sequence of domain operations rather than low-level mechanics.
+- Prefer direct, unsurprising code over clever compression.
+- Make dependencies, state transitions, units, and coordinate systems explicit.
+- Do not make one concept configurable in several places. Establish one source
+  of truth and derive the rest.
+- When two implementations are both correct, prefer the one with fewer states,
+  branches, implicit assumptions, and special cases.
+
+### Design during construction
+
+Design continues while code is written, but changes must remain intentional.
+
+- Use abstraction, encapsulation, information hiding, and explicit contracts to
+  isolate likely sources of change.
+- Keep policy separate from mechanism. Domain rules decide *what* happens;
+  adapters decide *how* browser, storage, network, or audio work is performed.
+- Prefer table-driven data or typed registries when behavior varies by a finite
+  key, such as game mode, enemy type, upgrade, or theme.
+- Record non-obvious tradeoffs in a concise comment or decision document near
+  the affected boundary.
+- Treat repeated exceptions and growing conditionals as design feedback. Stop
+  and reshape the abstraction instead of adding another patch.
+- Build the simplest design that satisfies known requirements while preserving
+  a clear extension point for likely changes.
+
 ## Modularity rules
 
 - Keep files cohesive and easy to scan. **Aim for fewer than 200 lines per
@@ -114,6 +166,60 @@ feature/
   index.ts          # narrow public API
 ```
 
+## Routine design
+
+- Create a routine when it names a meaningful operation, removes duplication,
+  contains a cohesive calculation, or hides an unstable detail.
+- Give routines intention-revealing verb phrases. A caller should understand the
+  operation without reading its body.
+- Keep parameter lists small and cohesive. Replace repeated primitive bundles
+  with a named type when they represent one concept.
+- Do not use boolean parameters when the call site becomes ambiguous; prefer a
+  descriptive union, options object, or separate operation.
+- Avoid output parameters and hidden mutation. Return the result or mutate only
+  state clearly owned by the receiving object/module.
+- Put precondition validation at public and infrastructure boundaries. Internal
+  helpers may rely on established invariants when their contract is clear.
+- Keep normal behavior visually dominant. Handle invalid or exceptional cases
+  early, then proceed through the primary path.
+- Split a routine when its name requires “and,” its body mixes abstraction
+  levels, or its branches represent independent policies.
+
+## Data and variable discipline
+
+- Declare variables as close as practical to first use and initialize them
+  immediately.
+- Minimize scope and lifetime. Do not retain state after the operation that owns
+  it has finished.
+- Use one variable for one purpose. Do not recycle a variable for a different
+  meaning later in a routine.
+- Name quantities with their domain meaning and units, such as
+  `elapsedSeconds`, `accuracyPercent`, or `viewportWidth`.
+- Replace parallel arrays and loosely related primitives with typed records.
+- Prefer immutable bindings and readonly inputs. Introduce mutation only where
+  ownership is local and the lifecycle is obvious.
+- Avoid sentinel values when a union, `null`, or an explicit result type can
+  represent absence or failure safely.
+- Keep calculated values derived rather than synchronized manually across
+  multiple state fields.
+
+## Control flow
+
+- Order statements so dependencies and the primary narrative are apparent.
+- Prefer positive conditions and early exits over deeply nested branches.
+- Keep loop initialization, termination, and progress obvious and colocated.
+- Use `for...of` for collection traversal when an index is not part of the
+  domain rule.
+- Avoid modifying a collection while iterating it unless the operation is
+  explicitly designed and tested for that behavior.
+- Replace repeated `if`/`switch` ladders with typed lookup tables when keys map
+  directly to data or strategies.
+- Every finite-state `switch` must be exhaustive.
+- Do not rely on operator precedence when parentheses make the intended grouping
+  clearer.
+- Extract complex boolean expressions into named predicates that state the
+  business meaning.
+
 ## TypeScript standards
 
 - Enable strict TypeScript.
@@ -138,6 +244,25 @@ feature/
 - Persist versioned, validated data rather than trusting arbitrary
   `localStorage` contents.
 
+## Defensive programming
+
+Defensive checks protect trust boundaries without obscuring programmer errors.
+
+- Validate external data once at entry, normalize it, and pass trusted domain
+  values inward.
+- Distinguish malformed input, unavailable infrastructure, expected domain
+  rejection, and impossible internal state.
+- Use assertions for conditions that indicate a programming defect, not for
+  recoverable user or network errors.
+- Do not allow invalid partial state to escape a constructor, parser, or state
+  transition.
+- Clamp values only when clamping is the defined domain behavior. Otherwise
+  reject the invalid value visibly.
+- Include enough context in errors to identify the failed operation while
+  preserving the original cause.
+- Recovery behavior must be explicit and tested; never invent success-shaped
+  fallback data.
+
 ## Error handling
 
 - Preserve the original error cause.
@@ -145,6 +270,28 @@ feature/
 - Never silently swallow failures or return success-shaped fallback values.
 - Catch errors only where they can be handled, enriched, or displayed.
 - Invalid internal states should fail early with descriptive messages.
+
+## Implementation workflow
+
+1. Confirm requirements, invariants, and the direct validation target.
+2. Trace the existing behavior and identify its state owner.
+3. Sketch the solution in domain language before introducing syntax.
+4. Implement the smallest coherent slice and keep it buildable.
+5. Review the diff for accidental complexity, duplication, weak names, and
+   unrelated changes.
+6. Run the narrowest existing checks that prove the behavior, then broaden only
+   when risk or failures justify it.
+7. Commit the verified unit before starting unrelated work.
+
+During implementation:
+
+- Compile or type-check early enough to catch interface mistakes before they
+  spread.
+- Keep temporary scaffolding unmistakable and remove it before committing.
+- Do not comment out old implementations; version control already preserves
+  them.
+- When a first approach exposes a weak abstraction, revise the design rather
+  than layering compensating conditions on top.
 
 ## UI and accessibility
 
@@ -163,16 +310,49 @@ feature/
 - Comments explain non-obvious decisions, constraints, or tradeoffs—not syntax.
 - Delete dead code instead of commenting it out.
 
+## Review, testing, and debugging
+
+- Review requirements and design assumptions as well as source code; defects
+  prevented upstream are cheaper than defects debugged later.
+- Tests should cover normal behavior, boundaries, invalid inputs, state
+  transitions, and previously failing cases.
+- A bug fix must include a regression test at the lowest practical layer.
+- Prefer deterministic tests. Inject time and randomness, and avoid timing-based
+  sleeps when state can be advanced directly.
+- Reproduce a defect before changing code. Reduce it to the smallest failing
+  case and fix the root cause rather than its visible symptom.
+- Change one hypothesis at a time while debugging and use evidence from state,
+  logs, tests, or browser geometry rather than intuition alone.
+- Remove diagnostic output and temporary probes after the cause is understood.
+- Treat code review as defect detection and knowledge sharing, not formatting
+  debate. Automated tools own mechanical style where available.
+
+## Refactoring and performance
+
+- Refactor in behavior-preserving steps with tests protecting the relevant
+  contract.
+- Separate structural cleanup from behavior changes when either can stand as an
+  independently useful commit.
+- Refactor when duplication, excessive coupling, unclear ownership, long
+  routines, or repeated special cases make the next change unsafe.
+- Do not optimize based on intuition. Establish a measurable problem, profile or
+  benchmark it, change one relevant factor, and compare results.
+- Prefer architectural and algorithmic improvements over low-level code tricks.
+- Never trade correctness or maintainability for an unmeasured speedup.
+
 ## Quality gate
 
 Before merging:
 
-1. Type checking succeeds.
-2. Existing behavior tests succeed.
-3. The production build succeeds.
-4. No source file gained an avoidable second responsibility.
-5. New duplication was removed or deliberately justified.
-6. New side effects have explicit ownership and cleanup.
+1. The implementation matches the stated behavior and boundary cases.
+2. Type checking succeeds.
+3. Existing behavior tests and new regression tests succeed.
+4. The production build succeeds.
+5. No source file gained an avoidable second responsibility.
+6. New duplication was removed or deliberately justified.
+7. New side effects have explicit ownership and cleanup.
+8. Error paths are observable and do not return misleading success.
+9. Performance claims are supported by measurements.
 
 New work must improve these boundaries. Do not add more behavior to an already
 oversized module; extract the relevant responsibility first.
