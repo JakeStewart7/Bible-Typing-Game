@@ -25,7 +25,7 @@ import type { AppStateRepository } from '../persistence/app-state';
 import type { PassageReference } from '../memory/domain/passage.ts';
 import type { ProfileRepository } from '../persistence/profile-repository';
 import type { AppStorage } from '../persistence/storage';
-import { getCurrentWordIndex, getCurrentWordRange, isHintAvailable } from './hint';
+import { getCurrentWordIndex, getCurrentWordRange, getHintWordIndex, isHintAvailable } from './hint';
 import { analyzeSession } from './analysis';
 import { BrowserSessionHistoryRepository } from './session-history';
 import { selectPracticeStartPassage } from '../memory/domain/practice-library.ts';
@@ -355,6 +355,7 @@ export function initGameControllers(
         scheduleDefenseFrame();
       }
     }
+    if (game.typed.length !== previousLength) promptedHintWordIndex = null;
     updateUI();
     updateHintState();
     if (game.typed.join('') === game.text) finishGame();
@@ -565,12 +566,13 @@ export function initGameControllers(
     const isMemory = gameModeEl.value === 'memory';
     const available = !hasCompleted && game.typed.length < game.chars.length
       && isMemory && isHintAvailable(lastProgressAt, Date.now());
-    const nextPromptedWordIndex = available ? getCurrentWordIndex(game.text, game.typed.length) : null;
+    const nextPromptedWordIndex = available
+      ? getHintWordIndex(game.text, game.typed.length, revealedHintWordIndex)
+      : null;
     if (promptedHintWordIndex !== nextPromptedWordIndex) {
       promptedHintWordIndex = nextPromptedWordIndex;
       updateUI(false);
     }
-    positionRecallPrompt();
   }
 
   function positionRecallPrompt(): void {
@@ -578,7 +580,7 @@ export function initGameControllers(
       ? null
       : textEl.querySelector<HTMLElement>('.hint-target');
     recallPromptEl.classList.toggle('is-hidden', !hintTarget);
-    if (hintTarget) hintTarget.appendChild(recallPromptEl);
+    if (hintTarget && recallPromptEl.parentElement !== hintTarget) hintTarget.appendChild(recallPromptEl);
   }
 
   function updatePickerVerseProgress(): void {

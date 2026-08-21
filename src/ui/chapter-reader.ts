@@ -128,6 +128,7 @@ function appendCharacter(
     state.word.className = 'word';
     state.wordIndex++;
     if (state.wordIndex === state.promptedWordIndex) state.word.classList.add('hint-target');
+    if (state.wordIndex === state.revealedWordIndex) state.word.classList.add('revealed-hint');
     verseEl.appendChild(state.word);
   }
   const span = document.createElement('span');

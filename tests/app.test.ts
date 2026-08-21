@@ -30,7 +30,7 @@ import {
   selectPracticeStartPassage,
   toggleFavoritePassage
 } from '../src/memory/domain/practice-library.ts';
-import { getCurrentWordIndex, getCurrentWordRange, isHintAvailable } from '../src/game/hint.ts';
+import { getCurrentWordIndex, getCurrentWordRange, getHintWordIndex, isHintAvailable } from '../src/game/hint.ts';
 import { analyzeSession } from '../src/game/analysis.ts';
 import {
   addPassage,
@@ -226,6 +226,9 @@ test('hint timing and current-word selection are deterministic', () => {
   equal(getCurrentWordRange('Faith grows here', 7), { start: 6, end: 11 });
   equal(getCurrentWordRange('Faith grows here', 17), { start: 12, end: 16 });
   equal(getCurrentWordIndex('Faith grows here', 7), 1);
+  equal(getHintWordIndex('Faith grows here', 5, null), 1);
+  equal(getHintWordIndex('Faith grows here', 6, 1), 2);
+  equal(getHintWordIndex('Faith grows here', 12, 2), null);
   equal(isHintAvailable(1_000, 3_000), false);
   equal(isHintAvailable(1_000, 3_001), true);
 });

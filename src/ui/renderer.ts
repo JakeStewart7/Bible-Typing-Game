@@ -139,6 +139,7 @@ export function renderText(
     const wordSpan = document.createElement('span');
     wordSpan.classList.add('word');
     if (wIdx === promptedWordIndex) wordSpan.classList.add('hint-target');
+    if (wIdx === revealedWordIndex) wordSpan.classList.add('revealed-hint');
     wordSpan.style.whiteSpace = 'normal';
     for (let i = 0; i < word.length; i++) {
       const span = document.createElement('span');
