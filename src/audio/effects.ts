@@ -1,5 +1,8 @@
 let enabled = true;
 let context: AudioContext | null = null;
+let keyBus: GainNode | null = null;
+let correctKeyBuffer: AudioBuffer | null = null;
+let errorKeyBuffer: AudioBuffer | null = null;
 
 export function toggleEffects() {
   enabled = !enabled;
@@ -9,15 +12,38 @@ export function toggleEffects() {
 export function playKey(correct: boolean) {
   if (!enabled) return;
   context ??= new AudioContext();
-  const oscillator = context.createOscillator();
-  const gain = context.createGain();
-  oscillator.type = correct ? 'sine' : 'square';
-  oscillator.frequency.value = correct ? 520 : 130;
-  gain.gain.setValueAtTime(correct ? 0.025 : 0.04, context.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.055);
-  oscillator.connect(gain).connect(context.destination);
-  oscillator.start();
-  oscillator.stop(context.currentTime + 0.06);
+  keyBus ??= createKeyBus(context);
+  correctKeyBuffer ??= createKeyBuffer(context, 520, 'sine', .025);
+  errorKeyBuffer ??= createKeyBuffer(context, 130, 'square', .04);
+  const source = context.createBufferSource();
+  source.buffer = correct ? correctKeyBuffer : errorKeyBuffer;
+  source.connect(keyBus);
+  source.start();
+}
+
+function createKeyBus(audioContext: AudioContext): GainNode {
+  const gain = audioContext.createGain();
+  gain.connect(audioContext.destination);
+  return gain;
+}
+
+function createKeyBuffer(
+  audioContext: AudioContext,
+  frequency: number,
+  wave: 'sine' | 'square',
+  volume: number
+): AudioBuffer {
+  const durationSeconds = .06;
+  const frameCount = Math.ceil(audioContext.sampleRate * durationSeconds);
+  const buffer = audioContext.createBuffer(1, frameCount, audioContext.sampleRate);
+  const samples = buffer.getChannelData(0);
+  for (let frame = 0; frame < frameCount; frame++) {
+    const phase = 2 * Math.PI * frequency * frame / audioContext.sampleRate;
+    const signal = wave === 'sine' ? Math.sin(phase) : Math.sign(Math.sin(phase));
+    const envelope = Math.exp(-6 * frame / frameCount);
+    samples[frame] = signal * volume * envelope;
+  }
+  return buffer;
 }
 
 export function playComplete() {

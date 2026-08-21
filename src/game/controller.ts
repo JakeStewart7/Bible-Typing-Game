@@ -1,7 +1,8 @@
 import { sanitizeText } from './state';
 import type { Game } from './state';
 import { handleInput } from './input';
-import { renderText, updateCaretPosition } from '../ui/renderer';
+import { renderText } from '../ui/renderer';
+import { updateCaretPosition, type CaretMovement } from '../ui/caret';
 import { positionReaderAtActiveRange, renderChapterReader } from '../ui/chapter-reader';
 import { renderTypedBar } from '../ui/typedBar';
 import { renderStats } from '../ui/hud';
@@ -90,6 +91,7 @@ export function initGameControllers(
   let defenseFrame = 0;
   let readerPositionFrame = 0;
   let typingRenderFrame = 0;
+  let caretMovement: CaretMovement = 'track';
   let previousFrame = performance.now();
   let memoryHiddenPercent = 0;
   let activePassage: PassageReference | null = null;
@@ -224,9 +226,10 @@ export function initGameControllers(
       );
     }
     positionRecallPrompt();
-    updateCaretPosition(textEl, game);
+    updateCaretPosition(textEl, game, caretMovement);
+    caretMovement = 'track';
     renderTypedBar(typedBarEl, game);
-    progressFillEl.style.width = `${stats.progress}%`;
+    progressFillEl.style.transform = `scaleX(${stats.progress / 100})`;
   }
 
   function queueTypingRender(): void {
@@ -286,6 +289,7 @@ export function initGameControllers(
     defenseView.reset();
     inputEl.value = '';
     inputEl.disabled = false;
+    caretMovement = 'teleport';
     resultsEl.classList.add('is-hidden');
     document.getElementById('next-passage')?.classList.remove('is-hidden');
     updateUI(false);
@@ -470,6 +474,9 @@ export function initGameControllers(
     });
   });
   document.addEventListener('keydown', event => {
+    if (event.target === inputEl && event.ctrlKey && event.key === 'Backspace') {
+      caretMovement = 'boost';
+    }
     if (event.ctrlKey && event.key.toLowerCase() === 'h' && gameModeEl.value === 'memory') {
       event.preventDefault();
       revealNextWord();

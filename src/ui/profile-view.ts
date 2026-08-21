@@ -11,7 +11,7 @@ export type ProfileElements = {
 
 export function renderProfile(elements: ProfileElements, profile: PlayerProfile): void {
   elements.level.textContent = `Level ${profile.level}`;
-  elements.xpFill.style.width = `${(profile.xp % 500) / 5}%`;
+  elements.xpFill.style.transform = `scaleX(${(profile.xp % 500) / 500})`;
   setSpeed(elements.bestWpm, profile.bestWpm);
   setSpeed(elements.lifetimeWpm, profile.lifetimeWpm);
   setSpeed(elements.recentWpm, profile.recentWpm);

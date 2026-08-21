@@ -8,6 +8,8 @@ export const RECALL_VISIBILITY_PRESETS = [
 
 export type RecallVisibilityPercent = (typeof RECALL_VISIBILITY_PRESETS)[number]['visiblePercent'];
 
+const hiddenWordCache = new Map<string, ReadonlySet<number>>();
+
 export function hiddenPercentForVisibleWords(visiblePercent: RecallVisibilityPercent): number {
   return 100 - visiblePercent;
 }
@@ -15,10 +17,15 @@ export function hiddenPercentForVisibleWords(visiblePercent: RecallVisibilityPer
 export function hiddenMemoryWordIndices(wordCount: number, hiddenPercent: number): ReadonlySet<number> {
   const normalizedCount = Math.max(0, Math.floor(wordCount));
   const normalizedPercent = Math.max(0, Math.min(100, hiddenPercent));
+  const cacheKey = `${normalizedCount}:${normalizedPercent}`;
+  const cached = hiddenWordCache.get(cacheKey);
+  if (cached) return cached;
   const hiddenCount = Math.round(normalizedCount * normalizedPercent / 100);
   const rankedIndices = Array.from({ length: normalizedCount }, (_, index) => index)
     .sort((left, right) => memoryWordRank(left) - memoryWordRank(right));
-  return new Set(rankedIndices.slice(0, hiddenCount));
+  const hiddenWords = new Set(rankedIndices.slice(0, hiddenCount));
+  hiddenWordCache.set(cacheKey, hiddenWords);
+  return hiddenWords;
 }
 
 export function shouldMaskMemoryCharacter(
