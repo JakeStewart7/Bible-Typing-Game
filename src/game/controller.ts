@@ -27,16 +27,9 @@ import type { AppStorage } from '../persistence/storage';
 import { getCurrentWord, isHintAvailable } from './hint';
 import { analyzeSession } from './analysis';
 import { BrowserSessionHistoryRepository } from './session-history';
-import {
-  createPassageId,
-  isFavoritePassage,
-  recordRecentPassage,
-  selectMemoryStartPassage,
-  toMemoryPassage,
-  toggleFavoritePassage
-} from '../memory/domain/practice-library';
-import type { MemoryLibraryRepository, MemoryPassage } from '../memory/domain/practice-library';
-import { renderEmptyState } from '../ui/components';
+import { selectMemoryStartPassage } from '../memory/domain/practice-library';
+import { createPracticeLibraryController } from '../memory/ui/practice-library-controller.ts';
+import type { PlaylistCompletion } from '../memory/ui/playlist-controller.ts';
 
 type Controls = {
   hudEl: HTMLElement; textEl: HTMLElement; inputEl: HTMLInputElement; typedBarEl: HTMLElement;
@@ -52,7 +45,8 @@ type Controls = {
   waveCountEl: HTMLElement; defeatedCountEl: HTMLElement; battlePathEl: HTMLElement;
   battleMessageEl: HTMLElement;
   readyIndicatorEl: HTMLElement; hintButtonEl: HTMLButtonElement; favoritePassageEl: HTMLButtonElement;
-  memoryLibraryEl: HTMLElement; memoryFavoritesEl: HTMLElement; memoryRecentEl: HTMLElement;
+  memoryLibraryEl: HTMLElement; practiceFavoritesEl: HTMLElement;
+  memoryFavoritesEl: HTMLElement; memoryRecentEl: HTMLElement;
   resultAnalysisEl: HTMLElement;
   populateBooks: () => void; populateChapters: (preferred?: number) => void;
   populateVerses: () => Promise<void>; constrainEndVerses: () => void;
@@ -73,7 +67,7 @@ export function initGameControllers(
     defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
     battlePathEl, battleMessageEl,
     readyIndicatorEl, hintButtonEl, favoritePassageEl, memoryLibraryEl,
-    memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
+    practiceFavoritesEl, memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
     populateBooks, populateChapters, populateVerses, constrainEndVerses } = controls;
   let hudInterval: number | undefined;
   let hasCompleted = false;
@@ -84,20 +78,13 @@ export function initGameControllers(
   let activePassage: PassageReference | null = null;
   let lastProgressAt = Date.now();
   let hintTimer = 0;
-  const memoryLibrary: MemoryLibraryRepository = {
-    read: () => ({
-      favorites: stateRepository.readMemoryFavorites().map((passage, index) =>
-        toMemoryPassage(passage, Date.now() - index)),
-      recent: stateRepository.readRecentPassages().map((passage, index) =>
-        toMemoryPassage(passage, Date.now() - index))
-    }),
-    write: snapshot => {
-      stateRepository.writeMemoryFavorites(snapshot.favorites);
-      for (const passage of [...snapshot.recent].reverse()) {
-        stateRepository.recordRecentPassage(passage);
-      }
-    }
-  };
+  const practiceLibrary = createPracticeLibraryController({
+    library: memoryLibraryEl,
+    practiceFavorites: practiceFavoritesEl,
+    memoryFavorites: memoryFavoritesEl,
+    recent: memoryRecentEl,
+    favoriteButton: favoritePassageEl
+  }, stateRepository, passage => { void loadPassage(passage); });
   const sessionHistory = new BrowserSessionHistoryRepository(storage);
   const defenseView = createDefenseView({
     faith: faithCountEl, fortress: fortressHealthEl, wave: waveCountEl,
@@ -111,6 +98,13 @@ export function initGameControllers(
     returnToMenu: (book: string) => void;
     startNext: (chunk: CampaignChunk) => void;
   } | null = null;
+  let playlistHooks: {
+    complete: (passage: PassageReference) => PlaylistCompletion | null;
+    continue: () => void;
+    passageChanged: () => void;
+  } | null = null;
+  let playlistContinuation = false;
+  let suppressMemoryStart = false;
 
   function renderDefense() {
     defenseView.render(defense);
@@ -171,13 +165,17 @@ export function initGameControllers(
     challengeBannerEl.textContent = MODE_LABELS[mode];
     defenseGameEl.classList.toggle('is-hidden', mode !== 'defense');
     document.getElementById('memory-controls')?.classList.toggle('is-hidden', mode !== 'memory');
-    memoryLibraryEl.classList.toggle('is-hidden', mode !== 'memory');
-    favoritePassageEl.classList.toggle('is-hidden', mode !== 'memory' || !activePassage);
     hintButtonEl.classList.toggle('is-hidden', mode !== 'memory');
+    document.getElementById('playlist-library')?.classList.toggle('is-hidden', mode === 'defense');
+    document.getElementById('practice-mode-switch')?.classList.toggle('is-hidden', mode === 'defense');
+    document.querySelectorAll<HTMLButtonElement>('[data-practice-mode]').forEach(button => {
+      button.setAttribute('aria-pressed', String(button.dataset.practiceMode === mode));
+    });
+    practiceLibrary.setContext(mode, activePassage);
     if (mode === 'memory') {
-      renderMemoryLibrary();
-      if (enteringMemory) void loadMemoryStartPassage();
+      if (enteringMemory && !suppressMemoryStart) void loadMemoryStartPassage();
     }
+    suppressMemoryStart = false;
     renderDefense();
     if (mode === 'defense') void loadRandomDefensePassage();
   }
@@ -241,14 +239,29 @@ export function initGameControllers(
     const analysis = analyzeSession(game, stats, previousSession);
     resultAnalysisEl.replaceChildren(...renderAnalysis(analysis));
     const mode = parseGameMode(gameModeEl.value);
+    const playlistCompletion = mode === 'memory' && activePassage
+      ? playlistHooks?.complete(activePassage) ?? null
+      : null;
+    playlistContinuation = Boolean(playlistCompletion);
     const resultsTitle = document.getElementById('results-title');
     const resultsCopy = document.getElementById('results-copy');
     const nextButton = document.getElementById('next-passage');
     const chapterSelectButton = document.getElementById('chapter-select');
     if (resultsTitle) resultsTitle.textContent = campaignChunk ? 'Journey passage complete' : mode === 'defense' ? 'Arcade complete' : mode === 'memory' ? 'Memory passage complete' : 'Practice complete';
-    if (resultsCopy) resultsCopy.textContent = mode === 'defense' ? 'The shadows were repelled.' : mode === 'memory' ? 'You recalled the passage.' : '';
+    if (resultsCopy) {
+      resultsCopy.textContent = playlistCompletion?.completedCycle
+        ? 'Playlist complete. Your next round will begin at the first passage.'
+        : mode === 'defense'
+          ? 'The shadows were repelled.'
+          : mode === 'memory' ? 'You recalled the passage.' : '';
+    }
     if (chapterSelectButton) chapterSelectButton.textContent = campaignChunk ? 'Back to selection' : 'Choose passage';
-    if (nextButton) nextButton.classList.toggle('is-hidden', !campaignChunk);
+    if (nextButton) {
+      nextButton.textContent = playlistCompletion?.completedCycle
+        ? 'Start playlist again'
+        : playlistCompletion ? 'Next playlist passage' : 'Choose another';
+      nextButton.classList.toggle('is-hidden', !campaignChunk && !playlistCompletion);
+    }
     const earnedXp = Math.max(25, Math.round((stats.wpm + stats.accuracy + game.text.length / 10) * MODE_BONUSES[mode]));
     rewardMessageEl.textContent = `✦ +${earnedXp} XP · ${gameModeEl.options[gameModeEl.selectedIndex].text.split(' — ')[0]} completed`;
     if (campaignChunk && campaignHooks) {
@@ -268,11 +281,6 @@ export function initGameControllers(
     resultsEl.classList.remove('is-hidden');
     playComplete();
     sessionHistory.save(stats);
-    if (mode === 'memory' && activePassage) {
-      const snapshot = recordRecentPassage(memoryLibrary.read(), toMemoryPassage(activePassage, Date.now()));
-      memoryLibrary.write(snapshot);
-      renderMemoryLibrary();
-    }
     recordSession(stats.wpm, earnedXp, profileRepository);
     updateProfile();
   }
@@ -282,8 +290,9 @@ export function initGameControllers(
     const hadStarted = Boolean(game.startTime);
     const previousLength = game.typed.length;
     handleInput(game, inputEl.value);
-    if (mode === 'memory' && !hadStarted && game.startTime && activePassage) {
-      stateRepository.recordRecentPassage(activePassage);
+    if (!campaignChunk && (mode === 'practice' || mode === 'memory') &&
+      !hadStarted && game.startTime && activePassage) {
+      practiceLibrary.recordStarted(activePassage);
     }
     if (game.typed.length > previousLength) {
       lastProgressAt = Date.now();
@@ -332,6 +341,12 @@ export function initGameControllers(
       resultsEl.classList.add('is-hidden');
       return;
     }
+    if (playlistContinuation && playlistHooks) {
+      playlistContinuation = false;
+      playlistHooks.continue();
+      resultsEl.classList.add('is-hidden');
+      return;
+    }
     resultsEl.classList.add('is-hidden');
     document.querySelector('.passage-panel')?.scrollIntoView({ behavior: 'smooth' });
   });
@@ -349,14 +364,11 @@ export function initGameControllers(
     }, 1_800);
     focusInput();
   });
-  favoritePassageEl.addEventListener('click', () => {
-    if (!activePassage) return;
-    const passage = toMemoryPassage(activePassage, Date.now());
-    memoryLibrary.write(toggleFavoritePassage(memoryLibrary.read(), passage));
-    renderMemoryLibrary();
+  loadBtn.addEventListener('click', () => {
+    void loadSelectedPassage();
   });
 
-  loadBtn.addEventListener('click', async () => {
+  async function loadSelectedPassage(): Promise<boolean> {
     const start = Number(startVerseEl.value);
     const end = Math.max(start, Number(endVerseEl.value));
     loadBtn.disabled = true;
@@ -375,18 +387,19 @@ export function initGameControllers(
       activePassage = { book: bookEl.value, chapter: Number(chapterEl.value), startVerse: start, endVerse: end, translation: translationEl.value };
       passageTitleEl.textContent = `${bookEl.value} ${chapterEl.value}:${start}${end > start ? `–${end}` : ''}`;
       statusEl.textContent = '';
+      playlistContinuation = false;
       restartGame();
-      if (gameModeEl.value === 'memory') {
-        favoritePassageEl.classList.remove('is-hidden');
-        renderMemoryLibrary();
-      }
+      practiceLibrary.setContext(parseGameMode(gameModeEl.value), activePassage);
+      playlistHooks?.passageChanged();
+      return true;
     } catch (error) {
       console.error(error);
       statusEl.textContent = 'We could not load that passage. Please try again.';
+      return false;
     } finally {
       loadBtn.disabled = false;
     }
-  });
+  }
 
   populateBooks();
   translationEl.value = 'kjv';
@@ -406,6 +419,14 @@ export function initGameControllers(
     if (Number(endVerseEl.value) < Number(startVerseEl.value)) endVerseEl.value = startVerseEl.value;
   });
   gameModeEl.addEventListener('change', setMode);
+  document.querySelectorAll<HTMLButtonElement>('[data-practice-mode]').forEach(button => {
+    button.addEventListener('click', () => {
+      const mode = button.dataset.practiceMode;
+      if (mode !== 'practice' && mode !== 'memory') return;
+      gameModeEl.value = mode;
+      gameModeEl.dispatchEvent(new Event('change'));
+    });
+  });
   const memorySlider = document.getElementById('memory-visibility') as HTMLInputElement | null;
   memorySlider?.addEventListener('input', () => {
     memoryHiddenPercent = Number(memorySlider.value);
@@ -440,6 +461,17 @@ export function initGameControllers(
       restartGame();
     },
     setCampaignHooks: (hooks: NonNullable<typeof campaignHooks>) => { campaignHooks = hooks; },
+    setPlaylistHooks: (hooks: NonNullable<typeof playlistHooks>) => { playlistHooks = hooks; },
+    setPracticeMode: (
+      mode: 'practice' | 'memory',
+      options: { memoryStart: 'recent' | 'preserve' } = { memoryStart: 'recent' }
+    ) => {
+      suppressMemoryStart = options.memoryStart === 'preserve';
+      gameModeEl.value = mode;
+      gameModeEl.dispatchEvent(new Event('change'));
+    },
+    getActivePassage: (): PassageReference | null => activePassage ? { ...activePassage } : null,
+    loadPassage,
     leaveCampaign: () => { campaignChunk = null; },
     stop: () => {
       cancelAnimationFrame(defenseFrame);
@@ -462,18 +494,12 @@ export function initGameControllers(
     hintButtonEl.classList.toggle('hint-ready', available);
   }
 
-  function renderMemoryLibrary(): void {
-    const snapshot = memoryLibrary.read();
-    renderPassageList(memoryFavoritesEl, snapshot.favorites);
-    renderPassageList(memoryRecentEl, snapshot.recent);
-    const id = activePassage ? createPassageId(activePassage) : '';
-    const favorite = Boolean(id) && isFavoritePassage(snapshot, id);
-    favoritePassageEl.setAttribute('aria-pressed', String(favorite));
-    favoritePassageEl.textContent = favorite ? '★ Favorited' : '☆ Favorite';
-  }
-
   async function loadMemoryStartPassage(): Promise<void> {
     const passage = selectMemoryStartPassage(stateRepository.readRecentPassages());
+    await loadPassage(passage);
+  }
+
+  async function loadPassage(passage: PassageReference): Promise<boolean> {
     translationEl.value = passage.translation;
     bookEl.value = passage.book;
     populateChapters(passage.chapter);
@@ -481,39 +507,8 @@ export function initGameControllers(
     startVerseEl.value = String(passage.startVerse);
     constrainEndVerses();
     endVerseEl.value = String(passage.endVerse);
-    loadBtn.click();
+    return loadSelectedPassage();
   }
-
-  function renderPassageList(container: HTMLElement, passages: MemoryPassage[]): void {
-    if (!passages.length) {
-      renderEmptyState(container, 'No passages yet');
-      return;
-    }
-    container.replaceChildren(...passages.map(passage => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.textContent = formatPassageLabel(passage);
-      button.addEventListener('click', () => {
-        translationEl.value = passage.translation;
-        bookEl.value = passage.book;
-        populateChapters(passage.chapter);
-        void populateVerses().then(() => {
-          startVerseEl.value = String(passage.startVerse);
-          constrainEndVerses();
-          endVerseEl.value = String(passage.endVerse);
-          loadBtn.click();
-        });
-      });
-      return button;
-    }));
-  }
-}
-
-function formatPassageLabel(passage: PassageReference): string {
-  const verses = passage.startVerse === passage.endVerse
-    ? passage.startVerse
-    : `${passage.startVerse}–${passage.endVerse}`;
-  return `${passage.book} ${passage.chapter}:${verses}`;
 }
 
 function renderAnalysis(analysis: ReturnType<typeof analyzeSession>): HTMLElement[] {

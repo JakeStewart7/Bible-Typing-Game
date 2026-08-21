@@ -16,6 +16,7 @@ import { AppStateRepository } from './persistence/app-state';
 import { AppStorage } from './persistence/storage';
 import { ProfileRepository } from './persistence/profile-repository';
 import { applyPageTheme, themeForWorkspace } from './ui/page-theme';
+import { createPlaylistController } from './memory/ui/playlist-controller.ts';
 
 import trackDetermination from '../assets/music/determination.mp3';
 import trackApple from '../assets/music/apple_cider.ogg';
@@ -33,7 +34,8 @@ const {
   defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
   battlePathEl, battleMessageEl,
   readyIndicatorEl, hintButtonEl, favoritePassageEl,
-  memoryLibraryEl, memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
+  memoryLibraryEl, practiceFavoritesEl, memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
+  playlistFormEl, playlistNameEl, playlistListEl, playlistStatusEl,
   campaignScreenEl, campaignContentEl, campaignBackEl, campaignBreadcrumbEl,
   campaignTotalStarsEl, campaignTotalProgressEl, campaignDevToolsEl,
   sidebarCampaignProgressEl, celebrationEl,
@@ -58,9 +60,25 @@ const gameController = initGameControllers(game, {
   defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
   battlePathEl, battleMessageEl,
   readyIndicatorEl, hintButtonEl, favoritePassageEl,
-  memoryLibraryEl, memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
+  memoryLibraryEl, practiceFavoritesEl, memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
   populateBooks, populateChapters, populateVerses, constrainEndVerses
 }, stateRepository, profileRepository, storage, appConfig);
+const playlistController = createPlaylistController({
+  form: playlistFormEl,
+  nameInput: playlistNameEl,
+  list: playlistListEl,
+  status: playlistStatusEl
+}, {
+  repository: stateRepository,
+  getActivePassage: gameController.getActivePassage,
+  loadPassage: gameController.loadPassage,
+  activateMemoryMode: () => gameController.setPracticeMode('memory', { memoryStart: 'preserve' })
+});
+gameController.setPlaylistHooks({
+  complete: playlistController.completeActivePassage,
+  continue: playlistController.continueActivePlaylist,
+  passageChanged: playlistController.handlePassageChanged
+});
 
 setupMusic(document.getElementById('music-slot'));
 
@@ -107,8 +125,9 @@ function showWorkspace(workspace: string, selectedMode?: string): void {
   campaignScreenEl.scrollTo({ top: 0 });
   document.querySelectorAll<HTMLElement>('.mode-nav').forEach(button => {
     const campaignActive = (workspace === 'campaign' || workspace === 'campaign-play') && button.dataset.workspace === 'campaign';
-    const modeActive = Boolean(selectedMode) && button.dataset.mode === selectedMode;
-    button.classList.toggle('active', campaignActive || modeActive);
+    const practiceActive = workspace === 'practice' && button.dataset.workspace === 'practice';
+    const modeActive = workspace === 'defense' && button.dataset.mode === selectedMode;
+    button.classList.toggle('active', campaignActive || practiceActive || modeActive);
   });
   if (workspace === 'defense') {
     const mode = document.getElementById('game-mode') as HTMLSelectElement | null;
@@ -127,8 +146,18 @@ document.querySelectorAll<HTMLElement>('.mode-nav').forEach(button => button.add
     gameModeEl.value = mode;
     gameModeEl.dispatchEvent(new Event('change'));
   }
-  showWorkspace(button.dataset.workspace ?? 'practice', mode);
+  const workspace = button.dataset.workspace ?? 'practice';
+  if (workspace === 'practice' && gameModeEl.value === 'defense') {
+    gameModeEl.value = 'practice';
+    gameModeEl.dispatchEvent(new Event('change'));
+  }
+  showWorkspace(workspace, mode ?? gameModeEl.value);
 }));
+gameModeEl.addEventListener('change', () => {
+  if (gameModeEl.value === 'practice' || gameModeEl.value === 'memory') {
+    showWorkspace('practice', gameModeEl.value);
+  }
+});
 showWorkspace('campaign');
 const sidebar = document.getElementById('mode-sidebar');
 const sidebarToggle = document.getElementById('sidebar-toggle');

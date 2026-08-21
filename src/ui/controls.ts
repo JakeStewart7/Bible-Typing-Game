@@ -3,6 +3,7 @@ import { chooseVerseRange, filterEndVerses } from '../passage-selector';
 import { getVerseCount } from '../verse-counts';
 import { requireElement } from '../shared/dom';
 import type { AppConfig } from '../config';
+import { practiceWorkspaceMarkup } from './practice-workspace.ts';
 
 export function initControls(config: AppConfig) {
   const developerControls = config.isDevelopment ? `
@@ -58,8 +59,7 @@ export function initControls(config: AppConfig) {
           <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Collapse navigation" aria-controls="mode-sidebar" aria-expanded="true"><span aria-hidden="true">‹</span><b>Hide menu</b></button>
           <div class="sidebar-heading">Modes</div>
           <button class="mode-nav active" data-workspace="campaign" aria-label="Journey" title="Journey"><span>✦</span><div><strong>Journey</strong><small id="sidebar-campaign-progress">0 / 0 passages</small></div></button>
-          <button class="mode-nav" data-workspace="practice" data-mode="practice" aria-label="Practice" title="Practice"><span>⌨</span><div><strong>Practice</strong><small>Relaxed typing</small></div></button>
-          <button class="mode-nav" data-workspace="practice" data-mode="memory" aria-label="Memory" title="Memory"><span>◫</span><div><strong>Memory</strong><small>Words fade away</small></div></button>
+          <button class="mode-nav" data-workspace="practice" aria-label="Practice" title="Practice"><span>⌨</span><div><strong>Practice</strong><small>Practice or memorize</small></div></button>
           <button class="mode-nav" data-workspace="defense" data-mode="defense" aria-label="Arcade" title="Arcade"><span>◇</span><div><strong>Arcade</strong><small>Repel the shadows</small></div></button>
         </aside>
         <div class="page-viewport">
@@ -71,85 +71,7 @@ export function initControls(config: AppConfig) {
           </div>
         </header>
 
-        <div class="practice-workspace">
-          <section class="passage-panel card">
-            <div class="passage-panel-heading"><h3>Passage</h3><p>Select a reference to practice.</p></div>
-            <div class="passage-fields">
-              <div class="translation-field"><label for="translation">Translation</label><select id="translation">
-                <option value="kjv">KJV · King James Version</option>
-                <option value="asv">ASV · American Standard Version</option>
-              </select></div>
-              <div><label for="book">Book</label><select id="book"></select></div>
-              <div><label for="chapter">Chapter</label><select id="chapter"></select></div>
-              <div><label for="start-verse">From</label><select id="start-verse"></select></div>
-              <div><label for="end-verse">To</label><select id="end-verse"></select></div>
-            </div>
-            <button id="load-passage" class="primary-btn">Load passage</button>
-            <select id="game-mode" class="is-hidden" aria-hidden="true">
-              <option value="practice">Practice — relaxed</option>
-              <option value="memory">Memory — words fade as you type</option>
-              <option value="defense">Arcade — repel the shadows</option>
-            </select>
-            <div id="status" class="status" role="status"></div>
-            <div id="memory-controls" class="memory-controls is-hidden">
-              <label for="memory-visibility">Words hidden <strong id="memory-visibility-value">50%</strong></label>
-              <input id="memory-visibility" type="range" min="0" max="100" step="1" value="50">
-            </div>
-            <div id="memory-library" class="memory-library is-hidden">
-              <section><h4>Favorites</h4><div id="memory-favorites" class="memory-passage-list"></div></section>
-              <section><h4>Recently practiced</h4><div id="memory-recent" class="memory-passage-list"></div></section>
-            </div>
-          </section>
-
-          <section class="play-area">
-            <section id="defense-game" class="defense-game is-hidden">
-              <div class="defense-topbar">
-                <div class="resource"><span>✦</span><div><strong id="faith-count">0</strong><small>Faith</small></div></div>
-                <div class="resource"><span>⌂</span><div><strong id="fortress-health">100</strong><small>Fortress</small></div></div>
-                <div class="resource"><span>⚔</span><div><strong id="wave-count">1</strong><small>Wave</small></div></div>
-                <div class="resource"><span>✓</span><div><strong id="defeated-count">0</strong><small>Defeated</small></div></div>
-              </div>
-              <div class="battlefield">
-                <div class="sky-decoration">✦　·　✧　　　·　✦</div>
-                <div class="shadow-gate">⚑</div>
-                <div id="battle-path" class="battle-path"></div>
-                <div class="fortress" title="Your fortress"><span>♜</span><i></i></div>
-                <div id="battle-message" class="battle-message">Type correctly to send light across the field!</div>
-              </div>
-              <div class="upgrade-dock">
-                <button data-upgrade="power"><span>»</span><div><strong>Word Power</strong><small>More damage · <b data-cost="power">35</b> faith</small></div><i data-level="power">Lv 0</i></button>
-                <button data-upgrade="ward"><span>◇</span><div><strong>Stone Ward</strong><small>Less fortress damage · <b data-cost="ward">45</b> faith</small></div><i data-level="ward">Lv 0</i></button>
-                <button data-upgrade="slow"><span>❄</span><div><strong>Still Waters</strong><small>Slow approaching foes · <b data-cost="slow">55</b> faith</small></div><i data-level="slow">Lv 0</i></button>
-              </div>
-            </section>
-            <div id="hud" class="hud"></div>
-            <div id="challenge-banner" class="challenge-banner is-hidden"></div>
-            <article id="typing-card" class="typing-card card">
-              <div class="passage-heading">
-                <div><small>NOW TYPING</small><h3 id="passage-title">John 3:16</h3></div>
-                <button id="focus-button" class="ghost-btn">Focus mode</button>
-              </div>
-              <div class="progress-track"><div id="progress-fill"></div></div>
-              <div id="ready-indicator" class="ready-indicator" role="status" aria-live="polite">
-                <span aria-hidden="true">✦</span><strong>Ready to type</strong>
-              </div>
-              <div id="text" class="text-display" tabindex="0"></div>
-              <div class="typed-area">
-                <div id="typed-bar" class="typed-bar" aria-hidden="true"></div>
-                <input id="input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Type the passage here">
-              </div>
-              <div class="typing-footer">
-                <span>Click the passage or start typing</span>
-                <div>
-                  <button id="favorite-passage" class="text-btn is-hidden" type="button" aria-pressed="false">☆ Favorite</button>
-                  <button id="hint-button" class="hint-button" type="button" disabled>Hint</button>
-                  <button id="restart" class="text-btn">↻ Restart</button>
-                </div>
-              </div>
-              ${developerControls}
-            </article>
-          </section>
-        </div>
+        ${practiceWorkspaceMarkup(developerControls)}
       </section>
       <section id="campaign-screen" class="app-page campaign-screen is-hidden">
         <header class="page-header campaign-header">
@@ -255,9 +177,14 @@ export function initControls(config: AppConfig) {
     readyIndicatorEl: requireElement('ready-indicator', HTMLElement),
     hintButtonEl: requireElement('hint-button', HTMLButtonElement),
     favoritePassageEl: requireElement('favorite-passage', HTMLButtonElement),
-    memoryLibraryEl: requireElement('memory-library', HTMLElement),
+    memoryLibraryEl: requireElement('practice-library', HTMLElement),
+    practiceFavoritesEl: requireElement('practice-favorites', HTMLElement),
     memoryFavoritesEl: requireElement('memory-favorites', HTMLElement),
-    memoryRecentEl: requireElement('memory-recent', HTMLElement),
+    memoryRecentEl: requireElement('practice-recent', HTMLElement),
+    playlistFormEl: requireElement('playlist-create-form', HTMLFormElement),
+    playlistNameEl: requireElement('playlist-name', HTMLInputElement),
+    playlistListEl: requireElement('playlist-list', HTMLElement),
+    playlistStatusEl: requireElement('playlist-status', HTMLElement),
     resultAnalysisEl: requireElement('result-analysis', HTMLElement),
     campaignScreenEl: requireElement('campaign-screen', HTMLElement),
     campaignContentEl: requireElement('campaign-content', HTMLElement),

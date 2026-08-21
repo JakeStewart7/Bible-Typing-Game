@@ -143,6 +143,9 @@ function isPlaylistState(value: unknown): value is PlaylistState {
     }
     if (ids.has(playlist.id)) return false;
     ids.add(playlist.id);
+    const passageIds = new Set(playlist.passages.map(passage =>
+      `${passage.translation}:${passage.book}:${passage.chapter}:${passage.startVerse}:${passage.endVerse}`));
+    if (passageIds.size !== playlist.passages.length) return false;
     const currentIndex = Number(playlist.currentIndex);
     return playlist.passages.length === 0
       ? currentIndex === 0

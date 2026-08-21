@@ -22,16 +22,20 @@
     overflow: visible;
   }
   .app-shell:is([data-theme="practice"], [data-theme="memory"]) .status,
-  .app-shell[data-theme="memory"] .memory-controls {
+  .app-shell[data-theme="memory"] .memory-controls,
+  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .practice-mode-switch {
     grid-column: 1;
   }
   .app-shell[data-theme="memory"] .memory-controls {
     grid-template-columns: 1fr;
     gap: .35rem;
   }
-  .app-shell[data-theme="memory"] .memory-library {
+  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .memory-library {
     grid-column: 1;
     grid-template-columns: 1fr;
+  }
+  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .playlist-library {
+    grid-column: 1;
   }
   .app-shell:is([data-theme="practice"], [data-theme="memory"]) .play-area {
     min-height: 0;
@@ -100,6 +104,10 @@
   .passage-fields { grid-template-columns: minmax(9rem, 1.3fr) minmax(7rem, 1fr) repeat(3, minmax(4.5rem, .55fr)); overflow-x: auto; padding-bottom: .25rem; }
   .passage-panel > .primary-btn { justify-self: stretch; }
   .status { grid-column: 1; }
+  .memory-library { grid-template-columns: 1fr; }
+  .playlist-title { align-items: stretch; flex-direction: column; }
+  .playlist-title form { width: 100%; }
+  .playlist-title input { flex: 1; }
   .page-header { align-items: flex-start; }
 }
 
@@ -123,6 +131,9 @@
   .campaign-summary { text-align: left; }
   .campaign-dev-tools { display: grid; }
   .result-actions { flex-direction: column; }
+  .playlist-card { grid-template-columns: 1fr; }
+  .playlist-actions, .playlist-footer { justify-content: flex-start; flex-wrap: wrap; }
+  .playlist-passages li { align-items: flex-start; flex-direction: column; }
   .app-shell[data-theme="arcade"] .header-profile { display: none; }
   .app-shell[data-theme="arcade"] .top-actions {
     grid-column: auto;
