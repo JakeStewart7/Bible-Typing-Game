@@ -11,35 +11,53 @@ type CaretMotion = {
   targetHeight: number;
   velocityX: number;
   velocityY: number;
-  velocityHeight: number;
+  lineBoostActive: boolean;
   lastTime: number;
   frame: number;
 };
 
 const caretMotions = new WeakMap<HTMLElement, CaretMotion>();
-const CARET_SPEED_LIMIT = 2.75;
-const CARET_SPEED_OVERFLOW_FACTOR = .08;
+const CARET_MAX_SPEED = 2.75;
+const CARET_ACCELERATION = .28;
+const CARET_LINE_MAX_SPEED = 18;
+const CARET_LINE_ACCELERATION = 1.8;
 
 function animateCaret(motion: CaretMotion, now: number): void {
   const delta = Math.min(2, Math.max(.25, (now - motion.lastTime) / 16.67));
   motion.lastTime = now;
-  const acceleration = .03 * delta;
-  const damping = Math.pow(.86, delta);
+  const offsetX = motion.targetX - motion.x;
+  const offsetY = motion.targetY - motion.y;
+  const distance = Math.hypot(offsetX, offsetY);
+  const acceleration = motion.lineBoostActive ? CARET_LINE_ACCELERATION : CARET_ACCELERATION;
+  const maxSpeed = motion.lineBoostActive ? CARET_LINE_MAX_SPEED : CARET_MAX_SPEED;
+  const desiredSpeed = Math.min(maxSpeed, Math.sqrt(2 * acceleration * distance));
+  const desiredVelocityX = distance ? offsetX / distance * desiredSpeed : 0;
+  const desiredVelocityY = distance ? offsetY / distance * desiredSpeed : 0;
+  const velocityChange = acceleration * delta;
 
-  motion.velocityX = softenCaretVelocity((motion.velocityX + (motion.targetX - motion.x) * acceleration) * damping);
-  motion.velocityY = softenCaretVelocity((motion.velocityY + (motion.targetY - motion.y) * acceleration) * damping);
-  motion.velocityHeight = softenCaretVelocity((motion.velocityHeight + (motion.targetHeight - motion.height) * acceleration) * damping);
-  motion.x = moveWithoutOvershoot(motion.x, motion.targetX, motion.velocityX * delta);
-  motion.y = moveWithoutOvershoot(motion.y, motion.targetY, motion.velocityY * delta);
-  motion.height = moveWithoutOvershoot(motion.height, motion.targetHeight, motion.velocityHeight * delta);
-  if (motion.x === motion.targetX) motion.velocityX = 0;
-  if (motion.y === motion.targetY) motion.velocityY = 0;
-  if (motion.height === motion.targetHeight) motion.velocityHeight = 0;
+  motion.velocityX = approach(motion.velocityX, desiredVelocityX, velocityChange);
+  motion.velocityY = approach(motion.velocityY, desiredVelocityY, velocityChange);
+  const movementX = motion.velocityX * delta;
+  const movementY = motion.velocityY * delta;
+  if (Math.hypot(movementX, movementY) >= distance) {
+    motion.x = motion.targetX;
+    motion.y = motion.targetY;
+    motion.velocityX = 0;
+    motion.velocityY = 0;
+  } else {
+    motion.x += movementX;
+    motion.y += movementY;
+  }
+  motion.height += (motion.targetHeight - motion.height) * Math.min(1, .22 * delta);
+  if (Math.abs(motion.targetHeight - motion.height) < .05) motion.height = motion.targetHeight;
+  const speed = Math.hypot(motion.velocityX, motion.velocityY);
+  if (motion.lineBoostActive && desiredSpeed <= CARET_MAX_SPEED && speed <= CARET_MAX_SPEED) {
+    motion.lineBoostActive = false;
+  }
   renderCaretPosition(motion);
 
-  const distance = Math.abs(motion.targetX - motion.x) + Math.abs(motion.targetY - motion.y);
-  const speed = Math.abs(motion.velocityX) + Math.abs(motion.velocityY);
-  if (distance > .15 || speed > .05) {
+  const remainingDistance = Math.hypot(motion.targetX - motion.x, motion.targetY - motion.y);
+  if (remainingDistance > .15 || speed > .05 || Math.abs(motion.targetHeight - motion.height) > .05) {
     motion.frame = requestAnimationFrame(time => animateCaret(motion, time));
   } else {
     motion.x = motion.targetX;
@@ -47,22 +65,15 @@ function animateCaret(motion: CaretMotion, now: number): void {
     motion.height = motion.targetHeight;
     motion.velocityX = 0;
     motion.velocityY = 0;
-    motion.velocityHeight = 0;
     motion.frame = 0;
     renderCaretPosition(motion);
   }
 }
 
-function softenCaretVelocity(velocity: number): number {
-  const magnitude = Math.abs(velocity);
-  if (magnitude <= CARET_SPEED_LIMIT) return velocity;
-  return Math.sign(velocity) * (CARET_SPEED_LIMIT + (magnitude - CARET_SPEED_LIMIT) * CARET_SPEED_OVERFLOW_FACTOR);
-}
-
-function moveWithoutOvershoot(current: number, target: number, movement: number): number {
-  const remaining = target - current;
-  if (remaining === 0 || Math.sign(movement) !== Math.sign(remaining)) return current;
-  return Math.abs(movement) >= Math.abs(remaining) ? target : current + movement;
+function approach(current: number, target: number, maximumChange: number): number {
+  const difference = target - current;
+  if (Math.abs(difference) <= maximumChange) return target;
+  return current + Math.sign(difference) * maximumChange;
 }
 
 function renderCaretPosition(motion: CaretMotion): void {
@@ -91,7 +102,8 @@ export function updateCaretPosition(container: HTMLElement, game: Game) {
     motion = {
       element, x: targetX, y: targetY, height: cRect.height,
       targetX, targetY, targetHeight: cRect.height,
-      velocityX: 0, velocityY: 0, velocityHeight: 0,
+      velocityX: 0, velocityY: 0,
+      lineBoostActive: false,
       lastTime: performance.now(), frame: 0
     };
     caretMotions.set(container, motion);
@@ -104,15 +116,7 @@ export function updateCaretPosition(container: HTMLElement, game: Game) {
     motion.targetY = targetY;
     motion.targetHeight = cRect.height;
     if (changedLine) {
-      cancelAnimationFrame(motion.frame);
-      motion.frame = 0;
-      motion.x = targetX;
-      motion.y = targetY;
-      motion.height = cRect.height;
-      motion.velocityX = 0;
-      motion.velocityY = 0;
-      motion.velocityHeight = 0;
-      renderCaretPosition(motion);
+      motion.lineBoostActive = true;
     }
     if (!motion.frame) {
       motion.lastTime = performance.now();
