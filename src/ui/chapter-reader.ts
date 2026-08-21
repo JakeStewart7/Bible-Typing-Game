@@ -23,7 +23,7 @@ export function renderChapterReader(
   revealedWordIndex: number | null = null,
   promptedWordIndex: number | null = null
 ): void {
-  container.replaceChildren(readerEl);
+  if (readerEl.parentElement !== container) container.replaceChildren(readerEl);
   readerEl.replaceChildren();
   const state = createRenderState(container, game, revealedWordIndex, promptedWordIndex);
 

@@ -109,8 +109,9 @@ export function renderText(
   promptedWordIndex: number | null = null
 ) {
   const motion = caretMotions.get(container);
-  container.replaceChildren();
-  if (motion) container.appendChild(motion.element);
+  for (const child of [...container.children]) {
+    if (child !== motion?.element) child.remove();
+  }
   container.style.position = container.style.position || 'relative';
 
   const words = game.text.split(' ');
