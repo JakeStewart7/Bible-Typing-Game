@@ -89,6 +89,7 @@ export function initGameControllers(
   let defense: DefenseState = createDefenseState();
   let defenseFrame = 0;
   let readerPositionFrame = 0;
+  let typingRenderFrame = 0;
   let previousFrame = performance.now();
   let memoryHiddenPercent = 0;
   let activePassage: PassageReference | null = null;
@@ -226,6 +227,15 @@ export function initGameControllers(
     updateCaretPosition(textEl, game);
     renderTypedBar(typedBarEl, game);
     progressFillEl.style.width = `${stats.progress}%`;
+  }
+
+  function queueTypingRender(): void {
+    if (typingRenderFrame) return;
+    typingRenderFrame = requestAnimationFrame(() => {
+      typingRenderFrame = 0;
+      updateUI();
+      updateHintState();
+    });
   }
 
   function focusInput(): void {
@@ -389,9 +399,13 @@ export function initGameControllers(
       }
     }
     if (game.typed.length !== previousLength) promptedHintWordIndex = null;
-    updateUI();
-    updateHintState();
-    if (game.typed.join('') === game.text) finishGame();
+    if (game.typed.join('') === game.text) {
+      cancelAnimationFrame(typingRenderFrame);
+      typingRenderFrame = 0;
+      finishGame();
+    } else {
+      queueTypingRender();
+    }
   });
 
   textEl.addEventListener('click', focusInput);
@@ -590,6 +604,7 @@ export function initGameControllers(
     stop: () => {
       cancelAnimationFrame(defenseFrame);
       cancelAnimationFrame(readerPositionFrame);
+      cancelAnimationFrame(typingRenderFrame);
       clearInterval(hintTimer);
     }
   };
