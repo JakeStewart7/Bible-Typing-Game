@@ -109,14 +109,14 @@ select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px va
 .typing-card[data-mode="memory"] .char.correct:not(.memory-hidden) { color: var(--ink); background: transparent; }
 .typing-card[data-mode="memory"] .char.memory-hidden { color: transparent; background: linear-gradient(transparent 73%, #d9e3de 73% 82%, transparent 82%); text-shadow: none; }
 .typing-card[data-mode="memory"] .char.memory-hidden.error-highlight { color: transparent; background: #ffe1de; }
+.word { position: relative; display: inline-block; }
 .typing-card[data-mode="memory"] .word.hint-target { border-radius: .4rem; background: #ffe89b66; box-shadow: 0 0 0 .2rem #f1cd5730, 0 0 1rem #e3ae3f55; animation: hintTargetGlow 1.1s ease-in-out infinite alternate; }
 @keyframes hintTargetGlow { to { background: #ffe89ba8; box-shadow: 0 0 0 .25rem #f1cd5744, 0 0 1.3rem #e3ae3f77; } }
 .floating-caret { position: absolute; left: 0; top: 0; width: 2px; opacity: .78; background: linear-gradient(180deg, #50d8b0, var(--green-dark)); border-radius: 99px; pointer-events: none; z-index: 5; will-change: transform; transition: opacity 90ms; box-shadow: 0 0 5px #20b78e55; animation: caretGlow 1.4s ease-in-out infinite; }
 .floating-caret.complete { opacity: 0; }
 @keyframes caretGlow { 50% { opacity: 1; box-shadow: 0 0 8px #20b78e77; } }
 .typed-area { margin-top: 26px; }
-.recall-prompt { display: flex; align-items: center; gap: .4rem; width: max-content; max-width: 100%; min-height: 2.75rem; margin: 0 auto .65rem; padding: .6rem .85rem; border: 1px solid #d6aa4c; border-radius: 99px; color: #77550e; background: #fff9e7; font-size: .875rem; box-shadow: 0 8px 20px #a777191f; animation: recallPromptIn .22s ease-out; }
-.recall-prompt span { font-weight: 800; }
+.recall-prompt { position: absolute; z-index: 6; bottom: calc(100% + .65rem); left: 50%; display: flex; align-items: center; width: max-content; min-height: 2.25rem; margin: 0; padding: .3rem .55rem; border: 1px solid #d6aa4c; border-radius: 99px; color: #77550e; background: #fff9e7; box-shadow: 0 8px 20px #a777191f; transform: translateX(-50%); animation: recallPromptIn .22s ease-out; }
 .recall-prompt kbd { padding: .1rem .3rem; border: 1px solid #d6aa4c; border-bottom-width: 2px; border-radius: .25rem; background: #fff; font: 700 .75rem DM Mono, monospace; }
 @keyframes recallPromptIn { from { opacity: 0; transform: translateY(.3rem); } to { opacity: 1; transform: none; } }
 .typed-bar { display: none; }

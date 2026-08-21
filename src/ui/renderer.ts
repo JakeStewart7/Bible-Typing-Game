@@ -175,20 +175,19 @@ export function renderText(
       charIndex++;
     }
 
+    container.appendChild(wordSpan);
+
     const spaceSpan = document.createElement('span');
     spaceSpan.textContent = ' ';
     spaceSpan.classList.add('char');
-
     if (charIndex <= lastTypedIndex && firstErrorIndex !== -1 && charIndex >= firstErrorIndex) {
       spaceSpan.classList.add('error-highlight');
     }
 
     if (charIndex === game.typed.length) spaceSpan.classList.add('current');
 
-    wordSpan.appendChild(spaceSpan);
+    container.appendChild(spaceSpan);
     charIndex++;
-
-    container.appendChild(wordSpan);
   });
 
 }

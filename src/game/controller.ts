@@ -198,6 +198,7 @@ export function initGameControllers(
     } else {
       renderText(textEl, game, revealedHintWordIndex, promptedHintWordIndex);
     }
+    positionRecallPrompt();
     updateCaretPosition(textEl, game);
     renderTypedBar(typedBarEl, game);
     progressFillEl.style.width = `${stats.progress}%`;
@@ -551,7 +552,15 @@ export function initGameControllers(
       promptedHintWordIndex = nextPromptedWordIndex;
       updateUI(false);
     }
-    recallPromptEl.classList.toggle('is-hidden', !available);
+    positionRecallPrompt();
+  }
+
+  function positionRecallPrompt(): void {
+    const hintTarget = promptedHintWordIndex === null
+      ? null
+      : textEl.querySelector<HTMLElement>('.hint-target');
+    recallPromptEl.classList.toggle('is-hidden', !hintTarget);
+    if (hintTarget) hintTarget.appendChild(recallPromptEl);
   }
 
   function updatePickerVerseProgress(): void {

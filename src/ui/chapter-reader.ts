@@ -107,6 +107,22 @@ function appendCharacter(
   state: RenderState
 ): void {
   const isSpace = character === ' ';
+  if (isSpace) {
+    const separator = document.createElement('span');
+    separator.textContent = character;
+    separator.className = 'char';
+    if (state.characterIndex <= state.lastTypedIndex) {
+      separator.classList.add(state.firstErrorIndex === -1 || state.characterIndex < state.firstErrorIndex
+        ? 'correct'
+        : 'error-highlight');
+    }
+    if (state.characterIndex === game.typed.length) separator.classList.add('current');
+    if (state.characterIndex === game.lastPressedIndex) separator.classList.add('pressed');
+    verseEl.appendChild(separator);
+    state.characterIndex++;
+    state.word = null;
+    return;
+  }
   if (!isSpace && !state.word) {
     state.word = document.createElement('span');
     state.word.className = 'word';
@@ -134,8 +150,7 @@ function appendCharacter(
   }
   if (state.characterIndex === game.typed.length) span.classList.add('current');
   if (state.characterIndex === game.lastPressedIndex) span.classList.add('pressed');
-
   (state.word ?? verseEl).appendChild(span);
   state.characterIndex++;
-  if (isSpace) state.word = null;
+  state.characterIndex++;
 }
