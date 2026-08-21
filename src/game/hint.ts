@@ -8,6 +8,11 @@ export function getCurrentWordRange(text: string, typedLength: number): { start:
   return { start, end: nextSpace < 0 ? text.length : nextSpace };
 }
 
+export function getCurrentWordIndex(text: string, typedLength: number): number {
+  const { start } = getCurrentWordRange(text, typedLength);
+  return text.slice(0, start).split(' ').length - 1;
+}
+
 export function getCurrentWord(game: Pick<Game, 'text' | 'typed'>): string {
   const range = getCurrentWordRange(game.text, game.typed.length);
   return game.text.slice(range.start, range.end);

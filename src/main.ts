@@ -34,7 +34,7 @@ const {
   levelLabelEl, xpLabelEl, xpFillEl, personalBestEl, lifetimeWpmEl, recentWpmEl,
   defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
   battlePathEl, battleMessageEl,
-  readyIndicatorEl, hintButtonEl, favoritePassageEl, recallPromptEl,
+  readyIndicatorEl, favoritePassageEl, recallPromptEl,
   memoryLibraryEl, practiceFavoritesEl, memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
   playlistFormEl, playlistNameEl, playlistListEl, playlistStatusEl,
   campaignScreenEl, campaignContentEl, campaignBackEl, campaignBreadcrumbEl,
@@ -49,7 +49,7 @@ const profileRepository = new ProfileRepository(storage);
 // ----------------------------
 // Game state (keep instance export for other modules/tests)
 // ----------------------------
-export const game: Game = createGame('Typing games help improve speed and accuracy through practice and focus.');
+export const game: Game = createGame('');
 
 // Wire controllers (moves logic out of main.ts into game/controller.ts)
 const gameController = initGameControllers(game, {
@@ -60,7 +60,7 @@ const gameController = initGameControllers(game, {
   levelLabelEl, xpLabelEl, xpFillEl, personalBestEl, lifetimeWpmEl, recentWpmEl,
   defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
   battlePathEl, battleMessageEl,
-  readyIndicatorEl, hintButtonEl, favoritePassageEl, recallPromptEl,
+  readyIndicatorEl, favoritePassageEl, recallPromptEl,
   memoryLibraryEl, practiceFavoritesEl, memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
   populateBooks, populateChapters, populateVerses, constrainEndVerses, setPickerVerseProgress
 }, stateRepository, profileRepository, storage, appConfig);

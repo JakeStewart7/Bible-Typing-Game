@@ -27,9 +27,10 @@ import {
 import {
   createPassageId,
   recordRecentPassage,
+  selectPracticeStartPassage,
   toggleFavoritePassage
 } from '../src/memory/domain/practice-library.ts';
-import { getCurrentWordRange, isHintAvailable } from '../src/game/hint.ts';
+import { getCurrentWordIndex, getCurrentWordRange, isHintAvailable } from '../src/game/hint.ts';
 import { analyzeSession } from '../src/game/analysis.ts';
 import {
   addPassage,
@@ -224,8 +225,17 @@ test('Memory keeps hidden word characters masked until correct while showing pun
 test('hint timing and current-word selection are deterministic', () => {
   equal(getCurrentWordRange('Faith grows here', 7), { start: 6, end: 11 });
   equal(getCurrentWordRange('Faith grows here', 17), { start: 12, end: 16 });
+  equal(getCurrentWordIndex('Faith grows here', 7), 1);
   equal(isHintAvailable(1_000, 3_000), false);
   equal(isHintAvailable(1_000, 3_001), true);
+});
+
+test('Practice starts from the newest passage or John 3:16', () => {
+  const recent = { book: 'Psalms', chapter: 23, startVerse: 1, endVerse: 4, translation: 'kjv' };
+  equal(selectPracticeStartPassage([recent]), recent);
+  equal(selectPracticeStartPassage([]), {
+    book: 'John', chapter: 3, startVerse: 16, endVerse: 16, translation: 'kjv'
+  });
 });
 
 test('Memory library keeps unique recent passages and toggles favorites', () => {

@@ -69,14 +69,13 @@ export function practiceWorkspaceMarkup(developerControls: string): string {
         <div id="challenge-banner" class="challenge-banner is-hidden"></div>
         <article id="typing-card" class="typing-card card">
           <div class="passage-heading">
-            <div><small>NOW TYPING</small><h3 id="passage-title">John 3:16</h3></div>
+            <div class="passage-heading-copy"><small>NOW TYPING</small><div><h3 id="passage-title">John 3:16</h3><button id="choose-passage" class="text-btn" type="button">Change passage</button></div></div>
             <div class="reader-tools">
-              <button id="choose-passage" class="ghost-btn">Choose passage</button>
               <fieldset class="text-visibility">
-                <legend>Text visibility</legend>
+                <legend>Memory mode</legend>
                 <div>
                   ${RECALL_VISIBILITY_PRESETS.map(({ visiblePercent, label }) =>
-                    `<button type="button" data-text-visibility="${visiblePercent}" aria-pressed="${visiblePercent === 100}"><span>${visiblePercent}%</span>${label}</button>`).join('')}
+                    `<button type="button" data-text-visibility="${visiblePercent}" aria-label="${label} (${visiblePercent}% text visible)" aria-pressed="${visiblePercent === 100}">${visiblePercent}%</button>`).join('')}
                 </div>
               </fieldset>
               <button id="focus-button" class="ghost-btn">Focus mode</button>
@@ -91,16 +90,14 @@ export function practiceWorkspaceMarkup(developerControls: string): string {
           </div>
           <div class="typed-area">
             <div id="typed-bar" class="typed-bar" aria-hidden="true"></div>
-            <input id="input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Type the passage here">
             <div id="recall-prompt" class="recall-prompt is-hidden" role="status">
-              <span>Need a nudge?</span> Press <kbd>Ctrl</kbd> + <kbd>H</kbd> to reveal the next word.
+              <span>Stuck on this word?</span> Press <kbd>Ctrl</kbd> + <kbd>H</kbd>.
             </div>
+            <input id="input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Type the passage here">
           </div>
           <div class="typing-footer">
-            <span>Click the passage or start typing</span>
             <div>
               <button id="favorite-passage" class="text-btn is-hidden" type="button" aria-pressed="false">☆ Favorite</button>
-              <button id="hint-button" class="hint-button" type="button" disabled>Reveal word</button>
               <button id="restart" class="text-btn">↻ Restart</button>
             </div>
           </div>

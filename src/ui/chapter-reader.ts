@@ -12,6 +12,7 @@ type RenderState = {
   hiddenWords: Set<number>;
   memoryMode: boolean;
   revealedWordIndex: number | null;
+  promptedWordIndex: number | null;
 };
 
 export function renderChapterReader(
@@ -19,11 +20,12 @@ export function renderChapterReader(
   readerEl: HTMLElement,
   reader: ChapterReader,
   game: Game,
-  revealedWordIndex: number | null = null
+  revealedWordIndex: number | null = null,
+  promptedWordIndex: number | null = null
 ): void {
   container.replaceChildren(readerEl);
   readerEl.replaceChildren();
-  const state = createRenderState(container, game, revealedWordIndex);
+  const state = createRenderState(container, game, revealedWordIndex, promptedWordIndex);
 
   for (const verse of reader.verses) {
     const verseEl = document.createElement('p');
@@ -53,7 +55,12 @@ export function positionReaderAtActiveRange(container: HTMLElement, readerEl: HT
   container.scrollTop = Math.max(0, firstActiveVerse.offsetTop - container.clientHeight * .25);
 }
 
-function createRenderState(container: HTMLElement, game: Game, revealedWordIndex: number | null): RenderState {
+function createRenderState(
+  container: HTMLElement,
+  game: Game,
+  revealedWordIndex: number | null,
+  promptedWordIndex: number | null
+): RenderState {
   const memoryMode = Boolean(container.closest<HTMLElement>('[data-mode="memory"]'));
   const memoryHiddenPercent = Number(
     container.closest<HTMLElement>('[data-mode="memory"]')?.style.getPropertyValue('--memory-hidden-percent') || 50
@@ -69,7 +76,8 @@ function createRenderState(container: HTMLElement, game: Game, revealedWordIndex
     caretWordIndex,
     hiddenWords: memoryMode ? hiddenMemoryWordIndices(words.length, memoryHiddenPercent) : new Set<number>(),
     memoryMode,
-    revealedWordIndex
+    revealedWordIndex,
+    promptedWordIndex
   };
 }
 
@@ -103,6 +111,7 @@ function appendCharacter(
     state.word = document.createElement('span');
     state.word.className = 'word';
     state.wordIndex++;
+    if (state.wordIndex === state.promptedWordIndex) state.word.classList.add('hint-target');
     verseEl.appendChild(state.word);
   }
   const span = document.createElement('span');

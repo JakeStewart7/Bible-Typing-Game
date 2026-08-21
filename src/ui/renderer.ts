@@ -102,7 +102,12 @@ export function updateCaretPosition(container: HTMLElement, game: Game) {
   motion.element.classList.toggle('complete', !caretEl);
 }
 
-export function renderText(container: HTMLElement, game: Game, revealedWordIndex: number | null = null) {
+export function renderText(
+  container: HTMLElement,
+  game: Game,
+  revealedWordIndex: number | null = null,
+  promptedWordIndex: number | null = null
+) {
   const motion = caretMotions.get(container);
   container.replaceChildren();
   if (motion) container.appendChild(motion.element);
@@ -133,6 +138,7 @@ export function renderText(container: HTMLElement, game: Game, revealedWordIndex
   words.forEach((word, wIdx) => {
     const wordSpan = document.createElement('span');
     wordSpan.classList.add('word');
+    if (wIdx === promptedWordIndex) wordSpan.classList.add('hint-target');
     wordSpan.style.whiteSpace = 'normal';
     for (let i = 0; i < word.length; i++) {
       const span = document.createElement('span');

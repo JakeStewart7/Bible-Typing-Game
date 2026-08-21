@@ -260,7 +260,6 @@ export function initControls(config: AppConfig) {
     defeatedCountEl: requireElement('defeated-count', HTMLElement), battlePathEl: requireElement('battle-path', HTMLElement),
     battleMessageEl: requireElement('battle-message', HTMLElement),
     readyIndicatorEl: requireElement('ready-indicator', HTMLElement),
-    hintButtonEl: requireElement('hint-button', HTMLButtonElement),
     recallPromptEl: requireElement('recall-prompt', HTMLElement),
     favoritePassageEl: requireElement('favorite-passage', HTMLButtonElement),
     memoryLibraryEl: requireElement('practice-library', HTMLElement),

@@ -18,6 +18,18 @@ export interface MemoryLibraryRepository {
 }
 
 const MAX_RECENT = 6;
+const DEFAULT_PRACTICE_PASSAGE: PassageReference = {
+  book: 'John',
+  chapter: 3,
+  startVerse: 16,
+  endVerse: 16,
+  translation: 'kjv'
+};
+
+export function selectPracticeStartPassage(recent: readonly PassageReference[]): PassageReference {
+  return recent[0] ? { ...recent[0] } : { ...DEFAULT_PRACTICE_PASSAGE };
+}
+
 export function createPassageId(reference: PassageReference): string {
   return [
     reference.translation,

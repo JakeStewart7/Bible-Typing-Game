@@ -25,9 +25,10 @@ import type { AppStateRepository } from '../persistence/app-state';
 import type { PassageReference } from '../memory/domain/passage.ts';
 import type { ProfileRepository } from '../persistence/profile-repository';
 import type { AppStorage } from '../persistence/storage';
-import { getCurrentWordRange, isHintAvailable } from './hint';
+import { getCurrentWordIndex, getCurrentWordRange, isHintAvailable } from './hint';
 import { analyzeSession } from './analysis';
 import { BrowserSessionHistoryRepository } from './session-history';
+import { selectPracticeStartPassage } from '../memory/domain/practice-library.ts';
 import { createPracticeLibraryController } from '../memory/ui/practice-library-controller.ts';
 import type { PlaylistCompletion } from '../memory/ui/playlist-controller.ts';
 import {
@@ -56,7 +57,7 @@ type Controls = {
   defenseGameEl: HTMLElement; faithCountEl: HTMLElement; fortressHealthEl: HTMLElement;
   waveCountEl: HTMLElement; defeatedCountEl: HTMLElement; battlePathEl: HTMLElement;
   battleMessageEl: HTMLElement;
-  readyIndicatorEl: HTMLElement; hintButtonEl: HTMLButtonElement; favoritePassageEl: HTMLButtonElement;
+  readyIndicatorEl: HTMLElement; favoritePassageEl: HTMLButtonElement;
   recallPromptEl: HTMLElement;
   memoryLibraryEl: HTMLElement; practiceFavoritesEl: HTMLElement;
   memoryFavoritesEl: HTMLElement; memoryRecentEl: HTMLElement;
@@ -80,7 +81,7 @@ export function initGameControllers(
     rewardMessageEl, levelLabelEl, xpLabelEl, xpFillEl, personalBestEl, lifetimeWpmEl, recentWpmEl,
     defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
     battlePathEl, battleMessageEl,
-    readyIndicatorEl, hintButtonEl, favoritePassageEl, recallPromptEl, memoryLibraryEl,
+    readyIndicatorEl, favoritePassageEl, recallPromptEl, memoryLibraryEl,
     practiceFavoritesEl, memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
     populateBooks, populateChapters, populateVerses, constrainEndVerses, setPickerVerseProgress } = controls;
   let hudInterval: number | undefined;
@@ -94,6 +95,7 @@ export function initGameControllers(
   let hintTimer = 0;
   let revealedHintWordIndex: number | null = null;
   let revealedHintEnd = -1;
+  let promptedHintWordIndex: number | null = null;
   const practiceLibrary = createPracticeLibraryController({
     library: memoryLibraryEl,
     practiceFavorites: practiceFavoritesEl,
@@ -181,7 +183,6 @@ export function initGameControllers(
     typingCardEl.dataset.mode = mode;
     challengeBannerEl.textContent = MODE_LABELS[mode];
     defenseGameEl.classList.toggle('is-hidden', mode !== 'defense');
-    hintButtonEl.classList.toggle('is-hidden', mode !== 'memory');
     document.getElementById('playlist-library')?.classList.toggle('is-hidden', mode === 'defense');
     practiceLibrary.setContext(mode, activePassage);
     renderDefense();
@@ -193,9 +194,9 @@ export function initGameControllers(
     const stats = calculateStats(game);
     if (updateHud) renderStats(hudEl, stats);
     if (chapterReader && gameModeEl.value !== 'defense') {
-      renderChapterReader(textEl, chapterReaderEl, chapterReader, game, revealedHintWordIndex);
+      renderChapterReader(textEl, chapterReaderEl, chapterReader, game, revealedHintWordIndex, promptedHintWordIndex);
     } else {
-      renderText(textEl, game, revealedHintWordIndex);
+      renderText(textEl, game, revealedHintWordIndex, promptedHintWordIndex);
     }
     updateCaretPosition(textEl, game);
     renderTypedBar(typedBarEl, game);
@@ -222,6 +223,7 @@ export function initGameControllers(
     lastProgressAt = Date.now();
     revealedHintWordIndex = null;
     revealedHintEnd = -1;
+    promptedHintWordIndex = null;
     defense = createDefenseState();
     defenseView.reset();
     inputEl.value = '';
@@ -398,7 +400,6 @@ export function initGameControllers(
   document.getElementById('focus-button')?.addEventListener('click', () => {
     document.getElementById('game-screen')?.classList.toggle('focus-mode');
   });
-  hintButtonEl.addEventListener('click', revealNextWord);
   document.addEventListener('keydown', event => {
     if (event.ctrlKey && event.key.toLowerCase() === 'h' && gameModeEl.value === 'memory') {
       event.preventDefault();
@@ -503,6 +504,7 @@ export function initGameControllers(
   setMode();
   updateProfile();
   restartGame();
+  void loadPassage(selectPracticeStartPassage(stateRepository.readRecentPassages()));
   hintTimer = window.setInterval(updateHintState, 250);
 
   return {
@@ -544,8 +546,11 @@ export function initGameControllers(
     const isMemory = gameModeEl.value === 'memory';
     const available = !hasCompleted && game.typed.length < game.chars.length
       && isMemory && isHintAvailable(lastProgressAt, Date.now());
-    hintButtonEl.disabled = !isMemory || hasCompleted || game.chars.length === 0;
-    hintButtonEl.classList.toggle('hint-ready', available);
+    const nextPromptedWordIndex = available ? getCurrentWordIndex(game.text, game.typed.length) : null;
+    if (promptedHintWordIndex !== nextPromptedWordIndex) {
+      promptedHintWordIndex = nextPromptedWordIndex;
+      updateUI(false);
+    }
     recallPromptEl.classList.toggle('is-hidden', !available);
   }
 
@@ -556,8 +561,9 @@ export function initGameControllers(
   function revealNextWord(): void {
     if (gameModeEl.value !== 'memory' || hasCompleted || game.typed.length >= game.chars.length) return;
     const range = getCurrentWordRange(game.text, game.typed.length);
-    revealedHintWordIndex = game.text.slice(0, range.start).split(' ').length - 1;
+    revealedHintWordIndex = getCurrentWordIndex(game.text, game.typed.length);
     revealedHintEnd = range.end;
+    promptedHintWordIndex = null;
     lastProgressAt = Date.now();
     recallPromptEl.classList.add('is-hidden');
     updateUI();
