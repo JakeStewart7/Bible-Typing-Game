@@ -95,6 +95,8 @@ export function initGameControllers(
   let lastProgressAt = Date.now();
   let hintTimer = 0;
   let revealedHintWordIndex: number | null = null;
+  let animatedRevealWordIndex: number | null = null;
+  let revealAnimationStartedAt = 0;
   let revealedHintEnd = -1;
   let promptedHintWordIndex: number | null = null;
   const practiceLibrary = createPracticeLibraryController({
@@ -196,11 +198,29 @@ export function initGameControllers(
 
   function updateUI(updateHud = true) {
     const stats = calculateStats(game);
+    const revealAnimationElapsedMs = Date.now() - revealAnimationStartedAt;
+    if (revealAnimationElapsedMs >= 500) animatedRevealWordIndex = null;
     if (updateHud) renderStats(hudEl, stats);
     if (chapterReader && gameModeEl.value !== 'defense') {
-      renderChapterReader(textEl, chapterReaderEl, chapterReader, game, revealedHintWordIndex, promptedHintWordIndex);
+      renderChapterReader(
+        textEl,
+        chapterReaderEl,
+        chapterReader,
+        game,
+        revealedHintWordIndex,
+        promptedHintWordIndex,
+        animatedRevealWordIndex,
+        revealAnimationElapsedMs
+      );
     } else {
-      renderText(textEl, game, revealedHintWordIndex, promptedHintWordIndex);
+      renderText(
+        textEl,
+        game,
+        revealedHintWordIndex,
+        promptedHintWordIndex,
+        animatedRevealWordIndex,
+        revealAnimationElapsedMs
+      );
     }
     positionRecallPrompt();
     updateCaretPosition(textEl, game);
@@ -248,6 +268,8 @@ export function initGameControllers(
     hasCompleted = false;
     lastProgressAt = Date.now();
     revealedHintWordIndex = null;
+    animatedRevealWordIndex = null;
+    revealAnimationStartedAt = 0;
     revealedHintEnd = -1;
     promptedHintWordIndex = null;
     defense = createDefenseState();
@@ -608,6 +630,8 @@ export function initGameControllers(
     if (gameModeEl.value !== 'memory' || hasCompleted || game.typed.length >= game.chars.length) return;
     const range = getCurrentWordRange(game.text, game.typed.length);
     revealedHintWordIndex = getCurrentWordIndex(game.text, game.typed.length);
+    animatedRevealWordIndex = revealedHintWordIndex;
+    revealAnimationStartedAt = Date.now();
     revealedHintEnd = range.end;
     promptedHintWordIndex = null;
     lastProgressAt = Date.now();

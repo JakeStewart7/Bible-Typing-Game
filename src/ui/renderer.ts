@@ -99,9 +99,21 @@ export function updateCaretPosition(container: HTMLElement, game: Game) {
     renderCaretPosition(motion);
   } else {
     if (!motion.element.isConnected) container.appendChild(motion.element);
+    const changedLine = Math.abs(targetY - motion.targetY) > cRect.height / 2;
     motion.targetX = targetX;
     motion.targetY = targetY;
     motion.targetHeight = cRect.height;
+    if (changedLine) {
+      cancelAnimationFrame(motion.frame);
+      motion.frame = 0;
+      motion.x = targetX;
+      motion.y = targetY;
+      motion.height = cRect.height;
+      motion.velocityX = 0;
+      motion.velocityY = 0;
+      motion.velocityHeight = 0;
+      renderCaretPosition(motion);
+    }
     if (!motion.frame) {
       motion.lastTime = performance.now();
       motion.frame = requestAnimationFrame(time => animateCaret(motion!, time));
@@ -114,7 +126,9 @@ export function renderText(
   container: HTMLElement,
   game: Game,
   revealedWordIndex: number | null = null,
-  promptedWordIndex: number | null = null
+  promptedWordIndex: number | null = null,
+  animatedRevealWordIndex: number | null = null,
+  revealAnimationElapsedMs = 0
 ) {
   const motion = caretMotions.get(container);
   for (const child of [...container.children]) {
@@ -148,7 +162,10 @@ export function renderText(
     const wordSpan = document.createElement('span');
     wordSpan.classList.add('word');
     if (wIdx === promptedWordIndex) wordSpan.classList.add('hint-target');
-    if (wIdx === revealedWordIndex) wordSpan.classList.add('revealed-hint');
+    if (wIdx === animatedRevealWordIndex) {
+      wordSpan.classList.add('revealed-hint');
+      wordSpan.style.animationDelay = `-${revealAnimationElapsedMs}ms`;
+    }
     wordSpan.style.whiteSpace = 'normal';
     for (let i = 0; i < word.length; i++) {
       const span = document.createElement('span');

@@ -21,7 +21,9 @@ export function renderChapterReader(
   reader: ChapterReader,
   game: Game,
   revealedWordIndex: number | null = null,
-  promptedWordIndex: number | null = null
+  promptedWordIndex: number | null = null,
+  animatedRevealWordIndex: number | null = null,
+  revealAnimationElapsedMs = 0
 ): void {
   if (readerEl.parentElement !== container) container.replaceChildren(readerEl);
   readerEl.replaceChildren();
@@ -39,9 +41,11 @@ export function renderChapterReader(
     verseEl.appendChild(numberEl);
 
     if (verse.isActive) {
-      appendCharacters(verseEl, verse.text, game, state);
+      appendCharacters(verseEl, verse.text, game, state, animatedRevealWordIndex, revealAnimationElapsedMs);
       const nextVerse = reader.verses[reader.verses.indexOf(verse) + 1];
-      if (nextVerse?.isActive) appendCharacter(verseEl, ' ', game, state);
+      if (nextVerse?.isActive) {
+        appendCharacter(verseEl, ' ', game, state, animatedRevealWordIndex, revealAnimationElapsedMs);
+      }
     } else {
       verseEl.append(` ${verse.text}`);
     }
@@ -95,16 +99,22 @@ function appendCharacters(
   verseEl: HTMLElement,
   text: string,
   game: Game,
-  state: RenderState
+  state: RenderState,
+  animatedRevealWordIndex: number | null,
+  revealAnimationElapsedMs: number
 ): void {
-  for (const character of text) appendCharacter(verseEl, character, game, state);
+  for (const character of text) {
+    appendCharacter(verseEl, character, game, state, animatedRevealWordIndex, revealAnimationElapsedMs);
+  }
 }
 
 function appendCharacter(
   verseEl: HTMLElement,
   character: string,
   game: Game,
-  state: RenderState
+  state: RenderState,
+  animatedRevealWordIndex: number | null,
+  revealAnimationElapsedMs: number
 ): void {
   const isSpace = character === ' ';
   if (isSpace) {
@@ -128,7 +138,10 @@ function appendCharacter(
     state.word.className = 'word';
     state.wordIndex++;
     if (state.wordIndex === state.promptedWordIndex) state.word.classList.add('hint-target');
-    if (state.wordIndex === state.revealedWordIndex) state.word.classList.add('revealed-hint');
+    if (state.wordIndex === animatedRevealWordIndex) {
+      state.word.classList.add('revealed-hint');
+      state.word.style.animationDelay = `-${revealAnimationElapsedMs}ms`;
+    }
     verseEl.appendChild(state.word);
   }
   const span = document.createElement('span');
