@@ -82,7 +82,9 @@ export function practiceWorkspaceMarkup(developerControls: string): string {
           <div id="ready-indicator" class="ready-indicator" role="status" aria-live="polite">
             <span aria-hidden="true">✦</span><strong>Ready to type</strong>
           </div>
-          <div id="text" class="text-display" tabindex="0"></div>
+          <div id="text" class="text-display" tabindex="0">
+            <div id="chapter-reader" class="chapter-reader" role="region" aria-label="Chapter reader; highlighted verses are typeable"></div>
+          </div>
           <div class="typed-area">
             <div id="typed-bar" class="typed-bar" aria-hidden="true"></div>
             <input id="input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Type the passage here">

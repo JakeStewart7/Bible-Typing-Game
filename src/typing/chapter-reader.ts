@@ -44,7 +44,13 @@ export function createChapterReader(
       ...verse,
       isActive: verse.verse >= activeRange.startVerse && verse.verse <= activeRange.endVerse
     }));
-  const activeText = sanitizeText(verses.filter(verse => verse.isActive).map(verse => verse.text).join(' '));
+  const activeVerses = verses.filter(verse => verse.isActive);
+  const expectedVerseCount = activeRange.endVerse - activeRange.startVerse + 1;
+  if (activeVerses.length !== expectedVerseCount
+    || !activeVerses.every((verse, index) => verse.verse === activeRange.startVerse + index)) {
+    throw new Error('The selected range is incomplete.');
+  }
+  const activeText = sanitizeText(activeVerses.map(verse => verse.text).join(' '));
 
   if (!activeText) throw new Error('The selected range has no typeable verses.');
 

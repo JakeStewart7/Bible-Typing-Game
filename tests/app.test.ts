@@ -96,6 +96,11 @@ test('chapter reader continuation keeps range length and crosses chapter ends', 
   equal(nextChapterReaderRange(reference, 10, { book: 'John', chapter: 4, verseCount: 5 }), {
     ...reference, startVerse: 8, endVerse: 10
   });
+  equal(nextChapterReaderRange({ ...reference, startVerse: 7, endVerse: 9 }, 10, {
+    book: 'John', chapter: 4, verseCount: 5
+  }), {
+    ...reference, startVerse: 10, endVerse: 10
+  });
   equal(nextChapterReaderRange({ ...reference, startVerse: 8, endVerse: 10 }, 10, {
     book: 'John', chapter: 4, verseCount: 2
   }), {

@@ -158,6 +158,7 @@ export function initControls(config: AppConfig) {
 
   return {
     hudEl: requireElement('hud', HTMLElement), textEl: requireElement('text', HTMLElement),
+    chapterReaderEl: requireElement('chapter-reader', HTMLElement),
     inputEl: requireElement('input', HTMLInputElement), typedBarEl: requireElement('typed-bar', HTMLElement),
     translationEl, bookEl, chapterEl, startVerseEl, endVerseEl,
     loadBtn, statusEl,

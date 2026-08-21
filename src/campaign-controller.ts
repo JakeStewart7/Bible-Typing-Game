@@ -1,5 +1,6 @@
 import { BOOKS } from './bible-data';
-import { fetchRange } from './bible-api';
+import { fetchChapter } from './bible-api';
+import type { ChapterVerse } from './typing/chapter-reader';
 import {
   createCampaignChunks,
   getBookProgress,
@@ -29,7 +30,7 @@ export type CampaignView = {
 
 export function createCampaignController(
   view: CampaignView,
-  onStartChunk: (chunk: CampaignChunk, text: string) => void,
+  onStartChunk: (chunk: CampaignChunk, verses: ChapterVerse[]) => void,
   stateRepository: AppStateRepository,
   config: AppConfig
 ) {
@@ -126,12 +127,15 @@ export function createCampaignController(
     button.disabled = true;
     view.breadcrumbEl.textContent = `Loading ${chunk.book} ${chunk.chapter}:${chunk.startVerse}–${chunk.endVerse}…`;
     try {
-      const data = await fetchRange(chunk.book, chunk.chapter, chunk.startVerse, chunk.endVerse, 'kjv', false);
-      const text = data.verses?.map(verse => verse.text).join(' ') ?? '';
-      if (!text) throw new Error('Campaign passage was empty.');
+      const data = await fetchChapter(chunk.book, chunk.chapter, 'kjv', false);
+      const verses = (data.verses ?? []).map((verse, index) => ({
+        verse: verse.verse ?? index + 1,
+        text: verse.text
+      }));
+      if (!verses.length) throw new Error('Campaign chapter was empty.');
       continuation = chunk;
       persist();
-      onStartChunk(chunk, text);
+      onStartChunk(chunk, verses);
     } finally {
       button.disabled = false;
     }

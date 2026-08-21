@@ -10,7 +10,8 @@ import { setupMusic } from './audio/music';
 import { toggleEffects } from './audio/effects';
 import { createCampaignController } from './campaign-controller';
 import type { CampaignChunk } from './campaign';
-import { fetchRange } from './bible-api';
+import { fetchChapter } from './bible-api';
+import type { ChapterVerse } from './typing/chapter-reader';
 import { appConfig } from './config';
 import { AppStateRepository } from './persistence/app-state';
 import { AppStorage } from './persistence/storage';
@@ -26,7 +27,7 @@ import trackApple from '../assets/music/apple_cider.ogg';
 
 // initialize DOM and controls
 const {
-  hudEl, textEl, inputEl, typedBarEl,
+  hudEl, textEl, chapterReaderEl, inputEl, typedBarEl,
   translationEl, bookEl, chapterEl, startVerseEl, endVerseEl, loadBtn,
   statusEl, passageTitleEl, resultsEl, resultStatsEl, progressFillEl,
   gameModeEl, challengeBannerEl, typingCardEl, rewardMessageEl,
@@ -52,7 +53,7 @@ export const game: Game = createGame('Typing games help improve speed and accura
 
 // Wire controllers (moves logic out of main.ts into game/controller.ts)
 const gameController = initGameControllers(game, {
-  hudEl, textEl, inputEl, typedBarEl,
+  hudEl, textEl, chapterReaderEl, inputEl, typedBarEl,
   translationEl, bookEl, chapterEl, startVerseEl, endVerseEl, loadBtn,
   statusEl, passageTitleEl, resultsEl, resultStatsEl, progressFillEl,
   gameModeEl, challengeBannerEl, typingCardEl, rewardMessageEl,
@@ -82,17 +83,17 @@ gameController.setPlaylistHooks({
 
 setupMusic(document.getElementById('music-slot'));
 
-let startCampaignChunk: (chunk: CampaignChunk, text: string) => void = () => undefined;
+let startCampaignChunk: (chunk: CampaignChunk, verses: ChapterVerse[]) => void = () => undefined;
 const campaignController = createCampaignController({
   contentEl: campaignContentEl, backEl: campaignBackEl, breadcrumbEl: campaignBreadcrumbEl,
   totalStarsEl: campaignTotalStarsEl, totalProgressEl: campaignTotalProgressEl,
   devToolsEl: campaignDevToolsEl, sidebarProgressEl: sidebarCampaignProgressEl, celebrationEl
 }, (chunk, text) => startCampaignChunk(chunk, text), stateRepository, appConfig);
 
-startCampaignChunk = (chunk, text) => {
+startCampaignChunk = (chunk, verses) => {
   stateRepository.writeJourneyPosition(chunk);
   showWorkspace('campaign-play');
-  gameController.startCampaignChunk(chunk, text);
+  gameController.startCampaignChunk(chunk, verses);
 };
 gameController.setCampaignHooks({
   save: campaignController.saveChunk,
@@ -110,8 +111,11 @@ gameController.setCampaignHooks({
 });
 
 async function fetchCampaignChunk(chunk: CampaignChunk): Promise<void> {
-  const data = await fetchRange(chunk.book, chunk.chapter, chunk.startVerse, chunk.endVerse, 'kjv', false);
-  startCampaignChunk(chunk, data.verses?.map(verse => verse.text).join(' ') ?? '');
+  const data = await fetchChapter(chunk.book, chunk.chapter, 'kjv', false);
+  startCampaignChunk(chunk, (data.verses ?? []).map((verse, index) => ({
+    verse: verse.verse ?? index + 1,
+    text: verse.text
+  })));
 }
 
 function showWorkspace(workspace: string, selectedMode?: string): void {

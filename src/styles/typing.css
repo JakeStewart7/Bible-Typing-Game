@@ -79,6 +79,14 @@ select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px va
 .ready-indicator span { display: grid; place-items: center; width: 1.65rem; height: 1.65rem; border-radius: 50%; background: var(--mint); }
 @keyframes readyPulse { 0% { opacity: 0; transform: translateY(.3rem) scale(.96); } 18%, 70% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-.2rem); } }
 .text-display { position: relative; min-height: 220px; max-height: calc(100vh - 440px); overflow-y: auto; font: 500 clamp(1.2rem, 1.55vw, 1.55rem)/1.9 DM Mono, monospace; color: #879792; letter-spacing: -.025em; outline: none; }
+.chapter-reader { max-width: 70ch; margin: 0 auto; padding: 1rem 0 2rem; }
+.chapter-reader-verse { margin: 0; padding: .35rem .65rem; border-radius: 8px; transition: background .18s, color .18s; }
+.chapter-reader-verse.is-context { color: #667570; }
+.chapter-reader-verse.is-active { color: var(--ink); background: var(--page-accent-soft); }
+.verse-number { display: inline-block; min-width: 2.25em; margin-right: .45rem; color: var(--green-dark); font-size: .7em; font-weight: 800; line-height: 1; text-align: right; vertical-align: .16em; }
+.chapter-reader-verse.is-context .verse-number { color: #6b7974; }
+.chapter-reader-verse.is-active + .chapter-reader-verse.is-context { margin-top: .8rem; }
+.chapter-reader-verse.is-context + .chapter-reader-verse.is-active { margin-top: .8rem; }
 .word { display: inline; }
 .char { transition: color .12s, background .12s; }
 .char.correct { color: var(--ink); }

@@ -2,6 +2,7 @@ import { sanitizeText } from './state';
 import type { Game } from './state';
 import { handleInput } from './input';
 import { renderText, updateCaretPosition } from '../ui/renderer';
+import { positionReaderAtActiveRange, renderChapterReader } from '../ui/chapter-reader';
 import { renderTypedBar } from '../ui/typedBar';
 import { renderStats } from '../ui/hud';
 import { calculateStats } from './stats';
@@ -30,9 +31,16 @@ import { BrowserSessionHistoryRepository } from './session-history';
 import { selectMemoryStartPassage } from '../memory/domain/practice-library';
 import { createPracticeLibraryController } from '../memory/ui/practice-library-controller.ts';
 import type { PlaylistCompletion } from '../memory/ui/playlist-controller.ts';
+import {
+  createChapterReader,
+  nextChapterReaderRange,
+  type ChapterReader,
+  type ChapterVerse
+} from '../typing/chapter-reader';
 
 type Controls = {
-  hudEl: HTMLElement; textEl: HTMLElement; inputEl: HTMLInputElement; typedBarEl: HTMLElement;
+  hudEl: HTMLElement; textEl: HTMLElement; chapterReaderEl: HTMLElement;
+  inputEl: HTMLInputElement; typedBarEl: HTMLElement;
   translationEl: HTMLSelectElement; bookEl: HTMLSelectElement; chapterEl: HTMLSelectElement;
   startVerseEl: HTMLSelectElement; endVerseEl: HTMLSelectElement; loadBtn: HTMLButtonElement;
   statusEl: HTMLElement; passageTitleEl: HTMLElement; resultsEl: HTMLElement;
@@ -60,7 +68,7 @@ export function initGameControllers(
   storage: AppStorage,
   config: AppConfig
 ) {
-  const { hudEl, textEl, inputEl, typedBarEl, translationEl, bookEl, chapterEl,
+  const { hudEl, textEl, chapterReaderEl, inputEl, typedBarEl, translationEl, bookEl, chapterEl,
     startVerseEl, endVerseEl, loadBtn, statusEl, passageTitleEl, resultsEl,
     resultStatsEl, progressFillEl, gameModeEl, challengeBannerEl, typingCardEl,
     rewardMessageEl, levelLabelEl, xpLabelEl, xpFillEl, personalBestEl, lifetimeWpmEl, recentWpmEl,
@@ -105,6 +113,7 @@ export function initGameControllers(
   } | null = null;
   let playlistContinuation = false;
   let suppressMemoryStart = false;
+  let chapterReader: ChapterReader | null = null;
 
   function renderDefense() {
     defenseView.render(defense);
@@ -147,6 +156,7 @@ export function initGameControllers(
       const data = await fetchRange(book, chapter, range.start, range.end, 'kjv', false);
       const text = sanitizeText(data.verses?.map(verse => verse.text).join(' ') || '');
       if (!text) throw new Error('Random defense passage was empty.');
+      chapterReader = null;
       game.text = text;
       game.chars = text.split('');
       passageTitleEl.textContent = `${book} ${chapter}:${range.start}–${range.end}`;
@@ -177,13 +187,18 @@ export function initGameControllers(
     }
     suppressMemoryStart = false;
     renderDefense();
+    if (chapterReader && mode !== 'defense') updateUI(false);
     if (mode === 'defense') void loadRandomDefensePassage();
   }
 
   function updateUI(updateHud = true) {
     const stats = calculateStats(game);
     if (updateHud) renderStats(hudEl, stats);
-    renderText(textEl, game);
+    if (chapterReader && gameModeEl.value !== 'defense') {
+      renderChapterReader(textEl, chapterReaderEl, chapterReader, game);
+    } else {
+      renderText(textEl, game);
+    }
     updateCaretPosition(textEl, game);
     renderTypedBar(typedBarEl, game);
     progressFillEl.style.width = `${stats.progress}%`;
@@ -214,6 +229,9 @@ export function initGameControllers(
     resultsEl.classList.add('is-hidden');
     document.getElementById('next-passage')?.classList.remove('is-hidden');
     updateUI(false);
+    if (chapterReader && gameModeEl.value !== 'defense') {
+      positionReaderAtActiveRange(textEl, chapterReaderEl);
+    }
     window.clearInterval(hudInterval);
     hudInterval = window.setInterval(() => renderStats(hudEl, calculateStats(game)), 250);
     focusInput();
@@ -247,6 +265,13 @@ export function initGameControllers(
     const resultsCopy = document.getElementById('results-copy');
     const nextButton = document.getElementById('next-passage');
     const chapterSelectButton = document.getElementById('chapter-select');
+    const canContinuePassage = !campaignChunk && !playlistCompletion && activePassage
+      && (mode === 'practice' || mode === 'memory')
+      && nextChapterReaderRange(
+        activePassage,
+        getVerseCount(activePassage.book, activePassage.chapter),
+        followingChapter(activePassage.book, activePassage.chapter)
+      );
     if (resultsTitle) resultsTitle.textContent = campaignChunk ? 'Journey passage complete' : mode === 'defense' ? 'Arcade complete' : mode === 'memory' ? 'Memory passage complete' : 'Practice complete';
     if (resultsCopy) {
       resultsCopy.textContent = playlistCompletion?.completedCycle
@@ -255,12 +280,12 @@ export function initGameControllers(
           ? 'The shadows were repelled.'
           : mode === 'memory' ? 'You recalled the passage.' : '';
     }
-    if (chapterSelectButton) chapterSelectButton.textContent = campaignChunk ? 'Back to selection' : 'Choose passage';
+    if (chapterSelectButton) chapterSelectButton.textContent = campaignChunk ? 'Back to selection' : 'Back to passage select';
     if (nextButton) {
       nextButton.textContent = playlistCompletion?.completedCycle
         ? 'Start playlist again'
-        : playlistCompletion ? 'Next playlist passage' : 'Choose another';
-      nextButton.classList.toggle('is-hidden', !campaignChunk && !playlistCompletion);
+        : playlistCompletion ? 'Next playlist passage' : canContinuePassage ? 'Continue' : 'Choose another';
+      nextButton.classList.toggle('is-hidden', !campaignChunk && !playlistCompletion && !canContinuePassage);
     }
     const earnedXp = Math.max(25, Math.round((stats.wpm + stats.accuracy + game.text.length / 10) * MODE_BONUSES[mode]));
     rewardMessageEl.textContent = `✦ +${earnedXp} XP · ${gameModeEl.options[gameModeEl.selectedIndex].text.split(' — ')[0]} completed`;
@@ -347,6 +372,18 @@ export function initGameControllers(
       resultsEl.classList.add('is-hidden');
       return;
     }
+    if ((gameModeEl.value === 'practice' || gameModeEl.value === 'memory') && activePassage) {
+      const continuation = nextChapterReaderRange(
+        activePassage,
+        getVerseCount(activePassage.book, activePassage.chapter),
+        followingChapter(activePassage.book, activePassage.chapter)
+      );
+      if (continuation) {
+        resultsEl.classList.add('is-hidden');
+        void loadPassage(continuation);
+        return;
+      }
+    }
     resultsEl.classList.add('is-hidden');
     document.querySelector('.passage-panel')?.scrollIntoView({ behavior: 'smooth' });
   });
@@ -371,21 +408,34 @@ export function initGameControllers(
   async function loadSelectedPassage(): Promise<boolean> {
     const start = Number(startVerseEl.value);
     const end = Math.max(start, Number(endVerseEl.value));
+    return loadChapterPassage({
+      book: bookEl.value,
+      chapter: Number(chapterEl.value),
+      startVerse: start,
+      endVerse: end,
+      translation: translationEl.value
+    });
+  }
+
+  async function loadChapterPassage(passage: PassageReference): Promise<boolean> {
     loadBtn.disabled = true;
     statusEl.textContent = 'Loading your passage...';
     try {
-      let data: { verses?: Array<{ text: string }> };
+      let data: { verses?: Array<{ text: string; verse?: number }> };
       try {
-        data = await fetchRange(bookEl.value, Number(chapterEl.value), start, end, translationEl.value, false);
+        data = await fetchChapter(passage.book, passage.chapter, passage.translation, false);
       } catch {
         throw new Error(`${translationEl.options[translationEl.selectedIndex].text} is not available from the current Bible provider.`);
       }
-      const text = sanitizeText(data.verses?.map(verse => verse.text).join(' ') || '');
-      if (!text) throw new Error('No verses were returned.');
-      game.text = text;
-      game.chars = text.split('');
-      activePassage = { book: bookEl.value, chapter: Number(chapterEl.value), startVerse: start, endVerse: end, translation: translationEl.value };
-      passageTitleEl.textContent = `${bookEl.value} ${chapterEl.value}:${start}${end > start ? `–${end}` : ''}`;
+      const verses: ChapterVerse[] = (data.verses ?? []).map((verse, index) => ({
+        verse: verse.verse ?? index + 1,
+        text: verse.text
+      }));
+      chapterReader = createChapterReader(verses, passage);
+      game.text = chapterReader.activeText;
+      game.chars = game.text.split('');
+      activePassage = { ...passage };
+      passageTitleEl.textContent = `${passage.book} ${passage.chapter}:${passage.startVerse}${passage.endVerse > passage.startVerse ? `–${passage.endVerse}` : ''}`;
       statusEl.textContent = '';
       playlistContinuation = false;
       restartGame();
@@ -450,9 +500,10 @@ export function initGameControllers(
 
   return {
     restartGame,
-    startCampaignChunk: (chunk: CampaignChunk, text: string) => {
+    startCampaignChunk: (chunk: CampaignChunk, verses: ChapterVerse[]) => {
       campaignChunk = chunk;
-      game.text = sanitizeText(text);
+      chapterReader = createChapterReader(verses, chunk);
+      game.text = chapterReader.activeText;
       game.chars = game.text.split('');
       passageTitleEl.textContent = `${chunk.book} ${chunk.chapter}:${chunk.startVerse}–${chunk.endVerse}`;
       activePassage = { book: chunk.book, chapter: chunk.chapter, startVerse: chunk.startVerse, endVerse: chunk.endVerse, translation: 'kjv' };
@@ -509,6 +560,16 @@ export function initGameControllers(
     endVerseEl.value = String(passage.endVerse);
     return loadSelectedPassage();
   }
+}
+
+function followingChapter(book: string, chapter: number): { book: string; chapter: number; verseCount: number } | null {
+  if (chapter < getChapterCount(book)) {
+    const nextChapter = chapter + 1;
+    return { book, chapter: nextChapter, verseCount: getVerseCount(book, nextChapter) };
+  }
+  const nextBook = BOOKS[BOOKS.indexOf(book) + 1];
+  if (!nextBook) return null;
+  return { book: nextBook, chapter: 1, verseCount: getVerseCount(nextBook, 1) };
 }
 
 function renderAnalysis(analysis: ReturnType<typeof analyzeSession>): HTMLElement[] {
