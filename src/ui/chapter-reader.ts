@@ -15,6 +15,14 @@ type RenderState = {
   promptedWordIndex: number | null;
 };
 
+type RenderedChapter = {
+  reader: ChapterReader;
+  characterElements: HTMLElement[];
+  wordElements: HTMLElement[];
+};
+
+const renderedChapters = new WeakMap<HTMLElement, RenderedChapter>();
+
 export function renderChapterReader(
   container: HTMLElement,
   readerEl: HTMLElement,
@@ -26,31 +34,18 @@ export function renderChapterReader(
   revealAnimationElapsedMs = 0
 ): void {
   if (readerEl.parentElement !== container) container.replaceChildren(readerEl);
-  readerEl.replaceChildren();
   const state = createRenderState(container, game, revealedWordIndex, promptedWordIndex);
-
-  for (const verse of reader.verses) {
-    const verseEl = document.createElement('p');
-    verseEl.className = verse.isActive
-      ? 'chapter-reader-verse is-active'
-      : 'chapter-reader-verse is-context';
-    verseEl.dataset.verse = String(verse.verse);
-    const numberEl = document.createElement('span');
-    numberEl.className = 'verse-number';
-    numberEl.textContent = String(verse.verse);
-    verseEl.appendChild(numberEl);
-
-    if (verse.isActive) {
-      appendCharacters(verseEl, verse.text, game, state, animatedRevealWordIndex, revealAnimationElapsedMs);
-      const nextVerse = reader.verses[reader.verses.indexOf(verse) + 1];
-      if (nextVerse?.isActive) {
-        appendCharacter(verseEl, ' ', game, state, animatedRevealWordIndex, revealAnimationElapsedMs);
-      }
-    } else {
-      verseEl.append(` ${verse.text}`);
-    }
-    readerEl.appendChild(verseEl);
+  let rendered = renderedChapters.get(readerEl);
+  if (rendered?.reader !== reader) {
+    buildChapter(readerEl, reader, game, state, animatedRevealWordIndex, revealAnimationElapsedMs);
+    rendered = {
+      reader,
+      characterElements: [...readerEl.querySelectorAll<HTMLElement>('.chapter-reader-verse.is-active .char')],
+      wordElements: [...readerEl.querySelectorAll<HTMLElement>('.chapter-reader-verse.is-active .word')]
+    };
+    renderedChapters.set(readerEl, rendered);
   }
+  updateRenderedChapter(rendered, game, state, animatedRevealWordIndex, revealAnimationElapsedMs);
 }
 
 export function positionReaderAtActiveRange(container: HTMLElement, readerEl: HTMLElement): void {
@@ -83,6 +78,85 @@ function createRenderState(
     revealedWordIndex,
     promptedWordIndex
   };
+}
+
+function buildChapter(
+  readerEl: HTMLElement,
+  reader: ChapterReader,
+  game: Game,
+  state: RenderState,
+  animatedRevealWordIndex: number | null,
+  revealAnimationElapsedMs: number
+): void {
+  readerEl.replaceChildren();
+  for (const [verseIndex, verse] of reader.verses.entries()) {
+    const verseEl = document.createElement('p');
+    verseEl.className = verse.isActive
+      ? 'chapter-reader-verse is-active'
+      : 'chapter-reader-verse is-context';
+    verseEl.dataset.verse = String(verse.verse);
+    const numberEl = document.createElement('span');
+    numberEl.className = 'verse-number';
+    numberEl.textContent = String(verse.verse);
+    verseEl.appendChild(numberEl);
+
+    if (verse.isActive) {
+      appendCharacters(verseEl, verse.text, game, state, animatedRevealWordIndex, revealAnimationElapsedMs);
+      if (reader.verses[verseIndex + 1]?.isActive) {
+        appendCharacter(verseEl, ' ', game, state, animatedRevealWordIndex, revealAnimationElapsedMs);
+      }
+    } else {
+      verseEl.append(` ${verse.text}`);
+    }
+    readerEl.appendChild(verseEl);
+  }
+}
+
+function updateRenderedChapter(
+  rendered: RenderedChapter,
+  game: Game,
+  state: RenderState,
+  animatedRevealWordIndex: number | null,
+  revealAnimationElapsedMs: number
+): void {
+  for (const [wordIndex, wordEl] of rendered.wordElements.entries()) {
+    const prompted = wordIndex === state.promptedWordIndex;
+    wordEl.classList.toggle('hint-target', prompted);
+    const animated = wordIndex === animatedRevealWordIndex;
+    if (animated && !wordEl.classList.contains('revealed-hint')) {
+      wordEl.classList.add('revealed-hint');
+      wordEl.style.animationDelay = `-${revealAnimationElapsedMs}ms`;
+    } else if (!animated) {
+      wordEl.classList.remove('revealed-hint');
+      wordEl.style.removeProperty('animation-delay');
+    }
+  }
+
+  for (const [characterIndex, characterEl] of rendered.characterElements.entries()) {
+    const wordIndex = Number(characterEl.dataset.wordIndex);
+    const sourceCharacter = game.chars[characterIndex] ?? '';
+    const hiddenInMemory = sourceCharacter !== ' ' && state.memoryMode
+      && wordIndex !== state.revealedWordIndex
+      && shouldMaskMemoryCharacter(
+        state.hiddenWords.has(wordIndex),
+        game.typed[characterIndex],
+        sourceCharacter
+      );
+    const classes = ['char'];
+    if (hiddenInMemory) classes.push('memory-hidden');
+    if (wordIndex === state.caretWordIndex) classes.push('letter-underline');
+    if (characterIndex <= state.lastTypedIndex) {
+      classes.push(state.firstErrorIndex === -1 || characterIndex < state.firstErrorIndex
+        ? 'correct'
+        : 'error-highlight');
+    }
+    if (characterIndex === game.typed.length) classes.push('current');
+    if (characterIndex === game.lastPressedIndex) classes.push('pressed');
+    const className = classes.join(' ');
+    if (characterEl.className !== className) characterEl.className = className;
+    const displayCharacter = hiddenInMemory ? '·' : sourceCharacter;
+    if (characterEl.textContent !== displayCharacter) characterEl.textContent = displayCharacter;
+  }
 }
 
 function findCaretWordIndex(words: string[], lastTypedIndex: number): number | null {
@@ -121,6 +195,7 @@ function appendCharacter(
     const separator = document.createElement('span');
     separator.textContent = character;
     separator.className = 'char';
+    separator.dataset.wordIndex = String(state.wordIndex);
     if (state.characterIndex <= state.lastTypedIndex) {
       separator.classList.add(state.firstErrorIndex === -1 || state.characterIndex < state.firstErrorIndex
         ? 'correct'
@@ -147,6 +222,7 @@ function appendCharacter(
   const span = document.createElement('span');
   span.textContent = character;
   span.className = 'char';
+  span.dataset.wordIndex = String(state.wordIndex);
   const hiddenInMemory = state.memoryMode && state.wordIndex !== state.revealedWordIndex && shouldMaskMemoryCharacter(
     state.hiddenWords.has(state.wordIndex),
     game.typed[state.characterIndex],
