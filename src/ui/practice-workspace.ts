@@ -69,7 +69,7 @@ export function practiceWorkspaceMarkup(developerControls: string): string {
         <div id="challenge-banner" class="challenge-banner is-hidden"></div>
         <article id="typing-card" class="typing-card card">
           <div class="passage-heading">
-            <div class="passage-heading-copy"><small>NOW TYPING</small><div><h3 id="passage-title">John 3:16</h3><button id="choose-passage" class="text-btn" type="button">Change passage</button></div></div>
+            <div class="passage-heading-copy"><small>NOW TYPING</small><div><h3 id="passage-title">John 3:16</h3><button id="choose-passage" class="passage-select-button" type="button"><span aria-hidden="true">⌁</span> Choose passage</button></div></div>
             <div class="reader-tools">
               <fieldset class="text-visibility">
                 <legend>Memory mode</legend>

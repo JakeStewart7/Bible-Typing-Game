@@ -24,7 +24,7 @@
   --page-glow: #d9f4e6;
   --header-height: clamp(4.25rem, 7vh, 4.75rem);
   --text-small: .75rem;
-  --text-label: .6875rem;
+  --text-label: .75rem;
   font-family: Manrope, sans-serif;
   color: var(--ink);
   background: #f7fbf7;
