@@ -88,6 +88,7 @@ export function initGameControllers(
   let hasCompleted = false;
   let defense: DefenseState = createDefenseState();
   let defenseFrame = 0;
+  let readerPositionFrame = 0;
   let previousFrame = performance.now();
   let memoryHiddenPercent = 0;
   let activePassage: PassageReference | null = null;
@@ -186,7 +187,10 @@ export function initGameControllers(
     document.getElementById('playlist-library')?.classList.toggle('is-hidden', mode === 'defense');
     practiceLibrary.setContext(mode, activePassage);
     renderDefense();
-    if (chapterReader && mode !== 'defense') updateUI(false);
+    if (chapterReader && mode !== 'defense') {
+      updateUI(false);
+      queueReaderPosition();
+    }
     if (mode === 'defense') void loadRandomDefensePassage();
   }
 
@@ -206,6 +210,16 @@ export function initGameControllers(
 
   function focusInput(): void {
     inputEl.focus({ preventScroll: gameModeEl.value === 'defense' });
+  }
+
+  function queueReaderPosition(): void {
+    cancelAnimationFrame(readerPositionFrame);
+    readerPositionFrame = requestAnimationFrame(() => {
+      readerPositionFrame = 0;
+      if (!chapterReader || gameModeEl.value === 'defense') return;
+      positionReaderAtActiveRange(textEl, chapterReaderEl);
+      updateCaretPosition(textEl, game);
+    });
   }
 
   function restartGame() {
@@ -233,7 +247,7 @@ export function initGameControllers(
     document.getElementById('next-passage')?.classList.remove('is-hidden');
     updateUI(false);
     if (chapterReader && gameModeEl.value !== 'defense') {
-      positionReaderAtActiveRange(textEl, chapterReaderEl);
+      queueReaderPosition();
     }
     window.clearInterval(hudInterval);
     hudInterval = window.setInterval(() => renderStats(hudEl, calculateStats(game)), 250);
@@ -529,9 +543,13 @@ export function initGameControllers(
     setTextVisibility,
     getActivePassage: (): PassageReference | null => activePassage ? { ...activePassage } : null,
     loadPassage,
+    showPracticeReader: () => {
+      if (chapterReader && gameModeEl.value !== 'defense') queueReaderPosition();
+    },
     leaveCampaign: () => { campaignChunk = null; },
     stop: () => {
       cancelAnimationFrame(defenseFrame);
+      cancelAnimationFrame(readerPositionFrame);
       clearInterval(hintTimer);
     }
   };

@@ -152,5 +152,4 @@ function appendCharacter(
   if (state.characterIndex === game.lastPressedIndex) span.classList.add('pressed');
   (state.word ?? verseEl).appendChild(span);
   state.characterIndex++;
-  state.characterIndex++;
 }

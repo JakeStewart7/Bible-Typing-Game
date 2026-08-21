@@ -104,7 +104,8 @@ select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px va
 .chapter-reader-verse.is-context + .chapter-reader-verse.is-active { margin-top: .8rem; }
 .word { display: inline; }
 .char { transition: color .12s, background .12s; }
-.char.correct { color: var(--ink); }
+.typing-card[data-mode]:not([data-mode="defense"]) .char:not(.correct):not(.error-highlight):not(.memory-hidden) { color: #94a39f; }
+.char.correct { color: #08725a; background: linear-gradient(transparent 78%, #bfead8 78% 88%, transparent 88%); }
 .char.error-highlight { color: #b83f38; background: #ffe1de; box-shadow: inset 0 -2px #ee6b62; }
 .typing-card[data-mode="memory"] .char.correct:not(.memory-hidden) { color: var(--ink); background: transparent; }
 .typing-card[data-mode="memory"] .char.memory-hidden { color: transparent; background: linear-gradient(transparent 73%, #d9e3de 73% 82%, transparent 82%); text-shadow: none; }

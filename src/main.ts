@@ -142,6 +142,7 @@ function showWorkspace(workspace: string, selectedMode?: string): void {
     }
   } else if (workspace === 'practice') {
     gameController.leaveCampaign();
+    gameController.showPracticeReader();
   } else if (workspace === 'campaign') campaignController.renderBooks();
 }
 
