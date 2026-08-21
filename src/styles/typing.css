@@ -77,13 +77,12 @@ select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px va
 .passage-heading-copy > div { display: flex; align-items: baseline; gap: .65rem; }
 .passage-select-button { min-height: 2.75rem; padding: .65rem .9rem; border: 0; border-radius: .8rem; color: #fff; background: var(--green-dark); box-shadow: 0 7px 16px color-mix(in srgb, var(--green-dark) 25%, transparent); font-size: .875rem; font-weight: 800; }
 .passage-select-button:hover { background: var(--page-accent-hover); transform: translateY(-1px); }
-.passage-select-button span { margin-right: .25rem; font-size: 1rem; }
 .reader-tools { display: flex; flex-wrap: wrap; align-items: end; justify-content: flex-end; gap: .6rem; }
-.text-visibility { margin: 0; padding: 0; border: 0; }
-.text-visibility legend { margin-bottom: .3rem; color: var(--green-dark); font-size: .75rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; text-align: right; }
-.text-visibility > div { display: flex; padding: .2rem; border: 1px solid var(--page-border); border-radius: 99px; background: color-mix(in srgb, var(--page-accent-soft) 58%, white); }
-.text-visibility button { min-width: 3rem; min-height: 2.75rem; padding: .35rem .5rem; border: 0; border-radius: 99px; color: #526b65; background: transparent; font-size: .875rem; font-weight: 800; white-space: nowrap; }
-.text-visibility button[aria-pressed="true"] { color: #fff; background: var(--green-dark); box-shadow: 0 3px 10px color-mix(in srgb, var(--green-dark) 24%, transparent); }
+.text-visibility { display: grid; gap: .3rem; margin: 0; padding: .45rem; border: 1px solid var(--page-border); border-radius: 1rem; background: color-mix(in srgb, var(--page-accent-soft) 68%, white); box-shadow: inset 0 1px #fff; }
+.text-visibility legend { padding: 0 .15rem; color: var(--green-dark); font-size: .75rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; text-align: right; }
+.text-visibility > div { display: flex; padding: .18rem; border: 1px solid color-mix(in srgb, var(--page-accent) 18%, white); border-radius: .72rem; background: #fff; box-shadow: 0 2px 7px color-mix(in srgb, var(--page-accent) 10%, transparent); }
+.text-visibility button { min-width: 2.9rem; min-height: 2.75rem; padding: .35rem .45rem; border: 0; border-radius: .52rem; color: #526b65; background: transparent; font-size: .875rem; font-weight: 800; white-space: nowrap; }
+.text-visibility button[aria-pressed="true"] { color: #fff; background: linear-gradient(135deg, var(--green), var(--green-dark)); box-shadow: 0 3px 8px color-mix(in srgb, var(--green-dark) 25%, transparent); }
 .reader-tools .ghost-btn { min-height: 2.75rem; font-size: .875rem; }
 .ghost-btn, .text-btn { min-height: 2.75rem; padding: .5rem .75rem; color: var(--green-dark); background: transparent; border: 0; border-radius: .7rem; font-size: .875rem; font-weight: 800; }
 .ghost-btn { border: 1px solid var(--border); }
@@ -125,7 +124,7 @@ select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px va
 .typed-bar { display: none; }
 #input { width: 100%; height: 52px; padding: 0 16px; border: 1px solid var(--border); border-radius: 13px; color: var(--ink); background: var(--page-surface); font-family: DM Mono, monospace; outline: none; }
 #input:focus { border-color: var(--green); box-shadow: 0 0 0 4px var(--page-glow); }
-.typing-footer { display: flex; justify-content: flex-end; align-items: center; color: #667c77; font-size: .875rem; padding-top: 13px; }
+.typing-footer { display: flex; justify-content: space-between; align-items: center; gap: .75rem; color: #667c77; font-size: .875rem; padding-top: 13px; }
 .typing-footer > div { display: flex; align-items: center; gap: .6rem; }
 .dev-complete-btn { display: block; min-height: 2.75rem; margin: 10px 0 0 auto; padding: 6px 12px; border: 1px dashed #d6aa4c; border-radius: 8px; color: #8b671b; background: #fff9e7; font-size: .875rem; }
 .modal-backdrop { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 20px; background: #143d3575; backdrop-filter: blur(12px); }

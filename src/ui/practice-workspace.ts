@@ -69,7 +69,7 @@ export function practiceWorkspaceMarkup(developerControls: string): string {
         <div id="challenge-banner" class="challenge-banner is-hidden"></div>
         <article id="typing-card" class="typing-card card">
           <div class="passage-heading">
-            <div class="passage-heading-copy"><small>NOW TYPING</small><div><h3 id="passage-title">John 3:16</h3><button id="choose-passage" class="passage-select-button" type="button"><span aria-hidden="true">⌁</span> Choose passage</button></div></div>
+            <div class="passage-heading-copy"><small>NOW TYPING</small><div><h3 id="passage-title">John 3:16</h3></div></div>
             <div class="reader-tools">
               <fieldset class="text-visibility">
                 <legend>Memory mode</legend>
@@ -94,6 +94,7 @@ export function practiceWorkspaceMarkup(developerControls: string): string {
             <input id="input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Type the passage here">
           </div>
           <div class="typing-footer">
+            <button id="choose-passage" class="passage-select-button" type="button">Choose passage</button>
             <div>
               <button id="favorite-passage" class="text-btn is-hidden" type="button" aria-pressed="false">☆ Favorite</button>
               <button id="restart" class="text-btn">↻ Restart</button>
