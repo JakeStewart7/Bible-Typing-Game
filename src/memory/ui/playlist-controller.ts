@@ -24,7 +24,7 @@ type PlaylistDependencies = {
   repository: AppStateRepository;
   getActivePassage: () => PassageReference | null;
   loadPassage: (passage: PassageReference) => Promise<boolean>;
-  activateMemoryMode: () => void;
+  activateRecallMode: () => void;
   createId?: () => string;
 };
 
@@ -148,7 +148,7 @@ export function createPlaylistController(
     const passage = playlist?.passages[playlist.currentIndex];
     if (!passage) return;
     activePlaylistId = playlistId;
-    dependencies.activateMemoryMode();
+    dependencies.activateRecallMode();
     await dependencies.loadPassage(passage);
     render();
   }

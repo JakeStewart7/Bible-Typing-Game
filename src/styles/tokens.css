@@ -13,7 +13,6 @@
   /* These are the only values needed to configure page and navigation themes. */
   --journey-accent: #c58b18;
   --practice-accent: #159a78;
-  --memory-accent: #7956c8;
   --arcade-accent: #4b9ed6;
   --content-max: 92rem;
   --content-gutter: clamp(1rem, 2.5vw, 2.5rem);

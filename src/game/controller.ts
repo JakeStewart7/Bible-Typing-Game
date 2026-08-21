@@ -28,9 +28,13 @@ import type { AppStorage } from '../persistence/storage';
 import { getCurrentWord, isHintAvailable } from './hint';
 import { analyzeSession } from './analysis';
 import { BrowserSessionHistoryRepository } from './session-history';
-import { selectMemoryStartPassage } from '../memory/domain/practice-library';
 import { createPracticeLibraryController } from '../memory/ui/practice-library-controller.ts';
 import type { PlaylistCompletion } from '../memory/ui/playlist-controller.ts';
+import {
+  hiddenPercentForVisibleWords,
+  RECALL_VISIBILITY_PRESETS,
+  type RecallVisibilityPercent
+} from '../memory/domain/visibility.ts';
 import {
   createChapterReader,
   nextChapterReaderRange,
@@ -82,7 +86,7 @@ export function initGameControllers(
   let defense: DefenseState = createDefenseState();
   let defenseFrame = 0;
   let previousFrame = performance.now();
-  let memoryHiddenPercent = 50;
+  let memoryHiddenPercent = 0;
   let activePassage: PassageReference | null = null;
   let lastProgressAt = Date.now();
   let hintTimer = 0;
@@ -112,7 +116,6 @@ export function initGameControllers(
     passageChanged: () => void;
   } | null = null;
   let playlistContinuation = false;
-  let suppressMemoryStart = false;
   let chapterReader: ChapterReader | null = null;
 
   function renderDefense() {
@@ -170,22 +173,12 @@ export function initGameControllers(
 
   function setMode() {
     const mode = parseGameMode(gameModeEl.value);
-    const enteringMemory = mode === 'memory' && typingCardEl.dataset.mode !== 'memory';
     typingCardEl.dataset.mode = mode;
     challengeBannerEl.textContent = MODE_LABELS[mode];
     defenseGameEl.classList.toggle('is-hidden', mode !== 'defense');
-    document.getElementById('memory-controls')?.classList.toggle('is-hidden', mode !== 'memory');
     hintButtonEl.classList.toggle('is-hidden', mode !== 'memory');
     document.getElementById('playlist-library')?.classList.toggle('is-hidden', mode === 'defense');
-    document.getElementById('practice-mode-switch')?.classList.toggle('is-hidden', mode === 'defense');
-    document.querySelectorAll<HTMLButtonElement>('[data-practice-mode]').forEach(button => {
-      button.setAttribute('aria-pressed', String(button.dataset.practiceMode === mode));
-    });
     practiceLibrary.setContext(mode, activePassage);
-    if (mode === 'memory') {
-      if (enteringMemory && !suppressMemoryStart) void loadMemoryStartPassage();
-    }
-    suppressMemoryStart = false;
     renderDefense();
     if (chapterReader && mode !== 'defense') updateUI(false);
     if (mode === 'defense') void loadRandomDefensePassage();
@@ -272,13 +265,13 @@ export function initGameControllers(
         getVerseCount(activePassage.book, activePassage.chapter),
         followingChapter(activePassage.book, activePassage.chapter)
       );
-    if (resultsTitle) resultsTitle.textContent = campaignChunk ? 'Journey passage complete' : mode === 'defense' ? 'Arcade complete' : mode === 'memory' ? 'Memory passage complete' : 'Practice complete';
+    if (resultsTitle) resultsTitle.textContent = campaignChunk ? 'Journey passage complete' : mode === 'defense' ? 'Arcade complete' : 'Passage complete';
     if (resultsCopy) {
       resultsCopy.textContent = playlistCompletion?.completedCycle
         ? 'Playlist complete. Your next round will begin at the first passage.'
         : mode === 'defense'
           ? 'The shadows were repelled.'
-          : mode === 'memory' ? 'You recalled the passage.' : '';
+          : mode === 'memory' ? 'You practiced with less text on screen.' : '';
     }
     if (chapterSelectButton) chapterSelectButton.textContent = campaignChunk ? 'Back to selection' : 'Back to passage select';
     if (nextButton) {
@@ -469,21 +462,23 @@ export function initGameControllers(
     if (Number(endVerseEl.value) < Number(startVerseEl.value)) endVerseEl.value = startVerseEl.value;
   });
   gameModeEl.addEventListener('change', setMode);
-  document.querySelectorAll<HTMLButtonElement>('[data-practice-mode]').forEach(button => {
+  document.querySelectorAll<HTMLButtonElement>('[data-text-visibility]').forEach(button => {
     button.addEventListener('click', () => {
-      const mode = button.dataset.practiceMode;
-      if (mode !== 'practice' && mode !== 'memory') return;
-      gameModeEl.value = mode;
-      gameModeEl.dispatchEvent(new Event('change'));
+      const visiblePercent = Number(button.dataset.textVisibility);
+      if (!RECALL_VISIBILITY_PRESETS.some(preset => preset.visiblePercent === visiblePercent)) return;
+      setTextVisibility(visiblePercent as RecallVisibilityPercent);
     });
   });
-  const memorySlider = document.getElementById('memory-visibility') as HTMLInputElement | null;
-  memorySlider?.addEventListener('input', () => {
-    memoryHiddenPercent = Number(memorySlider.value);
-    document.getElementById('memory-visibility-value')!.textContent = `${memoryHiddenPercent}%`;
+  function setTextVisibility(visiblePercent: RecallVisibilityPercent): void {
+    memoryHiddenPercent = hiddenPercentForVisibleWords(visiblePercent);
     typingCardEl.style.setProperty('--memory-hidden-percent', String(memoryHiddenPercent));
+    document.querySelectorAll<HTMLButtonElement>('[data-text-visibility]').forEach(button => {
+      button.setAttribute('aria-pressed', String(Number(button.dataset.textVisibility) === visiblePercent));
+    });
+    gameModeEl.value = memoryHiddenPercent ? 'memory' : 'practice';
+    gameModeEl.dispatchEvent(new Event('change'));
     updateUI();
-  });
+  }
   document.querySelectorAll<HTMLButtonElement>('[data-upgrade]').forEach(button => {
     button.addEventListener('click', () => {
       const id = button.dataset.upgrade as UpgradeId;
@@ -513,14 +508,7 @@ export function initGameControllers(
     },
     setCampaignHooks: (hooks: NonNullable<typeof campaignHooks>) => { campaignHooks = hooks; },
     setPlaylistHooks: (hooks: NonNullable<typeof playlistHooks>) => { playlistHooks = hooks; },
-    setPracticeMode: (
-      mode: 'practice' | 'memory',
-      options: { memoryStart: 'recent' | 'preserve' } = { memoryStart: 'recent' }
-    ) => {
-      suppressMemoryStart = options.memoryStart === 'preserve';
-      gameModeEl.value = mode;
-      gameModeEl.dispatchEvent(new Event('change'));
-    },
+    setTextVisibility,
     getActivePassage: (): PassageReference | null => activePassage ? { ...activePassage } : null,
     loadPassage,
     leaveCampaign: () => { campaignChunk = null; },
@@ -543,11 +531,6 @@ export function initGameControllers(
       && isMemory && isHintAvailable(lastProgressAt, Date.now());
     hintButtonEl.disabled = !isMemory || hasCompleted || game.chars.length === 0;
     hintButtonEl.classList.toggle('hint-ready', available);
-  }
-
-  async function loadMemoryStartPassage(): Promise<void> {
-    const passage = selectMemoryStartPassage(stateRepository.readRecentPassages());
-    await loadPassage(passage);
   }
 
   async function loadPassage(passage: PassageReference): Promise<boolean> {

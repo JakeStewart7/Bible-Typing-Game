@@ -73,7 +73,7 @@ const playlistController = createPlaylistController({
   repository: stateRepository,
   getActivePassage: gameController.getActivePassage,
   loadPassage: gameController.loadPassage,
-  activateMemoryMode: () => gameController.setPracticeMode('memory', { memoryStart: 'preserve' })
+  activateRecallMode: () => gameController.setTextVisibility(50)
 });
 gameController.setPlaylistHooks({
   complete: playlistController.completeActivePassage,

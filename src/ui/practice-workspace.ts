@@ -1,15 +1,10 @@
+import { RECALL_VISIBILITY_PRESETS } from '../memory/domain/visibility.ts';
+
 export function practiceWorkspaceMarkup(developerControls: string): string {
   return `
     <div class="practice-workspace">
       <section class="passage-panel card">
         <div class="passage-panel-heading"><h3>Passage</h3><p>Select a reference to practice.</p></div>
-        <fieldset id="practice-mode-switch" class="practice-mode-switch">
-          <legend>Practice style</legend>
-          <div>
-            <button type="button" data-practice-mode="practice" aria-pressed="true">Practice</button>
-            <button type="button" data-practice-mode="memory" aria-pressed="false">Memory</button>
-          </div>
-        </fieldset>
         <div class="passage-fields">
           <div class="translation-field"><label for="translation">Translation</label><select id="translation">
             <option value="kjv">KJV · King James Version</option>
@@ -23,22 +18,18 @@ export function practiceWorkspaceMarkup(developerControls: string): string {
         <button id="load-passage" class="primary-btn">Load passage</button>
         <select id="game-mode" class="is-hidden" aria-hidden="true">
           <option value="practice">Practice — relaxed</option>
-          <option value="memory">Memory — words fade as you type</option>
+          <option value="memory">Practice — text recall</option>
           <option value="defense">Arcade — repel the shadows</option>
         </select>
         <div id="status" class="status" role="status"></div>
-        <div id="memory-controls" class="memory-controls is-hidden">
-          <label for="memory-visibility">Words hidden <strong id="memory-visibility-value">50%</strong></label>
-          <input id="memory-visibility" type="range" min="0" max="100" step="1" value="50">
-        </div>
         <div id="practice-library" class="memory-library is-hidden">
           <section><h4>Practice favorites</h4><div id="practice-favorites" class="memory-passage-list"></div></section>
-          <section><h4>Memory favorites</h4><div id="memory-favorites" class="memory-passage-list"></div></section>
+          <section><h4>Recall favorites</h4><div id="memory-favorites" class="memory-passage-list"></div></section>
           <section><h4>Recently practiced</h4><div id="practice-recent" class="memory-passage-list"></div></section>
         </div>
         <section id="playlist-library" class="playlist-library">
           <div class="playlist-title">
-            <div><h4>Memorization playlists</h4><p>Practice saved passages in order.</p></div>
+            <div><h4>Recall playlists</h4><p>Practice saved passages in order.</p></div>
             <form id="playlist-create-form">
               <label class="sr-only" for="playlist-name">New playlist name</label>
               <input id="playlist-name" maxlength="80" placeholder="New playlist name" required>
@@ -76,7 +67,16 @@ export function practiceWorkspaceMarkup(developerControls: string): string {
         <article id="typing-card" class="typing-card card">
           <div class="passage-heading">
             <div><small>NOW TYPING</small><h3 id="passage-title">John 3:16</h3></div>
-            <button id="focus-button" class="ghost-btn">Focus mode</button>
+            <div class="reader-tools">
+              <fieldset class="text-visibility">
+                <legend>Text visibility</legend>
+                <div>
+                  ${RECALL_VISIBILITY_PRESETS.map(({ visiblePercent, label }) =>
+                    `<button type="button" data-text-visibility="${visiblePercent}" aria-pressed="${visiblePercent === 100}"><span>${visiblePercent}%</span>${label}</button>`).join('')}
+                </div>
+              </fieldset>
+              <button id="focus-button" class="ghost-btn">Focus mode</button>
+            </div>
           </div>
           <div class="progress-track"><div id="progress-fill"></div></div>
           <div id="ready-indicator" class="ready-indicator" role="status" aria-live="polite">

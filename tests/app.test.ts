@@ -11,11 +11,14 @@ import { AppStorage } from '../src/persistence/storage.ts';
 import { AppStateRepository } from '../src/persistence/app-state.ts';
 import { ProfileRepository } from '../src/persistence/profile-repository.ts';
 import { filterJourneyBooks, findJourneyContinuation, groupJourneyBooks, isJourneyBookUnlocked, journeyCurrency } from '../src/journey.ts';
-import { hiddenMemoryWordIndices, shouldMaskMemoryCharacter } from '../src/memory/domain/visibility.ts';
+import {
+  hiddenMemoryWordIndices,
+  hiddenPercentForVisibleWords,
+  shouldMaskMemoryCharacter
+} from '../src/memory/domain/visibility.ts';
 import {
   createPassageId,
   recordRecentPassage,
-  selectMemoryStartPassage,
   toggleFavoritePassage
 } from '../src/memory/domain/practice-library.ts';
 import { getCurrentWordRange, isHintAvailable } from '../src/game/hint.ts';
@@ -190,7 +193,12 @@ test('backspacing freezes accuracy until a new unscored letter is typed', () => 
   equal(calculateStats(game).accuracy, 100);
 });
 
-test('Memory hides the requested percentage of whole words deterministically', () => {
+test('Text visibility maps visible words to deterministic masked words', () => {
+  equal(hiddenPercentForVisibleWords(100), 0);
+  equal(hiddenPercentForVisibleWords(75), 25);
+  equal(hiddenPercentForVisibleWords(50), 50);
+  equal(hiddenPercentForVisibleWords(25), 75);
+  equal(hiddenPercentForVisibleWords(0), 100);
   equal([...hiddenMemoryWordIndices(20, 0)], []);
   equal(hiddenMemoryWordIndices(20, 50).size, 10);
   equal(hiddenMemoryWordIndices(20, 100).size, 20);
@@ -222,14 +230,6 @@ test('Memory library keeps unique recent passages and toggles favorites', () => 
   const favorite = toggleFavoritePassage(recent, passage);
   equal(favorite.favorites.map(item => item.id), [passage.id]);
   equal(toggleFavoritePassage(favorite, passage).favorites, []);
-});
-
-test('Memory starts with the newest practiced passage or Genesis 1:1', () => {
-  const recent = { book: 'Psalms', chapter: 23, startVerse: 1, endVerse: 4, translation: 'kjv' };
-  equal(selectMemoryStartPassage([recent]), recent);
-  equal(selectMemoryStartPassage([]), {
-    book: 'Genesis', chapter: 1, startVerse: 1, endVerse: 1, translation: 'kjv'
-  });
 });
 
 test('playlist operations create, rename, reorder, and delete playlists', () => {

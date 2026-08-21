@@ -1,55 +1,49 @@
 @media (min-width: 58.01rem) {
-  .app-shell:is([data-theme="practice"], [data-theme="memory"]) #game-screen {
+  .app-shell[data-theme="practice"] #game-screen {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     overflow: hidden;
   }
-  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .practice-workspace {
+  .app-shell[data-theme="practice"] .practice-workspace {
     height: 100%;
     min-height: 0;
     grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
     align-items: stretch;
   }
-  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .passage-panel {
+  .app-shell[data-theme="practice"] .passage-panel {
     min-height: 0;
     grid-template-columns: 1fr;
     align-content: start;
     align-items: stretch;
     overflow-y: auto;
   }
-  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .passage-fields {
+  .app-shell[data-theme="practice"] .passage-fields {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     overflow: visible;
   }
-  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .status,
-  .app-shell[data-theme="memory"] .memory-controls,
-  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .practice-mode-switch {
+  .app-shell[data-theme="practice"] .status {
     grid-column: 1;
   }
-  .app-shell[data-theme="memory"] .memory-controls {
-    grid-template-columns: 1fr;
-    gap: .35rem;
-  }
-  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .memory-library {
+  .app-shell[data-theme="practice"] .memory-library {
     grid-column: 1;
     grid-template-columns: 1fr;
   }
-  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .playlist-library {
+  .app-shell[data-theme="practice"] .playlist-library {
     grid-column: 1;
   }
-  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .play-area {
+  .app-shell[data-theme="practice"] .play-area {
     min-height: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
-  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .typing-card {
+  .app-shell[data-theme="practice"] .typing-card {
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: column;
   }
-  .app-shell:is([data-theme="practice"], [data-theme="memory"]) .text-display {
+  .app-shell[data-theme="practice"] .text-display {
     flex: 1;
     min-height: 0;
     max-height: none;
@@ -174,6 +168,8 @@
   .translation-field, .passage-fields > div:nth-child(2) { grid-column: 1; }
   .hud { grid-template-columns: 1fr; }
   .passage-heading { align-items: flex-start; gap: .75rem; }
+  .reader-tools { align-items: flex-end; flex-wrap: wrap; justify-content: flex-end; }
+  .text-visibility > div { max-width: 100%; overflow-x: auto; }
   .settings-menu { position: fixed; top: 4.25rem; right: 1rem; left: 1rem; width: auto; }
 }
 

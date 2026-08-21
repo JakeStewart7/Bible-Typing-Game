@@ -3,7 +3,7 @@ export type GameMode = typeof GAME_MODES[number];
 
 export const MODE_LABELS: Record<GameMode, string> = {
   practice: 'Relaxed practice',
-  memory: 'Memory mode: completed words fade away',
+  memory: 'Text recall: type from fewer visible words',
   defense: 'Arcade: type to repel the advancing shadows'
 };
 
