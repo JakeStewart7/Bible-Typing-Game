@@ -8,6 +8,20 @@ export function getCurrentWordRange(text: string, typedLength: number): { start:
   return { start, end: nextSpace < 0 ? text.length : nextSpace };
 }
 
+export function getCurrentWordIndex(text: string, typedLength: number): number {
+  const { start } = getCurrentWordRange(text, typedLength);
+  return text.slice(0, start).split(' ').length - 1;
+}
+
+export function getHintWordIndex(text: string, typedLength: number, revealedWordIndex: number | null): number | null {
+  const wordCount = text.split(' ').length;
+  const currentWordIndex = getCurrentWordIndex(text, typedLength);
+  const currentWordRange = getCurrentWordRange(text, typedLength);
+  let hintWordIndex = typedLength >= currentWordRange.end ? currentWordIndex + 1 : currentWordIndex;
+  if (hintWordIndex === revealedWordIndex) hintWordIndex++;
+  return hintWordIndex < wordCount ? hintWordIndex : null;
+}
+
 export function getCurrentWord(game: Pick<Game, 'text' | 'typed'>): string {
   const range = getCurrentWordRange(game.text, game.typed.length);
   return game.text.slice(range.start, range.end);

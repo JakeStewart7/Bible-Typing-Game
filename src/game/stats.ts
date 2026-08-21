@@ -19,8 +19,8 @@ export function calculateStats(game: Game, now = Date.now()): GameStats {
 }
 
 function getScoredLength(game: Game): number {
-  const mismatchIndex = game.typed.findIndex((character, index) => character !== game.chars[index]);
-  if (mismatchIndex < 0) return game.typed.length;
+  const mismatchIndex = game.blockedAccuracyIndex;
+  if (mismatchIndex === null) return game.typed.length;
 
   const wordStart = game.text.lastIndexOf(' ', mismatchIndex - 1) + 1;
   return wordStart;

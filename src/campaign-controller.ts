@@ -1,13 +1,17 @@
 import { BOOKS } from './bible-data';
-import { fetchRange } from './bible-api';
+import { fetchChapter } from './bible-api';
+import type { ChapterVerse } from './typing/chapter-reader';
 import {
+  completePassage,
   createCampaignChunks,
   getBookProgress,
   getCampaignProgress
 } from './campaign';
 import type { CampaignChunk } from './campaign';
+import { normalizeChapterVerses } from './typing/chapter-reader';
 import type { AppStateRepository } from './persistence/app-state';
 import type { AppConfig } from './config';
+import { formatPassageLabel } from './memory/domain/passage.ts';
 import {
   filterJourneyBooks,
   findJourneyContinuation,
@@ -29,7 +33,7 @@ export type CampaignView = {
 
 export function createCampaignController(
   view: CampaignView,
-  onStartChunk: (chunk: CampaignChunk, text: string) => void,
+  onStartChunk: (chunk: CampaignChunk, verses: ChapterVerse[]) => void,
   stateRepository: AppStateRepository,
   config: AppConfig
 ) {
@@ -42,13 +46,13 @@ export function createCampaignController(
   function renderSummary(): void {
     const summary = getCampaignProgress(progress);
     view.totalStarsEl.textContent = `${journeyCurrency(progress)} light`;
-    view.totalProgressEl.textContent = `${summary.completed} of ${summary.total} passages`;
+    view.totalProgressEl.textContent = `${summary.completed} of ${summary.total} verses`;
     view.sidebarProgressEl.innerHTML = `${summary.completedChapters} / 1,189 chapters<br>${summary.completedBooks} / 66 books`;
     continuation = findJourneyContinuation(progress, continuation);
     if (continueEl) {
       continueEl.classList.toggle('is-hidden', !continuation);
       if (continuation) {
-        continueEl.innerHTML = `<strong>Continue Journey</strong><span>${continuation.book} ${continuation.chapter}:${continuation.startVerse}–${continuation.endVerse}</span>`;
+        continueEl.innerHTML = `<strong>Continue Journey</strong><span>${formatPassageLabel(continuation)}</span>`;
       }
     }
   }
@@ -82,7 +86,7 @@ export function createCampaignController(
       button.innerHTML = `
         <span class="book-order">${String(BOOKS.indexOf(book) + 1).padStart(2, '0')}</span>
         <strong>${book}</strong>
-        <span>${unlocked ? `${summary.completed}/${summary.total} passages` : 'Locked · complete the prior book'}</span>
+        <span>${unlocked ? `${summary.completed}/${summary.total} verses` : 'Locked · complete the prior book'}</span>
         <i><b style="width:${summary.percent}%"></b></i>`;
       button.addEventListener('click', () => renderBook(book));
       return button;
@@ -102,7 +106,7 @@ export function createCampaignController(
       const section = document.createElement('section');
       section.className = 'campaign-chapter';
       const completed = chapterChunks.filter(chunk => (progress[chunk.id] ?? 0) > 0).length;
-      section.innerHTML = `<header><div><small>CHAPTER</small><strong>${chapter}</strong></div><span>${completed}/${chapterChunks.length} complete</span></header>`;
+      section.innerHTML = `<header><div><small>CHAPTER</small><strong>${chapter}</strong></div><span>${completed}/${chapterChunks.length} verses complete</span></header>`;
       const chunkGrid = document.createElement('div');
       chunkGrid.className = 'passage-grid';
       for (const chunk of chapterChunks) {
@@ -124,14 +128,14 @@ export function createCampaignController(
 
   async function startChunk(chunk: CampaignChunk, button: HTMLButtonElement): Promise<void> {
     button.disabled = true;
-    view.breadcrumbEl.textContent = `Loading ${chunk.book} ${chunk.chapter}:${chunk.startVerse}–${chunk.endVerse}…`;
+    view.breadcrumbEl.textContent = `Loading ${formatPassageLabel(chunk)}…`;
     try {
-      const data = await fetchRange(chunk.book, chunk.chapter, chunk.startVerse, chunk.endVerse, 'kjv', false);
-      const text = data.verses?.map(verse => verse.text).join(' ') ?? '';
-      if (!text) throw new Error('Campaign passage was empty.');
+      const data = await fetchChapter(chunk.book, chunk.chapter, 'kjv', false);
+      const verses = normalizeChapterVerses(data.verses ?? []);
+      if (!verses.length) throw new Error('Campaign chapter was empty.');
       continuation = chunk;
       persist();
-      onStartChunk(chunk, text);
+      onStartChunk(chunk, verses);
     } finally {
       button.disabled = false;
     }
@@ -140,6 +144,16 @@ export function createCampaignController(
   function saveChunk(chunk: CampaignChunk, stars: number): void {
     progress[chunk.id] = Math.max(progress[chunk.id] ?? 0, stars);
     continuation = findJourneyContinuation(progress, null);
+    persist();
+    renderSummary();
+  }
+
+  function savePassage(
+    passage: Pick<CampaignChunk, 'book' | 'chapter' | 'startVerse' | 'endVerse'>,
+    stars: number
+  ): void {
+    progress = completePassage(progress, passage, stars);
+    continuation = findJourneyContinuation(progress, continuation);
     persist();
     renderSummary();
   }
@@ -185,5 +199,5 @@ export function createCampaignController(
     });
   }
   renderBooks();
-  return { renderBooks, renderBook, saveChunk, celebrateBook, getProgress: () => progress };
+  return { renderBooks, renderBook, saveChunk, savePassage, celebrateBook, getProgress: () => progress };
 }

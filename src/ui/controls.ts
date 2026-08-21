@@ -3,6 +3,7 @@ import { chooseVerseRange, filterEndVerses } from '../passage-selector';
 import { getVerseCount } from '../verse-counts';
 import { requireElement } from '../shared/dom';
 import type { AppConfig } from '../config';
+import { practiceWorkspaceMarkup } from './practice-workspace.ts';
 
 export function initControls(config: AppConfig) {
   const developerControls = config.isDevelopment ? `
@@ -58,8 +59,7 @@ export function initControls(config: AppConfig) {
           <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Collapse navigation" aria-controls="mode-sidebar" aria-expanded="true"><span aria-hidden="true">‹</span><b>Hide menu</b></button>
           <div class="sidebar-heading">Modes</div>
           <button class="mode-nav active" data-workspace="campaign" aria-label="Journey" title="Journey"><span>✦</span><div><strong>Journey</strong><small id="sidebar-campaign-progress">0 / 0 passages</small></div></button>
-          <button class="mode-nav" data-workspace="practice" data-mode="practice" aria-label="Practice" title="Practice"><span>⌨</span><div><strong>Practice</strong><small>Relaxed typing</small></div></button>
-          <button class="mode-nav" data-workspace="practice" data-mode="memory" aria-label="Memory" title="Memory"><span>◫</span><div><strong>Memory</strong><small>Words fade away</small></div></button>
+          <button class="mode-nav" data-workspace="practice" aria-label="Practice" title="Practice"><span>⌨</span><div><strong>Practice</strong><small>Practice with text guidance</small></div></button>
           <button class="mode-nav" data-workspace="defense" data-mode="defense" aria-label="Arcade" title="Arcade"><span>◇</span><div><strong>Arcade</strong><small>Repel the shadows</small></div></button>
         </aside>
         <div class="page-viewport">
@@ -71,85 +71,7 @@ export function initControls(config: AppConfig) {
           </div>
         </header>
 
-        <div class="practice-workspace">
-          <section class="passage-panel card">
-            <div class="passage-panel-heading"><h3>Passage</h3><p>Select a reference to practice.</p></div>
-            <div class="passage-fields">
-              <div class="translation-field"><label for="translation">Translation</label><select id="translation">
-                <option value="kjv">KJV · King James Version</option>
-                <option value="asv">ASV · American Standard Version</option>
-              </select></div>
-              <div><label for="book">Book</label><select id="book"></select></div>
-              <div><label for="chapter">Chapter</label><select id="chapter"></select></div>
-              <div><label for="start-verse">From</label><select id="start-verse"></select></div>
-              <div><label for="end-verse">To</label><select id="end-verse"></select></div>
-            </div>
-            <button id="load-passage" class="primary-btn">Load passage</button>
-            <select id="game-mode" class="is-hidden" aria-hidden="true">
-              <option value="practice">Practice — relaxed</option>
-              <option value="memory">Memory — words fade as you type</option>
-              <option value="defense">Arcade — repel the shadows</option>
-            </select>
-            <div id="status" class="status" role="status"></div>
-            <div id="memory-controls" class="memory-controls is-hidden">
-              <label for="memory-visibility">Letters shown <strong id="memory-visibility-value">50%</strong></label>
-              <input id="memory-visibility" type="range" min="0" max="100" step="10" value="50">
-            </div>
-            <div id="memory-library" class="memory-library is-hidden">
-              <section><h4>Favorites</h4><div id="memory-favorites" class="memory-passage-list"></div></section>
-              <section><h4>Recently practiced</h4><div id="memory-recent" class="memory-passage-list"></div></section>
-            </div>
-          </section>
-
-          <section class="play-area">
-            <section id="defense-game" class="defense-game is-hidden">
-              <div class="defense-topbar">
-                <div class="resource"><span>✦</span><div><strong id="faith-count">0</strong><small>Faith</small></div></div>
-                <div class="resource"><span>⌂</span><div><strong id="fortress-health">100</strong><small>Fortress</small></div></div>
-                <div class="resource"><span>⚔</span><div><strong id="wave-count">1</strong><small>Wave</small></div></div>
-                <div class="resource"><span>✓</span><div><strong id="defeated-count">0</strong><small>Defeated</small></div></div>
-              </div>
-              <div class="battlefield">
-                <div class="sky-decoration">✦　·　✧　　　·　✦</div>
-                <div class="shadow-gate">⚑</div>
-                <div id="battle-path" class="battle-path"></div>
-                <div class="fortress" title="Your fortress"><span>♜</span><i></i></div>
-                <div id="battle-message" class="battle-message">Type correctly to send light across the field!</div>
-              </div>
-              <div class="upgrade-dock">
-                <button data-upgrade="power"><span>»</span><div><strong>Word Power</strong><small>More damage · <b data-cost="power">35</b> faith</small></div><i data-level="power">Lv 0</i></button>
-                <button data-upgrade="ward"><span>◇</span><div><strong>Stone Ward</strong><small>Less fortress damage · <b data-cost="ward">45</b> faith</small></div><i data-level="ward">Lv 0</i></button>
-                <button data-upgrade="slow"><span>❄</span><div><strong>Still Waters</strong><small>Slow approaching foes · <b data-cost="slow">55</b> faith</small></div><i data-level="slow">Lv 0</i></button>
-              </div>
-            </section>
-            <div id="hud" class="hud"></div>
-            <div id="challenge-banner" class="challenge-banner is-hidden"></div>
-            <article id="typing-card" class="typing-card card">
-              <div class="passage-heading">
-                <div><small>NOW TYPING</small><h3 id="passage-title">John 3:16</h3></div>
-                <button id="focus-button" class="ghost-btn">Focus mode</button>
-              </div>
-              <div class="progress-track"><div id="progress-fill"></div></div>
-              <div id="ready-indicator" class="ready-indicator" role="status" aria-live="polite">
-                <span aria-hidden="true">✦</span><strong>Ready to type</strong>
-              </div>
-              <div id="text" class="text-display" tabindex="0"></div>
-              <div class="typed-area">
-                <div id="typed-bar" class="typed-bar" aria-hidden="true"></div>
-                <input id="input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Type the passage here">
-              </div>
-              <div class="typing-footer">
-                <span>Click the passage or start typing</span>
-                <div>
-                  <button id="favorite-passage" class="text-btn is-hidden" type="button" aria-pressed="false">☆ Favorite</button>
-                  <button id="hint-button" class="hint-button" type="button" disabled>Hint</button>
-                  <button id="restart" class="text-btn">↻ Restart</button>
-                </div>
-              </div>
-              ${developerControls}
-            </article>
-          </section>
-        </div>
+        ${practiceWorkspaceMarkup(developerControls)}
       </section>
       <section id="campaign-screen" class="app-page campaign-screen is-hidden">
         <header class="page-header campaign-header">
@@ -194,9 +116,19 @@ export function initControls(config: AppConfig) {
   const endVerseEl = requireElement('end-verse', HTMLSelectElement);
   const statusEl = requireElement('status', HTMLElement);
   const loadBtn = requireElement('load-passage', HTMLButtonElement);
+  const passagePickerEl = requireElement('passage-picker', HTMLElement);
+  const bookGridEl = requireElement('picker-book-grid', HTMLElement);
+  const chapterGridEl = requireElement('picker-chapter-grid', HTMLElement);
+  const verseGridEl = requireElement('picker-verse-grid', HTMLElement);
+  const pickerBookLabelEl = requireElement('picker-book-label', HTMLElement);
+  const pickerChapterLabelEl = requireElement('picker-chapter-label', HTMLElement);
+  const pickerRangeLabelEl = requireElement('picker-range-label', HTMLElement);
+  let rangeAnchor: number | null = null;
+  let completedVerseIds = new Set<string>();
 
   function populateBooks() {
     bookEl.innerHTML = BOOKS.map(book => `<option value="${book}">${book}</option>`).join('');
+    renderPassagePicker();
   }
 
   function populateChapters(preferred = 1) {
@@ -232,10 +164,85 @@ export function initControls(config: AppConfig) {
     endVerseEl.disabled = count === 0;
     loadBtn.disabled = count === 0;
     statusEl.textContent = count ? '' : 'No verse metadata is available for this chapter.';
+    renderPassagePicker();
   }
+
+  function renderPassagePicker(): void {
+    const book = bookEl.value;
+    const chapter = Number(chapterEl.value);
+    const startVerse = Number(startVerseEl.value);
+    const endVerse = Number(endVerseEl.value);
+    pickerBookLabelEl.textContent = book;
+    pickerChapterLabelEl.textContent = chapter ? `Chapter ${chapter}` : '';
+    pickerRangeLabelEl.textContent = startVerse
+      ? startVerse === endVerse ? `Verse ${startVerse}` : `Verses ${startVerse}–${endVerse}`
+      : '';
+    bookGridEl.replaceChildren(...BOOKS.map(candidate => pickerButton(candidate, candidate === book, () => {
+      bookEl.value = candidate;
+      populateChapters();
+      void populateVerses();
+    })));
+    const chapterCount = getChapterCount(book);
+    chapterGridEl.replaceChildren(...Array.from({ length: chapterCount }, (_, index) => {
+      const candidate = index + 1;
+      return pickerButton(String(candidate), candidate === chapter, () => {
+        chapterEl.value = String(candidate);
+        void populateVerses();
+      });
+    }));
+    const verseCount = getVerseCount(book, chapter);
+    verseGridEl.replaceChildren(...Array.from({ length: verseCount }, (_, index) => {
+      const verse = index + 1;
+      const button = pickerButton(String(verse), verse >= startVerse && verse <= endVerse, () => {
+        if (rangeAnchor === null) {
+          rangeAnchor = verse;
+          startVerseEl.value = String(verse);
+          endVerseEl.value = String(verse);
+        } else {
+          startVerseEl.value = String(Math.min(rangeAnchor, verse));
+          constrainEndVerses();
+          endVerseEl.value = String(Math.max(rangeAnchor, verse));
+          rangeAnchor = null;
+        }
+        renderPassagePicker();
+      });
+      button.dataset.selected = String(verse >= startVerse && verse <= endVerse);
+      const verseId = `${book}:${chapter}:${verse}-${verse}`;
+      button.dataset.complete = String(completedVerseIds.has(verseId));
+      button.setAttribute('aria-label', `Verse ${verse}${completedVerseIds.has(verseId) ? ', completed' : ''}`);
+      return button;
+    }));
+  }
+
+  function pickerButton(label: string, selected: boolean, onClick: () => void): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.setAttribute('aria-pressed', String(selected));
+    button.addEventListener('click', onClick);
+    return button;
+  }
+
+  function setPickerVerseProgress(progress: Record<string, number>): void {
+    completedVerseIds = new Set(Object.entries(progress)
+      .filter(([, stars]) => stars > 0)
+      .map(([id]) => id));
+    renderPassagePicker();
+  }
+
+  document.getElementById('choose-passage')?.addEventListener('click', () => {
+    rangeAnchor = null;
+    renderPassagePicker();
+    passagePickerEl.classList.remove('is-hidden');
+  });
+  document.getElementById('close-passage-picker')?.addEventListener('click', () => {
+    passagePickerEl.classList.add('is-hidden');
+  });
+  loadBtn.addEventListener('click', () => passagePickerEl.classList.add('is-hidden'));
 
   return {
     hudEl: requireElement('hud', HTMLElement), textEl: requireElement('text', HTMLElement),
+    chapterReaderEl: requireElement('chapter-reader', HTMLElement),
     inputEl: requireElement('input', HTMLInputElement), typedBarEl: requireElement('typed-bar', HTMLElement),
     translationEl, bookEl, chapterEl, startVerseEl, endVerseEl,
     loadBtn, statusEl,
@@ -253,11 +260,16 @@ export function initControls(config: AppConfig) {
     defeatedCountEl: requireElement('defeated-count', HTMLElement), battlePathEl: requireElement('battle-path', HTMLElement),
     battleMessageEl: requireElement('battle-message', HTMLElement),
     readyIndicatorEl: requireElement('ready-indicator', HTMLElement),
-    hintButtonEl: requireElement('hint-button', HTMLButtonElement),
+    recallPromptEl: requireElement('recall-prompt', HTMLElement),
     favoritePassageEl: requireElement('favorite-passage', HTMLButtonElement),
-    memoryLibraryEl: requireElement('memory-library', HTMLElement),
+    memoryLibraryEl: requireElement('practice-library', HTMLElement),
+    practiceFavoritesEl: requireElement('practice-favorites', HTMLElement),
     memoryFavoritesEl: requireElement('memory-favorites', HTMLElement),
-    memoryRecentEl: requireElement('memory-recent', HTMLElement),
+    memoryRecentEl: requireElement('practice-recent', HTMLElement),
+    playlistFormEl: requireElement('playlist-create-form', HTMLFormElement),
+    playlistNameEl: requireElement('playlist-name', HTMLInputElement),
+    playlistListEl: requireElement('playlist-list', HTMLElement),
+    playlistStatusEl: requireElement('playlist-status', HTMLElement),
     resultAnalysisEl: requireElement('result-analysis', HTMLElement),
     campaignScreenEl: requireElement('campaign-screen', HTMLElement),
     campaignContentEl: requireElement('campaign-content', HTMLElement),
@@ -268,6 +280,6 @@ export function initControls(config: AppConfig) {
     campaignDevToolsEl: requireElement('campaign-dev-tools', HTMLElement),
     sidebarCampaignProgressEl: requireElement('sidebar-campaign-progress', HTMLElement),
     celebrationEl: requireElement('celebration', HTMLElement),
-    populateBooks, populateChapters, populateVerses, constrainEndVerses
+    populateBooks, populateChapters, populateVerses, constrainEndVerses, setPickerVerseProgress
   };
 }

@@ -11,29 +11,27 @@ export type DefenseElements = {
 };
 
 export function createDefenseView(elements: DefenseElements) {
-  const enemyElements = new Map<number, HTMLElement>();
+  const enemyElements = new Map<number, { element: HTMLElement; health: HTMLElement }>();
   const projectileElements = new Map<number, HTMLElement>();
 
   function render(state: DefenseState): void {
-    elements.faith.textContent = String(state.faith);
-    elements.fortress.textContent = String(state.fortress);
-    elements.wave.textContent = String(state.wave);
-    elements.defeated.textContent = String(state.enemiesDefeated);
+    setText(elements.faith, state.faith);
+    setText(elements.fortress, state.fortress);
+    setText(elements.wave, state.wave);
+    setText(elements.defeated, state.enemiesDefeated);
     removeInactive(enemyElements, new Set(state.enemies.map(enemy => enemy.id)));
     removeInactive(projectileElements, new Set(state.projectiles.map(projectile => projectile.id)));
 
     for (const enemy of state.enemies) {
-      const element = getEnemyElement(enemy.id);
+      const { element, health } = getEnemyElement(enemy.id);
       element.dataset.kind = enemy.kind ?? 'wisp';
-      element.style.left = `${enemy.position}%`;
-      element.style.bottom = `${18 + ((enemy.id % 3) - 1) * 2}px`;
-      const health = element.querySelector<HTMLElement>('.enemy-health i');
-      if (health) health.style.width = `${enemy.health / enemy.maxHealth * 100}%`;
+      const bottom = 18 + ((enemy.id % 3) - 1) * 2;
+      element.style.transform = `translate3d(${enemy.position}cqw, ${-bottom}px, 0) translateX(-50%)`;
+      health.style.transform = `scaleX(${enemy.health / enemy.maxHealth})`;
     }
     for (const projectile of state.projectiles) {
       const element = getProjectileElement(projectile.id);
-      element.style.left = `${projectile.position}%`;
-      element.style.bottom = `${30 + projectile.height}px`;
+      element.style.transform = `translate3d(${projectile.position}cqw, ${-(30 + projectile.height)}px, 0) translateX(-50%)`;
     }
     renderUpgrades(state);
     if (state.status === 'lost') {
@@ -48,21 +46,24 @@ export function createDefenseView(elements: DefenseElements) {
   }
 
   function reset(): void {
-    enemyElements.forEach(element => element.remove());
+    enemyElements.forEach(({ element }) => element.remove());
     projectileElements.forEach(element => element.remove());
     enemyElements.clear();
     projectileElements.clear();
   }
 
-  function getEnemyElement(id: number): HTMLElement {
+  function getEnemyElement(id: number): { element: HTMLElement; health: HTMLElement } {
     const existing = enemyElements.get(id);
     if (existing) return existing;
     const element = document.createElement('div');
     element.className = 'enemy';
     element.innerHTML = '<span class="enemy-core" aria-hidden="true"></span><div class="enemy-health"><i></i></div>';
     elements.path.appendChild(element);
-    enemyElements.set(id, element);
-    return element;
+    const health = element.querySelector<HTMLElement>('.enemy-health i');
+    if (!health) throw new Error('Enemy health element was not created.');
+    const view = { element, health };
+    enemyElements.set(id, view);
+    return view;
   }
 
   function getProjectileElement(id: number): HTMLElement {
@@ -78,13 +79,21 @@ export function createDefenseView(elements: DefenseElements) {
   return { render, reset };
 }
 
-function removeInactive(elements: Map<number, HTMLElement>, activeIds: Set<number>): void {
-  elements.forEach((element, id) => {
+function removeInactive<T extends HTMLElement | { element: HTMLElement }>(
+  elements: Map<number, T>,
+  activeIds: Set<number>
+): void {
+  elements.forEach((entry, id) => {
     if (!activeIds.has(id)) {
-      element.remove();
+      ('element' in entry ? entry.element : entry).remove();
       elements.delete(id);
     }
   });
+}
+
+function setText(element: HTMLElement, value: string | number): void {
+  const text = String(value);
+  if (element.textContent !== text) element.textContent = text;
 }
 
 function renderUpgrades(state: DefenseState): void {

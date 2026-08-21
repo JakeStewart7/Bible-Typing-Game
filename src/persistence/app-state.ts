@@ -1,14 +1,18 @@
-import type { CampaignChunk, CampaignProgress } from '../campaign';
+import { normalizeCampaignProgress, type CampaignChunk, type CampaignProgress } from '../campaign.ts';
+import {
+  emptyPlaylistState,
+  PLAYLIST_STATE_VERSION
+} from '../memory/domain/playlists.ts';
+import type { PlaylistState } from '../memory/domain/playlists.ts';
+import {
+  createPassageId,
+  samePassageReference,
+  type PassageReference
+} from '../memory/domain/passage.ts';
 import type { AppStorage, StoredValue } from './storage.ts';
 import { decodeJson } from './storage.ts';
 
-export type PassageReference = {
-  book: string;
-  chapter: number;
-  startVerse: number;
-  endVerse: number;
-  translation: string;
-};
+export type { PassageReference } from '../memory/domain/passage.ts';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -44,10 +48,21 @@ const favoritePassagesValue: StoredValue<PassageReference[]> = {
     Array.isArray(value) && value.every(isPassageReference))
 };
 
+const practiceFavoritePassagesValue: StoredValue<PassageReference[]> = {
+  key: 'verseTypePracticeFavorites',
+  decode: decodeJson((value): value is PassageReference[] =>
+    Array.isArray(value) && value.every(isPassageReference))
+};
+
 const recentPassagesValue: StoredValue<PassageReference[]> = {
   key: 'verseTypeRecentPassages',
   decode: decodeJson((value): value is PassageReference[] =>
     Array.isArray(value) && value.every(isPassageReference))
+};
+
+const playlistStateValue: StoredValue<PlaylistState> = {
+  key: 'verseTypeMemorizationPlaylists',
+  decode: decodeJson(isPlaylistState)
 };
 
 export class AppStateRepository {
@@ -58,11 +73,11 @@ export class AppStateRepository {
   }
 
   readCampaignProgress(): CampaignProgress {
-    return this.storage.read(campaignProgressValue, {});
+    return normalizeCampaignProgress(this.storage.read(campaignProgressValue, {}));
   }
 
   writeCampaignProgress(progress: CampaignProgress): void {
-    this.storage.write(campaignProgressValue, progress);
+    this.storage.write(campaignProgressValue, normalizeCampaignProgress(progress));
   }
 
   readJourneyPosition(): CampaignChunk | null {
@@ -81,22 +96,54 @@ export class AppStateRepository {
     this.storage.write(favoritePassagesValue, favorites);
   }
 
+  readPracticeFavorites(): PassageReference[] {
+    return this.storage.read(practiceFavoritePassagesValue, []);
+  }
+
+  writePracticeFavorites(favorites: PassageReference[]): void {
+    this.storage.write(practiceFavoritePassagesValue, favorites);
+  }
+
   readRecentPassages(): PassageReference[] {
     return this.storage.read(recentPassagesValue, []);
   }
 
   recordRecentPassage(passage: PassageReference): PassageReference[] {
-    const distinct = this.readRecentPassages().filter(item => !samePassage(item, passage));
+    const distinct = this.readRecentPassages().filter(item => !samePassageReference(item, passage));
     const recent = [passage, ...distinct].slice(0, 10);
     this.storage.write(recentPassagesValue, recent);
     return recent;
   }
+
+  readPlaylistState(): PlaylistState {
+    return this.storage.read(playlistStateValue, emptyPlaylistState());
+  }
+
+  writePlaylistState(state: PlaylistState): void {
+    this.storage.write(playlistStateValue, state);
+  }
 }
 
-function samePassage(left: PassageReference, right: PassageReference): boolean {
-  return left.book === right.book &&
-    left.chapter === right.chapter &&
-    left.startVerse === right.startVerse &&
-    left.endVerse === right.endVerse &&
-    left.translation === right.translation;
+function isPlaylistState(value: unknown): value is PlaylistState {
+  if (!isRecord(value) || value.version !== PLAYLIST_STATE_VERSION || !Array.isArray(value.playlists)) {
+    return false;
+  }
+  const ids = new Set<string>();
+  return value.playlists.every(playlist => {
+    if (!isRecord(playlist) ||
+      typeof playlist.id !== 'string' || !playlist.id ||
+      typeof playlist.name !== 'string' || !playlist.name.trim() ||
+      !Array.isArray(playlist.passages) || !playlist.passages.every(isPassageReference) ||
+      !Number.isInteger(playlist.currentIndex)) {
+      return false;
+    }
+    if (ids.has(playlist.id)) return false;
+    ids.add(playlist.id);
+    const passageIds = new Set(playlist.passages.map(createPassageId));
+    if (passageIds.size !== playlist.passages.length) return false;
+    const currentIndex = Number(playlist.currentIndex);
+    return playlist.passages.length === 0
+      ? currentIndex === 0
+      : currentIndex >= 0 && currentIndex < playlist.passages.length;
+  });
 }

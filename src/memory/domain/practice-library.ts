@@ -1,10 +1,7 @@
-export type PassageReference = {
-  book: string;
-  chapter: number;
-  startVerse: number;
-  endVerse: number;
-  translation: string;
-};
+import { createPassageId, type PassageReference } from './passage.ts';
+
+export type { PassageReference } from './passage.ts';
+export { createPassageId } from './passage.ts';
 
 export type MemoryPassage = PassageReference & {
   id: string;
@@ -22,15 +19,16 @@ export interface MemoryLibraryRepository {
 }
 
 const MAX_RECENT = 6;
+const DEFAULT_PRACTICE_PASSAGE: PassageReference = {
+  book: 'John',
+  chapter: 3,
+  startVerse: 16,
+  endVerse: 16,
+  translation: 'kjv'
+};
 
-export function createPassageId(reference: PassageReference): string {
-  return [
-    reference.translation,
-    reference.book,
-    reference.chapter,
-    reference.startVerse,
-    reference.endVerse
-  ].join(':');
+export function selectPracticeStartPassage(recent: readonly PassageReference[]): PassageReference {
+  return recent[0] ? { ...recent[0] } : { ...DEFAULT_PRACTICE_PASSAGE };
 }
 
 export function toMemoryPassage(reference: PassageReference, practicedAt: number): MemoryPassage {

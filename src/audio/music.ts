@@ -6,7 +6,7 @@ export function setupMusic(container?: HTMLElement | null) {
   const audio = new Audio(tracks[Math.floor(Math.random() * tracks.length)]);
   audio.loop = true;
   audio.volume = 0.22;
-  audio.preload = 'auto';
+  audio.preload = 'none';
 
   container.innerHTML = `
     <div class="music-controls">

@@ -10,12 +10,14 @@ import { setupMusic } from './audio/music';
 import { toggleEffects } from './audio/effects';
 import { createCampaignController } from './campaign-controller';
 import type { CampaignChunk } from './campaign';
-import { fetchRange } from './bible-api';
+import { fetchChapter } from './bible-api';
+import { normalizeChapterVerses, type ChapterVerse } from './typing/chapter-reader';
 import { appConfig } from './config';
 import { AppStateRepository } from './persistence/app-state';
 import { AppStorage } from './persistence/storage';
 import { ProfileRepository } from './persistence/profile-repository';
 import { applyPageTheme, themeForWorkspace } from './ui/page-theme';
+import { createPlaylistController } from './memory/ui/playlist-controller.ts';
 
 import trackDetermination from '../assets/music/determination.mp3';
 import trackApple from '../assets/music/apple_cider.ogg';
@@ -23,22 +25,7 @@ import trackApple from '../assets/music/apple_cider.ogg';
 // bundle tracks for the music module to consume
 (window as Window & { __bundledMusic?: string[] }).__bundledMusic = [trackDetermination, trackApple];
 
-// initialize DOM and controls
-const {
-  hudEl, textEl, inputEl, typedBarEl,
-  translationEl, bookEl, chapterEl, startVerseEl, endVerseEl, loadBtn,
-  statusEl, passageTitleEl, resultsEl, resultStatsEl, progressFillEl,
-  gameModeEl, challengeBannerEl, typingCardEl, rewardMessageEl,
-  levelLabelEl, xpLabelEl, xpFillEl, personalBestEl, lifetimeWpmEl, recentWpmEl,
-  defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
-  battlePathEl, battleMessageEl,
-  readyIndicatorEl, hintButtonEl, favoritePassageEl,
-  memoryLibraryEl, memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
-  campaignScreenEl, campaignContentEl, campaignBackEl, campaignBreadcrumbEl,
-  campaignTotalStarsEl, campaignTotalProgressEl, campaignDevToolsEl,
-  sidebarCampaignProgressEl, celebrationEl,
-  populateBooks, populateChapters, populateVerses, constrainEndVerses
-} = initControls(appConfig);
+const controls = initControls(appConfig);
 const storage = new AppStorage(window.localStorage);
 const stateRepository = new AppStateRepository(storage);
 const profileRepository = new ProfileRepository(storage);
@@ -46,38 +33,56 @@ const profileRepository = new ProfileRepository(storage);
 // ----------------------------
 // Game state (keep instance export for other modules/tests)
 // ----------------------------
-export const game: Game = createGame('Typing games help improve speed and accuracy through practice and focus.');
+export const game: Game = createGame('');
 
 // Wire controllers (moves logic out of main.ts into game/controller.ts)
-const gameController = initGameControllers(game, {
-  hudEl, textEl, inputEl, typedBarEl,
-  translationEl, bookEl, chapterEl, startVerseEl, endVerseEl, loadBtn,
-  statusEl, passageTitleEl, resultsEl, resultStatsEl, progressFillEl,
-  gameModeEl, challengeBannerEl, typingCardEl, rewardMessageEl,
-  levelLabelEl, xpLabelEl, xpFillEl, personalBestEl, lifetimeWpmEl, recentWpmEl,
-  defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
-  battlePathEl, battleMessageEl,
-  readyIndicatorEl, hintButtonEl, favoritePassageEl,
-  memoryLibraryEl, memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
-  populateBooks, populateChapters, populateVerses, constrainEndVerses
-}, stateRepository, profileRepository, storage, appConfig);
+const gameController = initGameControllers(
+  game,
+  controls,
+  stateRepository,
+  profileRepository,
+  storage,
+  appConfig
+);
+const playlistController = createPlaylistController({
+  form: controls.playlistFormEl,
+  nameInput: controls.playlistNameEl,
+  list: controls.playlistListEl,
+  status: controls.playlistStatusEl
+}, {
+  repository: stateRepository,
+  getActivePassage: gameController.getActivePassage,
+  loadPassage: gameController.loadPassage,
+  activateRecallMode: () => gameController.setTextVisibility(50)
+});
+gameController.setPlaylistHooks({
+  complete: playlistController.completeActivePassage,
+  continue: playlistController.continueActivePlaylist,
+  passageChanged: playlistController.handlePassageChanged
+});
 
 setupMusic(document.getElementById('music-slot'));
 
-let startCampaignChunk: (chunk: CampaignChunk, text: string) => void = () => undefined;
+let startCampaignChunk: (chunk: CampaignChunk, verses: ChapterVerse[]) => void = () => undefined;
 const campaignController = createCampaignController({
-  contentEl: campaignContentEl, backEl: campaignBackEl, breadcrumbEl: campaignBreadcrumbEl,
-  totalStarsEl: campaignTotalStarsEl, totalProgressEl: campaignTotalProgressEl,
-  devToolsEl: campaignDevToolsEl, sidebarProgressEl: sidebarCampaignProgressEl, celebrationEl
+  contentEl: controls.campaignContentEl,
+  backEl: controls.campaignBackEl,
+  breadcrumbEl: controls.campaignBreadcrumbEl,
+  totalStarsEl: controls.campaignTotalStarsEl,
+  totalProgressEl: controls.campaignTotalProgressEl,
+  devToolsEl: controls.campaignDevToolsEl,
+  sidebarProgressEl: controls.sidebarCampaignProgressEl,
+  celebrationEl: controls.celebrationEl
 }, (chunk, text) => startCampaignChunk(chunk, text), stateRepository, appConfig);
 
-startCampaignChunk = (chunk, text) => {
+startCampaignChunk = (chunk, verses) => {
   stateRepository.writeJourneyPosition(chunk);
   showWorkspace('campaign-play');
-  gameController.startCampaignChunk(chunk, text);
+  gameController.startCampaignChunk(chunk, verses);
 };
 gameController.setCampaignHooks({
   save: campaignController.saveChunk,
+  savePassage: campaignController.savePassage,
   progress: campaignController.getProgress,
   celebrateBook: campaignController.celebrateBook,
   returnToMenu: book => {
@@ -92,23 +97,24 @@ gameController.setCampaignHooks({
 });
 
 async function fetchCampaignChunk(chunk: CampaignChunk): Promise<void> {
-  const data = await fetchRange(chunk.book, chunk.chapter, chunk.startVerse, chunk.endVerse, 'kjv', false);
-  startCampaignChunk(chunk, data.verses?.map(verse => verse.text).join(' ') ?? '');
+  const data = await fetchChapter(chunk.book, chunk.chapter, 'kjv', false);
+  startCampaignChunk(chunk, normalizeChapterVerses(data.verses ?? []));
 }
 
 function showWorkspace(workspace: string, selectedMode?: string): void {
   const gameScreen = document.getElementById('game-screen');
-  campaignScreenEl.classList.toggle('is-hidden', workspace !== 'campaign');
+  controls.campaignScreenEl.classList.toggle('is-hidden', workspace !== 'campaign');
   gameScreen?.classList.toggle('is-hidden', workspace === 'campaign');
   gameScreen?.classList.toggle('campaign-play', workspace === 'campaign-play');
   const appShell = document.querySelector<HTMLElement>('.app-shell');
   if (appShell) applyPageTheme(appShell, themeForWorkspace(workspace, selectedMode));
   gameScreen?.scrollTo({ top: 0 });
-  campaignScreenEl.scrollTo({ top: 0 });
+  controls.campaignScreenEl.scrollTo({ top: 0 });
   document.querySelectorAll<HTMLElement>('.mode-nav').forEach(button => {
     const campaignActive = (workspace === 'campaign' || workspace === 'campaign-play') && button.dataset.workspace === 'campaign';
-    const modeActive = Boolean(selectedMode) && button.dataset.mode === selectedMode;
-    button.classList.toggle('active', campaignActive || modeActive);
+    const practiceActive = workspace === 'practice' && button.dataset.workspace === 'practice';
+    const modeActive = workspace === 'defense' && button.dataset.mode === selectedMode;
+    button.classList.toggle('active', campaignActive || practiceActive || modeActive);
   });
   if (workspace === 'defense') {
     const mode = document.getElementById('game-mode') as HTMLSelectElement | null;
@@ -118,17 +124,28 @@ function showWorkspace(workspace: string, selectedMode?: string): void {
     }
   } else if (workspace === 'practice') {
     gameController.leaveCampaign();
+    gameController.showPracticeReader();
   } else if (workspace === 'campaign') campaignController.renderBooks();
 }
 
 document.querySelectorAll<HTMLElement>('.mode-nav').forEach(button => button.addEventListener('click', () => {
   const mode = button.dataset.mode;
   if (mode) {
-    gameModeEl.value = mode;
-    gameModeEl.dispatchEvent(new Event('change'));
+    controls.gameModeEl.value = mode;
+    controls.gameModeEl.dispatchEvent(new Event('change'));
   }
-  showWorkspace(button.dataset.workspace ?? 'practice', mode);
+  const workspace = button.dataset.workspace ?? 'practice';
+  if (workspace === 'practice' && controls.gameModeEl.value === 'defense') {
+    controls.gameModeEl.value = 'practice';
+    controls.gameModeEl.dispatchEvent(new Event('change'));
+  }
+  showWorkspace(workspace, mode ?? controls.gameModeEl.value);
 }));
+controls.gameModeEl.addEventListener('change', () => {
+  if (controls.gameModeEl.value === 'practice' || controls.gameModeEl.value === 'memory') {
+    showWorkspace('practice', controls.gameModeEl.value);
+  }
+});
 showWorkspace('campaign');
 const sidebar = document.getElementById('mode-sidebar');
 const sidebarToggle = document.getElementById('sidebar-toggle');

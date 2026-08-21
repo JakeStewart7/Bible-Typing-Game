@@ -1,8 +1,7 @@
-export type PageTheme = 'journey' | 'practice' | 'memory' | 'arcade';
+export type PageTheme = 'journey' | 'practice' | 'arcade';
 
 export function themeForWorkspace(workspace: string, selectedMode?: string): PageTheme {
   if (workspace === 'campaign' || workspace === 'campaign-play') return 'journey';
-  if (selectedMode === 'memory') return 'memory';
   if (selectedMode === 'defense') return 'arcade';
   return 'practice';
 }

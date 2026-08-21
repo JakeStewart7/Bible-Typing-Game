@@ -6,19 +6,44 @@ import { handleInput } from '../src/game/input.ts';
 import { calculateStats } from '../src/game/stats.ts';
 import { getVerseCount, VERSE_COUNTS } from '../src/verse-counts.ts';
 import { advanceEnemy, buyUpgrade, completeDefense, createDefenseState, typeCharacter } from '../src/game/minigame.ts';
-import { createCampaignChunks, getBookProgress, getCampaignProgress, nextChunk, starsForWpm } from '../src/campaign.ts';
+import {
+  completePassage,
+  createCampaignChunks,
+  getBookProgress,
+  getCampaignProgress,
+  nextChunk,
+  normalizeCampaignProgress,
+  starsForWpm
+} from '../src/campaign.ts';
 import { AppStorage } from '../src/persistence/storage.ts';
 import { AppStateRepository } from '../src/persistence/app-state.ts';
 import { ProfileRepository } from '../src/persistence/profile-repository.ts';
 import { filterJourneyBooks, findJourneyContinuation, groupJourneyBooks, isJourneyBookUnlocked, journeyCurrency } from '../src/journey.ts';
-import { shouldHideMemoryCharacter, shouldMaskMemoryCharacter } from '../src/memory/domain/visibility.ts';
+import {
+  hiddenMemoryWordIndices,
+  hiddenPercentForVisibleWords,
+  shouldMaskMemoryCharacter
+} from '../src/memory/domain/visibility.ts';
 import {
   createPassageId,
   recordRecentPassage,
+  selectPracticeStartPassage,
   toggleFavoritePassage
 } from '../src/memory/domain/practice-library.ts';
-import { getCurrentWordRange, isHintAvailable } from '../src/game/hint.ts';
+import { getCurrentWordIndex, getCurrentWordRange, getHintWordIndex, isHintAvailable } from '../src/game/hint.ts';
 import { analyzeSession } from '../src/game/analysis.ts';
+import {
+  addPassage,
+  advancePlaylist,
+  createPlaylist,
+  deletePlaylist,
+  emptyPlaylistState,
+  removePassage,
+  renamePlaylist,
+  reorderPassage,
+  reorderPlaylist
+} from '../src/memory/domain/playlists.ts';
+import { createChapterReader, nextChapterReaderRange } from '../src/typing/chapter-reader.ts';
 
 type Test = { name: string; run: () => void };
 const tests: Test[] = [];
@@ -63,6 +88,43 @@ test('random defense ranges contain seven verses within chapter boundaries', () 
   equal(chooseRandomVerseRange(36, 7, () => 0), { start: 1, end: 7 });
   equal(chooseRandomVerseRange(36, 7, () => .999), { start: 30, end: 36 });
   equal(chooseRandomVerseRange(4, 7, () => .5), { start: 1, end: 4 });
+});
+
+test('chapter reader keeps active verses typeable and surrounding context subdued', () => {
+  const reader = createChapterReader([
+    { verse: 1, text: ' Before ' },
+    { verse: 2, text: 'Active one.' },
+    { verse: 3, text: 'Active two.' },
+    { verse: 4, text: 'After' }
+  ], { startVerse: 2, endVerse: 3 });
+  equal(reader.activeText, 'Active one. Active two.');
+  equal(reader.verses.map(verse => [verse.verse, verse.isActive]), [
+    [1, false], [2, true], [3, true], [4, false]
+  ]);
+});
+
+test('chapter reader continuation keeps range length and crosses chapter ends', () => {
+  const reference = { book: 'John', chapter: 3, startVerse: 5, endVerse: 7, translation: 'kjv' };
+  equal(nextChapterReaderRange(reference, 10, { book: 'John', chapter: 4, verseCount: 5 }), {
+    ...reference, startVerse: 8, endVerse: 10
+  });
+  equal(nextChapterReaderRange({ ...reference, startVerse: 7, endVerse: 9 }, 10, {
+    book: 'John', chapter: 4, verseCount: 5
+  }), {
+    ...reference, startVerse: 10, endVerse: 10
+  });
+  equal(nextChapterReaderRange({ ...reference, startVerse: 8, endVerse: 10 }, 10, {
+    book: 'John', chapter: 4, verseCount: 2
+  }), {
+    book: 'John', chapter: 4, startVerse: 1, endVerse: 2, translation: 'kjv'
+  });
+});
+
+test('chapter reader continuation advances a whole chapter as a whole chapter', () => {
+  const reference = { book: 'John', chapter: 3, startVerse: 1, endVerse: 36, translation: 'kjv' };
+  equal(nextChapterReaderRange(reference, 36, { book: 'John', chapter: 4, verseCount: 54 }), {
+    book: 'John', chapter: 4, startVerse: 1, endVerse: 54, translation: 'kjv'
+  });
 });
 
 test('selector rejects reversed and unavailable ranges', () => {
@@ -140,24 +202,43 @@ test('backspacing freezes accuracy until a new unscored letter is typed', () => 
   equal(calculateStats(game).accuracy, 100);
 });
 
-test('Memory visibility is deterministic and supports its full range', () => {
-  equal(Array.from({ length: 20 }, (_, index) => shouldHideMemoryCharacter(index, 100)).some(Boolean), false);
-  equal(Array.from({ length: 20 }, (_, index) => shouldHideMemoryCharacter(index, 0)).every(Boolean), true);
-  equal(shouldHideMemoryCharacter(0, 50), false);
-  equal(shouldHideMemoryCharacter(1, 50), true);
+test('Text visibility maps visible words to deterministic masked words', () => {
+  equal(hiddenPercentForVisibleWords(100), 0);
+  equal(hiddenPercentForVisibleWords(75), 25);
+  equal(hiddenPercentForVisibleWords(50), 50);
+  equal(hiddenPercentForVisibleWords(25), 75);
+  equal(hiddenPercentForVisibleWords(0), 100);
+  equal([...hiddenMemoryWordIndices(20, 0)], []);
+  equal(hiddenMemoryWordIndices(20, 50).size, 10);
+  equal(hiddenMemoryWordIndices(20, 100).size, 20);
+  equal([...hiddenMemoryWordIndices(20, 37)], [...hiddenMemoryWordIndices(20, 37)]);
 });
 
-test('Memory keeps a hidden letter masked until it is typed correctly', () => {
-  equal(shouldMaskMemoryCharacter(1, 50, undefined, 'a'), true);
-  equal(shouldMaskMemoryCharacter(1, 50, 'x', 'a'), true);
-  equal(shouldMaskMemoryCharacter(1, 50, 'a', 'a'), false);
+test('Memory keeps hidden word characters masked until correct while showing punctuation', () => {
+  equal(shouldMaskMemoryCharacter(true, undefined, 'a'), true);
+  equal(shouldMaskMemoryCharacter(true, 'x', 'a'), true);
+  equal(shouldMaskMemoryCharacter(true, 'a', 'a'), false);
+  equal(shouldMaskMemoryCharacter(true, undefined, ','), false);
+  equal(shouldMaskMemoryCharacter(false, undefined, 'a'), false);
 });
 
 test('hint timing and current-word selection are deterministic', () => {
   equal(getCurrentWordRange('Faith grows here', 7), { start: 6, end: 11 });
   equal(getCurrentWordRange('Faith grows here', 17), { start: 12, end: 16 });
+  equal(getCurrentWordIndex('Faith grows here', 7), 1);
+  equal(getHintWordIndex('Faith grows here', 5, null), 1);
+  equal(getHintWordIndex('Faith grows here', 6, 1), 2);
+  equal(getHintWordIndex('Faith grows here', 12, 2), null);
   equal(isHintAvailable(1_000, 3_000), false);
   equal(isHintAvailable(1_000, 3_001), true);
+});
+
+test('Practice starts from the newest passage or John 3:16', () => {
+  const recent = { book: 'Psalms', chapter: 23, startVerse: 1, endVerse: 4, translation: 'kjv' };
+  equal(selectPracticeStartPassage([recent]), recent);
+  equal(selectPracticeStartPassage([]), {
+    book: 'John', chapter: 3, startVerse: 16, endVerse: 16, translation: 'kjv'
+  });
 });
 
 test('Memory library keeps unique recent passages and toggles favorites', () => {
@@ -170,6 +251,35 @@ test('Memory library keeps unique recent passages and toggles favorites', () => 
   const favorite = toggleFavoritePassage(recent, passage);
   equal(favorite.favorites.map(item => item.id), [passage.id]);
   equal(toggleFavoritePassage(favorite, passage).favorites, []);
+});
+
+test('playlist operations create, rename, reorder, and delete playlists', () => {
+  let state = createPlaylist(emptyPlaylistState(), 'psalms', ' Psalms ');
+  state = createPlaylist(state, 'john', 'John');
+  state = renamePlaylist(state, 'psalms', 'Psalms to remember');
+  state = reorderPlaylist(state, 1, 0);
+  equal(state.playlists.map(playlist => [playlist.id, playlist.name]), [
+    ['john', 'John'],
+    ['psalms', 'Psalms to remember']
+  ]);
+  equal(deletePlaylist(state, 'john').playlists.map(playlist => playlist.id), ['psalms']);
+});
+
+test('playlist passage operations preserve progress and wrap after a completed cycle', () => {
+  const john = { book: 'John', chapter: 3, startVerse: 16, endVerse: 17, translation: 'kjv' };
+  const psalms = { book: 'Psalms', chapter: 23, startVerse: 1, endVerse: 2, translation: 'kjv' };
+  let state = createPlaylist(emptyPlaylistState(), 'memory', 'Memory');
+  state = addPassage(state, 'memory', john);
+  state = addPassage(state, 'memory', psalms);
+  state = addPassage(state, 'memory', john);
+  equal(state.playlists[0]?.passages.length, 2);
+  state = advancePlaylist(state, 'memory').state;
+  state = reorderPassage(state, 'memory', 1, 0);
+  equal(state.playlists[0]?.currentIndex, 0);
+  state = removePassage(state, 'memory', 1);
+  const advanced = advancePlaylist(state, 'memory');
+  equal(advanced.completedCycle, true);
+  equal(advanced.state.playlists[0]?.currentIndex, 0);
 });
 
 test('session analysis identifies difficult words and comparisons', () => {
@@ -293,11 +403,22 @@ test('completing defense awards a victory bonus', () => {
   equal(state.faith, 150);
 });
 
-test('campaign chunks never cross chapter boundaries', () => {
+test('Journey progress creates a task for every verse', () => {
   const chunks = createCampaignChunks('John');
-  equal(chunks[0], { id: 'John:1:1-3', book: 'John', chapter: 1, startVerse: 1, endVerse: 3 });
+  equal(chunks[0], { id: 'John:1:1-1', book: 'John', chapter: 1, startVerse: 1, endVerse: 1 });
   equal(chunks.filter(chunk => chunk.chapter === 1).at(-1)?.endVerse, 51);
   equal(chunks.some((chunk, index) => index > 0 && chunk.chapter !== chunks[index - 1]?.chapter && chunk.startVerse !== 1), false);
+});
+
+test('Practice completions mark every selected verse and migrate legacy ranges', () => {
+  const legacy = normalizeCampaignProgress({ 'John:3:1-3': 2 });
+  equal(Object.keys(legacy), ['John:3:1-1', 'John:3:2-2', 'John:3:3-3']);
+  const completed = completePassage(legacy, {
+    book: 'John', chapter: 3, startVerse: 2, endVerse: 4
+  }, 4);
+  equal(completed['John:3:1-1'], 2);
+  equal(completed['John:3:2-2'], 4);
+  equal(completed['John:3:4-4'], 4);
 });
 
 test('campaign stars use researched speed and accuracy thresholds', () => {
@@ -342,7 +463,7 @@ test('journey unlocks starting books and progresses deterministically', () => {
   equal(isJourneyBookUnlocked('Mark', completedMatthew), true);
 });
 
-test('journey currency counts unique completed passages without using stars', () => {
+test('journey currency counts unique completed verses without using stars', () => {
   equal(journeyCurrency({ 'Matthew:1:1-3': 5, 'Genesis:1:1-3': 1, invalid: 5, 'Mark:1:1-3': 0 }), 2);
 });
 
@@ -378,7 +499,11 @@ test('app state repository validates legacy Journey progress', () => {
     verseTypeCampaignProgress: '{"John:3:16-18":4}'
   });
   const repository = new AppStateRepository(new AppStorage(storage));
-  equal(repository.readCampaignProgress(), { 'John:3:16-18': 4 });
+  equal(repository.readCampaignProgress(), {
+    'John:3:16-16': 4,
+    'John:3:17-17': 4,
+    'John:3:18-18': 4
+  });
   storage.setItem('verseTypeCampaignProgress', '{"bad":99}');
   equal(repository.readCampaignProgress(), {});
 });
@@ -399,16 +524,42 @@ test('recent passages are deduplicated and bounded', () => {
   equal(recent.filter(item => item.chapter === 5).length, 1);
 });
 
-test('Journey position and Memory favorites round-trip through app storage', () => {
+test('Journey position and mode-specific favorites round-trip through app storage', () => {
   const repository = new AppStateRepository(new AppStorage(createMemoryStorage()));
   const position = createCampaignChunks('Obadiah')[0]!;
-  const favorite = {
+  const memoryFavorite = {
     book: 'John', chapter: 3, startVerse: 16, endVerse: 17, translation: 'kjv'
   };
+  const practiceFavorite = {
+    book: 'Psalms', chapter: 23, startVerse: 1, endVerse: 1, translation: 'kjv'
+  };
   repository.writeJourneyPosition(position);
-  repository.writeMemoryFavorites([favorite]);
+  repository.writePracticeFavorites([practiceFavorite]);
+  repository.writeMemoryFavorites([memoryFavorite]);
   equal(repository.readJourneyPosition(), position);
-  equal(repository.readMemoryFavorites(), [favorite]);
+  equal(repository.readPracticeFavorites(), [practiceFavorite]);
+  equal(repository.readMemoryFavorites(), [memoryFavorite]);
+});
+
+test('memorization playlists round-trip through validated app storage', () => {
+  const storage = createMemoryStorage();
+  const repository = new AppStateRepository(new AppStorage(storage));
+  const passage = {
+    book: 'Romans', chapter: 8, startVerse: 1, endVerse: 2, translation: 'kjv'
+  };
+  let state = addPassage(
+    createPlaylist(emptyPlaylistState(), 'romans-8', 'Romans 8'),
+    'romans-8',
+    passage
+  );
+  state = addPassage(state, 'romans-8', {
+    ...passage, startVerse: 3, endVerse: 4
+  });
+  state = advancePlaylist(state, 'romans-8').state;
+  repository.writePlaylistState(state);
+  equal(repository.readPlaylistState(), state);
+  storage.setItem('verseTypeMemorizationPlaylists', '{"version":1,"playlists":[{"id":"bad"}]}');
+  equal(repository.readPlaylistState(), emptyPlaylistState());
 });
 
 function createMemoryStorage(initial: Record<string, string> = {}): Storage {

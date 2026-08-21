@@ -1,5 +1,12 @@
 import type { GameStats } from '../game/stats';
 
+type StatsView = {
+  values: HTMLElement[];
+  renderedValues: string[];
+};
+
+const statsViews = new WeakMap<HTMLElement, StatsView>();
+
 export function renderStats(container: HTMLElement, stats: GameStats): void {
   const items = [
     ['»', stats.wpm, 'WPM'],
@@ -7,9 +14,41 @@ export function renderStats(container: HTMLElement, stats: GameStats): void {
     ['◷', formatTime(stats.time), 'Time'],
     ['✓', `${stats.progress}%`, 'Complete']
   ];
-  container.innerHTML = items.map(([icon, value, label]) => `
-    <div class="stat"><span class="stat-icon">${icon}</span><div><span class="stat-value">${value}</span><span class="stat-label">${label}</span></div></div>
-  `).join('');
+  let view = statsViews.get(container);
+  if (!view) {
+    const elements = items.map(([icon, value, label]) => {
+      const stat = document.createElement('div');
+      stat.className = 'stat';
+      const iconEl = document.createElement('span');
+      iconEl.className = 'stat-icon';
+      iconEl.textContent = String(icon);
+      const copy = document.createElement('div');
+      const valueEl = document.createElement('span');
+      valueEl.className = 'stat-value';
+      valueEl.textContent = String(value);
+      const labelEl = document.createElement('span');
+      labelEl.className = 'stat-label';
+      labelEl.textContent = String(label);
+      copy.append(valueEl, labelEl);
+      stat.append(iconEl, copy);
+      return stat;
+    });
+    container.replaceChildren(...elements);
+    view = {
+      values: [...container.querySelectorAll<HTMLElement>('.stat-value')],
+      renderedValues: items.map(([, value]) => String(value))
+    };
+    statsViews.set(container, view);
+    return;
+  }
+
+  items.forEach(([, value], index) => {
+    const nextValue = String(value);
+    if (view.renderedValues[index] === nextValue) return;
+    const valueEl = view.values[index];
+    if (valueEl) valueEl.textContent = nextValue;
+    view.renderedValues[index] = nextValue;
+  });
 }
 
 function formatTime(seconds: number) {
