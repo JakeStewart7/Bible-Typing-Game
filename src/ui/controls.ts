@@ -92,8 +92,8 @@ export function initControls(config: AppConfig) {
             </select>
             <div id="status" class="status" role="status"></div>
             <div id="memory-controls" class="memory-controls is-hidden">
-              <label for="memory-visibility">Letters shown <strong id="memory-visibility-value">50%</strong></label>
-              <input id="memory-visibility" type="range" min="0" max="100" step="10" value="50">
+              <label for="memory-visibility">Words hidden <strong id="memory-visibility-value">50%</strong></label>
+              <input id="memory-visibility" type="range" min="0" max="100" step="1" value="50">
             </div>
             <div id="memory-library" class="memory-library is-hidden">
               <section><h4>Favorites</h4><div id="memory-favorites" class="memory-passage-list"></div></section>

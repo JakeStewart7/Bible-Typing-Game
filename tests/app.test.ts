@@ -11,7 +11,7 @@ import { AppStorage } from '../src/persistence/storage.ts';
 import { AppStateRepository } from '../src/persistence/app-state.ts';
 import { ProfileRepository } from '../src/persistence/profile-repository.ts';
 import { filterJourneyBooks, findJourneyContinuation, groupJourneyBooks, isJourneyBookUnlocked, journeyCurrency } from '../src/journey.ts';
-import { shouldHideMemoryCharacter, shouldMaskMemoryCharacter } from '../src/memory/domain/visibility.ts';
+import { hiddenMemoryWordIndices, shouldMaskMemoryCharacter } from '../src/memory/domain/visibility.ts';
 import {
   createPassageId,
   recordRecentPassage,
@@ -140,17 +140,19 @@ test('backspacing freezes accuracy until a new unscored letter is typed', () => 
   equal(calculateStats(game).accuracy, 100);
 });
 
-test('Memory visibility is deterministic and supports its full range', () => {
-  equal(Array.from({ length: 20 }, (_, index) => shouldHideMemoryCharacter(index, 100)).some(Boolean), false);
-  equal(Array.from({ length: 20 }, (_, index) => shouldHideMemoryCharacter(index, 0)).every(Boolean), true);
-  equal(shouldHideMemoryCharacter(0, 50), false);
-  equal(shouldHideMemoryCharacter(1, 50), true);
+test('Memory hides the requested percentage of whole words deterministically', () => {
+  equal([...hiddenMemoryWordIndices(20, 0)], []);
+  equal(hiddenMemoryWordIndices(20, 50).size, 10);
+  equal(hiddenMemoryWordIndices(20, 100).size, 20);
+  equal([...hiddenMemoryWordIndices(20, 37)], [...hiddenMemoryWordIndices(20, 37)]);
 });
 
-test('Memory keeps a hidden letter masked until it is typed correctly', () => {
-  equal(shouldMaskMemoryCharacter(1, 50, undefined, 'a'), true);
-  equal(shouldMaskMemoryCharacter(1, 50, 'x', 'a'), true);
-  equal(shouldMaskMemoryCharacter(1, 50, 'a', 'a'), false);
+test('Memory keeps hidden word characters masked until correct while showing punctuation', () => {
+  equal(shouldMaskMemoryCharacter(true, undefined, 'a'), true);
+  equal(shouldMaskMemoryCharacter(true, 'x', 'a'), true);
+  equal(shouldMaskMemoryCharacter(true, 'a', 'a'), false);
+  equal(shouldMaskMemoryCharacter(true, undefined, ','), false);
+  equal(shouldMaskMemoryCharacter(false, undefined, 'a'), false);
 });
 
 test('hint timing and current-word selection are deterministic', () => {

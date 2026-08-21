@@ -1,5 +1,5 @@
 import type { Game } from '../game/state';
-import { shouldMaskMemoryCharacter } from '../memory/domain/visibility';
+import { hiddenMemoryWordIndices, shouldMaskMemoryCharacter } from '../memory/domain/visibility';
 
 type CaretMotion = {
   element: HTMLElement;
@@ -110,7 +110,10 @@ export function renderText(container: HTMLElement, game: Game) {
 
   const words = game.text.split(' ');
   const memoryMode = container.closest<HTMLElement>('[data-mode="memory"]');
-  const memoryVisibility = Number(memoryMode?.style.getPropertyValue('--memory-visibility') || 50);
+  const memoryHiddenPercent = Number(memoryMode?.style.getPropertyValue('--memory-hidden-percent') || 50);
+  const hiddenWords = memoryMode
+    ? hiddenMemoryWordIndices(words.length, memoryHiddenPercent)
+    : new Set<number>();
   let charIndex = 0;
 
   const firstErrorIndex = game.typed.findIndex((c, i) => c !== game.chars[i]);
@@ -135,9 +138,8 @@ export function renderText(container: HTMLElement, game: Game) {
       const span = document.createElement('span');
       span.textContent = word[i];
       span.classList.add('char');
-      const hiddenInMemory = Boolean(memoryMode) && shouldMaskMemoryCharacter(
-        charIndex,
-        memoryVisibility,
+      const hiddenInMemory = shouldMaskMemoryCharacter(
+        hiddenWords.has(wIdx),
         game.typed[charIndex],
         game.chars[charIndex] ?? ''
       );

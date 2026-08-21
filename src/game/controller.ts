@@ -78,7 +78,7 @@ export function initGameControllers(
   let defense: DefenseState = createDefenseState();
   let defenseFrame = 0;
   let previousFrame = performance.now();
-  let memoryVisibility = 50;
+  let memoryHiddenPercent = 50;
   let activePassage: PassageReference | null = null;
   let lastProgressAt = Date.now();
   let hintTimer = 0;
@@ -402,9 +402,9 @@ export function initGameControllers(
   gameModeEl.addEventListener('change', setMode);
   const memorySlider = document.getElementById('memory-visibility') as HTMLInputElement | null;
   memorySlider?.addEventListener('input', () => {
-    memoryVisibility = Number(memorySlider.value);
-    document.getElementById('memory-visibility-value')!.textContent = `${memoryVisibility}%`;
-    typingCardEl.style.setProperty('--memory-visibility', String(memoryVisibility));
+    memoryHiddenPercent = Number(memorySlider.value);
+    document.getElementById('memory-visibility-value')!.textContent = `${memoryHiddenPercent}%`;
+    typingCardEl.style.setProperty('--memory-hidden-percent', String(memoryHiddenPercent));
     updateUI();
   });
   document.querySelectorAll<HTMLButtonElement>('[data-upgrade]').forEach(button => {
