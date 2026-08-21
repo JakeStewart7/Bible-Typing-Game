@@ -20,6 +20,17 @@ import {
 } from '../src/memory/domain/practice-library.ts';
 import { getCurrentWordRange, isHintAvailable } from '../src/game/hint.ts';
 import { analyzeSession } from '../src/game/analysis.ts';
+import {
+  addPassage,
+  advancePlaylist,
+  createPlaylist,
+  deletePlaylist,
+  emptyPlaylistState,
+  removePassage,
+  renamePlaylist,
+  reorderPassage,
+  reorderPlaylist
+} from '../src/memory/domain/playlists.ts';
 
 type Test = { name: string; run: () => void };
 const tests: Test[] = [];
@@ -180,6 +191,35 @@ test('Memory starts with the newest practiced passage or Genesis 1:1', () => {
   equal(selectMemoryStartPassage([recent]), recent);
   equal(selectMemoryStartPassage([]), {
     book: 'Genesis', chapter: 1, startVerse: 1, endVerse: 1, translation: 'kjv'
+  });
+
+  test('playlist operations create, rename, reorder, and delete playlists', () => {
+    let state = createPlaylist(emptyPlaylistState(), 'psalms', ' Psalms ');
+    state = createPlaylist(state, 'john', 'John');
+    state = renamePlaylist(state, 'psalms', 'Psalms to remember');
+    state = reorderPlaylist(state, 1, 0);
+    equal(state.playlists.map(playlist => [playlist.id, playlist.name]), [
+      ['john', 'John'],
+      ['psalms', 'Psalms to remember']
+    ]);
+    equal(deletePlaylist(state, 'john').playlists.map(playlist => playlist.id), ['psalms']);
+  });
+
+  test('playlist passage operations preserve progress and wrap after a completed cycle', () => {
+    const john = { book: 'John', chapter: 3, startVerse: 16, endVerse: 17, translation: 'kjv' };
+    const psalms = { book: 'Psalms', chapter: 23, startVerse: 1, endVerse: 2, translation: 'kjv' };
+    let state = createPlaylist(emptyPlaylistState(), 'memory', 'Memory');
+    state = addPassage(state, 'memory', john);
+    state = addPassage(state, 'memory', psalms);
+    state = addPassage(state, 'memory', john);
+    equal(state.playlists[0]?.passages.length, 2);
+    state = advancePlaylist(state, 'memory').state;
+    state = reorderPassage(state, 'memory', 1, 0);
+    equal(state.playlists[0]?.currentIndex, 0);
+    state = removePassage(state, 'memory', 1);
+    const advanced = advancePlaylist(state, 'memory');
+    equal(advanced.completedCycle, true);
+    equal(advanced.state.playlists[0]?.currentIndex, 0);
   });
 });
 
@@ -410,16 +450,35 @@ test('recent passages are deduplicated and bounded', () => {
   equal(recent.filter(item => item.chapter === 5).length, 1);
 });
 
-test('Journey position and Memory favorites round-trip through app storage', () => {
+test('Journey position and mode-specific favorites round-trip through app storage', () => {
   const repository = new AppStateRepository(new AppStorage(createMemoryStorage()));
   const position = createCampaignChunks('Obadiah')[0]!;
   const favorite = {
     book: 'John', chapter: 3, startVerse: 16, endVerse: 17, translation: 'kjv'
   };
   repository.writeJourneyPosition(position);
+  repository.writePracticeFavorites([favorite]);
   repository.writeMemoryFavorites([favorite]);
   equal(repository.readJourneyPosition(), position);
+  equal(repository.readPracticeFavorites(), [favorite]);
   equal(repository.readMemoryFavorites(), [favorite]);
+});
+
+test('memorization playlists round-trip through validated app storage', () => {
+  const storage = createMemoryStorage();
+  const repository = new AppStateRepository(new AppStorage(storage));
+  const passage = {
+    book: 'Romans', chapter: 8, startVerse: 1, endVerse: 2, translation: 'kjv'
+  };
+  const state = addPassage(
+    createPlaylist(emptyPlaylistState(), 'romans-8', 'Romans 8'),
+    'romans-8',
+    passage
+  );
+  repository.writePlaylistState(state);
+  equal(repository.readPlaylistState(), state);
+  storage.setItem('verseTypeMemorizationPlaylists', '{"version":1,"playlists":[{"id":"bad"}]}');
+  equal(repository.readPlaylistState(), emptyPlaylistState());
 });
 
 function createMemoryStorage(initial: Record<string, string> = {}): Storage {
