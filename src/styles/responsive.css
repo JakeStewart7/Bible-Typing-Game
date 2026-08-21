@@ -105,9 +105,6 @@
   .passage-panel > .primary-btn { justify-self: stretch; }
   .status { grid-column: 1; }
   .memory-library { grid-template-columns: 1fr; }
-  .playlist-title { align-items: stretch; flex-direction: column; }
-  .playlist-title form { width: 100%; }
-  .playlist-title input { flex: 1; }
   .page-header { align-items: flex-start; }
 }
 
@@ -131,8 +128,6 @@
   .campaign-summary { text-align: left; }
   .campaign-dev-tools { display: grid; }
   .result-actions { flex-direction: column; }
-  .playlist-card { grid-template-columns: 1fr; }
-  .playlist-actions, .playlist-footer { justify-content: flex-start; flex-wrap: wrap; }
   .playlist-passages li { align-items: flex-start; flex-direction: column; }
   .app-shell[data-theme="arcade"] .header-profile { display: none; }
   .app-shell[data-theme="arcade"] .top-actions {
