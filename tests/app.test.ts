@@ -31,6 +31,7 @@ import {
   reorderPassage,
   reorderPlaylist
 } from '../src/memory/domain/playlists.ts';
+import { createChapterReader, nextChapterReaderRange } from '../src/typing/chapter-reader.ts';
 
 type Test = { name: string; run: () => void };
 const tests: Test[] = [];
@@ -75,6 +76,38 @@ test('random defense ranges contain seven verses within chapter boundaries', () 
   equal(chooseRandomVerseRange(36, 7, () => 0), { start: 1, end: 7 });
   equal(chooseRandomVerseRange(36, 7, () => .999), { start: 30, end: 36 });
   equal(chooseRandomVerseRange(4, 7, () => .5), { start: 1, end: 4 });
+});
+
+test('chapter reader keeps active verses typeable and surrounding context subdued', () => {
+  const reader = createChapterReader([
+    { verse: 1, text: ' Before ' },
+    { verse: 2, text: 'Active one.' },
+    { verse: 3, text: 'Active two.' },
+    { verse: 4, text: 'After' }
+  ], { startVerse: 2, endVerse: 3 });
+  equal(reader.activeText, 'Active one. Active two.');
+  equal(reader.verses.map(verse => [verse.verse, verse.isActive]), [
+    [1, false], [2, true], [3, true], [4, false]
+  ]);
+});
+
+test('chapter reader continuation keeps range length and crosses chapter ends', () => {
+  const reference = { book: 'John', chapter: 3, startVerse: 5, endVerse: 7, translation: 'kjv' };
+  equal(nextChapterReaderRange(reference, 10, { book: 'John', chapter: 4, verseCount: 5 }), {
+    ...reference, startVerse: 8, endVerse: 10
+  });
+  equal(nextChapterReaderRange({ ...reference, startVerse: 8, endVerse: 10 }, 10, {
+    book: 'John', chapter: 4, verseCount: 2
+  }), {
+    book: 'John', chapter: 4, startVerse: 1, endVerse: 2, translation: 'kjv'
+  });
+});
+
+test('chapter reader continuation advances a whole chapter as a whole chapter', () => {
+  const reference = { book: 'John', chapter: 3, startVerse: 1, endVerse: 36, translation: 'kjv' };
+  equal(nextChapterReaderRange(reference, 36, { book: 'John', chapter: 4, verseCount: 54 }), {
+    book: 'John', chapter: 4, startVerse: 1, endVerse: 54, translation: 'kjv'
+  });
 });
 
 test('selector rejects reversed and unavailable ranges', () => {
