@@ -17,6 +17,8 @@ type CaretMotion = {
 };
 
 const caretMotions = new WeakMap<HTMLElement, CaretMotion>();
+const CARET_SPEED_LIMIT = 4.5;
+const CARET_SPEED_OVERFLOW_FACTOR = .25;
 
 function animateCaret(motion: CaretMotion, now: number): void {
   const delta = Math.min(2, Math.max(.25, (now - motion.lastTime) / 16.67));
@@ -24,9 +26,9 @@ function animateCaret(motion: CaretMotion, now: number): void {
   const acceleration = .03 * delta;
   const damping = Math.pow(.86, delta);
 
-  motion.velocityX = (motion.velocityX + (motion.targetX - motion.x) * acceleration) * damping;
-  motion.velocityY = (motion.velocityY + (motion.targetY - motion.y) * acceleration) * damping;
-  motion.velocityHeight = (motion.velocityHeight + (motion.targetHeight - motion.height) * acceleration) * damping;
+  motion.velocityX = softenCaretVelocity((motion.velocityX + (motion.targetX - motion.x) * acceleration) * damping);
+  motion.velocityY = softenCaretVelocity((motion.velocityY + (motion.targetY - motion.y) * acceleration) * damping);
+  motion.velocityHeight = softenCaretVelocity((motion.velocityHeight + (motion.targetHeight - motion.height) * acceleration) * damping);
   motion.x = moveWithoutOvershoot(motion.x, motion.targetX, motion.velocityX * delta);
   motion.y = moveWithoutOvershoot(motion.y, motion.targetY, motion.velocityY * delta);
   motion.height = moveWithoutOvershoot(motion.height, motion.targetHeight, motion.velocityHeight * delta);
@@ -49,6 +51,12 @@ function animateCaret(motion: CaretMotion, now: number): void {
     motion.frame = 0;
     renderCaretPosition(motion);
   }
+}
+
+function softenCaretVelocity(velocity: number): number {
+  const magnitude = Math.abs(velocity);
+  if (magnitude <= CARET_SPEED_LIMIT) return velocity;
+  return Math.sign(velocity) * (CARET_SPEED_LIMIT + (magnitude - CARET_SPEED_LIMIT) * CARET_SPEED_OVERFLOW_FACTOR);
 }
 
 function moveWithoutOvershoot(current: number, target: number, movement: number): number {
