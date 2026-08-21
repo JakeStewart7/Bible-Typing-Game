@@ -1,4 +1,4 @@
-import type { CampaignChunk, CampaignProgress } from '../campaign';
+import { normalizeCampaignProgress, type CampaignChunk, type CampaignProgress } from '../campaign.ts';
 import {
   emptyPlaylistState,
   PLAYLIST_STATE_VERSION
@@ -69,11 +69,11 @@ export class AppStateRepository {
   }
 
   readCampaignProgress(): CampaignProgress {
-    return this.storage.read(campaignProgressValue, {});
+    return normalizeCampaignProgress(this.storage.read(campaignProgressValue, {}));
   }
 
   writeCampaignProgress(progress: CampaignProgress): void {
-    this.storage.write(campaignProgressValue, progress);
+    this.storage.write(campaignProgressValue, normalizeCampaignProgress(progress));
   }
 
   readJourneyPosition(): CampaignChunk | null {

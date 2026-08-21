@@ -102,7 +102,7 @@ export function updateCaretPosition(container: HTMLElement, game: Game) {
   motion.element.classList.toggle('complete', !caretEl);
 }
 
-export function renderText(container: HTMLElement, game: Game) {
+export function renderText(container: HTMLElement, game: Game, revealedWordIndex: number | null = null) {
   const motion = caretMotions.get(container);
   container.replaceChildren();
   if (motion) container.appendChild(motion.element);
@@ -138,7 +138,7 @@ export function renderText(container: HTMLElement, game: Game) {
       const span = document.createElement('span');
       span.textContent = word[i];
       span.classList.add('char');
-      const hiddenInMemory = shouldMaskMemoryCharacter(
+      const hiddenInMemory = wIdx !== revealedWordIndex && shouldMaskMemoryCharacter(
         hiddenWords.has(wIdx),
         game.typed[charIndex],
         game.chars[charIndex] ?? ''

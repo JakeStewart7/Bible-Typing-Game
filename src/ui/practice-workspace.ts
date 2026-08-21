@@ -3,42 +3,45 @@ import { RECALL_VISIBILITY_PRESETS } from '../memory/domain/visibility.ts';
 export function practiceWorkspaceMarkup(developerControls: string): string {
   return `
     <div class="practice-workspace">
-      <section class="passage-panel card">
-        <div class="passage-panel-heading"><h3>Passage</h3><p>Select a reference to practice.</p></div>
-        <div class="passage-fields">
-          <div class="translation-field"><label for="translation">Translation</label><select id="translation">
+      <section id="passage-picker" class="passage-picker is-hidden" role="dialog" aria-modal="true" aria-labelledby="passage-picker-title">
+        <div class="passage-picker-dialog">
+          <header class="passage-picker-heading">
+            <div><h3 id="passage-picker-title">Choose a passage</h3><p>Pick a book, chapter, and verse range.</p></div>
+            <button id="close-passage-picker" class="ghost-btn" type="button">Close</button>
+          </header>
+          <div class="picker-translation"><label for="translation">Translation</label><select id="translation">
             <option value="kjv">KJV · King James Version</option>
             <option value="asv">ASV · American Standard Version</option>
           </select></div>
-          <div><label for="book">Book</label><select id="book"></select></div>
-          <div><label for="chapter">Chapter</label><select id="chapter"></select></div>
-          <div><label for="start-verse">From</label><select id="start-verse"></select></div>
-          <div><label for="end-verse">To</label><select id="end-verse"></select></div>
-        </div>
-        <button id="load-passage" class="primary-btn">Load passage</button>
-        <select id="game-mode" class="is-hidden" aria-hidden="true">
-          <option value="practice">Practice — relaxed</option>
-          <option value="memory">Practice — text recall</option>
-          <option value="defense">Arcade — repel the shadows</option>
-        </select>
-        <div id="status" class="status" role="status"></div>
-        <div id="practice-library" class="memory-library is-hidden">
-          <section><h4>Practice favorites</h4><div id="practice-favorites" class="memory-passage-list"></div></section>
-          <section><h4>Recall favorites</h4><div id="memory-favorites" class="memory-passage-list"></div></section>
-          <section><h4>Recently practiced</h4><div id="practice-recent" class="memory-passage-list"></div></section>
-        </div>
-        <section id="playlist-library" class="playlist-library">
-          <div class="playlist-title">
-            <div><h4>Recall playlists</h4><p>Practice saved passages in order.</p></div>
-            <form id="playlist-create-form">
-              <label class="sr-only" for="playlist-name">New playlist name</label>
-              <input id="playlist-name" maxlength="80" placeholder="New playlist name" required>
-              <button class="secondary-btn" type="submit">Create</button>
-            </form>
+          <select id="book" class="is-hidden" aria-hidden="true"></select>
+          <select id="chapter" class="is-hidden" aria-hidden="true"></select>
+          <select id="start-verse" class="is-hidden" aria-hidden="true"></select>
+          <select id="end-verse" class="is-hidden" aria-hidden="true"></select>
+          <section class="picker-section"><div class="picker-section-heading"><h4>Book</h4><span id="picker-book-label"></span></div><div id="picker-book-grid" class="picker-book-grid"></div></section>
+          <section class="picker-section"><div class="picker-section-heading"><h4>Chapter</h4><span id="picker-chapter-label"></span></div><div id="picker-chapter-grid" class="picker-chapter-grid"></div></section>
+          <section class="picker-section"><div class="picker-section-heading"><h4>Verses</h4><span id="picker-range-label"></span></div><div id="picker-verse-grid" class="picker-verse-grid"></div></section>
+          <div class="picker-actions">
+            <div id="status" class="status" role="status"></div>
+            <button id="load-passage" class="primary-btn">Open chapter reader</button>
           </div>
-          <div id="playlist-status" class="status" role="status"></div>
-          <div id="playlist-list" class="playlist-list"></div>
-        </section>
+          <div id="practice-library" class="memory-library is-hidden">
+            <section><h4>Practice favorites</h4><div id="practice-favorites" class="memory-passage-list"></div></section>
+            <section><h4>Recall favorites</h4><div id="memory-favorites" class="memory-passage-list"></div></section>
+            <section><h4>Recently practiced</h4><div id="practice-recent" class="memory-passage-list"></div></section>
+          </div>
+          <section id="playlist-library" class="playlist-library">
+            <div class="playlist-title">
+              <div><h4>Recall playlists</h4><p>Practice saved passages in order.</p></div>
+              <form id="playlist-create-form">
+                <label class="sr-only" for="playlist-name">New playlist name</label>
+                <input id="playlist-name" maxlength="80" placeholder="New playlist name" required>
+                <button class="secondary-btn" type="submit">Create</button>
+              </form>
+            </div>
+            <div id="playlist-status" class="status" role="status"></div>
+            <div id="playlist-list" class="playlist-list"></div>
+          </section>
+        </div>
       </section>
 
       <section class="play-area">
@@ -68,6 +71,7 @@ export function practiceWorkspaceMarkup(developerControls: string): string {
           <div class="passage-heading">
             <div><small>NOW TYPING</small><h3 id="passage-title">John 3:16</h3></div>
             <div class="reader-tools">
+              <button id="choose-passage" class="ghost-btn">Choose passage</button>
               <fieldset class="text-visibility">
                 <legend>Text visibility</legend>
                 <div>
@@ -88,17 +92,25 @@ export function practiceWorkspaceMarkup(developerControls: string): string {
           <div class="typed-area">
             <div id="typed-bar" class="typed-bar" aria-hidden="true"></div>
             <input id="input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Type the passage here">
+            <div id="recall-prompt" class="recall-prompt is-hidden" role="status">
+              <span>Need a nudge?</span> Press <kbd>Ctrl</kbd> + <kbd>H</kbd> to reveal the next word.
+            </div>
           </div>
           <div class="typing-footer">
             <span>Click the passage or start typing</span>
             <div>
               <button id="favorite-passage" class="text-btn is-hidden" type="button" aria-pressed="false">☆ Favorite</button>
-              <button id="hint-button" class="hint-button" type="button" disabled>Hint</button>
+              <button id="hint-button" class="hint-button" type="button" disabled>Reveal word</button>
               <button id="restart" class="text-btn">↻ Restart</button>
             </div>
           </div>
           ${developerControls}
         </article>
       </section>
+      <select id="game-mode" class="is-hidden" aria-hidden="true">
+        <option value="practice">Practice — relaxed</option>
+        <option value="memory">Practice — text recall</option>
+        <option value="defense">Arcade — repel the shadows</option>
+      </select>
     </div>`;
 }

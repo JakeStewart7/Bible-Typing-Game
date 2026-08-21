@@ -59,7 +59,7 @@ export function initControls(config: AppConfig) {
           <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Collapse navigation" aria-controls="mode-sidebar" aria-expanded="true"><span aria-hidden="true">‹</span><b>Hide menu</b></button>
           <div class="sidebar-heading">Modes</div>
           <button class="mode-nav active" data-workspace="campaign" aria-label="Journey" title="Journey"><span>✦</span><div><strong>Journey</strong><small id="sidebar-campaign-progress">0 / 0 passages</small></div></button>
-          <button class="mode-nav" data-workspace="practice" aria-label="Practice" title="Practice"><span>⌨</span><div><strong>Practice</strong><small>Practice or memorize</small></div></button>
+          <button class="mode-nav" data-workspace="practice" aria-label="Practice" title="Practice"><span>⌨</span><div><strong>Practice</strong><small>Practice with text guidance</small></div></button>
           <button class="mode-nav" data-workspace="defense" data-mode="defense" aria-label="Arcade" title="Arcade"><span>◇</span><div><strong>Arcade</strong><small>Repel the shadows</small></div></button>
         </aside>
         <div class="page-viewport">
@@ -116,9 +116,19 @@ export function initControls(config: AppConfig) {
   const endVerseEl = requireElement('end-verse', HTMLSelectElement);
   const statusEl = requireElement('status', HTMLElement);
   const loadBtn = requireElement('load-passage', HTMLButtonElement);
+  const passagePickerEl = requireElement('passage-picker', HTMLElement);
+  const bookGridEl = requireElement('picker-book-grid', HTMLElement);
+  const chapterGridEl = requireElement('picker-chapter-grid', HTMLElement);
+  const verseGridEl = requireElement('picker-verse-grid', HTMLElement);
+  const pickerBookLabelEl = requireElement('picker-book-label', HTMLElement);
+  const pickerChapterLabelEl = requireElement('picker-chapter-label', HTMLElement);
+  const pickerRangeLabelEl = requireElement('picker-range-label', HTMLElement);
+  let rangeAnchor: number | null = null;
+  let completedVerseIds = new Set<string>();
 
   function populateBooks() {
     bookEl.innerHTML = BOOKS.map(book => `<option value="${book}">${book}</option>`).join('');
+    renderPassagePicker();
   }
 
   function populateChapters(preferred = 1) {
@@ -154,7 +164,81 @@ export function initControls(config: AppConfig) {
     endVerseEl.disabled = count === 0;
     loadBtn.disabled = count === 0;
     statusEl.textContent = count ? '' : 'No verse metadata is available for this chapter.';
+    renderPassagePicker();
   }
+
+  function renderPassagePicker(): void {
+    const book = bookEl.value;
+    const chapter = Number(chapterEl.value);
+    const startVerse = Number(startVerseEl.value);
+    const endVerse = Number(endVerseEl.value);
+    pickerBookLabelEl.textContent = book;
+    pickerChapterLabelEl.textContent = chapter ? `Chapter ${chapter}` : '';
+    pickerRangeLabelEl.textContent = startVerse
+      ? startVerse === endVerse ? `Verse ${startVerse}` : `Verses ${startVerse}–${endVerse}`
+      : '';
+    bookGridEl.replaceChildren(...BOOKS.map(candidate => pickerButton(candidate, candidate === book, () => {
+      bookEl.value = candidate;
+      populateChapters();
+      void populateVerses();
+    })));
+    const chapterCount = getChapterCount(book);
+    chapterGridEl.replaceChildren(...Array.from({ length: chapterCount }, (_, index) => {
+      const candidate = index + 1;
+      return pickerButton(String(candidate), candidate === chapter, () => {
+        chapterEl.value = String(candidate);
+        void populateVerses();
+      });
+    }));
+    const verseCount = getVerseCount(book, chapter);
+    verseGridEl.replaceChildren(...Array.from({ length: verseCount }, (_, index) => {
+      const verse = index + 1;
+      const button = pickerButton(String(verse), verse >= startVerse && verse <= endVerse, () => {
+        if (rangeAnchor === null) {
+          rangeAnchor = verse;
+          startVerseEl.value = String(verse);
+          endVerseEl.value = String(verse);
+        } else {
+          startVerseEl.value = String(Math.min(rangeAnchor, verse));
+          constrainEndVerses();
+          endVerseEl.value = String(Math.max(rangeAnchor, verse));
+          rangeAnchor = null;
+        }
+        renderPassagePicker();
+      });
+      button.dataset.selected = String(verse >= startVerse && verse <= endVerse);
+      const verseId = `${book}:${chapter}:${verse}-${verse}`;
+      button.dataset.complete = String(completedVerseIds.has(verseId));
+      button.setAttribute('aria-label', `Verse ${verse}${completedVerseIds.has(verseId) ? ', completed' : ''}`);
+      return button;
+    }));
+  }
+
+  function pickerButton(label: string, selected: boolean, onClick: () => void): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.setAttribute('aria-pressed', String(selected));
+    button.addEventListener('click', onClick);
+    return button;
+  }
+
+  function setPickerVerseProgress(progress: Record<string, number>): void {
+    completedVerseIds = new Set(Object.entries(progress)
+      .filter(([, stars]) => stars > 0)
+      .map(([id]) => id));
+    renderPassagePicker();
+  }
+
+  document.getElementById('choose-passage')?.addEventListener('click', () => {
+    rangeAnchor = null;
+    renderPassagePicker();
+    passagePickerEl.classList.remove('is-hidden');
+  });
+  document.getElementById('close-passage-picker')?.addEventListener('click', () => {
+    passagePickerEl.classList.add('is-hidden');
+  });
+  loadBtn.addEventListener('click', () => passagePickerEl.classList.add('is-hidden'));
 
   return {
     hudEl: requireElement('hud', HTMLElement), textEl: requireElement('text', HTMLElement),
@@ -177,6 +261,7 @@ export function initControls(config: AppConfig) {
     battleMessageEl: requireElement('battle-message', HTMLElement),
     readyIndicatorEl: requireElement('ready-indicator', HTMLElement),
     hintButtonEl: requireElement('hint-button', HTMLButtonElement),
+    recallPromptEl: requireElement('recall-prompt', HTMLElement),
     favoritePassageEl: requireElement('favorite-passage', HTMLButtonElement),
     memoryLibraryEl: requireElement('practice-library', HTMLElement),
     practiceFavoritesEl: requireElement('practice-favorites', HTMLElement),
@@ -196,6 +281,6 @@ export function initControls(config: AppConfig) {
     campaignDevToolsEl: requireElement('campaign-dev-tools', HTMLElement),
     sidebarCampaignProgressEl: requireElement('sidebar-campaign-progress', HTMLElement),
     celebrationEl: requireElement('celebration', HTMLElement),
-    populateBooks, populateChapters, populateVerses, constrainEndVerses
+    populateBooks, populateChapters, populateVerses, constrainEndVerses, setPickerVerseProgress
   };
 }

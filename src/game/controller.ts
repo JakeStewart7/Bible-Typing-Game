@@ -25,7 +25,7 @@ import type { AppStateRepository } from '../persistence/app-state';
 import type { PassageReference } from '../memory/domain/passage.ts';
 import type { ProfileRepository } from '../persistence/profile-repository';
 import type { AppStorage } from '../persistence/storage';
-import { getCurrentWord, isHintAvailable } from './hint';
+import { getCurrentWordRange, isHintAvailable } from './hint';
 import { analyzeSession } from './analysis';
 import { BrowserSessionHistoryRepository } from './session-history';
 import { createPracticeLibraryController } from '../memory/ui/practice-library-controller.ts';
@@ -57,11 +57,13 @@ type Controls = {
   waveCountEl: HTMLElement; defeatedCountEl: HTMLElement; battlePathEl: HTMLElement;
   battleMessageEl: HTMLElement;
   readyIndicatorEl: HTMLElement; hintButtonEl: HTMLButtonElement; favoritePassageEl: HTMLButtonElement;
+  recallPromptEl: HTMLElement;
   memoryLibraryEl: HTMLElement; practiceFavoritesEl: HTMLElement;
   memoryFavoritesEl: HTMLElement; memoryRecentEl: HTMLElement;
   resultAnalysisEl: HTMLElement;
   populateBooks: () => void; populateChapters: (preferred?: number) => void;
   populateVerses: () => Promise<void>; constrainEndVerses: () => void;
+  setPickerVerseProgress: (progress: Record<string, number>) => void;
 };
 
 export function initGameControllers(
@@ -78,9 +80,9 @@ export function initGameControllers(
     rewardMessageEl, levelLabelEl, xpLabelEl, xpFillEl, personalBestEl, lifetimeWpmEl, recentWpmEl,
     defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
     battlePathEl, battleMessageEl,
-    readyIndicatorEl, hintButtonEl, favoritePassageEl, memoryLibraryEl,
+    readyIndicatorEl, hintButtonEl, favoritePassageEl, recallPromptEl, memoryLibraryEl,
     practiceFavoritesEl, memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
-    populateBooks, populateChapters, populateVerses, constrainEndVerses } = controls;
+    populateBooks, populateChapters, populateVerses, constrainEndVerses, setPickerVerseProgress } = controls;
   let hudInterval: number | undefined;
   let hasCompleted = false;
   let defense: DefenseState = createDefenseState();
@@ -90,6 +92,8 @@ export function initGameControllers(
   let activePassage: PassageReference | null = null;
   let lastProgressAt = Date.now();
   let hintTimer = 0;
+  let revealedHintWordIndex: number | null = null;
+  let revealedHintEnd = -1;
   const practiceLibrary = createPracticeLibraryController({
     library: memoryLibraryEl,
     practiceFavorites: practiceFavoritesEl,
@@ -105,6 +109,7 @@ export function initGameControllers(
   let campaignChunk: CampaignChunk | null = null;
   let campaignHooks: {
     save: (chunk: CampaignChunk, stars: number) => void;
+    savePassage: (passage: PassageReference, stars: number) => void;
     progress: () => CampaignProgress;
     celebrateBook: (book: string) => void;
     returnToMenu: (book: string) => void;
@@ -188,9 +193,9 @@ export function initGameControllers(
     const stats = calculateStats(game);
     if (updateHud) renderStats(hudEl, stats);
     if (chapterReader && gameModeEl.value !== 'defense') {
-      renderChapterReader(textEl, chapterReaderEl, chapterReader, game);
+      renderChapterReader(textEl, chapterReaderEl, chapterReader, game, revealedHintWordIndex);
     } else {
-      renderText(textEl, game);
+      renderText(textEl, game, revealedHintWordIndex);
     }
     updateCaretPosition(textEl, game);
     renderTypedBar(typedBarEl, game);
@@ -215,6 +220,8 @@ export function initGameControllers(
     game.completedAt = undefined;
     hasCompleted = false;
     lastProgressAt = Date.now();
+    revealedHintWordIndex = null;
+    revealedHintEnd = -1;
     defense = createDefenseState();
     defenseView.reset();
     inputEl.value = '';
@@ -295,6 +302,10 @@ export function initGameControllers(
         nextButton.classList.toggle('is-hidden', !following);
       }
       if (chapterSelectButton) chapterSelectButton.textContent = 'Back to selection';
+      updatePickerVerseProgress();
+    } else if (activePassage && mode !== 'defense' && campaignHooks) {
+      campaignHooks.savePassage(activePassage, Math.max(1, starsForWpm(stats.wpm, stats.accuracy)));
+      updatePickerVerseProgress();
     }
     resultsEl.classList.remove('is-hidden');
     playComplete();
@@ -308,6 +319,10 @@ export function initGameControllers(
     const hadStarted = Boolean(game.startTime);
     const previousLength = game.typed.length;
     handleInput(game, inputEl.value);
+    if (game.typed.length >= revealedHintEnd) {
+      revealedHintWordIndex = null;
+      revealedHintEnd = -1;
+    }
     if (!campaignChunk && (mode === 'practice' || mode === 'memory') &&
       !hadStarted && game.startTime && activePassage) {
       practiceLibrary.recordStarted(activePassage);
@@ -383,16 +398,12 @@ export function initGameControllers(
   document.getElementById('focus-button')?.addEventListener('click', () => {
     document.getElementById('game-screen')?.classList.toggle('focus-mode');
   });
-  hintButtonEl.addEventListener('click', () => {
-    if (!isHintAvailable(lastProgressAt, Date.now())) return;
-    hintButtonEl.textContent = getCurrentWord(game) || 'Hint';
-    hintButtonEl.classList.remove('hint-ready');
-    lastProgressAt = Date.now();
-    window.setTimeout(() => {
-      hintButtonEl.textContent = 'Hint';
-      updateHintState();
-    }, 1_800);
-    focusInput();
+  hintButtonEl.addEventListener('click', revealNextWord);
+  document.addEventListener('keydown', event => {
+    if (event.ctrlKey && event.key.toLowerCase() === 'h' && gameModeEl.value === 'memory') {
+      event.preventDefault();
+      revealNextWord();
+    }
   });
   loadBtn.addEventListener('click', () => {
     void loadSelectedPassage();
@@ -433,6 +444,7 @@ export function initGameControllers(
       playlistContinuation = false;
       restartGame();
       practiceLibrary.setContext(parseGameMode(gameModeEl.value), activePassage);
+      updatePickerVerseProgress();
       playlistHooks?.passageChanged();
       return true;
     } catch (error) {
@@ -500,13 +512,16 @@ export function initGameControllers(
       chapterReader = createChapterReader(verses, chunk);
       game.text = chapterReader.activeText;
       game.chars = game.text.split('');
-      passageTitleEl.textContent = `${chunk.book} ${chunk.chapter}:${chunk.startVerse}–${chunk.endVerse}`;
+      passageTitleEl.textContent = `${chunk.book} ${chunk.chapter}:${chunk.startVerse}${chunk.endVerse > chunk.startVerse ? `–${chunk.endVerse}` : ''}`;
       activePassage = { book: chunk.book, chapter: chunk.chapter, startVerse: chunk.startVerse, endVerse: chunk.endVerse, translation: 'kjv' };
       gameModeEl.value = 'practice';
       setMode();
       restartGame();
     },
-    setCampaignHooks: (hooks: NonNullable<typeof campaignHooks>) => { campaignHooks = hooks; },
+    setCampaignHooks: (hooks: NonNullable<typeof campaignHooks>) => {
+      campaignHooks = hooks;
+      updatePickerVerseProgress();
+    },
     setPlaylistHooks: (hooks: NonNullable<typeof playlistHooks>) => { playlistHooks = hooks; },
     setTextVisibility,
     getActivePassage: (): PassageReference | null => activePassage ? { ...activePassage } : null,
@@ -531,6 +546,22 @@ export function initGameControllers(
       && isMemory && isHintAvailable(lastProgressAt, Date.now());
     hintButtonEl.disabled = !isMemory || hasCompleted || game.chars.length === 0;
     hintButtonEl.classList.toggle('hint-ready', available);
+    recallPromptEl.classList.toggle('is-hidden', !available);
+  }
+
+  function updatePickerVerseProgress(): void {
+    setPickerVerseProgress(campaignHooks?.progress() ?? {});
+  }
+
+  function revealNextWord(): void {
+    if (gameModeEl.value !== 'memory' || hasCompleted || game.typed.length >= game.chars.length) return;
+    const range = getCurrentWordRange(game.text, game.typed.length);
+    revealedHintWordIndex = game.text.slice(0, range.start).split(' ').length - 1;
+    revealedHintEnd = range.end;
+    lastProgressAt = Date.now();
+    recallPromptEl.classList.add('is-hidden');
+    updateUI();
+    focusInput();
   }
 
   async function loadPassage(passage: PassageReference): Promise<boolean> {

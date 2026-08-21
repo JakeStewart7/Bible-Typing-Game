@@ -6,7 +6,15 @@ import { handleInput } from '../src/game/input.ts';
 import { calculateStats } from '../src/game/stats.ts';
 import { getVerseCount, VERSE_COUNTS } from '../src/verse-counts.ts';
 import { advanceEnemy, buyUpgrade, completeDefense, createDefenseState, typeCharacter } from '../src/game/minigame.ts';
-import { createCampaignChunks, getBookProgress, getCampaignProgress, nextChunk, starsForWpm } from '../src/campaign.ts';
+import {
+  completePassage,
+  createCampaignChunks,
+  getBookProgress,
+  getCampaignProgress,
+  nextChunk,
+  normalizeCampaignProgress,
+  starsForWpm
+} from '../src/campaign.ts';
 import { AppStorage } from '../src/persistence/storage.ts';
 import { AppStateRepository } from '../src/persistence/app-state.ts';
 import { ProfileRepository } from '../src/persistence/profile-repository.ts';
@@ -382,11 +390,22 @@ test('completing defense awards a victory bonus', () => {
   equal(state.faith, 150);
 });
 
-test('campaign chunks never cross chapter boundaries', () => {
+test('Journey progress creates a task for every verse', () => {
   const chunks = createCampaignChunks('John');
-  equal(chunks[0], { id: 'John:1:1-3', book: 'John', chapter: 1, startVerse: 1, endVerse: 3 });
+  equal(chunks[0], { id: 'John:1:1-1', book: 'John', chapter: 1, startVerse: 1, endVerse: 1 });
   equal(chunks.filter(chunk => chunk.chapter === 1).at(-1)?.endVerse, 51);
   equal(chunks.some((chunk, index) => index > 0 && chunk.chapter !== chunks[index - 1]?.chapter && chunk.startVerse !== 1), false);
+});
+
+test('Practice completions mark every selected verse and migrate legacy ranges', () => {
+  const legacy = normalizeCampaignProgress({ 'John:3:1-3': 2 });
+  equal(Object.keys(legacy), ['John:3:1-1', 'John:3:2-2', 'John:3:3-3']);
+  const completed = completePassage(legacy, {
+    book: 'John', chapter: 3, startVerse: 2, endVerse: 4
+  }, 4);
+  equal(completed['John:3:1-1'], 2);
+  equal(completed['John:3:2-2'], 4);
+  equal(completed['John:3:4-4'], 4);
 });
 
 test('campaign stars use researched speed and accuracy thresholds', () => {
@@ -431,7 +450,7 @@ test('journey unlocks starting books and progresses deterministically', () => {
   equal(isJourneyBookUnlocked('Mark', completedMatthew), true);
 });
 
-test('journey currency counts unique completed passages without using stars', () => {
+test('journey currency counts unique completed verses without using stars', () => {
   equal(journeyCurrency({ 'Matthew:1:1-3': 5, 'Genesis:1:1-3': 1, invalid: 5, 'Mark:1:1-3': 0 }), 2);
 });
 
@@ -467,7 +486,11 @@ test('app state repository validates legacy Journey progress', () => {
     verseTypeCampaignProgress: '{"John:3:16-18":4}'
   });
   const repository = new AppStateRepository(new AppStorage(storage));
-  equal(repository.readCampaignProgress(), { 'John:3:16-18': 4 });
+  equal(repository.readCampaignProgress(), {
+    'John:3:16-16': 4,
+    'John:3:17-17': 4,
+    'John:3:18-18': 4
+  });
   storage.setItem('verseTypeCampaignProgress', '{"bad":99}');
   equal(repository.readCampaignProgress(), {});
 });

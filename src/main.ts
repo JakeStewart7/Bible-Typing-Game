@@ -34,13 +34,13 @@ const {
   levelLabelEl, xpLabelEl, xpFillEl, personalBestEl, lifetimeWpmEl, recentWpmEl,
   defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
   battlePathEl, battleMessageEl,
-  readyIndicatorEl, hintButtonEl, favoritePassageEl,
+  readyIndicatorEl, hintButtonEl, favoritePassageEl, recallPromptEl,
   memoryLibraryEl, practiceFavoritesEl, memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
   playlistFormEl, playlistNameEl, playlistListEl, playlistStatusEl,
   campaignScreenEl, campaignContentEl, campaignBackEl, campaignBreadcrumbEl,
   campaignTotalStarsEl, campaignTotalProgressEl, campaignDevToolsEl,
   sidebarCampaignProgressEl, celebrationEl,
-  populateBooks, populateChapters, populateVerses, constrainEndVerses
+  populateBooks, populateChapters, populateVerses, constrainEndVerses, setPickerVerseProgress
 } = initControls(appConfig);
 const storage = new AppStorage(window.localStorage);
 const stateRepository = new AppStateRepository(storage);
@@ -60,9 +60,9 @@ const gameController = initGameControllers(game, {
   levelLabelEl, xpLabelEl, xpFillEl, personalBestEl, lifetimeWpmEl, recentWpmEl,
   defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
   battlePathEl, battleMessageEl,
-  readyIndicatorEl, hintButtonEl, favoritePassageEl,
+  readyIndicatorEl, hintButtonEl, favoritePassageEl, recallPromptEl,
   memoryLibraryEl, practiceFavoritesEl, memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
-  populateBooks, populateChapters, populateVerses, constrainEndVerses
+  populateBooks, populateChapters, populateVerses, constrainEndVerses, setPickerVerseProgress
 }, stateRepository, profileRepository, storage, appConfig);
 const playlistController = createPlaylistController({
   form: playlistFormEl,
@@ -97,6 +97,7 @@ startCampaignChunk = (chunk, verses) => {
 };
 gameController.setCampaignHooks({
   save: campaignController.saveChunk,
+  savePassage: campaignController.savePassage,
   progress: campaignController.getProgress,
   celebrateBook: campaignController.celebrateBook,
   returnToMenu: book => {

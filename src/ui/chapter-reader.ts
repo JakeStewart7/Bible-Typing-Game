@@ -11,17 +11,19 @@ type RenderState = {
   caretWordIndex: number | null;
   hiddenWords: Set<number>;
   memoryMode: boolean;
+  revealedWordIndex: number | null;
 };
 
 export function renderChapterReader(
   container: HTMLElement,
   readerEl: HTMLElement,
   reader: ChapterReader,
-  game: Game
+  game: Game,
+  revealedWordIndex: number | null = null
 ): void {
   container.replaceChildren(readerEl);
   readerEl.replaceChildren();
-  const state = createRenderState(container, game);
+  const state = createRenderState(container, game, revealedWordIndex);
 
   for (const verse of reader.verses) {
     const verseEl = document.createElement('p');
@@ -51,7 +53,7 @@ export function positionReaderAtActiveRange(container: HTMLElement, readerEl: HT
   container.scrollTop = Math.max(0, firstActiveVerse.offsetTop - container.clientHeight * .25);
 }
 
-function createRenderState(container: HTMLElement, game: Game): RenderState {
+function createRenderState(container: HTMLElement, game: Game, revealedWordIndex: number | null): RenderState {
   const memoryMode = Boolean(container.closest<HTMLElement>('[data-mode="memory"]'));
   const memoryHiddenPercent = Number(
     container.closest<HTMLElement>('[data-mode="memory"]')?.style.getPropertyValue('--memory-hidden-percent') || 50
@@ -66,7 +68,8 @@ function createRenderState(container: HTMLElement, game: Game): RenderState {
     lastTypedIndex: game.typed.length - 1,
     caretWordIndex,
     hiddenWords: memoryMode ? hiddenMemoryWordIndices(words.length, memoryHiddenPercent) : new Set<number>(),
-    memoryMode
+    memoryMode,
+    revealedWordIndex
   };
 }
 
@@ -105,7 +108,7 @@ function appendCharacter(
   const span = document.createElement('span');
   span.textContent = character;
   span.className = 'char';
-  const hiddenInMemory = state.memoryMode && shouldMaskMemoryCharacter(
+  const hiddenInMemory = state.memoryMode && state.wordIndex !== state.revealedWordIndex && shouldMaskMemoryCharacter(
     state.hiddenWords.has(state.wordIndex),
     game.typed[state.characterIndex],
     game.chars[state.characterIndex] ?? ''

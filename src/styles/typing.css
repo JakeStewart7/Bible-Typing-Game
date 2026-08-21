@@ -3,19 +3,31 @@
 .practice-workspace { display: grid; gap: clamp(.75rem, 1.5vw, 1rem); width: 100%; max-width: var(--content-max); margin: auto; }
 .layout { display: grid; grid-template-columns: minmax(260px, 310px) minmax(0, 1fr); gap: clamp(14px, 2vw, 22px); align-items: start; max-width: 1500px; margin: auto; }
 .card { background: rgba(255,255,255,.94); border: 1px solid var(--border); border-radius: 24px; box-shadow: 0 18px 50px var(--page-shadow); }
-.passage-panel { display: grid; grid-template-columns: minmax(8rem, auto) minmax(25rem, 1fr) auto; align-items: end; gap: clamp(.75rem, 1.5vw, 1.25rem); padding: clamp(.875rem, 1.5vw, 1.125rem); }
-.passage-panel h3, .typing-card h3 { margin: 0; font: 700 1.5rem Playfair Display; }
-.passage-panel-heading p { margin: 2px 0 0; color: var(--muted); font-size: var(--text-small); }
-.passage-fields { display: grid; grid-template-columns: minmax(10rem, 1.3fr) minmax(8rem, 1fr) repeat(3, minmax(4.75rem, .55fr)); gap: .5rem; }
-.translation-field { grid-column: auto; }
-.passage-fields > div:nth-child(2) { grid-column: auto; }
+.typing-card h3 { margin: 0; font: 700 1.5rem Playfair Display; }
+.passage-picker { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: clamp(1rem, 4vw, 3rem); overflow: auto; background: #143d3575; backdrop-filter: blur(12px); }
+.passage-picker-dialog { width: min(68rem, 100%); max-height: min(52rem, 100%); display: grid; gap: 1.1rem; overflow: auto; padding: clamp(1.25rem, 3vw, 2rem); border: 1px solid var(--page-border); border-radius: 1.5rem; background: var(--page-surface); box-shadow: 0 30px 90px #153d3540; }
+.passage-picker-heading, .picker-section-heading, .picker-actions { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
+.passage-picker-heading h3, .picker-section h4 { margin: 0; font: 700 1.35rem Playfair Display; }
+.passage-picker-heading p { margin: .25rem 0 0; color: var(--muted); font-size: .8rem; }
+.picker-translation { width: min(18rem, 100%); }
+.picker-section { display: grid; gap: .55rem; }
+.picker-section-heading h4 { font-size: 1rem; }
+.picker-section-heading span { color: var(--muted); font-size: .7rem; font-weight: 700; }
+.picker-book-grid, .picker-chapter-grid, .picker-verse-grid { display: grid; gap: .4rem; }
+.picker-book-grid { grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); max-height: 12rem; overflow-y: auto; padding-right: .25rem; }
+.picker-chapter-grid { grid-template-columns: repeat(auto-fill, minmax(2.4rem, 1fr)); }
+.picker-verse-grid { grid-template-columns: repeat(auto-fill, minmax(2.5rem, 1fr)); }
+.picker-book-grid button, .picker-chapter-grid button, .picker-verse-grid button { min-height: 2.3rem; border: 1px solid var(--border); border-radius: .65rem; color: var(--ink); background: #fff; font-size: .72rem; font-weight: 800; }
+.picker-book-grid button { padding-inline: .55rem; text-align: left; }
+.picker-book-grid button[aria-pressed="true"], .picker-chapter-grid button[aria-pressed="true"], .picker-verse-grid button[data-selected="true"] { border-color: var(--page-accent); color: var(--green-dark); background: var(--page-accent-soft); }
+.picker-verse-grid button[data-complete="true"]::after { content: "✓"; margin-left: .25rem; color: var(--green); }
+.picker-actions { align-items: center; padding-top: .25rem; }
 .panel-copy { color: var(--muted); font-size: .83rem; line-height: 1.55; }
 label { display: block; margin: 0 0 5px; font-size: var(--text-label); font-weight: 800; color: #526b65; text-transform: uppercase; letter-spacing: .08em; }
 select, input[type=number] { width: 100%; height: 2.75rem; border: 1px solid var(--border); border-radius: 9px; background: var(--page-surface); color: var(--ink); padding: 0 .625rem; outline: none; font-size: .875rem; }
 select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--page-glow); }
 .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.passage-panel > .primary-btn { width: auto; margin: 0; padding: 10px 16px; white-space: nowrap; }
-.status { grid-column: 2; color: #b9433c; font-size: var(--text-small); min-height: 0; }
+.status { color: #b9433c; font-size: var(--text-small); min-height: 0; }
 .memory-library { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; border-top: 1px solid var(--border); padding-top: .75rem; }
 .memory-library h4 { margin: 0 0 .4rem; color: var(--muted); font-size: var(--text-label); text-transform: uppercase; letter-spacing: .08em; }
 .memory-passage-list { display: flex; flex-wrap: wrap; gap: .4rem; }
@@ -98,6 +110,10 @@ select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px va
 .floating-caret.complete { opacity: 0; }
 @keyframes caretGlow { 50% { opacity: 1; box-shadow: 0 0 8px #20b78e77; } }
 .typed-area { margin-top: 26px; }
+.recall-prompt { display: flex; align-items: center; gap: .35rem; width: max-content; max-width: 100%; margin: .65rem auto 0; padding: .55rem .75rem; border: 1px solid #d6aa4c; border-radius: 99px; color: #77550e; background: #fff9e7; font-size: .72rem; box-shadow: 0 8px 20px #a777191f; animation: recallPromptIn .22s ease-out; }
+.recall-prompt span { font-weight: 800; }
+.recall-prompt kbd { padding: .1rem .3rem; border: 1px solid #d6aa4c; border-bottom-width: 2px; border-radius: .25rem; background: #fff; font: 700 .65rem DM Mono, monospace; }
+@keyframes recallPromptIn { from { opacity: 0; transform: translateY(.3rem); } to { opacity: 1; transform: none; } }
 .typed-bar { display: none; }
 #input { width: 100%; height: 52px; padding: 0 16px; border: 1px solid var(--border); border-radius: 13px; color: var(--ink); background: var(--page-surface); font-family: DM Mono, monospace; outline: none; }
 #input:focus { border-color: var(--green); box-shadow: 0 0 0 4px var(--page-glow); }
@@ -126,7 +142,7 @@ select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px va
 .reward-message { margin: 18px 0 -10px; color: #a06e0d; font-weight: 800; font-size: .82rem; }
 .shake { animation: shake .25s linear; }
 @keyframes shake { 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-3px); } }
-.focus-mode .passage-panel, .focus-mode .game-intro { display: none; }
+.focus-mode .passage-picker, .focus-mode .game-intro { display: none; }
 .focus-mode .layout { display: block; max-width: 940px; margin: auto; }
 .campaign-play .game-intro, .campaign-play .passage-panel { display: none; }
 .campaign-play .practice-workspace { display: block; max-width: 1050px; margin: auto; }
