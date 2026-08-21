@@ -5,6 +5,11 @@ export type ChapterVerse = {
   text: string;
 };
 
+type ChapterVerseInput = {
+  verse?: number;
+  text: string;
+};
+
 export type VerseRange = {
   startVerse: number;
   endVerse: number;
@@ -31,6 +36,13 @@ export type ChapterInfo = {
   chapter: number;
   verseCount: number;
 };
+
+export function normalizeChapterVerses(verses: readonly ChapterVerseInput[]): ChapterVerse[] {
+  return verses.map((verse, index) => ({
+    verse: verse.verse ?? index + 1,
+    text: verse.text
+  }));
+}
 
 export function createChapterReader(
   chapterVerses: readonly ChapterVerse[],

@@ -23,7 +23,7 @@ import { getVerseCount } from '../verse-counts';
 import { chooseRandomVerseRange } from '../passage-selector';
 import type { AppConfig } from '../config';
 import type { AppStateRepository } from '../persistence/app-state';
-import type { PassageReference } from '../memory/domain/passage.ts';
+import { formatPassageLabel, type PassageReference } from '../memory/domain/passage.ts';
 import type { ProfileRepository } from '../persistence/profile-repository';
 import type { AppStorage } from '../persistence/storage';
 import { getCurrentWordIndex, getCurrentWordRange, getHintWordIndex, isHintAvailable } from './hint';
@@ -40,9 +40,11 @@ import {
 import {
   createChapterReader,
   nextChapterReaderRange,
+  normalizeChapterVerses,
   type ChapterReader,
   type ChapterVerse
 } from '../typing/chapter-reader';
+import { createFrameScheduler } from '../shared/frame-scheduler';
 
 type Controls = {
   hudEl: HTMLElement; textEl: HTMLElement; chapterReaderEl: HTMLElement;
@@ -88,9 +90,6 @@ export function initGameControllers(
   let hudInterval: number | undefined;
   let hasCompleted = false;
   let defense: DefenseState = createDefenseState();
-  let defenseFrame = 0;
-  let readerPositionFrame = 0;
-  let typingRenderFrame = 0;
   let caretMovement: CaretMovement = 'track';
   let previousFrame = performance.now();
   let memoryHiddenPercent = 0;
@@ -130,6 +129,16 @@ export function initGameControllers(
   } | null = null;
   let playlistContinuation = false;
   let chapterReader: ChapterReader | null = null;
+  const defenseScheduler = createFrameScheduler(defenseLoop);
+  const typingRenderScheduler = createFrameScheduler(() => {
+    updateUI();
+    updateHintState();
+  });
+  const readerPositionScheduler = createFrameScheduler(() => {
+    if (!chapterReader || gameModeEl.value === 'defense') return;
+    positionReaderAtActiveRange(textEl, chapterReaderEl);
+    updateCaretPosition(textEl, game);
+  });
 
   function renderDefense() {
     defenseView.render(defense);
@@ -143,17 +152,14 @@ export function initGameControllers(
       renderDefense();
       if (defense.status === 'lost') inputEl.disabled = true;
     }
-    defenseFrame = 0;
     if (gameModeEl.value === 'defense' && game.startTime && defense.status === 'playing') {
-      scheduleDefenseFrame();
+      defenseScheduler.schedule();
     }
   }
 
   function scheduleDefenseFrame() {
-    if (!defenseFrame) {
-      previousFrame = performance.now();
-      defenseFrame = requestAnimationFrame(defenseLoop);
-    }
+    previousFrame = performance.now();
+    defenseScheduler.schedule();
   }
 
   function updateProfile() {
@@ -233,12 +239,7 @@ export function initGameControllers(
   }
 
   function queueTypingRender(): void {
-    if (typingRenderFrame) return;
-    typingRenderFrame = requestAnimationFrame(() => {
-      typingRenderFrame = 0;
-      updateUI();
-      updateHintState();
-    });
+    typingRenderScheduler.schedule();
   }
 
   function focusInput(): void {
@@ -257,13 +258,7 @@ export function initGameControllers(
   }
 
   function queueReaderPosition(): void {
-    cancelAnimationFrame(readerPositionFrame);
-    readerPositionFrame = requestAnimationFrame(() => {
-      readerPositionFrame = 0;
-      if (!chapterReader || gameModeEl.value === 'defense') return;
-      positionReaderAtActiveRange(textEl, chapterReaderEl);
-      updateCaretPosition(textEl, game);
-    });
+    readerPositionScheduler.reschedule();
   }
 
   function restartGame() {
@@ -356,7 +351,7 @@ export function initGameControllers(
     if (campaignChunk && campaignHooks) {
       const stars = starsForWpm(stats.wpm, stats.accuracy);
       campaignHooks.save(campaignChunk, Math.max(1, stars));
-      rewardMessageEl.textContent = `${'★'.repeat(Math.max(1, stars))}${'☆'.repeat(5 - Math.max(1, stars))} · ${campaignChunk.book} ${campaignChunk.chapter}:${campaignChunk.startVerse}–${campaignChunk.endVerse}`;
+      rewardMessageEl.textContent = `${'★'.repeat(Math.max(1, stars))}${'☆'.repeat(5 - Math.max(1, stars))} · ${formatPassageLabel(campaignChunk)}`;
       const completedChapter = isChapterComplete(campaignChunk, campaignHooks.progress());
       const following = nextChunk(campaignChunk);
       const completedBook = !following && getBookProgressComplete(campaignChunk.book, campaignHooks.progress());
@@ -404,8 +399,7 @@ export function initGameControllers(
     }
     if (game.typed.length !== previousLength) promptedHintWordIndex = null;
     if (game.typed.join('') === game.text) {
-      cancelAnimationFrame(typingRenderFrame);
-      typingRenderFrame = 0;
+      typingRenderScheduler.cancel();
       finishGame();
     } else {
       queueTypingRender();
@@ -508,15 +502,12 @@ export function initGameControllers(
       } catch {
         throw new Error(`${translationEl.options[translationEl.selectedIndex].text} is not available from the current Bible provider.`);
       }
-      const verses: ChapterVerse[] = (data.verses ?? []).map((verse, index) => ({
-        verse: verse.verse ?? index + 1,
-        text: verse.text
-      }));
+      const verses = normalizeChapterVerses(data.verses ?? []);
       chapterReader = createChapterReader(verses, passage);
       game.text = chapterReader.activeText;
       game.chars = game.text.split('');
       activePassage = { ...passage };
-      passageTitleEl.textContent = `${passage.book} ${passage.chapter}:${passage.startVerse}${passage.endVerse > passage.startVerse ? `–${passage.endVerse}` : ''}`;
+      passageTitleEl.textContent = formatPassageLabel(passage);
       statusEl.textContent = '';
       playlistContinuation = false;
       restartGame();
@@ -590,7 +581,7 @@ export function initGameControllers(
       chapterReader = createChapterReader(verses, chunk);
       game.text = chapterReader.activeText;
       game.chars = game.text.split('');
-      passageTitleEl.textContent = `${chunk.book} ${chunk.chapter}:${chunk.startVerse}${chunk.endVerse > chunk.startVerse ? `–${chunk.endVerse}` : ''}`;
+      passageTitleEl.textContent = formatPassageLabel(chunk);
       activePassage = { book: chunk.book, chapter: chunk.chapter, startVerse: chunk.startVerse, endVerse: chunk.endVerse, translation: 'kjv' };
       gameModeEl.value = 'practice';
       setMode();
@@ -609,9 +600,9 @@ export function initGameControllers(
     },
     leaveCampaign: () => { campaignChunk = null; },
     stop: () => {
-      cancelAnimationFrame(defenseFrame);
-      cancelAnimationFrame(readerPositionFrame);
-      cancelAnimationFrame(typingRenderFrame);
+      defenseScheduler.cancel();
+      readerPositionScheduler.cancel();
+      typingRenderScheduler.cancel();
       clearInterval(hintTimer);
     }
   };

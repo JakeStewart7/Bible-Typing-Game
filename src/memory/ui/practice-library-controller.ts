@@ -2,13 +2,12 @@ import type { GameMode } from '../../game/modes.ts';
 import type { AppStateRepository } from '../../persistence/app-state.ts';
 import { renderEmptyState } from '../../ui/components.ts';
 import {
-  createPassageId,
   isFavoritePassage,
   toMemoryPassage,
   toggleFavoritePassage
 } from '../domain/practice-library.ts';
 import type { MemoryLibrarySnapshot, MemoryPassage } from '../domain/practice-library.ts';
-import type { PassageReference } from '../domain/passage.ts';
+import { createPassageId, formatPassageLabel, type PassageReference } from '../domain/passage.ts';
 
 type PracticeLibraryElements = {
   library: HTMLElement;
@@ -98,11 +97,4 @@ export function createPracticeLibraryController(
   }
 
   return { setContext, recordStarted, render };
-}
-
-function formatPassageLabel(passage: PassageReference): string {
-  const verses = passage.startVerse === passage.endVerse
-    ? passage.startVerse
-    : `${passage.startVerse}–${passage.endVerse}`;
-  return `${passage.book} ${passage.chapter}:${verses}`;
 }

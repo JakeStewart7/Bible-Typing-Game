@@ -1,4 +1,4 @@
-import { createPassageId } from './practice-library.ts';
+import { createPassageId } from './passage.ts';
 import type { PassageReference } from './passage.ts';
 
 export const PLAYLIST_STATE_VERSION = 1;

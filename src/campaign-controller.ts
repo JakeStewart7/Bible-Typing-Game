@@ -8,8 +8,10 @@ import {
   getCampaignProgress
 } from './campaign';
 import type { CampaignChunk } from './campaign';
+import { normalizeChapterVerses } from './typing/chapter-reader';
 import type { AppStateRepository } from './persistence/app-state';
 import type { AppConfig } from './config';
+import { formatPassageLabel } from './memory/domain/passage.ts';
 import {
   filterJourneyBooks,
   findJourneyContinuation,
@@ -50,10 +52,7 @@ export function createCampaignController(
     if (continueEl) {
       continueEl.classList.toggle('is-hidden', !continuation);
       if (continuation) {
-        const reference = continuation.startVerse === continuation.endVerse
-          ? continuation.startVerse
-          : `${continuation.startVerse}–${continuation.endVerse}`;
-        continueEl.innerHTML = `<strong>Continue Journey</strong><span>${continuation.book} ${continuation.chapter}:${reference}</span>`;
+        continueEl.innerHTML = `<strong>Continue Journey</strong><span>${formatPassageLabel(continuation)}</span>`;
       }
     }
   }
@@ -129,13 +128,10 @@ export function createCampaignController(
 
   async function startChunk(chunk: CampaignChunk, button: HTMLButtonElement): Promise<void> {
     button.disabled = true;
-    view.breadcrumbEl.textContent = `Loading ${chunk.book} ${chunk.chapter}:${chunk.startVerse}–${chunk.endVerse}…`;
+    view.breadcrumbEl.textContent = `Loading ${formatPassageLabel(chunk)}…`;
     try {
       const data = await fetchChapter(chunk.book, chunk.chapter, 'kjv', false);
-      const verses = (data.verses ?? []).map((verse, index) => ({
-        verse: verse.verse ?? index + 1,
-        text: verse.text
-      }));
+      const verses = normalizeChapterVerses(data.verses ?? []);
       if (!verses.length) throw new Error('Campaign chapter was empty.');
       continuation = chunk;
       persist();

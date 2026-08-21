@@ -10,8 +10,7 @@ import {
   reorderPlaylist
 } from '../domain/playlists.ts';
 import type { MemorizationPlaylist, PlaylistState } from '../domain/playlists.ts';
-import { createPassageId } from '../domain/practice-library.ts';
-import type { PassageReference } from '../domain/passage.ts';
+import { createPassageId, formatPassageLabel, type PassageReference } from '../domain/passage.ts';
 
 type PlaylistElements = {
   form: HTMLFormElement;
@@ -205,11 +204,4 @@ function action(
   button.disabled = disabled;
   button.addEventListener('click', onClick);
   return button;
-}
-
-function formatPassageLabel(passage: PassageReference): string {
-  const verses = passage.startVerse === passage.endVerse
-    ? passage.startVerse
-    : `${passage.startVerse}–${passage.endVerse}`;
-  return `${passage.book} ${passage.chapter}:${verses}`;
 }

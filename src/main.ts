@@ -11,7 +11,7 @@ import { toggleEffects } from './audio/effects';
 import { createCampaignController } from './campaign-controller';
 import type { CampaignChunk } from './campaign';
 import { fetchChapter } from './bible-api';
-import type { ChapterVerse } from './typing/chapter-reader';
+import { normalizeChapterVerses, type ChapterVerse } from './typing/chapter-reader';
 import { appConfig } from './config';
 import { AppStateRepository } from './persistence/app-state';
 import { AppStorage } from './persistence/storage';
@@ -25,23 +25,7 @@ import trackApple from '../assets/music/apple_cider.ogg';
 // bundle tracks for the music module to consume
 (window as Window & { __bundledMusic?: string[] }).__bundledMusic = [trackDetermination, trackApple];
 
-// initialize DOM and controls
-const {
-  hudEl, textEl, chapterReaderEl, inputEl, typedBarEl,
-  translationEl, bookEl, chapterEl, startVerseEl, endVerseEl, loadBtn,
-  statusEl, passageTitleEl, resultsEl, resultStatsEl, progressFillEl,
-  gameModeEl, challengeBannerEl, typingCardEl, rewardMessageEl,
-  levelLabelEl, xpLabelEl, xpFillEl, personalBestEl, lifetimeWpmEl, recentWpmEl,
-  defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
-  battlePathEl, battleMessageEl,
-  readyIndicatorEl, favoritePassageEl, recallPromptEl,
-  memoryLibraryEl, practiceFavoritesEl, memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
-  playlistFormEl, playlistNameEl, playlistListEl, playlistStatusEl,
-  campaignScreenEl, campaignContentEl, campaignBackEl, campaignBreadcrumbEl,
-  campaignTotalStarsEl, campaignTotalProgressEl, campaignDevToolsEl,
-  sidebarCampaignProgressEl, celebrationEl,
-  populateBooks, populateChapters, populateVerses, constrainEndVerses, setPickerVerseProgress
-} = initControls(appConfig);
+const controls = initControls(appConfig);
 const storage = new AppStorage(window.localStorage);
 const stateRepository = new AppStateRepository(storage);
 const profileRepository = new ProfileRepository(storage);
@@ -52,23 +36,19 @@ const profileRepository = new ProfileRepository(storage);
 export const game: Game = createGame('');
 
 // Wire controllers (moves logic out of main.ts into game/controller.ts)
-const gameController = initGameControllers(game, {
-  hudEl, textEl, chapterReaderEl, inputEl, typedBarEl,
-  translationEl, bookEl, chapterEl, startVerseEl, endVerseEl, loadBtn,
-  statusEl, passageTitleEl, resultsEl, resultStatsEl, progressFillEl,
-  gameModeEl, challengeBannerEl, typingCardEl, rewardMessageEl,
-  levelLabelEl, xpLabelEl, xpFillEl, personalBestEl, lifetimeWpmEl, recentWpmEl,
-  defenseGameEl, faithCountEl, fortressHealthEl, waveCountEl, defeatedCountEl,
-  battlePathEl, battleMessageEl,
-  readyIndicatorEl, favoritePassageEl, recallPromptEl,
-  memoryLibraryEl, practiceFavoritesEl, memoryFavoritesEl, memoryRecentEl, resultAnalysisEl,
-  populateBooks, populateChapters, populateVerses, constrainEndVerses, setPickerVerseProgress
-}, stateRepository, profileRepository, storage, appConfig);
+const gameController = initGameControllers(
+  game,
+  controls,
+  stateRepository,
+  profileRepository,
+  storage,
+  appConfig
+);
 const playlistController = createPlaylistController({
-  form: playlistFormEl,
-  nameInput: playlistNameEl,
-  list: playlistListEl,
-  status: playlistStatusEl
+  form: controls.playlistFormEl,
+  nameInput: controls.playlistNameEl,
+  list: controls.playlistListEl,
+  status: controls.playlistStatusEl
 }, {
   repository: stateRepository,
   getActivePassage: gameController.getActivePassage,
@@ -85,9 +65,14 @@ setupMusic(document.getElementById('music-slot'));
 
 let startCampaignChunk: (chunk: CampaignChunk, verses: ChapterVerse[]) => void = () => undefined;
 const campaignController = createCampaignController({
-  contentEl: campaignContentEl, backEl: campaignBackEl, breadcrumbEl: campaignBreadcrumbEl,
-  totalStarsEl: campaignTotalStarsEl, totalProgressEl: campaignTotalProgressEl,
-  devToolsEl: campaignDevToolsEl, sidebarProgressEl: sidebarCampaignProgressEl, celebrationEl
+  contentEl: controls.campaignContentEl,
+  backEl: controls.campaignBackEl,
+  breadcrumbEl: controls.campaignBreadcrumbEl,
+  totalStarsEl: controls.campaignTotalStarsEl,
+  totalProgressEl: controls.campaignTotalProgressEl,
+  devToolsEl: controls.campaignDevToolsEl,
+  sidebarProgressEl: controls.sidebarCampaignProgressEl,
+  celebrationEl: controls.celebrationEl
 }, (chunk, text) => startCampaignChunk(chunk, text), stateRepository, appConfig);
 
 startCampaignChunk = (chunk, verses) => {
@@ -113,21 +98,18 @@ gameController.setCampaignHooks({
 
 async function fetchCampaignChunk(chunk: CampaignChunk): Promise<void> {
   const data = await fetchChapter(chunk.book, chunk.chapter, 'kjv', false);
-  startCampaignChunk(chunk, (data.verses ?? []).map((verse, index) => ({
-    verse: verse.verse ?? index + 1,
-    text: verse.text
-  })));
+  startCampaignChunk(chunk, normalizeChapterVerses(data.verses ?? []));
 }
 
 function showWorkspace(workspace: string, selectedMode?: string): void {
   const gameScreen = document.getElementById('game-screen');
-  campaignScreenEl.classList.toggle('is-hidden', workspace !== 'campaign');
+  controls.campaignScreenEl.classList.toggle('is-hidden', workspace !== 'campaign');
   gameScreen?.classList.toggle('is-hidden', workspace === 'campaign');
   gameScreen?.classList.toggle('campaign-play', workspace === 'campaign-play');
   const appShell = document.querySelector<HTMLElement>('.app-shell');
   if (appShell) applyPageTheme(appShell, themeForWorkspace(workspace, selectedMode));
   gameScreen?.scrollTo({ top: 0 });
-  campaignScreenEl.scrollTo({ top: 0 });
+  controls.campaignScreenEl.scrollTo({ top: 0 });
   document.querySelectorAll<HTMLElement>('.mode-nav').forEach(button => {
     const campaignActive = (workspace === 'campaign' || workspace === 'campaign-play') && button.dataset.workspace === 'campaign';
     const practiceActive = workspace === 'practice' && button.dataset.workspace === 'practice';
@@ -149,19 +131,19 @@ function showWorkspace(workspace: string, selectedMode?: string): void {
 document.querySelectorAll<HTMLElement>('.mode-nav').forEach(button => button.addEventListener('click', () => {
   const mode = button.dataset.mode;
   if (mode) {
-    gameModeEl.value = mode;
-    gameModeEl.dispatchEvent(new Event('change'));
+    controls.gameModeEl.value = mode;
+    controls.gameModeEl.dispatchEvent(new Event('change'));
   }
   const workspace = button.dataset.workspace ?? 'practice';
-  if (workspace === 'practice' && gameModeEl.value === 'defense') {
-    gameModeEl.value = 'practice';
-    gameModeEl.dispatchEvent(new Event('change'));
+  if (workspace === 'practice' && controls.gameModeEl.value === 'defense') {
+    controls.gameModeEl.value = 'practice';
+    controls.gameModeEl.dispatchEvent(new Event('change'));
   }
-  showWorkspace(workspace, mode ?? gameModeEl.value);
+  showWorkspace(workspace, mode ?? controls.gameModeEl.value);
 }));
-gameModeEl.addEventListener('change', () => {
-  if (gameModeEl.value === 'practice' || gameModeEl.value === 'memory') {
-    showWorkspace('practice', gameModeEl.value);
+controls.gameModeEl.addEventListener('change', () => {
+  if (controls.gameModeEl.value === 'practice' || controls.gameModeEl.value === 'memory') {
+    showWorkspace('practice', controls.gameModeEl.value);
   }
 });
 showWorkspace('campaign');

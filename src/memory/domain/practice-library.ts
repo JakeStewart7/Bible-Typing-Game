@@ -1,6 +1,7 @@
-import type { PassageReference } from './passage.ts';
+import { createPassageId, type PassageReference } from './passage.ts';
 
 export type { PassageReference } from './passage.ts';
+export { createPassageId } from './passage.ts';
 
 export type MemoryPassage = PassageReference & {
   id: string;
@@ -28,16 +29,6 @@ const DEFAULT_PRACTICE_PASSAGE: PassageReference = {
 
 export function selectPracticeStartPassage(recent: readonly PassageReference[]): PassageReference {
   return recent[0] ? { ...recent[0] } : { ...DEFAULT_PRACTICE_PASSAGE };
-}
-
-export function createPassageId(reference: PassageReference): string {
-  return [
-    reference.translation,
-    reference.book,
-    reference.chapter,
-    reference.startVerse,
-    reference.endVerse
-  ].join(':');
 }
 
 export function toMemoryPassage(reference: PassageReference, practicedAt: number): MemoryPassage {

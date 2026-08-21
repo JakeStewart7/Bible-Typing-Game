@@ -45,6 +45,16 @@ const LOB_ARC_HEIGHTS = [20, 38, 60] as const;
 const LOB_HEIGHT_JITTER = 6;
 const PROJECTILE_GRAVITY = 140;
 const LAUNCH_POSITION = 94;
+const ENEMY_PROFILES = {
+  wisp: { health: 4, speed: 1, hitbox: { radius: 5, height: 9 } },
+  rusher: { health: 2, speed: 1.65, hitbox: { radius: 3.5, height: 7 } },
+  warden: { health: 7, speed: .72, hitbox: { radius: 6, height: 11 } },
+  titan: { health: 11, speed: .48, hitbox: { radius: 7, height: 14 } }
+} as const satisfies Record<EnemyKind, {
+  health: number;
+  speed: number;
+  hitbox: { radius: number; height: number };
+}>;
 export type RandomSource = () => number;
 
 export function upgradeCost(state: DefenseState, id: UpgradeId): number {
@@ -195,12 +205,7 @@ function enemyKindFor(id: number, wave: number): EnemyKind {
 }
 
 function enemyProfile(kind: EnemyKind | undefined): { health: number; speed: number } {
-  switch (kind) {
-    case 'rusher': return { health: 2, speed: 1.65 };
-    case 'warden': return { health: 7, speed: .72 };
-    case 'titan': return { health: 11, speed: .48 };
-    default: return { health: 4, speed: 1 };
-  }
+  return ENEMY_PROFILES[kind ?? 'wisp'];
 }
 
 function defenseEnemySpeed(state: DefenseState): number {
@@ -229,10 +234,5 @@ function projectileIntersectsEnemy(projectile: Projectile, enemy: Enemy, previou
 }
 
 function enemyHitbox(kind: EnemyKind | undefined): { radius: number; height: number } {
-  switch (kind) {
-    case 'rusher': return { radius: 3.5, height: 7 };
-    case 'warden': return { radius: 6, height: 11 };
-    case 'titan': return { radius: 7, height: 14 };
-    default: return { radius: 5, height: 9 };
-  }
+  return ENEMY_PROFILES[kind ?? 'wisp'].hitbox;
 }

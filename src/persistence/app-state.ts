@@ -4,7 +4,11 @@ import {
   PLAYLIST_STATE_VERSION
 } from '../memory/domain/playlists.ts';
 import type { PlaylistState } from '../memory/domain/playlists.ts';
-import type { PassageReference } from '../memory/domain/passage.ts';
+import {
+  createPassageId,
+  samePassageReference,
+  type PassageReference
+} from '../memory/domain/passage.ts';
 import type { AppStorage, StoredValue } from './storage.ts';
 import { decodeJson } from './storage.ts';
 
@@ -105,7 +109,7 @@ export class AppStateRepository {
   }
 
   recordRecentPassage(passage: PassageReference): PassageReference[] {
-    const distinct = this.readRecentPassages().filter(item => !samePassage(item, passage));
+    const distinct = this.readRecentPassages().filter(item => !samePassageReference(item, passage));
     const recent = [passage, ...distinct].slice(0, 10);
     this.storage.write(recentPassagesValue, recent);
     return recent;
@@ -118,14 +122,6 @@ export class AppStateRepository {
   writePlaylistState(state: PlaylistState): void {
     this.storage.write(playlistStateValue, state);
   }
-}
-
-function samePassage(left: PassageReference, right: PassageReference): boolean {
-  return left.book === right.book &&
-    left.chapter === right.chapter &&
-    left.startVerse === right.startVerse &&
-    left.endVerse === right.endVerse &&
-    left.translation === right.translation;
 }
 
 function isPlaylistState(value: unknown): value is PlaylistState {
@@ -143,8 +139,7 @@ function isPlaylistState(value: unknown): value is PlaylistState {
     }
     if (ids.has(playlist.id)) return false;
     ids.add(playlist.id);
-    const passageIds = new Set(playlist.passages.map(passage =>
-      `${passage.translation}:${passage.book}:${passage.chapter}:${passage.startVerse}:${passage.endVerse}`));
+    const passageIds = new Set(playlist.passages.map(createPassageId));
     if (passageIds.size !== playlist.passages.length) return false;
     const currentIndex = Number(playlist.currentIndex);
     return playlist.passages.length === 0
