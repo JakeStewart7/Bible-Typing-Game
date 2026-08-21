@@ -17,8 +17,8 @@ type CaretMotion = {
 };
 
 const caretMotions = new WeakMap<HTMLElement, CaretMotion>();
-const CARET_SPEED_LIMIT = 4.5;
-const CARET_SPEED_OVERFLOW_FACTOR = .25;
+const CARET_SPEED_LIMIT = 2.75;
+const CARET_SPEED_OVERFLOW_FACTOR = .08;
 
 function animateCaret(motion: CaretMotion, now: number): void {
   const delta = Math.min(2, Math.max(.25, (now - motion.lastTime) / 16.67));
