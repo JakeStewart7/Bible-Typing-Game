@@ -30,6 +30,7 @@ import {
   createPassageId,
   isFavoritePassage,
   recordRecentPassage,
+  selectMemoryStartPassage,
   toMemoryPassage,
   toggleFavoritePassage
 } from '../memory/domain/practice-library';
@@ -164,6 +165,7 @@ export function initGameControllers(
 
   function setMode() {
     const mode = parseGameMode(gameModeEl.value);
+    const enteringMemory = mode === 'memory' && typingCardEl.dataset.mode !== 'memory';
     typingCardEl.dataset.mode = mode;
     challengeBannerEl.textContent = MODE_LABELS[mode];
     defenseGameEl.classList.toggle('is-hidden', mode !== 'defense');
@@ -171,7 +173,10 @@ export function initGameControllers(
     memoryLibraryEl.classList.toggle('is-hidden', mode !== 'memory');
     favoritePassageEl.classList.toggle('is-hidden', mode !== 'memory' || !activePassage);
     hintButtonEl.classList.toggle('is-hidden', mode !== 'memory');
-    if (mode === 'memory') renderMemoryLibrary();
+    if (mode === 'memory') {
+      renderMemoryLibrary();
+      if (enteringMemory) void loadMemoryStartPassage();
+    }
     renderDefense();
     if (mode === 'defense') void loadRandomDefensePassage();
   }
@@ -464,6 +469,18 @@ export function initGameControllers(
     const favorite = Boolean(id) && isFavoritePassage(snapshot, id);
     favoritePassageEl.setAttribute('aria-pressed', String(favorite));
     favoritePassageEl.textContent = favorite ? '★ Favorited' : '☆ Favorite';
+  }
+
+  async function loadMemoryStartPassage(): Promise<void> {
+    const passage = selectMemoryStartPassage(stateRepository.readRecentPassages());
+    translationEl.value = passage.translation;
+    bookEl.value = passage.book;
+    populateChapters(passage.chapter);
+    await populateVerses();
+    startVerseEl.value = String(passage.startVerse);
+    constrainEndVerses();
+    endVerseEl.value = String(passage.endVerse);
+    loadBtn.click();
   }
 
   function renderPassageList(container: HTMLElement, passages: MemoryPassage[]): void {

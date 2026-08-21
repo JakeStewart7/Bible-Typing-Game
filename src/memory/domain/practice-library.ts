@@ -22,6 +22,13 @@ export interface MemoryLibraryRepository {
 }
 
 const MAX_RECENT = 6;
+const DEFAULT_MEMORY_PASSAGE: PassageReference = {
+  book: 'Genesis',
+  chapter: 1,
+  startVerse: 1,
+  endVerse: 1,
+  translation: 'kjv'
+};
 
 export function createPassageId(reference: PassageReference): string {
   return [
@@ -62,4 +69,8 @@ export function toggleFavoritePassage(
 
 export function isFavoritePassage(snapshot: MemoryLibrarySnapshot, id: string): boolean {
   return snapshot.favorites.some(item => item.id === id);
+}
+
+export function selectMemoryStartPassage(recent: readonly PassageReference[]): PassageReference {
+  return recent[0] ? { ...recent[0] } : { ...DEFAULT_MEMORY_PASSAGE };
 }

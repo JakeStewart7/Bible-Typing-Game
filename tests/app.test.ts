@@ -15,6 +15,7 @@ import { hiddenMemoryWordIndices, shouldMaskMemoryCharacter } from '../src/memor
 import {
   createPassageId,
   recordRecentPassage,
+  selectMemoryStartPassage,
   toggleFavoritePassage
 } from '../src/memory/domain/practice-library.ts';
 import { getCurrentWordRange, isHintAvailable } from '../src/game/hint.ts';
@@ -172,6 +173,14 @@ test('Memory library keeps unique recent passages and toggles favorites', () => 
   const favorite = toggleFavoritePassage(recent, passage);
   equal(favorite.favorites.map(item => item.id), [passage.id]);
   equal(toggleFavoritePassage(favorite, passage).favorites, []);
+});
+
+test('Memory starts with the newest practiced passage or Genesis 1:1', () => {
+  const recent = { book: 'Psalms', chapter: 23, startVerse: 1, endVerse: 4, translation: 'kjv' };
+  equal(selectMemoryStartPassage([recent]), recent);
+  equal(selectMemoryStartPassage([]), {
+    book: 'Genesis', chapter: 1, startVerse: 1, endVerse: 1, translation: 'kjv'
+  });
 });
 
 test('session analysis identifies difficult words and comparisons', () => {
