@@ -19,7 +19,8 @@ type CaretMotion = {
 const caretMotions = new WeakMap<HTMLElement, CaretMotion>();
 const CARET_MAX_SPEED = 2.75;
 const CARET_ACCELERATION = .28;
-const CARET_LINE_MAX_SPEED = 18;
+const CARET_ACCELERATION_FALLOFF = 2.75;
+const CARET_LINE_MAX_SPEED = 54;
 const CARET_LINE_ACCELERATION = 1.8;
 
 function animateCaret(motion: CaretMotion, now: number): void {
@@ -28,7 +29,9 @@ function animateCaret(motion: CaretMotion, now: number): void {
   const offsetX = motion.targetX - motion.x;
   const offsetY = motion.targetY - motion.y;
   const distance = Math.hypot(offsetX, offsetY);
-  const acceleration = motion.lineBoostActive ? CARET_LINE_ACCELERATION : CARET_ACCELERATION;
+  const currentSpeed = Math.hypot(motion.velocityX, motion.velocityY);
+  const regularAcceleration = CARET_ACCELERATION / (1 + currentSpeed / CARET_ACCELERATION_FALLOFF);
+  const acceleration = motion.lineBoostActive ? CARET_LINE_ACCELERATION : regularAcceleration;
   const maxSpeed = motion.lineBoostActive ? CARET_LINE_MAX_SPEED : CARET_MAX_SPEED;
   const desiredSpeed = Math.min(maxSpeed, Math.sqrt(2 * acceleration * distance));
   const desiredVelocityX = distance ? offsetX / distance * desiredSpeed : 0;
