@@ -212,6 +212,17 @@ export function initGameControllers(
     inputEl.focus({ preventScroll: gameModeEl.value === 'defense' });
   }
 
+  function shouldKeepTypingFocus(): boolean {
+    const gameScreen = document.getElementById('game-screen');
+    const interactiveOverlay = document.querySelector(
+      '.passage-picker:not(.is-hidden), .settings-menu:not(.is-hidden), .modal-backdrop:not(.is-hidden)'
+    );
+    return gameModeEl.value !== 'defense' && !inputEl.disabled
+      && !gameScreen?.classList.contains('is-hidden')
+      && !gameScreen?.classList.contains('campaign-play')
+      && !interactiveOverlay;
+  }
+
   function queueReaderPosition(): void {
     cancelAnimationFrame(readerPositionFrame);
     readerPositionFrame = requestAnimationFrame(() => {
@@ -415,6 +426,12 @@ export function initGameControllers(
   });
   document.getElementById('focus-button')?.addEventListener('click', () => {
     document.getElementById('game-screen')?.classList.toggle('focus-mode');
+  });
+  document.addEventListener('focusin', event => {
+    if (event.target === inputEl || !shouldKeepTypingFocus()) return;
+    requestAnimationFrame(() => {
+      if (shouldKeepTypingFocus()) focusInput();
+    });
   });
   document.addEventListener('keydown', event => {
     if (event.ctrlKey && event.key.toLowerCase() === 'h' && gameModeEl.value === 'memory') {
