@@ -12,6 +12,7 @@
 .app-shell[data-theme="journey"] { --page-accent: var(--journey-accent); }
 .app-shell[data-theme="practice"] { --page-accent: var(--practice-accent); }
 .app-shell[data-theme="arcade"] { --page-accent: var(--arcade-accent); }
+.app-shell[data-theme="multiplayer"] { --page-accent: var(--multiplayer-accent); }
 .topbar { position: relative; z-index: 25; min-width: 0; height: var(--header-height); padding: 0 var(--content-gutter); display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1rem; border-bottom: 1px solid rgba(23,63,56,.12); background: #fff; }
 .workspace-shell { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); min-height: 0; overflow: hidden; }
 .page-viewport { min-width: 0; min-height: 0; overflow: hidden; }
@@ -30,6 +31,7 @@
 .mode-nav { --nav-accent: var(--practice-accent); --nav-soft: color-mix(in srgb, var(--nav-accent) 14%, white); --nav-hover: color-mix(in srgb, var(--nav-accent) 7%, white); width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px; border: 0; border-radius: 12px; color: var(--muted); background: transparent; text-align: left; }
 .mode-nav[data-workspace="campaign"] { --nav-accent: var(--journey-accent); }
 .mode-nav[data-mode="defense"] { --nav-accent: var(--arcade-accent); }
+.mode-nav[data-workspace="multiplayer"] { --nav-accent: var(--multiplayer-accent); }
 .mode-nav:hover { color: var(--nav-accent); background: var(--nav-hover); }
 .mode-nav.active { color: var(--nav-accent); background: var(--nav-soft); }
 .mode-nav > span { flex: 0 0 25px; font-size: 1.1rem; text-align: center; }

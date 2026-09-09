@@ -26,8 +26,16 @@ export function samePassageReference(left: PassageReference, right: PassageRefer
 }
 
 export function formatPassageLabel(reference: PassageLocation): string {
-  const verses = reference.startVerse === reference.endVerse
-    ? reference.startVerse
-    : `${reference.startVerse}–${reference.endVerse}`;
-  return `${reference.book} ${reference.chapter}:${verses}`;
+  return `${reference.book} ${reference.chapter}:${
+    formatVerseRange(reference.startVerse, reference.endVerse)
+  }`;
+}
+
+export function formatVerseRange(startVerse: number, endVerse: number): string {
+  return startVerse === endVerse ? String(startVerse) : `${startVerse}–${endVerse}`;
+}
+
+export function formatVerseSelectionLabel(startVerse: number, endVerse: number): string {
+  const range = formatVerseRange(startVerse, endVerse);
+  return startVerse === endVerse ? `Verse ${range}` : `Verses ${range}`;
 }

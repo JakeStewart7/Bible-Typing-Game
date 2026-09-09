@@ -17,7 +17,11 @@ import { AppStateRepository } from './persistence/app-state';
 import { AppStorage } from './persistence/storage';
 import { ProfileRepository } from './persistence/profile-repository';
 import { applyPageTheme, themeForWorkspace } from './ui/page-theme';
+import { setCaretSmoothingEnabled } from './ui/caret';
 import { createPlaylistController } from './memory/ui/playlist-controller.ts';
+import { createMultiplayerController } from './multiplayer/ui/controller.ts';
+import { MockMultiplayerClient } from './multiplayer/infrastructure/mock-multiplayer-client.ts';
+import { BiblePassageProvider } from './multiplayer/infrastructure/bible-passage-provider.ts';
 
 import trackDetermination from '../assets/music/determination.mp3';
 import trackApple from '../assets/music/apple_cider.ogg';
@@ -29,6 +33,13 @@ const controls = initControls(appConfig);
 const storage = new AppStorage(window.localStorage);
 const stateRepository = new AppStateRepository(storage);
 const profileRepository = new ProfileRepository(storage);
+const appShell = document.querySelector<HTMLElement>('.app-shell');
+const cursorSmoothingToggle = document.getElementById('cursor-smoothing-toggle');
+let cursorSmoothingEnabled = stateRepository.readCursorSmoothing();
+applyCursorSmoothing();
+const multiplayerController = createMultiplayerController(
+  new MockMultiplayerClient(new BiblePassageProvider())
+);
 
 // ----------------------------
 // Game state (keep instance export for other modules/tests)
@@ -104,7 +115,9 @@ async function fetchCampaignChunk(chunk: CampaignChunk): Promise<void> {
 function showWorkspace(workspace: string, selectedMode?: string): void {
   const gameScreen = document.getElementById('game-screen');
   controls.campaignScreenEl.classList.toggle('is-hidden', workspace !== 'campaign');
+  controls.multiplayerScreenEl.classList.toggle('is-hidden', workspace !== 'multiplayer');
   gameScreen?.classList.toggle('is-hidden', workspace === 'campaign');
+  gameScreen?.classList.toggle('is-hidden', workspace === 'multiplayer');
   gameScreen?.classList.toggle('campaign-play', workspace === 'campaign-play');
   const appShell = document.querySelector<HTMLElement>('.app-shell');
   if (appShell) applyPageTheme(appShell, themeForWorkspace(workspace, selectedMode));
@@ -114,7 +127,8 @@ function showWorkspace(workspace: string, selectedMode?: string): void {
     const campaignActive = (workspace === 'campaign' || workspace === 'campaign-play') && button.dataset.workspace === 'campaign';
     const practiceActive = workspace === 'practice' && button.dataset.workspace === 'practice';
     const modeActive = workspace === 'defense' && button.dataset.mode === selectedMode;
-    button.classList.toggle('active', campaignActive || practiceActive || modeActive);
+    const multiplayerActive = workspace === 'multiplayer' && button.dataset.workspace === 'multiplayer';
+    button.classList.toggle('active', campaignActive || practiceActive || modeActive || multiplayerActive);
   });
   if (workspace === 'defense') {
     const mode = document.getElementById('game-mode') as HTMLSelectElement | null;
@@ -125,6 +139,9 @@ function showWorkspace(workspace: string, selectedMode?: string): void {
   } else if (workspace === 'practice') {
     gameController.leaveCampaign();
     gameController.showPracticeReader();
+  } else if (workspace === 'multiplayer') {
+    gameController.leaveCampaign();
+    multiplayerController.show();
   } else if (workspace === 'campaign') campaignController.renderBooks();
 }
 
@@ -177,3 +194,17 @@ document.getElementById('sound-toggle')?.addEventListener('click', event => {
   const label = button.querySelector('span');
   if (label) label.textContent = enabled ? 'On' : 'Off';
 });
+
+cursorSmoothingToggle?.addEventListener('click', () => {
+  cursorSmoothingEnabled = !cursorSmoothingEnabled;
+  stateRepository.writeCursorSmoothing(cursorSmoothingEnabled);
+  applyCursorSmoothing();
+});
+
+function applyCursorSmoothing(): void {
+  setCaretSmoothingEnabled(cursorSmoothingEnabled);
+  appShell?.classList.toggle('cursor-smoothing-disabled', !cursorSmoothingEnabled);
+  cursorSmoothingToggle?.setAttribute('aria-pressed', String(cursorSmoothingEnabled));
+  const label = cursorSmoothingToggle?.querySelector('span');
+  if (label) label.textContent = cursorSmoothingEnabled ? 'On' : 'Off';
+}

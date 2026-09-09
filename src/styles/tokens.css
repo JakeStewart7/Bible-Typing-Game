@@ -9,11 +9,13 @@
   --cream: #fffdf7;
   --gold: #f4b83f;
   --coral: #ee6b62;
+  --error: #a93630;
   --border: #dce8e2;
   /* These are the only values needed to configure page and navigation themes. */
   --journey-accent: #c58b18;
   --practice-accent: #159a78;
   --arcade-accent: #4b9ed6;
+  --multiplayer-accent: #7a62c9;
   --content-max: 92rem;
   --content-gutter: clamp(1rem, 2.5vw, 2.5rem);
   --sidebar-width: clamp(13rem, 17vw, 15rem);

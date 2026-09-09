@@ -3,7 +3,9 @@ import { chooseVerseRange, filterEndVerses } from '../passage-selector';
 import { getVerseCount } from '../verse-counts';
 import { requireElement } from '../shared/dom';
 import type { AppConfig } from '../config';
+import { formatVerseSelectionLabel } from '../memory/domain/passage.ts';
 import { practiceWorkspaceMarkup } from './practice-workspace.ts';
+import { multiplayerWorkspaceMarkup } from '../multiplayer/ui/workspace.ts';
 
 export function initControls(config: AppConfig) {
   const developerControls = config.isDevelopment ? `
@@ -43,7 +45,11 @@ export function initControls(config: AppConfig) {
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.8 7.8 0 0 0 0-3l2-1.5-2-3.4-2.4 1a8 8 0 0 0-2.6-1.5L14.1 2h-4.2l-.4 3.1A8 8 0 0 0 7 6.6l-2.4-1-2 3.4 2 1.5a7.8 7.8 0 0 0 0 3l-2 1.5 2 3.4 2.4-1a8 8 0 0 0 2.6 1.5l.4 3.1h4.2l.4-3.1a8 8 0 0 0 2.6-1.5l2.4 1 2-3.4-2.2-1.5Z"/></svg>
             </button>
             <div id="settings-menu" class="settings-menu is-hidden">
-              <header><div><small>Preferences</small><strong>Audio settings</strong></div></header>
+              <header><div><small>Preferences</small><strong>App settings</strong></div></header>
+              <div class="setting-row">
+                <div><strong>Cursor smoothing</strong><small>Animate the typing cursor between characters</small></div>
+                <button id="cursor-smoothing-toggle" class="sound-switch" aria-label="Toggle cursor smoothing" aria-pressed="true"><i></i><span>On</span></button>
+              </div>
               <div class="setting-row">
                 <div><strong>Sound effects</strong><small>Typing and completion feedback</small></div>
                 <button id="sound-toggle" class="sound-switch" aria-label="Toggle sound effects" aria-pressed="true"><i></i><span>On</span></button>
@@ -61,6 +67,7 @@ export function initControls(config: AppConfig) {
           <button class="mode-nav active" data-workspace="campaign" aria-label="Journey" title="Journey"><span>✦</span><div><strong>Journey</strong><small id="sidebar-campaign-progress">0 / 0 passages</small></div></button>
           <button class="mode-nav" data-workspace="practice" aria-label="Practice" title="Practice"><span>⌨</span><div><strong>Practice</strong><small>Practice with text guidance</small></div></button>
           <button class="mode-nav" data-workspace="defense" data-mode="defense" aria-label="Arcade" title="Arcade"><span>◇</span><div><strong>Arcade</strong><small>Repel the shadows</small></div></button>
+          <button class="mode-nav" data-workspace="multiplayer" aria-label="Together" title="Together"><span>◎</span><div><strong>Together</strong><small>Type and recall as a group</small></div></button>
         </aside>
         <div class="page-viewport">
       <section id="game-screen" class="app-page game-screen is-hidden">
@@ -88,6 +95,7 @@ export function initControls(config: AppConfig) {
         ${journeyDeveloperPanel}
         <div id="campaign-content" class="campaign-content"></div>
       </section>
+      ${multiplayerWorkspaceMarkup()}
         </div>
       </div>
 
@@ -175,7 +183,7 @@ export function initControls(config: AppConfig) {
     pickerBookLabelEl.textContent = book;
     pickerChapterLabelEl.textContent = chapter ? `Chapter ${chapter}` : '';
     pickerRangeLabelEl.textContent = startVerse
-      ? startVerse === endVerse ? `Verse ${startVerse}` : `Verses ${startVerse}–${endVerse}`
+      ? formatVerseSelectionLabel(startVerse, endVerse)
       : '';
     bookGridEl.replaceChildren(...BOOKS.map(candidate => pickerButton(candidate, candidate === book, () => {
       bookEl.value = candidate;
@@ -272,6 +280,7 @@ export function initControls(config: AppConfig) {
     playlistStatusEl: requireElement('playlist-status', HTMLElement),
     resultAnalysisEl: requireElement('result-analysis', HTMLElement),
     campaignScreenEl: requireElement('campaign-screen', HTMLElement),
+    multiplayerScreenEl: requireElement('multiplayer-screen', HTMLElement),
     campaignContentEl: requireElement('campaign-content', HTMLElement),
     campaignBackEl: requireElement('campaign-back', HTMLButtonElement),
     campaignBreadcrumbEl: requireElement('campaign-breadcrumb', HTMLElement),

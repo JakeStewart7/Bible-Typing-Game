@@ -11,7 +11,7 @@ import type { CampaignChunk } from './campaign';
 import { normalizeChapterVerses } from './typing/chapter-reader';
 import type { AppStateRepository } from './persistence/app-state';
 import type { AppConfig } from './config';
-import { formatPassageLabel } from './memory/domain/passage.ts';
+import { formatPassageLabel, formatVerseSelectionLabel } from './memory/domain/passage.ts';
 import {
   filterJourneyBooks,
   findJourneyContinuation,
@@ -113,9 +113,7 @@ export function createCampaignController(
         const stars = progress[chunk.id] ?? 0;
         const button = document.createElement('button');
         button.className = stars ? 'passage-tile complete' : 'passage-tile';
-        const passageLabel = chunk.startVerse === chunk.endVerse
-          ? `Verse ${chunk.startVerse}`
-          : `Verses ${chunk.startVerse}–${chunk.endVerse}`;
+        const passageLabel = formatVerseSelectionLabel(chunk.startVerse, chunk.endVerse);
         button.innerHTML = `<strong>${passageLabel}</strong><span>${'★'.repeat(stars)}${'☆'.repeat(5 - stars)}</span>`;
         button.addEventListener('click', () => void startChunk(chunk, button));
         chunkGrid.appendChild(button);

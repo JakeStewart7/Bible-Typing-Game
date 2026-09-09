@@ -19,10 +19,15 @@ type CaretMotion = {
 
 const motions = new WeakMap<HTMLElement, CaretMotion>();
 const MAX_SPEED = 2.75;
-const ACCELERATION = .34;
+const ACCELERATION = .374;
 const ACCELERATION_FALLOFF = 4;
 const BOOST_MAX_SPEED = 54;
-const BOOST_ACCELERATION = 3.6;
+const BOOST_ACCELERATION = 3.96;
+let smoothingEnabled = true;
+
+export function setCaretSmoothingEnabled(enabled: boolean): void {
+  smoothingEnabled = enabled;
+}
 
 export function getCaretElement(container: HTMLElement): HTMLElement | undefined {
   return motions.get(container)?.element;
@@ -49,7 +54,7 @@ export function updateCaretPosition(
     motion.boostActive ||= changedLine || movement === 'boost';
   }
 
-  if (movement === 'teleport') {
+  if (movement === 'teleport' || !smoothingEnabled) {
     teleportToTarget(motion);
   } else {
     scheduleAnimation(motion);
