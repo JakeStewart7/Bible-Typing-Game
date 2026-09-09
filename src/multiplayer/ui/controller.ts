@@ -2,10 +2,9 @@ import type { MultiplayerClient, RoomConnection, RoomSnapshot } from '../domain/
 import { MockMultiplayerClient } from '../infrastructure/mock-multiplayer-client';
 import { MultiplayerView } from './view';
 import { playComplete, playKey } from '../../audio/effects';
+import { normalizeBotDifficulty } from '../domain/settings';
 
-const MOCK_REFRESH_INTERVAL_MS = 75;
-const MOCK_CHARACTERS_PER_UPDATE = 1;
-
+const MOCK_REFRESH_INTERVAL_MS = 25;
 export function createMultiplayerController(client: MultiplayerClient): { show(): void } {
   const view = new MultiplayerView();
   let connection: RoomConnection | null = null;
@@ -15,25 +14,45 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
   let cursorSequence = 0;
 
   bindForm('multiplayer-create-form', () => run(async () => {
-    await connect(await client.createRoom(inputValue('multiplayer-name')));
+    await connect(await client.createRoom(inputValue('multiplayer-name'), view.creationSettings()));
   }));
   bindForm('multiplayer-join-form', () => run(async () => {
     await connect(await client.joinRoom(inputValue('multiplayer-code'), inputValue('multiplayer-join-name')));
   }));
   button('multiplayer-leave').addEventListener('click', leave);
   button('multiplayer-add-bot').addEventListener('click', () => run(async () => {
-    mockClient().addSimulatedPlayer();
+    await send({ type: 'ADD_BOT' });
   }));
   button('multiplayer-start').addEventListener('click', () => send({ type: 'START_ROUND' }));
   button('multiplayer-ready').addEventListener('click', () => send({ type: 'SET_READY', ready: true }));
+  for (const id of ['multiplayer-round-length', 'multiplayer-round-guessing']) {
+    element(id).addEventListener('change', () => {
+      if (!snapshot) return;
+      const nextSettings = view.nextRoundSettings();
+      void send({
+        type: 'UPDATE_SETTINGS',
+        settings: {
+          ...snapshot.settings,
+          passageLength: nextSettings.passageLength,
+          includeGuessing: nextSettings.includeGuessing
+        }
+      });
+    });
+  }
+  element('multiplayer-players').addEventListener('change', event => {
+    const target = event.target;
+    if (!(target instanceof HTMLSelectElement) || !target.dataset.playerId) return;
+    const difficulty = target.value;
+    void send({
+      type: 'UPDATE_BOT_DIFFICULTY',
+      playerId: target.dataset.playerId,
+      difficulty: normalizeBotDifficulty(difficulty)
+    });
+  });
   button('multiplayer-restart').addEventListener('click', () => {
     if (!snapshot || snapshot.phase !== 'typing') return;
     view.restartTyping(snapshot);
-    void send({
-      type: 'UPDATE_CURSOR',
-      position: 0,
-      sequence: ++cursorSequence
-    });
+    void send({ type: 'RESTART_TYPING' });
   });
   button('multiplayer-focus').addEventListener('click', event => {
     const control = event.currentTarget;
@@ -52,14 +71,11 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
     if (inputUpdate.advanced) playKey(inputUpdate.lastCharacterCorrect ?? false);
     void run(async () => {
       await connection!.send({
-        type: 'UPDATE_CURSOR',
-        position: view.typingCursor(),
+        type: 'UPDATE_TYPING',
+        typedText: view.typingValue(),
         sequence: ++cursorSequence
       });
-      if (inputUpdate.completed) {
-        await connection!.send({ type: 'COMPLETE_PASSAGE' });
-        playComplete();
-      }
+      if (inputUpdate.completed) playComplete();
     });
   });
   element('multiplayer-guess-form').addEventListener('input', () => {
@@ -89,12 +105,12 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
       view.render(nextSnapshot);
       if (roundChanged && nextSnapshot.phase === 'typing') view.focusTyping();
     });
-    if (client instanceof MockMultiplayerClient) {
-      botTimer = window.setInterval(() => {
-        if (snapshot) view.refreshTyping(snapshot);
-        void run(() => client.advanceSimulatedPlayers(MOCK_CHARACTERS_PER_UPDATE));
-      }, MOCK_REFRESH_INTERVAL_MS);
-    }
+    botTimer = window.setInterval(() => {
+      if (snapshot) view.refreshTyping(snapshot);
+      if (client instanceof MockMultiplayerClient) {
+        void run(() => client.advanceSimulatedPlayers());
+      }
+    }, MOCK_REFRESH_INTERVAL_MS);
   }
 
   function leave(): void {
@@ -120,13 +136,6 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
     } catch (error) {
       view.setStatus(error instanceof Error ? error.message : 'The multiplayer action failed.', true);
     }
-  }
-
-  function mockClient(): MockMultiplayerClient {
-    if (!(client instanceof MockMultiplayerClient)) {
-      throw new Error('Simulated players are only available with the mock transport.');
-    }
-    return client;
   }
 
   return {

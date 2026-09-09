@@ -1,4 +1,5 @@
 import type { Game } from './state';
+import { getValidatedTypingLength } from './input.ts';
 
 export type GameStats = { time: number; wpm: number; accuracy: number; progress: number };
 
@@ -19,9 +20,5 @@ export function calculateStats(game: Game, now = Date.now()): GameStats {
 }
 
 export function getTypingProgressLength(game: Game): number {
-  const mismatchIndex = game.blockedAccuracyIndex;
-  if (mismatchIndex === null) return game.typed.length;
-
-  const wordStart = game.text.lastIndexOf(' ', mismatchIndex - 1) + 1;
-  return wordStart;
+  return getValidatedTypingLength(game.text, game.typed.join(''));
 }

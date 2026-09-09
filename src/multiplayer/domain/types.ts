@@ -1,5 +1,13 @@
 export type RoomPhase = 'lobby' | 'typing' | 'guessing' | 'reveal';
 export type PlayerKind = 'human' | 'simulated';
+export type BotDifficulty = 'easy' | 'medium' | 'hard' | 'very-hard' | 'extreme';
+export type PassageLength = 'very-short' | 'short' | 'medium' | 'long' | 'very-long';
+
+export type RoomSettings = {
+  botDifficulty: BotDifficulty;
+  passageLength: PassageLength;
+  includeGuessing: boolean;
+};
 
 export type PassageReference = {
   book: string;
@@ -25,13 +33,18 @@ export type PlayerState = {
   name: string;
   color: string;
   kind: PlayerKind;
+  botDifficulty: BotDifficulty | null;
+  typedText: string;
   cursor: number;
+  progress: number;
   cursorSequence: number;
   guess: PassageGuess;
   typingComplete: boolean;
   guessSubmitted: boolean;
   ready: boolean;
   score: number | null;
+  wpm: number;
+  accuracy: number;
 };
 
 export type RoomSnapshot = {
@@ -42,16 +55,21 @@ export type RoomSnapshot = {
   round: number;
   passageText: string | null;
   revealedReference: PassageReference | null;
+  guessingEndsAt: number | null;
+  settings: RoomSettings;
   players: readonly PlayerState[];
 };
 
 export type PlayerCommand =
   | { type: 'START_ROUND' }
-  | { type: 'UPDATE_CURSOR'; position: number; sequence: number }
-  | { type: 'COMPLETE_PASSAGE' }
+  | { type: 'UPDATE_TYPING'; typedText: string; sequence: number }
+  | { type: 'RESTART_TYPING' }
   | { type: 'UPDATE_GUESS'; guess: PassageGuess }
   | { type: 'SUBMIT_GUESS' }
-  | { type: 'SET_READY'; ready: boolean };
+  | { type: 'SET_READY'; ready: boolean }
+  | { type: 'UPDATE_SETTINGS'; settings: RoomSettings }
+  | { type: 'ADD_BOT' }
+  | { type: 'UPDATE_BOT_DIFFICULTY'; playerId: string; difficulty: BotDifficulty };
 
 export type RoomListener = (snapshot: RoomSnapshot) => void;
 
@@ -64,12 +82,12 @@ export interface RoomConnection {
 }
 
 export interface MultiplayerClient {
-  createRoom(playerName: string): Promise<RoomConnection>;
+  createRoom(playerName: string, settings: RoomSettings): Promise<RoomConnection>;
   joinRoom(code: string, playerName: string): Promise<RoomConnection>;
 }
 
 export interface PassageProvider {
-  nextPassage(): Promise<MultiplayerPassage>;
+  nextPassage(settings: RoomSettings): Promise<MultiplayerPassage>;
 }
 
 export const EMPTY_GUESS: PassageGuess = {

@@ -22,11 +22,13 @@ export type TypingChrome = {
 };
 
 export function updateTypingInput(game: Game, value: string): TypingInputUpdate {
-  const hadStarted = Boolean(game.startTime);
+  const hadStarted = game.startTime !== null;
   const previousLength = game.typed.length;
   handleInput(game, value);
   const advanced = game.typed.length > previousLength;
   const lastIndex = game.typed.length - 1;
+  const completed = game.typed.join('') === game.text;
+  if (completed && game.completedAt === undefined) game.completedAt = Date.now();
   return {
     hadStarted,
     previousLength,
@@ -34,7 +36,7 @@ export function updateTypingInput(game: Game, value: string): TypingInputUpdate 
     lastCharacterCorrect: advanced
       ? game.typed[lastIndex] === game.chars[lastIndex]
       : null,
-    completed: game.typed.join('') === game.text
+    completed
   };
 }
 

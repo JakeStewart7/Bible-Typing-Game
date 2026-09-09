@@ -1,12 +1,23 @@
-import type { PlayerState, RoomPhase, RoomSnapshot } from '../domain/types';
+import type { PlayerState, RoomPhase, RoomSettings, RoomSnapshot } from '../domain/types';
+import { BOT_DIFFICULTY_OPTIONS } from '../domain/settings';
 import { createGame, type Game } from '../../game/state';
-import { getTypingProgressLength } from '../../game/stats';
 import {
   renderTypingExperience,
   updateTypingInput,
   type TypingInputUpdate
 } from '../../typing/session';
 import { renderPeerCarets } from './peer-carets';
+import {
+  playerStatus,
+  readPassageLength,
+  readRoomSettings,
+  renderGuessTimer,
+  required,
+  requiredButton,
+  requiredInput,
+  requiredSelect,
+  setText
+} from './view-support';
 
 const PHASE_LABELS: Record<RoomPhase, string> = {
   lobby: 'Lobby',
@@ -58,8 +69,8 @@ export class MultiplayerView {
     this.renderPlayers(snapshot);
     this.showPhase(snapshot.phase);
     if (snapshot.phase === 'lobby') this.renderLobby(snapshot);
-    if (snapshot.phase === 'typing') this.renderTyping(snapshot);
-    if (snapshot.phase === 'guessing') this.renderGuessing(self);
+    if (snapshot.phase === 'typing' || snapshot.phase === 'guessing') this.renderTyping(snapshot);
+    if (snapshot.phase === 'guessing') this.renderGuessing(snapshot, self);
     if (snapshot.phase === 'reveal') this.renderReveal(snapshot, self);
   }
 
@@ -70,6 +81,22 @@ export class MultiplayerView {
 
   typingValue(): string {
     return this.input.value;
+  }
+
+  creationSettings(): RoomSettings {
+    return readRoomSettings(
+      'multiplayer-create-difficulty',
+      'multiplayer-create-length',
+      'multiplayer-create-guessing'
+    );
+  }
+
+  nextRoundSettings(): RoomSettings {
+    return {
+      botDifficulty: 'medium',
+      passageLength: readPassageLength('multiplayer-round-length'),
+      includeGuessing: requiredInput('multiplayer-round-guessing', HTMLInputElement).checked
+    };
   }
 
   clearTypingValue(): void {
@@ -93,16 +120,15 @@ export class MultiplayerView {
     return update;
   }
 
-  typingCursor(): number {
-    return getTypingProgressLength(this.game);
-  }
-
   focusTyping(): void {
     if (!this.input.disabled) this.input.focus();
   }
 
   refreshTyping(snapshot: RoomSnapshot): void {
-    if (snapshot.phase === 'typing') this.renderTyping(snapshot);
+    if (snapshot.phase === 'typing' || snapshot.phase === 'guessing') {
+      this.renderTyping(snapshot);
+      if (snapshot.phase === 'guessing') renderGuessTimer(snapshot);
+    }
   }
 
   clearGuessValue(): void {
@@ -134,7 +160,32 @@ export class MultiplayerView {
       const detail = document.createElement('small');
       detail.textContent = playerStatus(player, snapshot);
       identity.append(dot, name);
-      row.append(identity, detail);
+      row.append(identity);
+      if (snapshot.round > 0) {
+        const metrics = document.createElement('small');
+        metrics.className = 'player-metrics';
+        const progressPercent = Math.round(
+          player.progress / Math.max(1, snapshot.passageText?.length ?? 1) * 100
+        );
+        metrics.textContent = `${player.wpm} WPM • ${progressPercent}% typed`;
+        row.append(metrics);
+      }
+      row.append(detail);
+      if (player.kind === 'simulated' && snapshot.selfId === snapshot.hostId
+        && (snapshot.phase === 'lobby' || snapshot.phase === 'reveal')) {
+        const select = document.createElement('select');
+        select.className = 'bot-difficulty-select';
+        select.dataset.playerId = player.id;
+        select.setAttribute('aria-label', `${player.name} difficulty`);
+        for (const [value, option] of Object.entries(BOT_DIFFICULTY_OPTIONS)) {
+          const choice = document.createElement('option');
+          choice.value = value;
+          choice.textContent = `${option.label} · ${option.minimumWpm}-${option.maximumWpm} WPM`;
+          choice.selected = value === player.botDifficulty;
+          select.appendChild(choice);
+        }
+        row.appendChild(select);
+      }
       return row;
     }));
   }
@@ -144,6 +195,7 @@ export class MultiplayerView {
     const isHost = snapshot.selfId === snapshot.hostId;
     start.disabled = !isHost || snapshot.players.length < 2;
     start.textContent = isHost ? 'Start round' : 'Waiting for host';
+    requiredButton('multiplayer-add-bot').disabled = !isHost;
   }
 
   private renderTyping(snapshot: RoomSnapshot): void {
@@ -158,14 +210,15 @@ export class MultiplayerView {
     });
     setText('multiplayer-typing-progress', `${stats.progress}%`);
     renderPeerCarets(this.passage, snapshot.players, snapshot.selfId);
-    this.input.disabled = self?.typingComplete ?? false;
+    this.input.disabled = snapshot.phase !== 'typing' || (self?.typingComplete ?? false);
     requiredButton('multiplayer-restart').disabled = this.input.disabled;
   }
 
-  private renderGuessing(self: PlayerState | undefined): void {
+  private renderGuessing(snapshot: RoomSnapshot, self: PlayerState | undefined): void {
     const submitted = self?.guessSubmitted ?? false;
     for (const input of Object.values(this.guessInputs)) input.disabled = submitted;
     requiredButton('multiplayer-submit-guess').disabled = submitted;
+    renderGuessTimer(snapshot);
   }
 
   private renderReveal(snapshot: RoomSnapshot, self: PlayerState | undefined): void {
@@ -186,42 +239,23 @@ export class MultiplayerView {
     const ready = requiredButton('multiplayer-ready');
     ready.textContent = self?.ready ? 'Ready — waiting for others' : 'Ready for another round';
     ready.disabled = self?.ready ?? false;
+    const host = snapshot.selfId === snapshot.hostId;
+    const passageLength = requiredSelect('multiplayer-round-length');
+    const guessing = requiredInput('multiplayer-round-guessing', HTMLInputElement);
+    passageLength.value = snapshot.settings.passageLength;
+    guessing.checked = snapshot.settings.includeGuessing;
+    passageLength.disabled = !host || Boolean(self?.ready);
+    guessing.disabled = !host || Boolean(self?.ready);
+    required('multiplayer-scores').classList.toggle('is-hidden', !snapshot.settings.includeGuessing);
   }
 
   private showPhase(active: RoomPhase): void {
-    for (const phase of ['lobby', 'typing', 'guessing', 'reveal'] as const) {
-      required(`multiplayer-${phase}-phase`).classList.toggle('is-hidden', phase !== active);
-    }
+    required('multiplayer-lobby-phase').classList.toggle('is-hidden', active !== 'lobby');
+    required('multiplayer-typing-phase').classList.toggle(
+      'is-hidden',
+      active !== 'typing' && active !== 'guessing'
+    );
+    required('multiplayer-guessing-phase').classList.toggle('is-hidden', active !== 'guessing');
+    required('multiplayer-reveal-phase').classList.toggle('is-hidden', active !== 'reveal');
   }
-}
-
-function playerStatus(player: PlayerState, snapshot: RoomSnapshot): string {
-  if (snapshot.phase === 'lobby') return player.id === snapshot.hostId ? 'Host' : player.kind === 'simulated' ? 'Simulated' : 'Joined';
-  if (snapshot.phase === 'typing') return player.typingComplete ? 'Finished typing' : `${Math.round(player.cursor / Math.max(1, snapshot.passageText?.length ?? 1) * 100)}% typed`;
-  if (snapshot.phase === 'guessing') {
-    if (player.guessSubmitted) return 'Answer locked';
-    const guess = player.guess;
-    return [guess.book, guess.chapter, guess.startVerse && guess.endVerse ? `${guess.startVerse}-${guess.endVerse}` : ''].filter(Boolean).join(' ') || 'Thinking...';
-  }
-  return player.ready ? 'Ready' : `${player.score ?? 0}%`;
-}
-
-function required(id: string): HTMLElement {
-  const element = document.getElementById(id);
-  if (!element) throw new Error(`Expected #${id}.`);
-  return element;
-}
-
-function requiredInput<T extends HTMLElement>(id: string, type: { new(): T }): T {
-  const element = document.getElementById(id);
-  if (!(element instanceof type)) throw new Error(`Expected #${id}.`);
-  return element;
-}
-
-function requiredButton(id: string): HTMLButtonElement {
-  return requiredInput(id, HTMLButtonElement);
-}
-
-function setText(id: string, value: string): void {
-  required(id).textContent = value;
 }
