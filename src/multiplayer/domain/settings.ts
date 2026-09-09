@@ -11,7 +11,7 @@ export const BOT_DIFFICULTY_OPTIONS: Record<BotDifficulty, {
   wordTimingVariation: number;
 }> = {
   easy: {
-    label: 'Easy', accuracy: .85, minimumWpm: 20, maximumWpm: 30,
+    label: 'Easy', accuracy: .85, minimumWpm: 18, maximumWpm: 27,
     characterTimingVariation: .65, wordTimingVariation: .9
   },
   medium: {
