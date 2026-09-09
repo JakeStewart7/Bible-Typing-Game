@@ -36,11 +36,11 @@ test('bot difficulties define requested accuracy and speed ranges', () => {
   equal(MOCK_REFRESH_INTERVAL_MS, 100);
   equal(BOT_DIFFICULTY_OPTIONS.easy, {
     label: 'Easy', accuracy: .85, minimumWpm: 20, maximumWpm: 30,
-    characterTimingVariation: .4, wordTimingVariation: .7
+    characterTimingVariation: .65, wordTimingVariation: .9
   });
   equal(BOT_DIFFICULTY_OPTIONS.medium, {
     label: 'Normal', accuracy: .9, minimumWpm: 40, maximumWpm: 50,
-    characterTimingVariation: .32, wordTimingVariation: .55
+    characterTimingVariation: .5, wordTimingVariation: .75
   });
   equal(BOT_DIFFICULTY_OPTIONS.hard, {
     label: 'Hard', accuracy: .95, minimumWpm: 70, maximumWpm: 80,
