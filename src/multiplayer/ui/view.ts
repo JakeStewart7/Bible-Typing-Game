@@ -1,4 +1,12 @@
 import type { PlayerState, RoomPhase, RoomSnapshot } from '../domain/types';
+import { createGame, type Game } from '../../game/state';
+import { getTypingProgressLength } from '../../game/stats';
+import {
+  renderTypingExperience,
+  updateTypingInput,
+  type TypingInputUpdate
+} from '../../typing/session';
+import { renderPeerCarets } from './peer-carets';
 
 const PHASE_LABELS: Record<RoomPhase, string> = {
   lobby: 'Lobby',
@@ -14,7 +22,11 @@ export class MultiplayerView {
   private readonly status = required('multiplayer-status');
   private readonly players = required('multiplayer-players');
   private readonly passage = required('multiplayer-passage');
-  private readonly input = requiredInput('multiplayer-input', HTMLTextAreaElement);
+  private readonly hud = required('multiplayer-hud');
+  private readonly typedBar = required('multiplayer-typed-bar');
+  private readonly progressFill = required('multiplayer-progress-fill');
+  private readonly input = requiredInput('multiplayer-input', HTMLInputElement);
+  private game: Game = createGame('');
   private readonly guessInputs = {
     book: requiredInput('multiplayer-guess-book', HTMLInputElement),
     chapter: requiredInput('multiplayer-guess-chapter', HTMLInputElement),
@@ -64,6 +76,35 @@ export class MultiplayerView {
     this.input.value = '';
   }
 
+  startTyping(passage: string): void {
+    this.game = createGame(passage);
+    this.clearTypingValue();
+  }
+
+  restartTyping(snapshot: RoomSnapshot): void {
+    this.startTyping(snapshot.passageText ?? '');
+    this.renderTyping(snapshot);
+    this.focusTyping();
+  }
+
+  updateTyping(snapshot: RoomSnapshot): TypingInputUpdate {
+    const update = updateTypingInput(this.game, this.input.value);
+    this.renderTyping(snapshot);
+    return update;
+  }
+
+  typingCursor(): number {
+    return getTypingProgressLength(this.game);
+  }
+
+  focusTyping(): void {
+    if (!this.input.disabled) this.input.focus();
+  }
+
+  refreshTyping(snapshot: RoomSnapshot): void {
+    if (snapshot.phase === 'typing') this.renderTyping(snapshot);
+  }
+
   clearGuessValue(): void {
     for (const input of Object.values(this.guessInputs)) {
       input.value = '';
@@ -108,10 +149,17 @@ export class MultiplayerView {
   private renderTyping(snapshot: RoomSnapshot): void {
     const passage = snapshot.passageText ?? '';
     const self = snapshot.players.find(player => player.id === snapshot.selfId);
-    setText('multiplayer-typing-progress', `${Math.round((self?.cursor ?? 0) / Math.max(1, passage.length) * 100)}%`);
-    this.passage.replaceChildren(...passageWithCursors(passage, snapshot.players));
+    if (this.game.text !== passage) this.startTyping(passage);
+    const stats = renderTypingExperience(this.game, {
+      text: this.passage,
+      typedBar: this.typedBar,
+      progressFill: this.progressFill,
+      hud: this.hud
+    });
+    setText('multiplayer-typing-progress', `${stats.progress}%`);
+    renderPeerCarets(this.passage, snapshot.players, snapshot.selfId);
     this.input.disabled = self?.typingComplete ?? false;
-    if (!this.input.disabled) this.input.focus();
+    requiredButton('multiplayer-restart').disabled = this.input.disabled;
   }
 
   private renderGuessing(self: PlayerState | undefined): void {
@@ -145,28 +193,6 @@ export class MultiplayerView {
       required(`multiplayer-${phase}-phase`).classList.toggle('is-hidden', phase !== active);
     }
   }
-}
-
-function passageWithCursors(text: string, players: readonly PlayerState[]): Node[] {
-  const cursors = new Map<number, PlayerState[]>();
-  for (const player of players) {
-    const group = cursors.get(player.cursor) ?? [];
-    group.push(player);
-    cursors.set(player.cursor, group);
-  }
-  const nodes: Node[] = [];
-  for (let index = 0; index <= text.length; index++) {
-    for (const player of cursors.get(index) ?? []) {
-      const marker = document.createElement('span');
-      marker.className = 'player-cursor';
-      marker.style.borderColor = player.color;
-      marker.title = player.name;
-      marker.setAttribute('aria-label', `${player.name}'s cursor`);
-      nodes.push(marker);
-    }
-    if (index < text.length) nodes.push(document.createTextNode(text[index]!));
-  }
-  return nodes;
 }
 
 function playerStatus(player: PlayerState, snapshot: RoomSnapshot): string {

@@ -91,7 +91,7 @@ export function practiceWorkspaceMarkup(developerControls: string): string {
           <div class="typed-area">
             <div id="typed-bar" class="typed-bar" aria-hidden="true"></div>
             <div id="recall-prompt" class="recall-prompt is-hidden" role="status"><kbd>Ctrl + H</kbd></div>
-            <input id="input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Type the passage here">
+            <input id="input" class="typing-input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Type the passage here">
           </div>
           <div class="typing-footer">
             <button id="choose-passage" class="passage-select-button" type="button">Choose passage</button>

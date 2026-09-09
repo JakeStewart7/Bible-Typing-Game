@@ -4,8 +4,6 @@ export function handleInput(game: Game, inputValue: string): void {
   if (!game.startTime) game.startTime = Date.now();
 
   const chars = inputValue.slice(0, game.chars.length).split('');
-  const previousLength = game.typed.length;
-
   if (game.blockedAccuracyIndex !== null) {
     const index = game.blockedAccuracyIndex;
     if (chars[index] === game.chars[index]) {

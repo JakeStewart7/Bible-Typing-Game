@@ -1,10 +1,8 @@
 import { sanitizeText } from './state';
 import type { Game } from './state';
-import { handleInput } from './input';
 import { renderText } from '../ui/renderer';
 import { updateCaretPosition, type CaretMovement } from '../ui/caret';
 import { positionReaderAtActiveRange, renderChapterReader } from '../ui/chapter-reader';
-import { renderTypedBar } from '../ui/typedBar';
 import { renderStats } from '../ui/hud';
 import { calculateStats } from './stats';
 import { fetchChapter, fetchRange } from '../bible-api';
@@ -45,6 +43,7 @@ import {
   type ChapterVerse
 } from '../typing/chapter-reader';
 import { createFrameScheduler } from '../shared/frame-scheduler';
+import { renderTypingChrome, updateTypingInput } from '../typing/session';
 
 type Controls = {
   hudEl: HTMLElement; textEl: HTMLElement; chapterReaderEl: HTMLElement;
@@ -206,10 +205,8 @@ export function initGameControllers(
   }
 
   function updateUI(updateHud = true) {
-    const stats = calculateStats(game);
     const revealAnimationElapsedMs = Date.now() - revealAnimationStartedAt;
     if (revealAnimationElapsedMs >= 500) animatedRevealWordIndex = null;
-    if (updateHud) renderStats(hudEl, stats);
     if (chapterReader && gameModeEl.value !== 'defense') {
       renderChapterReader(
         textEl,
@@ -232,10 +229,13 @@ export function initGameControllers(
       );
     }
     positionRecallPrompt();
-    updateCaretPosition(textEl, game, caretMovement);
+    renderTypingChrome(game, {
+      text: textEl,
+      typedBar: typedBarEl,
+      progressFill: progressFillEl,
+      hud: updateHud ? hudEl : undefined
+    }, caretMovement);
     caretMovement = 'track';
-    renderTypedBar(typedBarEl, game);
-    progressFillEl.style.transform = `scaleX(${stats.progress / 100})`;
   }
 
   function queueTypingRender(): void {
@@ -375,21 +375,18 @@ export function initGameControllers(
 
   inputEl.addEventListener('input', () => {
     const mode = gameModeEl.value;
-    const hadStarted = Boolean(game.startTime);
-    const previousLength = game.typed.length;
-    handleInput(game, inputEl.value);
+    const inputUpdate = updateTypingInput(game, inputEl.value);
     if (game.typed.length >= revealedHintEnd) {
       revealedHintWordIndex = null;
       revealedHintEnd = -1;
     }
     if (!campaignChunk && (mode === 'practice' || mode === 'memory') &&
-      !hadStarted && game.startTime && activePassage) {
+      !inputUpdate.hadStarted && game.startTime && activePassage) {
       practiceLibrary.recordStarted(activePassage);
     }
-    if (game.typed.length > previousLength) {
+    if (inputUpdate.advanced) {
       lastProgressAt = Date.now();
-      const index = game.typed.length - 1;
-      const correct = game.typed[index] === game.chars[index];
+      const correct = inputUpdate.lastCharacterCorrect ?? false;
       playKey(correct);
       if (mode === 'defense') {
         typeCharacter(defense, correct);
@@ -397,8 +394,8 @@ export function initGameControllers(
         scheduleDefenseFrame();
       }
     }
-    if (game.typed.length !== previousLength) promptedHintWordIndex = null;
-    if (game.typed.join('') === game.text) {
+    if (game.typed.length !== inputUpdate.previousLength) promptedHintWordIndex = null;
+    if (inputUpdate.completed) {
       typingRenderScheduler.cancel();
       finishGame();
     } else {

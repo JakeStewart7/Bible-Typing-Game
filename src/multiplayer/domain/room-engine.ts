@@ -80,6 +80,11 @@ export class RoomEngine {
       case 'UPDATE_CURSOR':
         this.updateCursor(player, command.position, command.sequence);
         break;
+      case 'COMPLETE_PASSAGE':
+        if (this.phase === 'typing' && this.passage && player.cursor === this.passage.text.length) {
+          player.typingComplete = true;
+        }
+        break;
       case 'UPDATE_GUESS':
         if (this.phase === 'guessing' && !player.guessSubmitted) player.guess = normalizeGuess(command.guess);
         break;
@@ -126,7 +131,6 @@ export class RoomEngine {
     if (!Number.isInteger(sequence) || sequence <= player.cursorSequence) return;
     player.cursorSequence = sequence;
     player.cursor = Math.min(Math.max(0, Math.floor(requestedPosition)), this.passage.text.length);
-    player.typingComplete = player.cursor === this.passage.text.length;
   }
 
   private advanceIfComplete(): void {

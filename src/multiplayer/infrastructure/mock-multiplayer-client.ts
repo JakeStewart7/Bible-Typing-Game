@@ -44,11 +44,15 @@ export class MockMultiplayerClient implements MultiplayerClient {
     const snapshot = room.getSnapshot('');
     for (const player of snapshot.players.filter(candidate => candidate.kind === 'simulated')) {
       if (snapshot.phase === 'typing' && snapshot.passageText) {
+        const position = Math.min(snapshot.passageText.length, player.cursor + step);
         await room.dispatch(player.id, {
           type: 'UPDATE_CURSOR',
-          position: Math.min(snapshot.passageText.length, player.cursor + step),
+          position,
           sequence: player.cursorSequence + 1
         });
+        if (position === snapshot.passageText.length) {
+          await room.dispatch(player.id, { type: 'COMPLETE_PASSAGE' });
+        }
       } else if (snapshot.phase === 'guessing' && !player.guessSubmitted) {
         await room.dispatch(player.id, { type: 'UPDATE_GUESS', guess: simulatedGuess(player.id) });
         await room.dispatch(player.id, { type: 'SUBMIT_GUESS' });

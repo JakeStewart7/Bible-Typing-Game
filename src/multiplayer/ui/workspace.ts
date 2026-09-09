@@ -58,9 +58,18 @@ export function multiplayerWorkspaceMarkup(): string {
             </section>
             <section id="multiplayer-typing-phase" class="round-phase is-hidden">
               <div class="round-heading"><div><small>TYPE THE PASSAGE</small><h3>Everyone advances together</h3></div><span id="multiplayer-typing-progress">0%</span></div>
-              <div id="multiplayer-passage" class="multiplayer-passage" aria-label="Passage to type"></div>
+              <div id="multiplayer-hud" class="hud"></div>
+              <div class="progress-track"><div id="multiplayer-progress-fill"></div></div>
+              <div id="multiplayer-passage" class="text-display multiplayer-passage" tabindex="0" aria-label="Passage to type"></div>
               <label class="sr-only" for="multiplayer-input">Type the passage</label>
-              <textarea id="multiplayer-input" rows="4" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+              <div class="typed-area">
+                <div id="multiplayer-typed-bar" class="typed-bar" aria-hidden="true"></div>
+                <input id="multiplayer-input" class="typing-input" autocomplete="off" autocapitalize="off" spellcheck="false">
+              </div>
+              <div class="typing-footer">
+                <button id="multiplayer-focus" class="text-btn" type="button" aria-pressed="false">Focus mode</button>
+                <button id="multiplayer-restart" class="text-btn" type="button">↻ Restart</button>
+              </div>
               <p class="phase-help">Your progress stops at the first incorrect character. The guessing phase begins when everyone finishes.</p>
             </section>
             <section id="multiplayer-guessing-phase" class="round-phase is-hidden">

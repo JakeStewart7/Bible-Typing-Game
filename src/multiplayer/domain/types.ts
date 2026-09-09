@@ -48,6 +48,7 @@ export type RoomSnapshot = {
 export type PlayerCommand =
   | { type: 'START_ROUND' }
   | { type: 'UPDATE_CURSOR'; position: number; sequence: number }
+  | { type: 'COMPLETE_PASSAGE' }
   | { type: 'UPDATE_GUESS'; guess: PassageGuess }
   | { type: 'SUBMIT_GUESS' }
   | { type: 'SET_READY'; ready: boolean };

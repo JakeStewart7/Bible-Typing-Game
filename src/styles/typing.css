@@ -122,8 +122,8 @@ select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px va
 .recall-prompt kbd { padding: .1rem .3rem; border: 1px solid #d6aa4c; border-bottom-width: 2px; border-radius: .25rem; background: #fff; font: 700 .75rem DM Mono, monospace; }
 @keyframes recallPromptIn { from { opacity: 0; transform: translateY(.3rem); } to { opacity: 1; transform: none; } }
 .typed-bar { display: none; }
-#input { width: 100%; height: 52px; padding: 0 16px; border: 1px solid var(--border); border-radius: 13px; color: var(--ink); background: var(--page-surface); font-family: DM Mono, monospace; outline: none; }
-#input:focus { border-color: var(--green); box-shadow: 0 0 0 4px var(--page-glow); }
+.typing-input { width: 100%; height: 52px; padding: 0 16px; border: 1px solid var(--border); border-radius: 13px; color: var(--ink); background: var(--page-surface); font-family: DM Mono, monospace; outline: none; }
+.typing-input:focus { border-color: var(--green); box-shadow: 0 0 0 4px var(--page-glow); }
 .typing-footer { display: flex; justify-content: space-between; align-items: center; gap: .75rem; color: #667c77; font-size: .875rem; padding-top: 13px; }
 .typing-footer > div { display: flex; align-items: center; gap: .6rem; }
 .dev-complete-btn { display: block; min-height: 2.75rem; margin: 10px 0 0 auto; padding: 6px 12px; border: 1px dashed #d6aa4c; border-radius: 8px; color: #8b671b; background: #fff9e7; font-size: .875rem; }

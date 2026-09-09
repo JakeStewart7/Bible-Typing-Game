@@ -592,8 +592,10 @@ test('multiplayer room advances only after every player completes each phase', a
   await room.dispatch('host', { type: 'UPDATE_CURSOR', position: passage.text.length, sequence: 1 });
   equal(room.getSnapshot('host').players[0]?.cursor, 5);
   await room.dispatch('host', { type: 'UPDATE_CURSOR', position: passage.text.length, sequence: 2 });
+  await room.dispatch('host', { type: 'COMPLETE_PASSAGE' });
   equal(room.getSnapshot('host').phase, 'typing');
   await room.dispatch('guest', { type: 'UPDATE_CURSOR', position: passage.text.length, sequence: 1 });
+  await room.dispatch('guest', { type: 'COMPLETE_PASSAGE' });
   equal(room.getSnapshot('host').phase, 'guessing');
   const exactGuess = { book: 'Romans', chapter: 10, startVerse: 17, endVerse: 17 };
   await room.dispatch('host', { type: 'UPDATE_GUESS', guess: exactGuess });

@@ -16,6 +16,10 @@ Multiplayer code is isolated under `src/multiplayer/`:
 - `infrastructure/` supplies passages and the in-memory mock transport.
 - `ui/` renders snapshots and sends player intentions.
 
+All game modes share the input processing and typing presentation primitives in
+`src/typing/session.ts`, including correctness tracking, live statistics,
+character states, progress, and caret behavior.
+
 The UI depends on the `MultiplayerClient` and `RoomConnection` contracts in
 `domain/types.ts`. A future WebSocket or WebRTC implementation should implement
 those contracts and leave the room UI and gameplay rules unchanged. In a
