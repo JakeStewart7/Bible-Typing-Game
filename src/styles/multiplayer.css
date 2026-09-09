@@ -8,11 +8,11 @@
 .multiplayer-entry-card h3 { margin: 0; font: 700 1.5rem Playfair Display; }
 .multiplayer-entry-card p { min-height: 3rem; color: var(--muted); line-height: 1.5; }
 .multiplayer-entry-card form { --stack-gap: .6rem; }
-.multiplayer-entry-card label, .guess-grid label, .next-round-settings > label { color: var(--muted); font-size: var(--text-small); font-weight: 800; }
-.multiplayer-entry-card input, .multiplayer-entry-card select, .guess-grid input, .next-round-settings select {
+.multiplayer-entry-card label, .guess-grid label, .room-settings > label { color: var(--muted); font-size: var(--text-small); font-weight: 800; }
+.multiplayer-entry-card input, .multiplayer-entry-card select, .guess-grid input, .room-settings select {
   width: 100%; padding: .75rem .875rem; border: 1px solid var(--page-border); border-radius: 11px; color: var(--ink); background: white;
 }
-.next-round-settings > label { display: grid; gap: .35rem; }
+.room-settings > label { display: grid; gap: .35rem; }
 .guessing-toggle { display: flex; align-items: center; gap: .65rem; padding: .7rem .8rem; border: 1px solid var(--page-border); border-radius: 11px; background: white; cursor: pointer; }
 .guessing-toggle span { position: relative; width: 2.5rem; height: 1.4rem; border-radius: 999px; background: var(--page-border); transition: background .18s ease; }
 .guessing-toggle span::after { content: ''; position: absolute; top: .2rem; left: .2rem; width: 1rem; height: 1rem; border-radius: 50%; background: white; box-shadow: 0 1px 4px var(--page-shadow); transition: transform .18s ease; }
@@ -26,7 +26,7 @@
 .room-toolbar strong { font: 700 1rem DM Mono; }
 .room-toolbar > div:first-child strong { color: var(--page-accent-strong); font-size: 1.25rem; letter-spacing: .12em; }
 .multiplayer-status { min-height: 2rem; padding: .45rem .2rem; color: var(--muted); font-size: var(--text-small); }
-.multiplayer-status.is-error { color: #b5413a; }
+.multiplayer-status.is-error { color: var(--error); }
 .multiplayer-layout { display: grid; grid-template-columns: minmax(13rem, 17rem) minmax(0, 1fr); gap: 1rem; align-items: start; }
 .player-panel, .round-panel { padding: 1.25rem; }
 .player-panel-heading, .round-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
@@ -49,7 +49,7 @@
 .round-phase > h3 { margin: .45rem 0; font: 700 clamp(1.5rem, 3vw, 2rem) Playfair Display; }
 .round-phase > p { color: var(--muted); }
 .phase-icon { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 50%; color: var(--page-accent-strong); background: var(--page-accent-soft); font-size: 1.5rem; }
-.multiplayer-passage { min-height: 12rem; max-height: 24rem; padding: 1rem; border-radius: 14px; background: #f8faf9; }
+.multiplayer-passage { min-height: 12rem; max-height: 24rem; padding: 1rem; border-radius: 14px; background: var(--page-surface); }
 .peer-caret { position: absolute; left: 0; top: 0; width: 3px; border-radius: 99px; background: var(--peer-color); pointer-events: none; z-index: 4; transition: transform .07s linear; }
 .cursor-smoothing-disabled .peer-caret { transition: none; }
 .peer-caret > span { position: absolute; bottom: calc(100% + .2rem); left: 0; padding: .12rem .3rem; border-radius: .3rem; color: white; background: var(--peer-color); font: 700 .58rem Manrope; white-space: nowrap; }
@@ -70,8 +70,8 @@
 .timer-ring { stroke: var(--page-accent); stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 0; transition: stroke-dashoffset .1s linear, stroke .2s; }
 .timer-ring.is-urgent { stroke: var(--coral); }
 .guess-timer strong { position: absolute; inset: 0; display: grid; place-items: center; font: 800 .9rem DM Mono; }
-.next-round-settings { width: min(22rem, 100%); display: grid; gap: .75rem; margin: 0 0 1.25rem; padding: 1rem; border: 1px solid var(--page-border); border-radius: 14px; text-align: left; }
-.next-round-settings legend { padding-inline: .35rem; color: var(--page-accent-strong); font-size: var(--text-small); font-weight: 800; }
+.room-settings { width: min(22rem, 100%); display: grid; gap: .75rem; margin: 0 0 1.25rem; padding: 1rem; border: 1px solid var(--page-border); border-radius: 14px; text-align: left; }
+.room-settings legend { padding-inline: .35rem; color: var(--page-accent-strong); font-size: var(--text-small); font-weight: 800; }
 @keyframes guessPopoverIn { from { opacity: 0; transform: translateY(.5rem); } }
 .score-list { width: min(26rem, 100%); display: grid; gap: .5rem; margin: 1rem 0 1.5rem; }
 .score-list div { display: flex; justify-content: space-between; padding: .75rem 1rem; border-radius: 11px; background: var(--page-surface); }
@@ -96,5 +96,5 @@
   .room-toolbar button { grid-column: auto; }
   .guess-grid { grid-template-columns: 1fr; }
   .guess-grid label:first-child { grid-column: auto; }
-  .next-round-settings { grid-template-columns: 1fr; }
+  .room-settings { grid-template-columns: 1fr; }
 }

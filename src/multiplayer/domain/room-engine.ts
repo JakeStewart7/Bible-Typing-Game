@@ -1,16 +1,12 @@
 import { scorePassageGuess } from './scoring.ts';
-import { getValidatedTypingLength } from '../../game/input.ts';
-import { handleInput } from '../../game/input.ts';
-import { calculateStats } from '../../game/stats.ts';
-import { createGame, type Game } from '../../game/state.ts';
 import {
-  createPlayerState,
   normalizePassageGuess,
-  resetPlayerForRound
 } from './player-state.ts';
+import { PlayerRoster } from './player-roster.ts';
+import { TypingSessions } from './typing-sessions.ts';
 import {
   DEFAULT_ROOM_SETTINGS,
-  normalizeBotDifficulty,
+  GUESS_DURATION_MS,
   normalizeRoomSettings
 } from './settings.ts';
 import {
@@ -25,24 +21,19 @@ import {
   type RoomSnapshot
 } from './types.ts';
 
-const PLAYER_COLORS = ['#159a78', '#4b9ed6', '#c58b18', '#9b6bd6', '#df6b62', '#398f9b'];
-export const GUESS_DURATION_MS = 30_000;
-
 export class RoomEngine {
   readonly code: string;
   private readonly provider: PassageProvider;
   private readonly listeners = new Map<RoomListener, string>();
-  private readonly players = new Map<string, PlayerState>();
-  private readonly typingGames = new Map<string, Game>();
+  private readonly roster = new PlayerRoster();
+  private readonly typingSessions = new TypingSessions();
   private phase: RoomPhase = 'lobby';
-  private hostId = '';
   private round = 0;
   private passage: MultiplayerPassage | null = null;
   private startingRound = false;
   private settings: RoomSettings;
   private guessingEndsAt: number | null = null;
   private readonly clock: () => number;
-  private nextBotNumber = 1;
 
   constructor(
     code: string,
@@ -63,28 +54,22 @@ export class RoomEngine {
     botDifficulty: RoomSettings['botDifficulty'] | null = null
   ): void {
     if (this.phase !== 'lobby') throw new Error('Players can only join while the room is in the lobby.');
-    if (this.players.has(id)) throw new Error(`Player ${id} is already in the room.`);
-    const normalizedName = name.trim().slice(0, 24);
-    if (!normalizedName) throw new Error('A player name is required.');
-    if (!this.hostId) this.hostId = id;
-    this.players.set(id, createPlayerState(
+    const player = this.roster.add(
       id,
-      normalizedName,
-      PLAYER_COLORS[this.players.size % PLAYER_COLORS.length]!,
+      name,
       kind,
       kind === 'simulated' ? botDifficulty ?? this.settings.botDifficulty : null
-    ));
-    this.typingGames.set(id, createGame(this.passage?.text ?? ''));
+    );
+    this.typingSessions.add(id, this.passage?.text);
     this.publish();
   }
 
   removePlayer(id: string): void {
-    this.players.delete(id);
-    this.typingGames.delete(id);
-    if (this.hostId === id) this.hostId = this.players.keys().next().value ?? '';
+    this.roster.remove(id);
+    this.typingSessions.remove(id);
     this.advanceIfComplete(this.clock());
     if (this.phase === 'reveal' && this.everyPlayer(player => player.ready)) {
-      for (const player of this.players.values()) player.ready = false;
+      for (const player of this.roster.values()) player.ready = false;
     }
     this.publish();
   }
@@ -97,11 +82,11 @@ export class RoomEngine {
 
   async dispatch(playerId: string, command: PlayerCommand): Promise<void> {
     this.tick(this.clock());
-    const player = this.players.get(playerId);
+    const player = this.roster.get(playerId);
     if (!player) throw new Error('This player is no longer in the room.');
     switch (command.type) {
       case 'START_ROUND':
-        if (playerId !== this.hostId) throw new Error('Only the host can start a round.');
+        if (playerId !== this.roster.hostId) throw new Error('Only the host can start a round.');
         if (this.phase !== 'lobby') throw new Error('A round can only be started from the lobby.');
         await this.startRound('lobby');
         return;
@@ -145,12 +130,12 @@ export class RoomEngine {
 
   tick(now = this.clock()): void {
     if (this.phase === 'typing') {
-      for (const player of this.players.values()) this.refreshTypingStats(player, now);
+      for (const player of this.roster.values()) this.typingSessions.refresh(player, now);
       this.publish();
       return;
     }
     if (this.phase === 'guessing' && this.guessingEndsAt !== null && now >= this.guessingEndsAt) {
-      for (const player of this.players.values()) player.guessSubmitted = true;
+      for (const player of this.roster.values()) player.guessSubmitted = true;
       this.advanceIfComplete(now);
       this.publish();
     }
@@ -158,20 +143,19 @@ export class RoomEngine {
 
   private async startRound(expectedPhase: 'lobby' | 'reveal'): Promise<void> {
     if (this.startingRound || this.phase !== expectedPhase) return;
-    if (this.players.size < 2) throw new Error('At least two players are required to start.');
+    if (this.roster.size < 2) throw new Error('At least two players are required to start.');
     this.startingRound = true;
     try {
       const passage = await this.provider.nextPassage(this.settings);
       const readyToAdvance = expectedPhase === 'lobby' || this.everyPlayer(player => player.ready);
-      if (this.phase !== expectedPhase || this.players.size < 2 || !readyToAdvance) {
+      if (this.phase !== expectedPhase || this.roster.size < 2 || !readyToAdvance) {
         throw new Error('The room changed while the passage was loading. Please try again.');
       }
       this.passage = passage;
       this.round++;
       this.phase = 'typing';
-      for (const player of this.players.values()) {
-        resetPlayerForRound(player);
-        this.typingGames.set(player.id, createGame(passage.text));
+      for (const player of this.roster.values()) {
+        this.typingSessions.reset(player, passage.text);
       }
       this.publish();
     } finally {
@@ -181,42 +165,22 @@ export class RoomEngine {
 
   private updateTyping(player: PlayerState, requestedText: string, sequence: number): void {
     if (this.phase !== 'typing' || !this.passage) return;
-    if (player.typingComplete) return;
-    if (!Number.isInteger(sequence) || sequence <= player.cursorSequence) return;
-    player.cursorSequence = sequence;
-    const typedText = String(requestedText).slice(0, this.passage.text.length);
-    const game = this.typingGames.get(player.id) ?? createGame(this.passage.text);
-    this.typingGames.set(player.id, game);
-    handleInput(game, typedText, this.clock());
-    player.typedText = game.typed.join('');
-    player.cursor = player.typedText.length;
-    player.progress = Math.max(
-      player.progress,
-      getValidatedTypingLength(this.passage.text, player.typedText)
+    this.typingSessions.update(
+      player,
+      this.passage.text,
+      requestedText,
+      sequence,
+      this.clock()
     );
-    player.typingComplete = player.typedText === this.passage.text;
-    if (player.typingComplete) game.completedAt = this.clock();
-    const stats = calculateStats(game, this.clock());
-    player.wpm = stats.wpm;
-    player.accuracy = stats.accuracy;
-  }
-
-  private refreshTypingStats(player: PlayerState, now: number): void {
-    const game = this.typingGames.get(player.id);
-    if (!game || game.startTime === null) return;
-    const stats = calculateStats(game, now);
-    player.wpm = stats.wpm;
-    player.accuracy = stats.accuracy;
   }
 
   private restartTyping(player: PlayerState): void {
     if (this.phase !== 'typing' || !this.passage || player.typingComplete) return;
-    resetPlayerForRound(player);
-    this.typingGames.set(player.id, createGame(this.passage.text));
+    this.typingSessions.reset(player, this.passage.text);
   }
 
   private updateSettings(playerId: string, settings: RoomSettings): void {
-    if (playerId !== this.hostId) throw new Error('Only the host can update room settings.');
+    if (playerId !== this.roster.hostId) throw new Error('Only the host can update room settings.');
     if (this.phase !== 'lobby' && this.phase !== 'reveal') {
       throw new Error('Room settings can only change between rounds.');
     }
@@ -224,15 +188,9 @@ export class RoomEngine {
   }
 
   private addBot(hostId: string): void {
-    if (hostId !== this.hostId) throw new Error('Only the host can add simulated players.');
     if (this.phase !== 'lobby') throw new Error('Simulated players can only be added in the lobby.');
-    const id = `mock-bot-${this.nextBotNumber}`;
-    this.addPlayer(
-      id,
-      `Player ${this.nextBotNumber++}`,
-      'simulated',
-      this.settings.botDifficulty
-    );
+    const bot = this.roster.addBot(hostId, this.settings.botDifficulty);
+    this.typingSessions.add(bot.id);
   }
 
   private updateBotDifficulty(
@@ -240,17 +198,14 @@ export class RoomEngine {
     playerId: string,
     difficulty: RoomSettings['botDifficulty']
   ): void {
-    if (hostId !== this.hostId) throw new Error('Only the host can update bot difficulty.');
     if (this.phase !== 'lobby' && this.phase !== 'reveal') {
       throw new Error('Bot difficulty can only change between rounds.');
     }
-    const bot = this.players.get(playerId);
-    if (!bot || bot.kind !== 'simulated') throw new Error('The selected player is not a bot.');
-    bot.botDifficulty = normalizeBotDifficulty(difficulty);
+    this.roster.updateBotDifficulty(hostId, playerId, difficulty);
   }
 
   private advanceIfComplete(now: number): void {
-    if (!this.players.size || !this.passage) return;
+    if (!this.roster.size || !this.passage) return;
     if (this.phase === 'typing' && this.everyPlayer(player => player.typingComplete)) {
       if (this.settings.includeGuessing) {
         this.phase = 'guessing';
@@ -260,7 +215,7 @@ export class RoomEngine {
         this.guessingEndsAt = null;
       }
     } else if (this.phase === 'guessing' && this.everyPlayer(player => player.guessSubmitted)) {
-      for (const player of this.players.values()) {
+      for (const player of this.roster.values()) {
         player.score = scorePassageGuess(player.guess, this.passage.reference);
       }
       this.phase = 'reveal';
@@ -269,24 +224,21 @@ export class RoomEngine {
   }
 
   private everyPlayer(predicate: (player: PlayerState) => boolean): boolean {
-    return [...this.players.values()].every(predicate);
+    return this.roster.every(predicate);
   }
 
   private snapshot(selfId: string): RoomSnapshot {
     return {
       code: this.code,
       phase: this.phase,
-      hostId: this.hostId,
+      hostId: this.roster.hostId,
       selfId,
       round: this.round,
       passageText: this.phase === 'lobby' ? null : this.passage?.text ?? null,
       revealedReference: this.phase === 'reveal' ? this.passage?.reference ?? null : null,
       guessingEndsAt: this.guessingEndsAt,
       settings: { ...this.settings },
-      players: [...this.players.values()].map(player => ({
-        ...player,
-        guess: { ...player.guess }
-      }))
+      players: this.roster.snapshot()
     };
   }
 

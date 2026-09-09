@@ -1,4 +1,8 @@
-import { BOT_DIFFICULTY_OPTIONS, PASSAGE_LENGTH_OPTIONS } from '../domain/settings';
+import {
+  BOT_DIFFICULTY_OPTIONS,
+  GUESS_DURATION_MS,
+  PASSAGE_LENGTH_OPTIONS
+} from '../domain/settings';
 import { formatVerseRange } from '../../memory/domain/passage';
 import type {
   PassageLength,
@@ -14,10 +18,9 @@ export function playerStatus(player: PlayerState, snapshot: RoomSnapshot): strin
       : 'Joined';
   }
   if (snapshot.phase === 'typing') {
-    return player.typingComplete
-      ? 'Finished typing'
-      : `${Math.round(player.progress / Math.max(1, snapshot.passageText?.length ?? 1) * 100)}% typed`;
+    return player.typingComplete ? 'Finished typing' : 'Typing…';
   }
+
   if (snapshot.phase === 'guessing') {
     if (player.guessSubmitted) return 'Answer locked';
     const guess = player.guess;
@@ -29,6 +32,10 @@ export function playerStatus(player: PlayerState, snapshot: RoomSnapshot): strin
   }
   if (!snapshot.settings.includeGuessing) return player.ready ? 'Ready' : 'Round complete';
   return player.ready ? 'Ready' : `${player.score ?? 0}%`;
+}
+
+export function typedProgressPercent(player: PlayerState, passageText: string | null): number {
+  return Math.round(player.progress / Math.max(1, passageText?.length ?? 1) * 100);
 }
 
 export function readPassageLength(id: string): PassageLength {
@@ -63,7 +70,8 @@ export function requiredSvgCircle(id: string): SVGCircleElement {
 }
 
 export function setText(id: string, value: string): void {
-  required(id).textContent = value;
+  const element = required(id);
+  if (element.textContent !== value) element.textContent = value;
 }
 
 export function renderGuessTimer(snapshot: RoomSnapshot): void {
@@ -71,6 +79,6 @@ export function renderGuessTimer(snapshot: RoomSnapshot): void {
   const remainingSeconds = Math.ceil(remainingMs / 1000);
   setText('multiplayer-timer-seconds', String(remainingSeconds));
   const ring = requiredSvgCircle('multiplayer-timer-ring');
-  ring.style.strokeDashoffset = String(100 - remainingMs / 30_000 * 100);
+  ring.style.strokeDashoffset = String(100 - remainingMs / GUESS_DURATION_MS * 100);
   ring.classList.toggle('is-urgent', remainingSeconds <= 10);
 }

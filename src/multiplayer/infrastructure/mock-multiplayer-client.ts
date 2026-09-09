@@ -58,7 +58,7 @@ export class MockMultiplayerClient implements MultiplayerClient {
     return this.connect(room, playerName);
   }
 
-  async advanceSimulatedPlayers(now = this.clock()): Promise<void> {
+  async advance(now = this.clock()): Promise<void> {
     const room = this.activeRoom;
     if (!room) return;
     room.tick(now);

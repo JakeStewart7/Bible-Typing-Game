@@ -1,6 +1,6 @@
-import { handleInput } from '../game/input';
 import { calculateStats, type GameStats } from '../game/stats';
 import type { Game } from '../game/state';
+import { applyTypingInput } from '../game/typing-update';
 import { updateCaretPosition, type CaretMovement } from '../ui/caret';
 import { renderStats } from '../ui/hud';
 import { renderText } from '../ui/renderer';
@@ -21,14 +21,12 @@ export type TypingChrome = {
   hud?: HTMLElement;
 };
 
-export function updateTypingInput(game: Game, value: string): TypingInputUpdate {
+export function updateTypingInput(game: Game, value: string, now = Date.now()): TypingInputUpdate {
   const hadStarted = game.startTime !== null;
   const previousLength = game.typed.length;
-  handleInput(game, value);
+  const update = applyTypingInput(game, value, now);
   const advanced = game.typed.length > previousLength;
   const lastIndex = game.typed.length - 1;
-  const completed = game.typed.join('') === game.text;
-  if (completed && game.completedAt === undefined) game.completedAt = Date.now();
   return {
     hadStarted,
     previousLength,
@@ -36,7 +34,7 @@ export function updateTypingInput(game: Game, value: string): TypingInputUpdate 
     lastCharacterCorrect: advanced
       ? game.typed[lastIndex] === game.chars[lastIndex]
       : null,
-    completed
+    completed: update.completed
   };
 }
 

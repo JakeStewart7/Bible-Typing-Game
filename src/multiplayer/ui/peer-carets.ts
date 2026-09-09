@@ -41,6 +41,7 @@ function createPeerCaret(
 ): HTMLElement {
   const caret = document.createElement('span');
   caret.className = 'peer-caret';
+  caret.setAttribute('aria-hidden', 'true');
   const label = document.createElement('span');
   label.textContent = player.name;
   caret.appendChild(label);

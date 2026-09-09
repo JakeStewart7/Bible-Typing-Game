@@ -1,5 +1,11 @@
-import type { PlayerState, RoomPhase, RoomSettings, RoomSnapshot } from '../domain/types';
-import { BOT_DIFFICULTY_OPTIONS, DEFAULT_ROOM_SETTINGS } from '../domain/settings';
+import type {
+  PassageGuess,
+  PlayerState,
+  RoomPhase,
+  RoomSettings,
+  RoomSnapshot
+} from '../domain/types';
+import { DEFAULT_ROOM_SETTINGS } from '../domain/settings';
 import { createGame, type Game } from '../../game/state';
 import {
   renderTypingExperience,
@@ -8,6 +14,7 @@ import {
 } from '../../typing/session';
 import { renderPeerCarets } from './peer-carets';
 import { formatPassageLabel } from '../../memory/domain/passage';
+import { PlayerListView } from './player-list';
 import {
   playerStatus,
   readPassageLength,
@@ -32,6 +39,7 @@ export class MultiplayerView {
   private readonly room = required('multiplayer-room');
   private readonly status = required('multiplayer-status');
   private readonly players = required('multiplayer-players');
+  private readonly playerList = new PlayerListView(this.players);
   private readonly passage = required('multiplayer-passage');
   private readonly hud = required('multiplayer-hud');
   private readonly typedBar = required('multiplayer-typed-bar');
@@ -53,6 +61,7 @@ export class MultiplayerView {
     this.entry.classList.remove('is-hidden');
     this.room.classList.add('is-hidden');
     this.setStatus('');
+    this.playerList.clear();
   }
 
   showRoom(): void {
@@ -66,7 +75,7 @@ export class MultiplayerView {
     setText('multiplayer-round', snapshot.round ? String(snapshot.round) : 'Waiting');
     setText('multiplayer-phase', PHASE_LABELS[snapshot.phase]);
     setText('multiplayer-player-count', String(snapshot.players.length));
-    this.renderPlayers(snapshot);
+    this.playerList.render(snapshot);
     this.showPhase(snapshot.phase);
     if (snapshot.phase === 'lobby') this.renderLobby(snapshot);
     if (snapshot.phase === 'typing' || snapshot.phase === 'guessing') this.renderTyping(snapshot);
@@ -134,7 +143,7 @@ export class MultiplayerView {
     }
   }
 
-  guessValue() {
+  guessValue(): PassageGuess {
     const numberValue = (input: HTMLInputElement) => input.value ? Number(input.value) : null;
     return {
       book: this.guessInputs.book.value,
@@ -144,46 +153,10 @@ export class MultiplayerView {
     };
   }
 
-  private renderPlayers(snapshot: RoomSnapshot): void {
-    this.players.replaceChildren(...snapshot.players.map(player => {
-      const row = document.createElement('div');
-      row.className = 'player-row';
-      const identity = document.createElement('div');
-      const dot = document.createElement('i');
-      dot.style.background = player.color;
-      const name = document.createElement('strong');
-      name.textContent = `${player.name}${player.id === snapshot.selfId ? ' (you)' : ''}`;
-      const detail = document.createElement('small');
-      detail.textContent = playerStatus(player, snapshot);
-      identity.append(dot, name);
-      row.append(identity);
-      if (snapshot.round > 0) {
-        const metrics = document.createElement('small');
-        metrics.className = 'player-metrics';
-        const progressPercent = Math.round(
-          player.progress / Math.max(1, snapshot.passageText?.length ?? 1) * 100
-        );
-        metrics.textContent = `${player.wpm} WPM • ${progressPercent}% typed`;
-        row.append(metrics);
-      }
-      row.append(detail);
-      if (player.kind === 'simulated' && snapshot.selfId === snapshot.hostId
-        && (snapshot.phase === 'lobby' || snapshot.phase === 'reveal')) {
-        const select = document.createElement('select');
-        select.className = 'bot-difficulty-select';
-        select.dataset.playerId = player.id;
-        select.setAttribute('aria-label', `${player.name} difficulty`);
-        for (const [value, option] of Object.entries(BOT_DIFFICULTY_OPTIONS)) {
-          const choice = document.createElement('option');
-          choice.value = value;
-          choice.textContent = `${option.label} · ${option.minimumWpm}-${option.maximumWpm} WPM`;
-          choice.selected = value === player.botDifficulty;
-          select.appendChild(choice);
-        }
-        row.appendChild(select);
-      }
-      return row;
-    }));
+  focusPhase(phase: RoomPhase): void {
+    if (phase === 'typing') this.focusTyping();
+    if (phase === 'guessing') this.guessInputs.book.focus();
+    if (phase === 'reveal') requiredButton('multiplayer-ready').focus();
   }
 
   private renderLobby(snapshot: RoomSnapshot): void {

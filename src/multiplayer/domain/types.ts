@@ -84,6 +84,7 @@ export interface RoomConnection {
 export interface MultiplayerClient {
   createRoom(playerName: string, settings: RoomSettings): Promise<RoomConnection>;
   joinRoom(code: string, playerName: string): Promise<RoomConnection>;
+  advance?(): Promise<void>;
 }
 
 export interface PassageProvider {

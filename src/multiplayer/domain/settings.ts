@@ -1,5 +1,7 @@
 import type { BotDifficulty, PassageLength, RoomSettings } from './types';
 
+export const GUESS_DURATION_MS = 30_000;
+
 export const BOT_DIFFICULTY_OPTIONS: Record<BotDifficulty, {
   label: string;
   accuracy: number;

@@ -1,11 +1,9 @@
 import type { MultiplayerClient, RoomConnection, RoomSnapshot } from '../domain/types';
-import {
-  MOCK_REFRESH_INTERVAL_MS,
-  MockMultiplayerClient
-} from '../infrastructure/mock-multiplayer-client';
+import { MOCK_REFRESH_INTERVAL_MS } from '../infrastructure/mock-multiplayer-client';
 import { MultiplayerView } from './view';
 import { playComplete, playKey } from '../../audio/effects';
 import { normalizeBotDifficulty } from '../domain/settings';
+import { required, requiredButton, requiredInput } from './view-support';
 
 export function createMultiplayerController(client: MultiplayerClient): { show(): void } {
   const view = new MultiplayerView();
@@ -21,12 +19,12 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
   bindForm('multiplayer-join-form', () => run(async () => {
     await connect(await client.joinRoom(inputValue('multiplayer-code'), inputValue('multiplayer-join-name')));
   }));
-  button('multiplayer-leave').addEventListener('click', leave);
-  button('multiplayer-add-bot').addEventListener('click', () => run(async () => {
+  requiredButton('multiplayer-leave').addEventListener('click', leave);
+  requiredButton('multiplayer-add-bot').addEventListener('click', () => run(async () => {
     await send({ type: 'ADD_BOT' });
   }));
-  button('multiplayer-start').addEventListener('click', () => send({ type: 'START_ROUND' }));
-  button('multiplayer-ready').addEventListener('click', () => send({ type: 'SET_READY', ready: true }));
+  requiredButton('multiplayer-start').addEventListener('click', () => send({ type: 'START_ROUND' }));
+  requiredButton('multiplayer-ready').addEventListener('click', () => send({ type: 'SET_READY', ready: true }));
   const settingsControls = [
     ['multiplayer-lobby-length', () => view.lobbySettings()],
     ['multiplayer-lobby-guessing', () => view.lobbySettings()],
@@ -34,7 +32,7 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
     ['multiplayer-round-guessing', () => view.nextRoundSettings()]
   ] as const;
   for (const [id, readSettings] of settingsControls) {
-    element(id).addEventListener('change', () => {
+    required(id).addEventListener('change', () => {
       if (!snapshot) return;
       const nextSettings = readSettings();
       void send({
@@ -47,7 +45,7 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
       });
     });
   }
-  element('multiplayer-players').addEventListener('change', event => {
+  required('multiplayer-players').addEventListener('change', event => {
     const target = event.target;
     if (!(target instanceof HTMLSelectElement) || !target.dataset.playerId) return;
     const difficulty = target.value;
@@ -57,23 +55,23 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
       difficulty: normalizeBotDifficulty(difficulty)
     });
   });
-  button('multiplayer-restart').addEventListener('click', () => {
+  requiredButton('multiplayer-restart').addEventListener('click', () => {
     if (!snapshot || snapshot.phase !== 'typing') return;
     view.restartTyping(snapshot);
     void send({ type: 'RESTART_TYPING' });
   });
-  button('multiplayer-focus').addEventListener('click', event => {
+  requiredButton('multiplayer-focus').addEventListener('click', event => {
     const control = event.currentTarget;
     if (!(control instanceof HTMLButtonElement)) return;
     const focused = view.element.classList.toggle('focus-mode');
     control.setAttribute('aria-pressed', String(focused));
     control.textContent = focused ? 'Exit focus mode' : 'Focus mode';
   });
-  element('multiplayer-passage').addEventListener('click', () => {
-    const input = element('multiplayer-input');
-    if (input instanceof HTMLInputElement && !input.disabled) input.focus();
+  required('multiplayer-passage').addEventListener('click', () => {
+    const input = requiredInput('multiplayer-input', HTMLInputElement);
+    if (!input.disabled) input.focus();
   });
-  element('multiplayer-input').addEventListener('input', () => {
+  required('multiplayer-input').addEventListener('input', () => {
     if (!snapshot || snapshot.phase !== 'typing' || !connection) return;
     const inputUpdate = view.updateTyping(snapshot);
     if (inputUpdate.advanced) playKey(inputUpdate.lastCharacterCorrect ?? false);
@@ -86,10 +84,10 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
       if (inputUpdate.completed) playComplete();
     });
   });
-  element('multiplayer-guess-form').addEventListener('input', () => {
+  required('multiplayer-guess-form').addEventListener('input', () => {
     void send({ type: 'UPDATE_GUESS', guess: view.guessValue() });
   });
-  element('multiplayer-guess-form').addEventListener('submit', event => {
+  required('multiplayer-guess-form').addEventListener('submit', event => {
     event.preventDefault();
     void run(async () => {
       if (!connection) return;
@@ -103,6 +101,7 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
     connection = nextConnection;
     unsubscribe = connection.subscribe(nextSnapshot => {
       const roundChanged = snapshot?.round !== nextSnapshot.round;
+      const previousPhase = snapshot?.phase;
       snapshot = nextSnapshot;
       if (roundChanged) {
         cursorSequence = 0;
@@ -111,13 +110,15 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
       }
       view.showRoom();
       view.render(nextSnapshot);
-      if (roundChanged && nextSnapshot.phase === 'typing') view.focusTyping();
+      if (previousPhase && previousPhase !== nextSnapshot.phase) {
+        view.focusPhase(nextSnapshot.phase);
+      } else if (roundChanged && nextSnapshot.phase === 'typing') {
+        view.focusTyping();
+      }
     });
     botTimer = window.setInterval(() => {
       if (snapshot) view.refreshTyping(snapshot);
-      if (client instanceof MockMultiplayerClient) {
-        void run(() => client.advanceSimulatedPlayers());
-      }
+      if (client.advance) void run(client.advance.bind(client));
     }, MOCK_REFRESH_INTERVAL_MS);
   }
 
@@ -154,26 +155,12 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
 }
 
 function bindForm(id: string, submit: () => Promise<void>): void {
-  element(id).addEventListener('submit', event => {
+  required(id).addEventListener('submit', event => {
     event.preventDefault();
     void submit();
   });
 }
 
-function element(id: string): HTMLElement {
-  const found = document.getElementById(id);
-  if (!found) throw new Error(`Expected #${id}.`);
-  return found;
-}
-
-function button(id: string): HTMLButtonElement {
-  const found = element(id);
-  if (!(found instanceof HTMLButtonElement)) throw new Error(`Expected #${id} to be a button.`);
-  return found;
-}
-
 function inputValue(id: string): string {
-  const found = element(id);
-  if (!(found instanceof HTMLInputElement)) throw new Error(`Expected #${id} to be an input.`);
-  return found.value;
+  return requiredInput(id, HTMLInputElement).value;
 }
