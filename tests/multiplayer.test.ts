@@ -35,7 +35,7 @@ test('multiplayer scoring rewards exact references and degrades by distance', ()
 test('bot difficulties define requested accuracy and speed ranges', () => {
   equal(MOCK_REFRESH_INTERVAL_MS, 100);
   equal(BOT_DIFFICULTY_OPTIONS.easy, {
-    label: 'Easy', accuracy: .85, minimumWpm: 18, maximumWpm: 27,
+    label: 'Easy', accuracy: .85, minimumWpm: 20, maximumWpm: 30,
     characterTimingVariation: .65, wordTimingVariation: .9
   });
   equal(BOT_DIFFICULTY_OPTIONS.medium, {
@@ -66,7 +66,7 @@ test('bot difficulties define requested accuracy and speed ranges', () => {
     nextTypingDelayMs(60, 'Faith', 'medium', () => 0)
     + nextTypingDelayMs(60, 'Faith', 'medium', () => 1)
   ) / 2), 200);
-  equal(measureBotWpm('easy', 22, 11) >= 18 && measureBotWpm('easy', 22, 11) <= 27, true);
+  equal(measureBotWpm('easy', 25, 11) >= 20 && measureBotWpm('easy', 25, 11) <= 30, true);
   equal(measureBotWpm('medium', 45, 22) >= 40 && measureBotWpm('medium', 45, 22) <= 50, true);
   equal(measureBotWpm('hard', 75, 33) >= 70 && measureBotWpm('hard', 75, 33) <= 80, true);
   equal(
