@@ -1,0 +1,63 @@
+.multiplayer-header { align-items: center; }
+.multiplayer-header h2 { margin: 0; font: 700 clamp(2rem, 4vw, 3rem) Playfair Display; }
+.multiplayer-header p { max-width: 44rem; margin: .5rem 0 0; color: var(--muted); line-height: 1.6; }
+.multiplayer-header .eyebrow { margin-bottom: .35rem; }
+.multiplayer-entry, .multiplayer-room { width: 100%; max-width: var(--content-max); margin: 0 auto; }
+.multiplayer-entry { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.multiplayer-entry-card { padding: clamp(1.25rem, 3vw, 2rem); }
+.multiplayer-entry-card h3 { margin: 0; font: 700 1.5rem Playfair Display; }
+.multiplayer-entry-card p { min-height: 3rem; color: var(--muted); line-height: 1.5; }
+.multiplayer-entry-card form { --stack-gap: .6rem; }
+.multiplayer-entry-card label, .guess-grid label { color: var(--muted); font-size: var(--text-small); font-weight: 800; }
+.multiplayer-entry-card input, .guess-grid input, #multiplayer-input {
+  width: 100%; padding: .75rem .875rem; border: 1px solid var(--page-border); border-radius: 11px; color: var(--ink); background: white;
+}
+.room-toolbar { display: grid; grid-template-columns: repeat(3, minmax(7rem, 1fr)) auto; align-items: center; gap: 1rem; padding: 1rem 1.25rem; }
+.room-toolbar > div { display: grid; gap: .2rem; }
+.room-toolbar small, .round-heading small, #multiplayer-reveal-phase > small { color: var(--muted); font-size: .65rem; font-weight: 800; letter-spacing: .12em; }
+.room-toolbar strong { font: 700 1rem DM Mono; }
+.room-toolbar > div:first-child strong { color: var(--page-accent-strong); font-size: 1.25rem; letter-spacing: .12em; }
+.multiplayer-status { min-height: 2rem; padding: .45rem .2rem; color: var(--muted); font-size: var(--text-small); }
+.multiplayer-status.is-error { color: #b5413a; }
+.multiplayer-layout { display: grid; grid-template-columns: minmax(13rem, 17rem) minmax(0, 1fr); gap: 1rem; align-items: start; }
+.player-panel, .round-panel { padding: 1.25rem; }
+.player-panel-heading, .round-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.player-panel-heading h3, .round-heading h3 { margin: 0; }
+.player-panel-heading span { display: grid; place-items: center; min-width: 1.8rem; height: 1.8rem; border-radius: 50%; color: var(--page-accent-strong); background: var(--page-accent-soft); font-weight: 800; }
+.player-list { display: grid; gap: .65rem; margin-top: 1rem; }
+.player-row { display: grid; gap: .25rem; padding: .75rem; border-radius: 11px; background: var(--page-surface); }
+.player-row > div { display: flex; align-items: center; gap: .5rem; }
+.player-row i { width: .65rem; height: .65rem; border-radius: 50%; }
+.player-row strong { font-size: .8rem; }
+.player-row small { padding-left: 1.15rem; color: var(--muted); font-size: .68rem; }
+.round-panel { min-height: 29rem; display: grid; }
+.round-phase { align-self: center; }
+#multiplayer-lobby-phase, #multiplayer-reveal-phase { justify-items: center; text-align: center; }
+.round-phase > h3 { margin: .45rem 0; font: 700 clamp(1.5rem, 3vw, 2rem) Playfair Display; }
+.round-phase > p { color: var(--muted); }
+.phase-icon { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 50%; color: var(--page-accent-strong); background: var(--page-accent-soft); font-size: 1.5rem; }
+.multiplayer-passage { margin: 1.25rem 0; padding: 1.25rem; border-radius: 14px; background: #f8faf9; font: 500 1.05rem/1.9 DM Mono; white-space: pre-wrap; }
+.player-cursor { position: relative; display: inline-block; height: 1.4em; margin-inline: -1px; border-left: 3px solid; vertical-align: -.3em; }
+#multiplayer-input { min-height: 7rem; resize: vertical; font: 500 .9rem/1.6 DM Mono; }
+.phase-help { margin-bottom: 0; color: var(--muted); font-size: var(--text-small); }
+.guess-grid { display: grid; grid-template-columns: 2fr repeat(3, 1fr); gap: .75rem; margin-top: 1.25rem; }
+.guess-grid label { display: grid; gap: .35rem; }
+.guess-grid button { grid-column: 1 / -1; justify-self: end; }
+.score-list { width: min(26rem, 100%); display: grid; gap: .5rem; margin: 1rem 0 1.5rem; }
+.score-list div { display: flex; justify-content: space-between; padding: .75rem 1rem; border-radius: 11px; background: var(--page-surface); }
+.score-list span { color: var(--page-accent-strong); font-weight: 800; }
+
+@media (max-width: 48rem) {
+  .multiplayer-entry, .multiplayer-layout { grid-template-columns: 1fr; }
+  .room-toolbar { grid-template-columns: repeat(3, 1fr); }
+  .room-toolbar button { grid-column: 1 / -1; }
+  .guess-grid { grid-template-columns: repeat(3, 1fr); }
+  .guess-grid label:first-child { grid-column: 1 / -1; }
+}
+
+@media (max-width: 32rem) {
+  .room-toolbar { grid-template-columns: 1fr; }
+  .room-toolbar button { grid-column: auto; }
+  .guess-grid { grid-template-columns: 1fr; }
+  .guess-grid label:first-child { grid-column: auto; }
+}

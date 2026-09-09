@@ -4,6 +4,7 @@ import { getVerseCount } from '../verse-counts';
 import { requireElement } from '../shared/dom';
 import type { AppConfig } from '../config';
 import { practiceWorkspaceMarkup } from './practice-workspace.ts';
+import { multiplayerWorkspaceMarkup } from '../multiplayer/ui/workspace.ts';
 
 export function initControls(config: AppConfig) {
   const developerControls = config.isDevelopment ? `
@@ -61,6 +62,7 @@ export function initControls(config: AppConfig) {
           <button class="mode-nav active" data-workspace="campaign" aria-label="Journey" title="Journey"><span>✦</span><div><strong>Journey</strong><small id="sidebar-campaign-progress">0 / 0 passages</small></div></button>
           <button class="mode-nav" data-workspace="practice" aria-label="Practice" title="Practice"><span>⌨</span><div><strong>Practice</strong><small>Practice with text guidance</small></div></button>
           <button class="mode-nav" data-workspace="defense" data-mode="defense" aria-label="Arcade" title="Arcade"><span>◇</span><div><strong>Arcade</strong><small>Repel the shadows</small></div></button>
+          <button class="mode-nav" data-workspace="multiplayer" aria-label="Together" title="Together"><span>◎</span><div><strong>Together</strong><small>Type and recall as a group</small></div></button>
         </aside>
         <div class="page-viewport">
       <section id="game-screen" class="app-page game-screen is-hidden">
@@ -88,6 +90,7 @@ export function initControls(config: AppConfig) {
         ${journeyDeveloperPanel}
         <div id="campaign-content" class="campaign-content"></div>
       </section>
+      ${multiplayerWorkspaceMarkup()}
         </div>
       </div>
 
@@ -272,6 +275,7 @@ export function initControls(config: AppConfig) {
     playlistStatusEl: requireElement('playlist-status', HTMLElement),
     resultAnalysisEl: requireElement('result-analysis', HTMLElement),
     campaignScreenEl: requireElement('campaign-screen', HTMLElement),
+    multiplayerScreenEl: requireElement('multiplayer-screen', HTMLElement),
     campaignContentEl: requireElement('campaign-content', HTMLElement),
     campaignBackEl: requireElement('campaign-back', HTMLButtonElement),
     campaignBreadcrumbEl: requireElement('campaign-breadcrumb', HTMLElement),

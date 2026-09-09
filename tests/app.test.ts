@@ -44,10 +44,13 @@ import {
   reorderPlaylist
 } from '../src/memory/domain/playlists.ts';
 import { createChapterReader, nextChapterReaderRange } from '../src/typing/chapter-reader.ts';
+import { RoomEngine } from '../src/multiplayer/domain/room-engine.ts';
+import { scorePassageGuess } from '../src/multiplayer/domain/scoring.ts';
+import type { MultiplayerPassage } from '../src/multiplayer/domain/types.ts';
 
-type Test = { name: string; run: () => void };
+type Test = { name: string; run: () => void | Promise<void> };
 const tests: Test[] = [];
-const test = (name: string, run: () => void) => tests.push({ name, run });
+const test = (name: string, run: () => void | Promise<void>) => tests.push({ name, run });
 const equal = (actual: unknown, expected: unknown) => {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(`Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`);
@@ -562,6 +565,58 @@ test('memorization playlists round-trip through validated app storage', () => {
   equal(repository.readPlaylistState(), emptyPlaylistState());
 });
 
+test('multiplayer scoring rewards exact references and degrades by distance', () => {
+  const answer = { book: 'John', chapter: 3, startVerse: 16, endVerse: 19 };
+  equal(scorePassageGuess({
+    book: 'John', chapter: 3, startVerse: 16, endVerse: 19
+  }, answer), 100);
+  equal(scorePassageGuess({
+    book: 'John', chapter: 4, startVerse: 17, endVerse: 20
+  }, answer), 88);
+  equal(scorePassageGuess({
+    book: 'Romans', chapter: null, startVerse: null, endVerse: null
+  }, answer), 0);
+});
+
+test('multiplayer room advances only after every player completes each phase', async () => {
+  const passage: MultiplayerPassage = {
+    text: 'Faith comes by hearing.',
+    reference: { book: 'Romans', chapter: 10, startVerse: 17, endVerse: 17 }
+  };
+  const room = new RoomEngine('FAITH', { nextPassage: async () => passage });
+  room.addPlayer('host', 'Host');
+  room.addPlayer('guest', 'Guest');
+  await room.dispatch('host', { type: 'START_ROUND' });
+  equal(room.getSnapshot('host').phase, 'typing');
+  await room.dispatch('host', { type: 'UPDATE_CURSOR', position: 5, sequence: 1 });
+  await room.dispatch('host', { type: 'UPDATE_CURSOR', position: passage.text.length, sequence: 1 });
+  equal(room.getSnapshot('host').players[0]?.cursor, 5);
+  await room.dispatch('host', { type: 'UPDATE_CURSOR', position: passage.text.length, sequence: 2 });
+  equal(room.getSnapshot('host').phase, 'typing');
+  await room.dispatch('guest', { type: 'UPDATE_CURSOR', position: passage.text.length, sequence: 1 });
+  equal(room.getSnapshot('host').phase, 'guessing');
+  const exactGuess = { book: 'Romans', chapter: 10, startVerse: 17, endVerse: 17 };
+  await room.dispatch('host', { type: 'UPDATE_GUESS', guess: exactGuess });
+  await room.dispatch('host', { type: 'SUBMIT_GUESS' });
+  equal(room.getSnapshot('host').revealedReference, null);
+  await room.dispatch('guest', { type: 'UPDATE_GUESS', guess: exactGuess });
+  await room.dispatch('guest', { type: 'SUBMIT_GUESS' });
+  equal(room.getSnapshot('host').phase, 'reveal');
+  equal(room.getSnapshot('host').players.map(player => player.score), [100, 100]);
+  let rejectedEarlyStart = false;
+  try {
+    await room.dispatch('host', { type: 'START_ROUND' });
+  } catch {
+    rejectedEarlyStart = true;
+  }
+  equal(rejectedEarlyStart, true);
+  await room.dispatch('host', { type: 'SET_READY', ready: true });
+  equal(room.getSnapshot('host').round, 1);
+  await room.dispatch('guest', { type: 'SET_READY', ready: true });
+  equal(room.getSnapshot('host').round, 2);
+  equal(room.getSnapshot('host').phase, 'typing');
+});
+
 function createMemoryStorage(initial: Record<string, string> = {}): Storage {
   const values = new Map(Object.entries(initial));
   return {
@@ -577,7 +632,7 @@ function createMemoryStorage(initial: Record<string, string> = {}): Storage {
 let failed = 0;
 for (const current of tests) {
   try {
-    current.run();
+    await current.run();
     console.log(`✓ ${current.name}`);
   } catch (error) {
     failed++;

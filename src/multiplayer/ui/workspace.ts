@@ -1,0 +1,88 @@
+export function multiplayerWorkspaceMarkup(): string {
+  return `
+    <section id="multiplayer-screen" class="app-page multiplayer-screen is-hidden">
+      <header class="page-header multiplayer-header">
+        <div>
+          <div class="eyebrow">Local multiplayer laboratory</div>
+          <h2>Gather around a passage</h2>
+          <p>Develop the complete room flow with simulated players before choosing a network provider.</p>
+        </div>
+        <span class="text-badge text-badge--accent">Mock transport</span>
+      </header>
+
+      <div id="multiplayer-entry" class="multiplayer-entry">
+        <section class="surface multiplayer-entry-card">
+          <h3>Create a lobby</h3>
+          <p>Start a local room, then add simulated players to exercise every phase.</p>
+          <form id="multiplayer-create-form" class="stack">
+            <label for="multiplayer-name">Display name</label>
+            <input id="multiplayer-name" maxlength="24" value="Host" autocomplete="nickname" required>
+            <button class="primary-btn" type="submit">Create mock lobby</button>
+          </form>
+        </section>
+        <section class="surface multiplayer-entry-card">
+          <h3>Join a lobby</h3>
+          <p>The adapter contract is ready for lobby-code providers. Mock rooms live in this page session.</p>
+          <form id="multiplayer-join-form" class="stack">
+            <label for="multiplayer-join-name">Display name</label>
+            <input id="multiplayer-join-name" maxlength="24" value="Guest" autocomplete="nickname" required>
+            <label for="multiplayer-code">Lobby code</label>
+            <input id="multiplayer-code" maxlength="5" autocomplete="off" placeholder="ABCDE" required>
+            <button class="secondary-btn" type="submit">Join mock lobby</button>
+          </form>
+        </section>
+      </div>
+
+      <section id="multiplayer-room" class="multiplayer-room is-hidden">
+        <header class="surface room-toolbar">
+          <div><small>LOBBY CODE</small><strong id="multiplayer-room-code">-----</strong></div>
+          <div><small>ROUND</small><strong id="multiplayer-round">Waiting</strong></div>
+          <div><small>PHASE</small><strong id="multiplayer-phase">Lobby</strong></div>
+          <button id="multiplayer-leave" class="secondary-btn" type="button">Leave</button>
+        </header>
+        <div id="multiplayer-status" class="multiplayer-status" role="status" aria-live="polite"></div>
+        <div class="multiplayer-layout">
+          <aside class="surface player-panel">
+            <div class="player-panel-heading"><h3>Players</h3><span id="multiplayer-player-count">0</span></div>
+            <div id="multiplayer-players" class="player-list"></div>
+          </aside>
+          <main class="surface round-panel">
+            <section id="multiplayer-lobby-phase" class="round-phase">
+              <span class="phase-icon" aria-hidden="true">⌛</span>
+              <h3>Waiting in the lobby</h3>
+              <p>Add simulated players, then begin when everyone is present.</p>
+              <div class="cluster">
+                <button id="multiplayer-add-bot" class="secondary-btn" type="button">Add simulated player</button>
+                <button id="multiplayer-start" class="primary-btn" type="button">Start round</button>
+              </div>
+            </section>
+            <section id="multiplayer-typing-phase" class="round-phase is-hidden">
+              <div class="round-heading"><div><small>TYPE THE PASSAGE</small><h3>Everyone advances together</h3></div><span id="multiplayer-typing-progress">0%</span></div>
+              <div id="multiplayer-passage" class="multiplayer-passage" aria-label="Passage to type"></div>
+              <label class="sr-only" for="multiplayer-input">Type the passage</label>
+              <textarea id="multiplayer-input" rows="4" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+              <p class="phase-help">Your progress stops at the first incorrect character. The guessing phase begins when everyone finishes.</p>
+            </section>
+            <section id="multiplayer-guessing-phase" class="round-phase is-hidden">
+              <div class="round-heading"><div><small>NAME THE PASSAGE</small><h3>What did you just type?</h3></div></div>
+              <form id="multiplayer-guess-form" class="guess-grid">
+                <label>Book<input id="multiplayer-guess-book" maxlength="40" required></label>
+                <label>Chapter<input id="multiplayer-guess-chapter" type="number" min="1" required></label>
+                <label>First verse<input id="multiplayer-guess-start" type="number" min="1" required></label>
+                <label>Last verse<input id="multiplayer-guess-end" type="number" min="1" required></label>
+                <button id="multiplayer-submit-guess" class="primary-btn" type="submit">Lock in answer</button>
+              </form>
+              <p class="phase-help">Draft answers are shared live. Submitted answers cannot be changed.</p>
+            </section>
+            <section id="multiplayer-reveal-phase" class="round-phase is-hidden">
+              <span class="phase-icon" aria-hidden="true">✦</span>
+              <small>PASSAGE REVEALED</small>
+              <h3 id="multiplayer-answer"></h3>
+              <div id="multiplayer-scores" class="score-list"></div>
+              <button id="multiplayer-ready" class="primary-btn" type="button">Ready for another round</button>
+            </section>
+          </main>
+        </div>
+      </section>
+    </section>`;
+}
