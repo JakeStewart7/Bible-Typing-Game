@@ -35,19 +35,24 @@ test('multiplayer scoring rewards exact references and degrades by distance', ()
 test('bot difficulties define requested accuracy and speed ranges', () => {
   equal(MOCK_REFRESH_INTERVAL_MS, 100);
   equal(BOT_DIFFICULTY_OPTIONS.easy, {
-    label: 'Easy', accuracy: .85, minimumWpm: 20, maximumWpm: 30
+    label: 'Easy', accuracy: .85, minimumWpm: 20, maximumWpm: 30,
+    characterTimingVariation: .4, wordTimingVariation: .7
   });
   equal(BOT_DIFFICULTY_OPTIONS.medium, {
-    label: 'Normal', accuracy: .9, minimumWpm: 40, maximumWpm: 50
+    label: 'Normal', accuracy: .9, minimumWpm: 40, maximumWpm: 50,
+    characterTimingVariation: .32, wordTimingVariation: .55
   });
   equal(BOT_DIFFICULTY_OPTIONS.hard, {
-    label: 'Hard', accuracy: .95, minimumWpm: 70, maximumWpm: 80
+    label: 'Hard', accuracy: .95, minimumWpm: 70, maximumWpm: 80,
+    characterTimingVariation: .25, wordTimingVariation: .42
   });
   equal(BOT_DIFFICULTY_OPTIONS['very-hard'], {
-    label: 'Very hard', accuracy: .96, minimumWpm: 90, maximumWpm: 110
+    label: 'Very hard', accuracy: .96, minimumWpm: 90, maximumWpm: 110,
+    characterTimingVariation: .22, wordTimingVariation: .36
   });
   equal(BOT_DIFFICULTY_OPTIONS.extreme, {
-    label: 'Extreme', accuracy: .98, minimumWpm: 110, maximumWpm: 130
+    label: 'Extreme', accuracy: .98, minimumWpm: 110, maximumWpm: 130,
+    characterTimingVariation: .18, wordTimingVariation: .3
   });
   equal(nextBotTyping('Faith', '', 'easy', () => 0), 'F');
   equal(nextBotTyping('Faith', '', 'easy', () => .99) === 'F', false);
@@ -57,6 +62,10 @@ test('bot difficulties define requested accuracy and speed ranges', () => {
       < nextTypingDelayMs(25, 'Faith', 'easy', () => 0),
     true
   );
+  equal(Math.round((
+    nextTypingDelayMs(60, 'Faith', 'medium', () => 0)
+    + nextTypingDelayMs(60, 'Faith', 'medium', () => 1)
+  ) / 2), 200);
   equal(measureBotWpm('easy', 25, 11) >= 20 && measureBotWpm('easy', 25, 11) <= 30, true);
   equal(measureBotWpm('medium', 45, 22) >= 40 && measureBotWpm('medium', 45, 22) <= 50, true);
   equal(measureBotWpm('hard', 75, 33) >= 70 && measureBotWpm('hard', 75, 33) <= 80, true);

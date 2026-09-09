@@ -180,9 +180,10 @@ export function nextTypingDelayMs(
   random: () => number
 ): number {
   const characterDelay = 60_000 / (wpm * 5);
-  const wordPauseSpread = difficulty === 'easy' ? .5 : difficulty === 'medium' ? .3 : .15;
-  const characterSpread = difficulty === 'easy' ? .2 : difficulty === 'medium' ? .12 : .06;
-  const spread = typedText.endsWith(' ') ? wordPauseSpread : characterSpread;
+  const option = BOT_DIFFICULTY_OPTIONS[difficulty];
+  const spread = typedText.endsWith(' ')
+    ? option.wordTimingVariation
+    : option.characterTimingVariation;
   const intervalFactor = 1 - spread + random() * spread * 2;
   return characterDelay * intervalFactor;
 }

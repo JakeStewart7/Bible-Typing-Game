@@ -7,12 +7,29 @@ export const BOT_DIFFICULTY_OPTIONS: Record<BotDifficulty, {
   accuracy: number;
   minimumWpm: number;
   maximumWpm: number;
+  characterTimingVariation: number;
+  wordTimingVariation: number;
 }> = {
-  easy: { label: 'Easy', accuracy: .85, minimumWpm: 20, maximumWpm: 30 },
-  medium: { label: 'Normal', accuracy: .9, minimumWpm: 40, maximumWpm: 50 },
-  hard: { label: 'Hard', accuracy: .95, minimumWpm: 70, maximumWpm: 80 },
-  'very-hard': { label: 'Very hard', accuracy: .96, minimumWpm: 90, maximumWpm: 110 },
-  extreme: { label: 'Extreme', accuracy: .98, minimumWpm: 110, maximumWpm: 130 }
+  easy: {
+    label: 'Easy', accuracy: .85, minimumWpm: 20, maximumWpm: 30,
+    characterTimingVariation: .4, wordTimingVariation: .7
+  },
+  medium: {
+    label: 'Normal', accuracy: .9, minimumWpm: 40, maximumWpm: 50,
+    characterTimingVariation: .32, wordTimingVariation: .55
+  },
+  hard: {
+    label: 'Hard', accuracy: .95, minimumWpm: 70, maximumWpm: 80,
+    characterTimingVariation: .25, wordTimingVariation: .42
+  },
+  'very-hard': {
+    label: 'Very hard', accuracy: .96, minimumWpm: 90, maximumWpm: 110,
+    characterTimingVariation: .22, wordTimingVariation: .36
+  },
+  extreme: {
+    label: 'Extreme', accuracy: .98, minimumWpm: 110, maximumWpm: 130,
+    characterTimingVariation: .18, wordTimingVariation: .3
+  }
 };
 
 export const PASSAGE_LENGTH_OPTIONS: Record<PassageLength, {
