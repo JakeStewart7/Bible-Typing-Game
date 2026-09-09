@@ -1,5 +1,5 @@
 import type { PlayerState, RoomPhase, RoomSettings, RoomSnapshot } from '../domain/types';
-import { BOT_DIFFICULTY_OPTIONS } from '../domain/settings';
+import { BOT_DIFFICULTY_OPTIONS, DEFAULT_ROOM_SETTINGS } from '../domain/settings';
 import { createGame, type Game } from '../../game/state';
 import {
   renderTypingExperience,
@@ -7,10 +7,10 @@ import {
   type TypingInputUpdate
 } from '../../typing/session';
 import { renderPeerCarets } from './peer-carets';
+import { formatPassageLabel } from '../../memory/domain/passage';
 import {
   playerStatus,
   readPassageLength,
-  readRoomSettings,
   renderGuessTimer,
   required,
   requiredButton,
@@ -84,19 +84,15 @@ export class MultiplayerView {
   }
 
   creationSettings(): RoomSettings {
-    return readRoomSettings(
-      'multiplayer-create-difficulty',
-      'multiplayer-create-length',
-      'multiplayer-create-guessing'
-    );
+    return { ...DEFAULT_ROOM_SETTINGS };
+  }
+
+  lobbySettings(): RoomSettings {
+    return this.readSettings('multiplayer-lobby');
   }
 
   nextRoundSettings(): RoomSettings {
-    return {
-      botDifficulty: 'medium',
-      passageLength: readPassageLength('multiplayer-round-length'),
-      includeGuessing: requiredInput('multiplayer-round-guessing', HTMLInputElement).checked
-    };
+    return this.readSettings('multiplayer-round');
   }
 
   clearTypingValue(): void {
@@ -196,6 +192,7 @@ export class MultiplayerView {
     start.disabled = !isHost || snapshot.players.length < 2;
     start.textContent = isHost ? 'Start round' : 'Waiting for host';
     requiredButton('multiplayer-add-bot').disabled = !isHost;
+    this.renderSettings('multiplayer-lobby', snapshot, isHost);
   }
 
   private renderTyping(snapshot: RoomSnapshot): void {
@@ -224,7 +221,7 @@ export class MultiplayerView {
   private renderReveal(snapshot: RoomSnapshot, self: PlayerState | undefined): void {
     const answer = snapshot.revealedReference;
     setText('multiplayer-answer', answer
-      ? `${answer.book} ${answer.chapter}:${answer.startVerse}-${answer.endVerse}`
+      ? formatPassageLabel(answer)
       : '');
     const scores = required('multiplayer-scores');
     scores.replaceChildren(...snapshot.players.map(player => {
@@ -239,14 +236,29 @@ export class MultiplayerView {
     const ready = requiredButton('multiplayer-ready');
     ready.textContent = self?.ready ? 'Ready — waiting for others' : 'Ready for another round';
     ready.disabled = self?.ready ?? false;
-    const host = snapshot.selfId === snapshot.hostId;
-    const passageLength = requiredSelect('multiplayer-round-length');
-    const guessing = requiredInput('multiplayer-round-guessing', HTMLInputElement);
+    this.renderSettings(
+      'multiplayer-round',
+      snapshot,
+      snapshot.selfId === snapshot.hostId && !self?.ready
+    );
+    required('multiplayer-scores').classList.toggle('is-hidden', !snapshot.settings.includeGuessing);
+  }
+
+  private readSettings(prefix: string): RoomSettings {
+    return {
+      botDifficulty: 'medium',
+      passageLength: readPassageLength(`${prefix}-length`),
+      includeGuessing: requiredInput(`${prefix}-guessing`, HTMLInputElement).checked
+    };
+  }
+
+  private renderSettings(prefix: string, snapshot: RoomSnapshot, enabled: boolean): void {
+    const passageLength = requiredSelect(`${prefix}-length`);
+    const guessing = requiredInput(`${prefix}-guessing`, HTMLInputElement);
     passageLength.value = snapshot.settings.passageLength;
     guessing.checked = snapshot.settings.includeGuessing;
-    passageLength.disabled = !host || Boolean(self?.ready);
-    guessing.disabled = !host || Boolean(self?.ready);
-    required('multiplayer-scores').classList.toggle('is-hidden', !snapshot.settings.includeGuessing);
+    passageLength.disabled = !enabled;
+    guessing.disabled = !enabled;
   }
 
   private showPhase(active: RoomPhase): void {

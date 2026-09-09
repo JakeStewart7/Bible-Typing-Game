@@ -20,20 +20,20 @@ export class BiblePassageProvider implements PassageProvider {
   }
 
   async nextPassage(settings: RoomSettings): Promise<MultiplayerPassage> {
-    const candidate = CANDIDATE_CHAPTERS[Math.floor(this.random() * CANDIDATE_CHAPTERS.length)]!;
-    const [book, chapter] = candidate;
-    const response = await fetchChapter(book, chapter, 'kjv', false);
-    const verses = response.verses ?? [];
-    if (!verses.length) throw new Error(`No verses are available for ${book} ${chapter}.`);
     const maximumCharacters = PASSAGE_LENGTH_OPTIONS[settings.passageLength].maximumCharacters;
-    const startIndex = Math.floor(this.random() * verses.length);
-    return selectPassageWithinLimit(
-      book,
-      chapter,
-      verses,
-      startIndex,
-      maximumCharacters
-    );
+    const firstCandidate = Math.floor(this.random() * CANDIDATE_CHAPTERS.length);
+    for (let offset = 0; offset < CANDIDATE_CHAPTERS.length; offset++) {
+      const [book, chapter] = CANDIDATE_CHAPTERS[
+        (firstCandidate + offset) % CANDIDATE_CHAPTERS.length
+      ]!;
+      const response = await fetchChapter(book, chapter, 'kjv', false);
+      const verses = response.verses ?? [];
+      if (!verses.length) continue;
+      const startIndex = Math.floor(this.random() * verses.length);
+      const passage = findPassageWithinLimit(book, chapter, verses, startIndex, maximumCharacters);
+      if (passage) return passage;
+    }
+    throw new Error(`No period-ending passage fits within ${maximumCharacters} characters.`);
   }
 }
 
@@ -44,29 +44,55 @@ export function selectPassageWithinLimit(
   startIndex: number,
   maximumCharacters: number
 ): MultiplayerPassage {
+  const passage = findPassageWithinLimit(book, chapter, verses, startIndex, maximumCharacters);
+  if (passage) return passage;
+  throw new Error(`No period-ending passage fits within ${maximumCharacters} characters.`);
+}
+
+function findPassageWithinLimit(
+  book: string,
+  chapter: number,
+  verses: readonly SourceVerse[],
+  startIndex: number,
+  maximumCharacters: number
+): MultiplayerPassage | null {
+  for (let offset = 0; offset < verses.length; offset++) {
+    const candidateIndex = (startIndex + offset) % verses.length;
+    const passage = periodEndingPassage(book, chapter, verses, candidateIndex, maximumCharacters);
+    if (passage) return passage;
+  }
+  return null;
+}
+
+function periodEndingPassage(
+  book: string,
+  chapter: number,
+  verses: readonly SourceVerse[],
+  startIndex: number,
+  maximumCharacters: number
+): MultiplayerPassage | null {
   const selected = verses.slice(startIndex);
   const startVerse = selected[0]?.verse;
-  const textParts: string[] = [];
-  let characterCount = 0;
-  let endVerse = startVerse;
+  if (startVerse === undefined) return null;
+  let candidateText = '';
+  const verseAtCharacter: number[] = [];
   for (const verse of selected) {
-    const separator = textParts.length ? ' ' : '';
+    if (verse.verse === undefined) continue;
+    const separator = candidateText ? ' ' : '';
     const verseText = sanitizeText(verse.text);
-    const remaining = maximumCharacters - characterCount;
+    const remaining = maximumCharacters - candidateText.length;
     if (remaining <= separator.length) break;
     const fragment = `${separator}${verseText}`.slice(0, remaining);
-    if (fragment) {
-      textParts.push(fragment);
-      characterCount += fragment.length;
-      endVerse = verse.verse;
-    }
+    candidateText += fragment;
+    verseAtCharacter.push(...Array.from({ length: fragment.length }, () => verse.verse!));
     if (fragment.length < separator.length + verseText.length) break;
   }
-  if (startVerse === undefined || endVerse === undefined) {
-    throw new Error(`Could not select a passage from ${book} ${chapter}.`);
-  }
+  const periodIndex = candidateText.lastIndexOf('.');
+  if (periodIndex < 0) return null;
+  const endVerse = verseAtCharacter[periodIndex];
+  if (endVerse === undefined) return null;
   return {
-    text: textParts.join('').trimEnd(),
+    text: candidateText.slice(0, periodIndex + 1),
     reference: { book, chapter, startVerse, endVerse }
   };
 }

@@ -1,9 +1,8 @@
 import { BOT_DIFFICULTY_OPTIONS, PASSAGE_LENGTH_OPTIONS } from '../domain/settings';
+import { formatVerseRange } from '../../memory/domain/passage';
 import type {
-  BotDifficulty,
   PassageLength,
   PlayerState,
-  RoomSettings,
   RoomSnapshot
 } from '../domain/types';
 
@@ -25,28 +24,11 @@ export function playerStatus(player: PlayerState, snapshot: RoomSnapshot): strin
     return [
       guess.book,
       guess.chapter,
-      guess.startVerse && guess.endVerse ? `${guess.startVerse}-${guess.endVerse}` : ''
+      guess.startVerse && guess.endVerse ? formatVerseRange(guess.startVerse, guess.endVerse) : ''
     ].filter(Boolean).join(' ') || 'Thinking...';
   }
   if (!snapshot.settings.includeGuessing) return player.ready ? 'Ready' : 'Round complete';
   return player.ready ? 'Ready' : `${player.score ?? 0}%`;
-}
-
-export function readRoomSettings(
-  difficultyId: string,
-  passageLengthId: string,
-  guessingId: string
-): RoomSettings {
-  return {
-    botDifficulty: readBotDifficulty(difficultyId),
-    passageLength: readPassageLength(passageLengthId),
-    includeGuessing: requiredInput(guessingId, HTMLInputElement).checked
-  };
-}
-
-export function readBotDifficulty(id: string): BotDifficulty {
-  const value = requiredSelect(id).value;
-  return value in BOT_DIFFICULTY_OPTIONS ? value as BotDifficulty : 'medium';
 }
 
 export function readPassageLength(id: string): PassageLength {

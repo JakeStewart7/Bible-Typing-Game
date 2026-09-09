@@ -3,6 +3,7 @@ import { chooseVerseRange, filterEndVerses } from '../passage-selector';
 import { getVerseCount } from '../verse-counts';
 import { requireElement } from '../shared/dom';
 import type { AppConfig } from '../config';
+import { formatVerseSelectionLabel } from '../memory/domain/passage.ts';
 import { practiceWorkspaceMarkup } from './practice-workspace.ts';
 import { multiplayerWorkspaceMarkup } from '../multiplayer/ui/workspace.ts';
 
@@ -44,7 +45,11 @@ export function initControls(config: AppConfig) {
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.8 7.8 0 0 0 0-3l2-1.5-2-3.4-2.4 1a8 8 0 0 0-2.6-1.5L14.1 2h-4.2l-.4 3.1A8 8 0 0 0 7 6.6l-2.4-1-2 3.4 2 1.5a7.8 7.8 0 0 0 0 3l-2 1.5 2 3.4 2.4-1a8 8 0 0 0 2.6 1.5l.4 3.1h4.2l.4-3.1a8 8 0 0 0 2.6-1.5l2.4 1 2-3.4-2.2-1.5Z"/></svg>
             </button>
             <div id="settings-menu" class="settings-menu is-hidden">
-              <header><div><small>Preferences</small><strong>Audio settings</strong></div></header>
+              <header><div><small>Preferences</small><strong>App settings</strong></div></header>
+              <div class="setting-row">
+                <div><strong>Cursor smoothing</strong><small>Animate the typing cursor between characters</small></div>
+                <button id="cursor-smoothing-toggle" class="sound-switch" aria-label="Toggle cursor smoothing" aria-pressed="true"><i></i><span>On</span></button>
+              </div>
               <div class="setting-row">
                 <div><strong>Sound effects</strong><small>Typing and completion feedback</small></div>
                 <button id="sound-toggle" class="sound-switch" aria-label="Toggle sound effects" aria-pressed="true"><i></i><span>On</span></button>
@@ -178,7 +183,7 @@ export function initControls(config: AppConfig) {
     pickerBookLabelEl.textContent = book;
     pickerChapterLabelEl.textContent = chapter ? `Chapter ${chapter}` : '';
     pickerRangeLabelEl.textContent = startVerse
-      ? startVerse === endVerse ? `Verse ${startVerse}` : `Verses ${startVerse}–${endVerse}`
+      ? formatVerseSelectionLabel(startVerse, endVerse)
       : '';
     bookGridEl.replaceChildren(...BOOKS.map(candidate => pickerButton(candidate, candidate === book, () => {
       bookEl.value = candidate;

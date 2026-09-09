@@ -14,6 +14,7 @@ import type {
 
 const rooms = new Map<string, RoomEngine>();
 let nextPlayerNumber = 1;
+export const MOCK_REFRESH_INTERVAL_MS = 100;
 
 type BotSchedule = {
   round: number;
@@ -71,24 +72,27 @@ export class MockMultiplayerClient implements MultiplayerClient {
           player.botDifficulty ?? snapshot.settings.botDifficulty,
           now
         );
-        if (now < schedule.nextActionAt || player.typingComplete) continue;
-        const typedText = nextBotTyping(
-          snapshot.passageText,
-          player.typedText,
-          player.botDifficulty ?? snapshot.settings.botDifficulty,
-          this.random
-        );
-        await room.dispatch(player.id, {
-          type: 'UPDATE_TYPING',
-          typedText,
-          sequence: player.cursorSequence + 1
-        });
-        schedule.nextActionAt += nextTypingDelayMs(
-          schedule.wpm,
-          typedText,
-          schedule.difficulty,
-          this.random
-        );
+        let typedText = player.typedText;
+        let sequence = player.cursorSequence;
+        while (now >= schedule.nextActionAt && typedText !== snapshot.passageText) {
+          typedText = nextBotTyping(
+            snapshot.passageText,
+            typedText,
+            player.botDifficulty ?? snapshot.settings.botDifficulty,
+            this.random
+          );
+          await room.dispatch(player.id, {
+            type: 'UPDATE_TYPING',
+            typedText,
+            sequence: ++sequence
+          });
+          schedule.nextActionAt += nextTypingDelayMs(
+            schedule.wpm,
+            typedText,
+            schedule.difficulty,
+            this.random
+          );
+        }
       } else if (snapshot.phase === 'guessing' && !player.guessSubmitted) {
         const schedule = this.getBotSchedule(
           player.id,

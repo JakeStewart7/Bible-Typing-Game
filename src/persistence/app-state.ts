@@ -65,6 +65,11 @@ const playlistStateValue: StoredValue<PlaylistState> = {
   decode: decodeJson(isPlaylistState)
 };
 
+const cursorSmoothingValue: StoredValue<boolean> = {
+  key: 'verseTypeCursorSmoothing',
+  decode: decodeJson((value): value is boolean => typeof value === 'boolean')
+};
+
 export class AppStateRepository {
   private readonly storage: AppStorage;
 
@@ -121,6 +126,14 @@ export class AppStateRepository {
 
   writePlaylistState(state: PlaylistState): void {
     this.storage.write(playlistStateValue, state);
+  }
+
+  readCursorSmoothing(): boolean {
+    return this.storage.read(cursorSmoothingValue, true);
+  }
+
+  writeCursorSmoothing(enabled: boolean): void {
+    this.storage.write(cursorSmoothingValue, enabled);
   }
 }
 

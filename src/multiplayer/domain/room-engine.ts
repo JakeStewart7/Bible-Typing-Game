@@ -144,10 +144,16 @@ export class RoomEngine {
   }
 
   tick(now = this.clock()): void {
-    if (this.phase !== 'guessing' || this.guessingEndsAt === null || now < this.guessingEndsAt) return;
-    for (const player of this.players.values()) player.guessSubmitted = true;
-    this.advanceIfComplete(now);
-    this.publish();
+    if (this.phase === 'typing') {
+      for (const player of this.players.values()) this.refreshTypingStats(player, now);
+      this.publish();
+      return;
+    }
+    if (this.phase === 'guessing' && this.guessingEndsAt !== null && now >= this.guessingEndsAt) {
+      for (const player of this.players.values()) player.guessSubmitted = true;
+      this.advanceIfComplete(now);
+      this.publish();
+    }
   }
 
   private async startRound(expectedPhase: 'lobby' | 'reveal'): Promise<void> {
@@ -191,6 +197,14 @@ export class RoomEngine {
     player.typingComplete = player.typedText === this.passage.text;
     if (player.typingComplete) game.completedAt = this.clock();
     const stats = calculateStats(game, this.clock());
+    player.wpm = stats.wpm;
+    player.accuracy = stats.accuracy;
+  }
+
+  private refreshTypingStats(player: PlayerState, now: number): void {
+    const game = this.typingGames.get(player.id);
+    if (!game || game.startTime === null) return;
+    const stats = calculateStats(game, now);
     player.wpm = stats.wpm;
     player.accuracy = stats.accuracy;
   }

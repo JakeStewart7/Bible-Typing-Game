@@ -180,7 +180,12 @@ export function initGameControllers(
       chapterReader = null;
       game.text = text;
       game.chars = text.split('');
-      passageTitleEl.textContent = `${book} ${chapter}:${range.start}–${range.end}`;
+      passageTitleEl.textContent = formatPassageLabel({
+        book,
+        chapter,
+        startVerse: range.start,
+        endVerse: range.end
+      });
       statusEl.textContent = '';
       restartGame();
     } catch (error) {

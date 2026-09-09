@@ -1,10 +1,12 @@
 import type { MultiplayerClient, RoomConnection, RoomSnapshot } from '../domain/types';
-import { MockMultiplayerClient } from '../infrastructure/mock-multiplayer-client';
+import {
+  MOCK_REFRESH_INTERVAL_MS,
+  MockMultiplayerClient
+} from '../infrastructure/mock-multiplayer-client';
 import { MultiplayerView } from './view';
 import { playComplete, playKey } from '../../audio/effects';
 import { normalizeBotDifficulty } from '../domain/settings';
 
-const MOCK_REFRESH_INTERVAL_MS = 25;
 export function createMultiplayerController(client: MultiplayerClient): { show(): void } {
   const view = new MultiplayerView();
   let connection: RoomConnection | null = null;
@@ -25,10 +27,16 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
   }));
   button('multiplayer-start').addEventListener('click', () => send({ type: 'START_ROUND' }));
   button('multiplayer-ready').addEventListener('click', () => send({ type: 'SET_READY', ready: true }));
-  for (const id of ['multiplayer-round-length', 'multiplayer-round-guessing']) {
+  const settingsControls = [
+    ['multiplayer-lobby-length', () => view.lobbySettings()],
+    ['multiplayer-lobby-guessing', () => view.lobbySettings()],
+    ['multiplayer-round-length', () => view.nextRoundSettings()],
+    ['multiplayer-round-guessing', () => view.nextRoundSettings()]
+  ] as const;
+  for (const [id, readSettings] of settingsControls) {
     element(id).addEventListener('change', () => {
       if (!snapshot) return;
-      const nextSettings = view.nextRoundSettings();
+      const nextSettings = readSettings();
       void send({
         type: 'UPDATE_SETTINGS',
         settings: {

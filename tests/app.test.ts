@@ -17,6 +17,10 @@ import {
 } from '../src/campaign.ts';
 import { AppStorage } from '../src/persistence/storage.ts';
 import { AppStateRepository } from '../src/persistence/app-state.ts';
+import {
+  formatPassageLabel,
+  formatVerseSelectionLabel
+} from '../src/memory/domain/passage.ts';
 import { ProfileRepository } from '../src/persistence/profile-repository.ts';
 import { filterJourneyBooks, findJourneyContinuation, groupJourneyBooks, isJourneyBookUnlocked, journeyCurrency } from '../src/journey.ts';
 import {
@@ -47,7 +51,11 @@ import { createChapterReader, nextChapterReaderRange } from '../src/typing/chapt
 import { RoomEngine } from '../src/multiplayer/domain/room-engine.ts';
 import { scorePassageGuess } from '../src/multiplayer/domain/scoring.ts';
 import type { MultiplayerPassage } from '../src/multiplayer/domain/types.ts';
-import { nextBotTyping, nextTypingDelayMs } from '../src/multiplayer/infrastructure/mock-multiplayer-client.ts';
+import {
+  MOCK_REFRESH_INTERVAL_MS,
+  nextBotTyping,
+  nextTypingDelayMs
+} from '../src/multiplayer/infrastructure/mock-multiplayer-client.ts';
 import { BOT_DIFFICULTY_OPTIONS } from '../src/multiplayer/domain/settings.ts';
 import { selectPassageWithinLimit } from '../src/multiplayer/infrastructure/bible-passage-provider.ts';
 
@@ -504,6 +512,24 @@ test('app state repository validates legacy Journey progress', () => {
   const storage = createMemoryStorage({
     verseTypeCampaignProgress: '{"John:3:16-18":4}'
   });
+
+  test('cursor smoothing preference defaults on and persists', () => {
+    const repository = new AppStateRepository(new AppStorage(createMemoryStorage()));
+    equal(repository.readCursorSmoothing(), true);
+    repository.writeCursorSmoothing(false);
+    equal(repository.readCursorSmoothing(), false);
+  });
+
+  test('passage labels omit duplicate single-verse ranges', () => {
+    equal(formatPassageLabel({
+      book: 'Isaiah', chapter: 46, startVerse: 3, endVerse: 3
+    }), 'Isaiah 46:3');
+    equal(formatPassageLabel({
+      book: 'Isaiah', chapter: 46, startVerse: 3, endVerse: 5
+    }), 'Isaiah 46:3–5');
+    equal(formatVerseSelectionLabel(3, 3), 'Verse 3');
+    equal(formatVerseSelectionLabel(3, 5), 'Verses 3–5');
+  });
   const repository = new AppStateRepository(new AppStorage(storage));
   equal(repository.readCampaignProgress(), {
     'John:3:16-16': 4,
@@ -574,14 +600,24 @@ test('multiplayer scoring rewards exact references and degrades by distance', ()
     book: 'John', chapter: 3, startVerse: 16, endVerse: 19
   }, answer), 100);
   equal(scorePassageGuess({
-    book: 'John', chapter: 4, startVerse: 17, endVerse: 20
-  }, answer), 88);
+    book: 'Matthew', chapter: null, startVerse: null, endVerse: null
+  }, answer), 40);
   equal(scorePassageGuess({
     book: 'Romans', chapter: null, startVerse: null, endVerse: null
+  }, answer), 20);
+  equal(scorePassageGuess({
+    book: 'Genesis', chapter: null, startVerse: null, endVerse: null
   }, answer), 0);
+  equal(scorePassageGuess({
+    book: 'John', chapter: 4, startVerse: 17, endVerse: 20
+  }, answer), 98);
+  equal(scorePassageGuess({
+    book: 'Revelation', chapter: null, startVerse: null, endVerse: null
+  }, { book: 'Isaiah', chapter: 5, startVerse: 1, endVerse: 1 }), 20);
 });
 
 test('bot difficulties define requested accuracy and speed ranges', () => {
+  equal(MOCK_REFRESH_INTERVAL_MS, 100);
   equal(BOT_DIFFICULTY_OPTIONS.easy, {
     label: 'Easy', accuracy: .85, minimumWpm: 20, maximumWpm: 30
   });
@@ -622,18 +658,23 @@ test('bot difficulties define requested accuracy and speed ranges', () => {
 
 test('multiplayer passage lengths enforce absolute character ceilings', () => {
   const verses = [
-    { verse: 1, text: 'A'.repeat(80) },
-    { verse: 2, text: 'B'.repeat(80) }
+    { verse: 1, text: `${'A'.repeat(59)}.` },
+    { verse: 2, text: `${'B'.repeat(58)}.` }
   ];
   equal(selectPassageWithinLimit('Test', 1, verses, 0, 60).text.length, 60);
   equal(selectPassageWithinLimit('Test', 1, verses, 0, 120).text.length, 120);
   equal(selectPassageWithinLimit('Test', 1, verses, 0, 120).reference.endVerse, 2);
   const boundary = selectPassageWithinLimit('Test', 1, [
-    { verse: 1, text: 'Faith' },
+    { verse: 1, text: 'Faith.' },
     { verse: 2, text: 'Hope' }
   ], 0, 6);
-  equal(boundary.text, 'Faith');
+  equal(boundary.text, 'Faith.');
   equal(boundary.reference.endVerse, 1);
+  const retried = selectPassageWithinLimit('Test', 1, [
+    { verse: 1, text: 'A passage without terminal punctuation' },
+    { verse: 2, text: 'Hope.' }
+  ], 0, 20);
+  equal(retried.text, 'Hope.');
 });
 
 test('only the host can add bots and each bot keeps its own difficulty', async () => {
@@ -751,6 +792,25 @@ test('multiplayer tracks actual cursors and freezes completed typing statistics'
   equal({ cursor: host.cursor, progress: host.progress }, {
     cursor: passage.text.length,
     progress: passage.text.length
+  });
+
+  test('multiplayer refresh ticks recalculate active WPM', async () => {
+    let now = 1_000;
+    const passage: MultiplayerPassage = {
+      text: 'Faith',
+      reference: { book: 'Hebrews', chapter: 11, startVerse: 1, endVerse: 1 }
+    };
+    const room = new RoomEngine('REFRESH', { nextPassage: async () => passage }, undefined, () => now);
+    room.addPlayer('host', 'Host');
+    room.addPlayer('guest', 'Guest');
+    await room.dispatch('host', { type: 'START_ROUND' });
+    await room.dispatch('host', { type: 'UPDATE_TYPING', typedText: 'F', sequence: 1 });
+    now += MOCK_REFRESH_INTERVAL_MS;
+    room.tick();
+    equal(room.getSnapshot('host').players[0]?.wpm, 120);
+    now += MOCK_REFRESH_INTERVAL_MS;
+    room.tick();
+    equal(room.getSnapshot('host').players[0]?.wpm, 60);
   });
 });
 

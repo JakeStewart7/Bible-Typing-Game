@@ -17,6 +17,7 @@ import { AppStateRepository } from './persistence/app-state';
 import { AppStorage } from './persistence/storage';
 import { ProfileRepository } from './persistence/profile-repository';
 import { applyPageTheme, themeForWorkspace } from './ui/page-theme';
+import { setCaretSmoothingEnabled } from './ui/caret';
 import { createPlaylistController } from './memory/ui/playlist-controller.ts';
 import { createMultiplayerController } from './multiplayer/ui/controller.ts';
 import { MockMultiplayerClient } from './multiplayer/infrastructure/mock-multiplayer-client.ts';
@@ -32,6 +33,10 @@ const controls = initControls(appConfig);
 const storage = new AppStorage(window.localStorage);
 const stateRepository = new AppStateRepository(storage);
 const profileRepository = new ProfileRepository(storage);
+const appShell = document.querySelector<HTMLElement>('.app-shell');
+const cursorSmoothingToggle = document.getElementById('cursor-smoothing-toggle');
+let cursorSmoothingEnabled = stateRepository.readCursorSmoothing();
+applyCursorSmoothing();
 const multiplayerController = createMultiplayerController(
   new MockMultiplayerClient(new BiblePassageProvider())
 );
@@ -189,3 +194,17 @@ document.getElementById('sound-toggle')?.addEventListener('click', event => {
   const label = button.querySelector('span');
   if (label) label.textContent = enabled ? 'On' : 'Off';
 });
+
+cursorSmoothingToggle?.addEventListener('click', () => {
+  cursorSmoothingEnabled = !cursorSmoothingEnabled;
+  stateRepository.writeCursorSmoothing(cursorSmoothingEnabled);
+  applyCursorSmoothing();
+});
+
+function applyCursorSmoothing(): void {
+  setCaretSmoothingEnabled(cursorSmoothingEnabled);
+  appShell?.classList.toggle('cursor-smoothing-disabled', !cursorSmoothingEnabled);
+  cursorSmoothingToggle?.setAttribute('aria-pressed', String(cursorSmoothingEnabled));
+  const label = cursorSmoothingToggle?.querySelector('span');
+  if (label) label.textContent = cursorSmoothingEnabled ? 'On' : 'Off';
+}

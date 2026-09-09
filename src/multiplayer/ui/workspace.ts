@@ -1,8 +1,4 @@
-import {
-  BOT_DIFFICULTY_OPTIONS,
-  DEFAULT_ROOM_SETTINGS,
-  PASSAGE_LENGTH_OPTIONS
-} from '../domain/settings';
+import { DEFAULT_ROOM_SETTINGS, PASSAGE_LENGTH_OPTIONS } from '../domain/settings';
 
 export function multiplayerWorkspaceMarkup(): string {
   return `
@@ -23,15 +19,6 @@ export function multiplayerWorkspaceMarkup(): string {
           <form id="multiplayer-create-form" class="stack">
             <label for="multiplayer-name">Display name</label>
             <input id="multiplayer-name" maxlength="24" value="Host" autocomplete="nickname" required>
-            <div class="lobby-option-grid">
-              <label for="multiplayer-create-difficulty">Default bot difficulty
-                <select id="multiplayer-create-difficulty">${difficultyOptions()}</select>
-              </label>
-              <label for="multiplayer-create-length">Passage length
-                <select id="multiplayer-create-length">${passageLengthOptions()}</select>
-              </label>
-            </div>
-            <label class="checkbox-option"><input id="multiplayer-create-guessing" type="checkbox" checked> Include passage guessing</label>
             <button class="primary-btn" type="submit">Create mock lobby</button>
           </form>
         </section>
@@ -69,6 +56,7 @@ export function multiplayerWorkspaceMarkup(): string {
               <div class="lobby-bot-controls">
                 <button id="multiplayer-add-bot" class="secondary-btn" type="button">Add simulated player</button>
               </div>
+              ${roomOptions('multiplayer-lobby', 'Lobby options')}
               <div class="cluster">
                 <button id="multiplayer-start" class="primary-btn" type="button">Start round</button>
               </div>
@@ -114,13 +102,7 @@ export function multiplayerWorkspaceMarkup(): string {
               <small>PASSAGE REVEALED</small>
               <h3 id="multiplayer-answer"></h3>
               <div id="multiplayer-scores" class="score-list"></div>
-              <fieldset class="next-round-settings">
-                <legend>Next round</legend>
-                <label for="multiplayer-round-length">Passage length
-                  <select id="multiplayer-round-length">${passageLengthOptions()}</select>
-                </label>
-                <label class="checkbox-option"><input id="multiplayer-round-guessing" type="checkbox"> Include passage guessing</label>
-              </fieldset>
+              ${roomOptions('multiplayer-round', 'Next round')}
               <button id="multiplayer-ready" class="primary-btn" type="button">Ready for another round</button>
             </section>
           </main>
@@ -129,10 +111,18 @@ export function multiplayerWorkspaceMarkup(): string {
     </section>`;
 }
 
-function difficultyOptions(): string {
-  return Object.entries(BOT_DIFFICULTY_OPTIONS)
-    .map(([value, option]) => `<option value="${value}"${value === DEFAULT_ROOM_SETTINGS.botDifficulty ? ' selected' : ''}>${option.label} · ${option.minimumWpm}-${option.maximumWpm} WPM · ${option.accuracy * 100}%</option>`)
-    .join('');
+function roomOptions(prefix: string, legend: string): string {
+  return `<fieldset class="next-round-settings">
+    <legend>${legend}</legend>
+    <label for="${prefix}-length">Passage length
+      <select id="${prefix}-length">${passageLengthOptions()}</select>
+    </label>
+    <label class="guessing-toggle">
+      <input id="${prefix}-guessing" class="sr-only" type="checkbox" checked>
+      <span aria-hidden="true"></span>
+      <strong>Passage guessing</strong>
+    </label>
+  </fieldset>`;
 }
 
 function passageLengthOptions(): string {
