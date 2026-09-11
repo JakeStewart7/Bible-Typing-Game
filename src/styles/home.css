@@ -28,7 +28,7 @@
 .home-menu h1 {
   margin: 0 0 clamp(2rem, 5vh, 3.5rem);
   color: #173f38;
-  font: 700 clamp(2.5rem, 6vw, 4.75rem) Playfair Display;
+  font: 700 clamp(3rem, 7vw, 5.5rem) Playfair Display;
   letter-spacing: -.055em;
 }
 .home-mode-grid { display: grid; gap: .7rem; text-align: left; }
@@ -37,11 +37,11 @@
   --home-soft: #e9f7f1;
   position: relative;
   display: grid;
-  grid-template-columns: 3.3rem 1fr auto;
+  grid-template-columns: 4rem 1fr;
   align-items: center;
   gap: .9rem;
-  min-height: 5.75rem;
-  padding: .85rem 1.15rem;
+  min-height: 6.75rem;
+  padding: 1rem 1.25rem;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--home-accent) 23%, white);
   border-radius: .7rem;
@@ -65,22 +65,18 @@
 .home-mode-icon {
   display: grid;
   place-items: center;
-  width: 3.1rem;
-  height: 3.1rem;
+  width: 3.7rem;
+  height: 3.7rem;
   border-radius: .9rem;
   color: var(--home-accent);
   background: var(--home-soft);
-  font-size: 1.65rem;
+  font-size: 1.9rem;
   font-weight: 800;
 }
-.home-mode-copy { display: grid; gap: .3rem; }
-.home-mode-copy strong { color: #204d43; font: 700 1.15rem Playfair Display; }
-.home-mode-copy small { color: #6d837e; font-size: .73rem; line-height: 1.35; }
-.home-mode-arrow { color: var(--home-accent); font-size: 1.35rem; font-weight: 700; transition: transform .18s ease; }
-.home-mode:hover .home-mode-arrow { transform: translateX(.2rem); }
+.home-mode-copy { display: grid; align-items: center; }
+.home-mode-copy strong { color: #204d43; font: 700 clamp(1.35rem, 2.5vw, 1.7rem) Playfair Display; }
 .app-shell.home-active .mode-sidebar { visibility: hidden; width: 0; min-width: 0; padding: 0; border: 0; overflow: hidden; }
 @media (max-width: 680px) {
   .home-menu { width: min(100% - 1.5rem, 34rem); padding-top: 2.75rem; }
-  .home-mode { min-height: 5.8rem; }
-  .home-mode-copy small { font-size: .7rem; }
+  .home-mode { min-height: 6rem; }
 }

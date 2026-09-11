@@ -76,23 +76,19 @@ export function initControls(config: AppConfig) {
           <div class="home-mode-grid" role="navigation" aria-label="Game modes">
             <button class="home-mode home-mode--journey" type="button" data-home-workspace="campaign">
               <span class="home-mode-icon" aria-hidden="true">✦</span>
-              <span class="home-mode-copy"><strong>Journey</strong><small>Progress through Scripture</small></span>
-              <span class="home-mode-arrow" aria-hidden="true">→</span>
+              <span class="home-mode-copy"><strong>Journey</strong></span>
             </button>
             <button class="home-mode home-mode--practice" type="button" data-home-workspace="practice">
               <span class="home-mode-icon" aria-hidden="true">⌨</span>
-              <span class="home-mode-copy"><strong>Practice</strong><small>Type a passage</small></span>
-              <span class="home-mode-arrow" aria-hidden="true">→</span>
+              <span class="home-mode-copy"><strong>Practice</strong></span>
             </button>
             <button class="home-mode home-mode--arcade" type="button" data-home-workspace="defense" data-home-mode="defense">
               <span class="home-mode-icon" aria-hidden="true">◇</span>
-              <span class="home-mode-copy"><strong>Arcade</strong><small>Defend the light</small></span>
-              <span class="home-mode-arrow" aria-hidden="true">→</span>
+              <span class="home-mode-copy"><strong>Arcade</strong></span>
             </button>
             <button class="home-mode home-mode--together" type="button" data-home-workspace="multiplayer">
               <span class="home-mode-icon" aria-hidden="true">◎</span>
-              <span class="home-mode-copy"><strong>Together</strong><small>Play with others</small></span>
-              <span class="home-mode-arrow" aria-hidden="true">→</span>
+              <span class="home-mode-copy"><strong>Together</strong></span>
             </button>
           </div>
         </div>
