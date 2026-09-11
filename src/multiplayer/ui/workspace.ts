@@ -20,8 +20,14 @@ export function multiplayerWorkspaceMarkup(): string {
             <label for="multiplayer-name">Display name</label>
             <input id="multiplayer-name" maxlength="24" value="Player" autocomplete="nickname" required>
             <div class="entry-actions">
-              <button class="primary-btn" type="submit">Host lobby</button>
-              <button id="multiplayer-show-join" class="secondary-btn" type="button" aria-expanded="false" aria-controls="multiplayer-join-form">Join lobby</button>
+              <button class="primary-btn entry-action" type="submit">
+                <span class="entry-action-icon" aria-hidden="true">+</span>
+                <span><strong>Host lobby</strong><small>Create a new room</small></span>
+              </button>
+              <button id="multiplayer-show-join" class="secondary-btn entry-action" type="button" aria-expanded="false" aria-controls="multiplayer-join-form">
+                <span class="entry-action-icon" aria-hidden="true">→</span>
+                <span><strong>Join lobby</strong><small>Enter a room code</small></span>
+              </button>
             </div>
           </form>
           <form id="multiplayer-join-form" class="stack is-hidden">
