@@ -1,4 +1,4 @@
-export type RoomPhase = 'lobby' | 'typing' | 'guessing' | 'reveal' | 'summary';
+export type RoomPhase = 'lobby' | 'typing' | 'guessing' | 'reveal';
 export type PlayerKind = 'human' | 'simulated';
 export type BotDifficulty = 'easy' | 'medium' | 'hard' | 'very-hard' | 'extreme';
 export type PassageLength = 'very-short' | 'short' | 'medium' | 'long' | 'very-long';
@@ -61,6 +61,7 @@ export type RoomSnapshot = {
   hostId: string;
   selfId: string;
   round: number;
+  matchComplete: boolean;
   passageText: string | null;
   revealedReference: PassageReference | null;
   guessingEndsAt: number | null;

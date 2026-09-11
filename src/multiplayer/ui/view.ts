@@ -29,8 +29,7 @@ const PHASE_LABELS: Record<RoomPhase, string> = {
   lobby: 'Lobby',
   typing: 'Typing',
   guessing: 'Guessing',
-  reveal: 'Reveal',
-  summary: 'Summary'
+  reveal: 'Reveal'
 };
 
 export class MultiplayerView {
@@ -85,7 +84,6 @@ export class MultiplayerView {
     if (snapshot.phase === 'typing' || snapshot.phase === 'guessing') this.renderTyping(snapshot);
     if (snapshot.phase === 'guessing') this.renderGuessing(snapshot, self);
     if (snapshot.phase === 'reveal') this.renderReveal(snapshot, self);
-    if (snapshot.phase === 'summary') this.renderSummary(snapshot);
   }
 
   setStatus(message: string, isError = false): void {
@@ -162,9 +160,14 @@ export class MultiplayerView {
     const start = requiredButton('multiplayer-start');
     const isHost = snapshot.selfId === snapshot.hostId;
     start.disabled = !isHost || snapshot.players.length < 2;
-    start.textContent = isHost ? 'Start round' : 'Waiting for host';
+    start.textContent = isHost
+      ? snapshot.matchComplete ? 'Start new match' : 'Start round'
+      : 'Waiting for host';
     requiredButton('multiplayer-add-bot').disabled = !isHost;
     this.renderSettings('multiplayer-lobby', snapshot, isHost);
+    const summary = required('multiplayer-summary');
+    summary.classList.toggle('is-hidden', !snapshot.matchComplete);
+    if (snapshot.matchComplete) this.renderSummary(snapshot);
   }
 
   private renderTyping(snapshot: RoomSnapshot): void {
@@ -241,7 +244,7 @@ export class MultiplayerView {
   }
 
   private renderSummary(snapshot: RoomSnapshot): void {
-    const summary = required('multiplayer-summary');
+    const summary = required('multiplayer-summary-standings');
     summary.replaceChildren(...[...snapshot.players]
       .sort((left, right) => right.totalScore - left.totalScore)
       .map((player, index) => {
@@ -258,24 +261,27 @@ export class MultiplayerView {
   }
 
   private readSettings(prefix: string): RoomSettings {
+    const rounds = document.getElementById(`${prefix}-rounds`);
     return {
       botDifficulty: 'medium',
       passageLength: readPassageLength(`${prefix}-length`),
       includeGuessing: requiredInput(`${prefix}-guessing`, HTMLInputElement).checked,
-      rounds: Number(requiredSelect(`${prefix}-rounds`).value)
+      rounds: Number(rounds instanceof HTMLSelectElement
+        ? rounds.value
+        : DEFAULT_ROOM_SETTINGS.rounds)
     };
   }
 
   private renderSettings(prefix: string, snapshot: RoomSnapshot, enabled: boolean): void {
     const passageLength = requiredSelect(`${prefix}-length`);
     const guessing = requiredInput(`${prefix}-guessing`, HTMLInputElement);
-    const rounds = requiredSelect(`${prefix}-rounds`);
+    const rounds = document.getElementById(`${prefix}-rounds`);
     passageLength.value = snapshot.settings.passageLength;
     guessing.checked = snapshot.settings.includeGuessing;
-    rounds.value = String(snapshot.settings.rounds);
+    if (rounds instanceof HTMLSelectElement) rounds.value = String(snapshot.settings.rounds);
     passageLength.disabled = !enabled;
     guessing.disabled = !enabled;
-    rounds.disabled = !enabled;
+    if (rounds instanceof HTMLSelectElement) rounds.disabled = !enabled;
   }
 
   private showPhase(active: RoomPhase): void {
@@ -286,6 +292,5 @@ export class MultiplayerView {
     );
     required('multiplayer-guessing-phase').classList.toggle('is-hidden', active !== 'guessing');
     required('multiplayer-reveal-phase').classList.toggle('is-hidden', active !== 'reveal');
-    required('multiplayer-summary-phase').classList.toggle('is-hidden', active !== 'summary');
   }
 }

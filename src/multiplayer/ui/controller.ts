@@ -33,8 +33,7 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
     ['multiplayer-lobby-guessing', () => view.lobbySettings()],
     ['multiplayer-lobby-rounds', () => view.lobbySettings()],
     ['multiplayer-round-length', () => view.nextRoundSettings()],
-    ['multiplayer-round-guessing', () => view.nextRoundSettings()],
-    ['multiplayer-round-rounds', () => view.nextRoundSettings()]
+    ['multiplayer-round-guessing', () => view.nextRoundSettings()]
   ] as const;
   for (const [id, readSettings] of settingsControls) {
     required(id).addEventListener('change', () => {
@@ -46,7 +45,7 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
           ...snapshot.settings,
           passageLength: nextSettings.passageLength,
           includeGuessing: nextSettings.includeGuessing,
-          rounds: nextSettings.rounds
+          rounds: id.endsWith('-rounds') ? nextSettings.rounds : snapshot.settings.rounds
         }
       });
     });
@@ -60,11 +59,11 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
       playerId: target.dataset.playerId,
       difficulty: normalizeBotDifficulty(difficulty)
     });
-    required('multiplayer-players').addEventListener('click', event => {
-      const target = event.target;
-      if (!(target instanceof HTMLButtonElement) || !target.dataset.playerId) return;
-      void send({ type: 'FORCE_FINISH_TYPING', playerId: target.dataset.playerId });
-    });
+  });
+  required('multiplayer-players').addEventListener('click', event => {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement) || !target.dataset.playerId) return;
+    void send({ type: 'FORCE_FINISH_TYPING', playerId: target.dataset.playerId });
   });
   required('multiplayer-encouragement-form').addEventListener('submit', event => {
     event.preventDefault();

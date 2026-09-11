@@ -334,7 +334,7 @@ test('multiplayer countdown gates typing stats and shares encouragement words', 
   equal(room.getSnapshot('host').players[0]?.cursor, 1);
 });
 
-test('multiplayer moves to a final summary after the configured rounds', async () => {
+test('multiplayer returns to the lobby with standings after the configured rounds', async () => {
   const passage: MultiplayerPassage = {
     text: 'Faith.',
     reference: { book: 'Hebrews', chapter: 11, startVerse: 1, endVerse: 1 }
@@ -358,7 +358,8 @@ test('multiplayer moves to a final summary after the configured rounds', async (
   await room.dispatch('guest', { type: 'SET_READY', ready: true });
   await completeTyping(room, passage.text);
   const snapshot = room.getSnapshot('host');
-  equal(snapshot.phase, 'summary');
+  equal(snapshot.phase, 'lobby');
+  equal(snapshot.matchComplete, true);
   equal(snapshot.round, 3);
   equal(snapshot.players.map(player => player.name), ['Host', 'Guest']);
 });

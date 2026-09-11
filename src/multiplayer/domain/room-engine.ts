@@ -30,6 +30,7 @@ export class RoomEngine {
   private readonly typingSessions = new TypingSessions();
   private phase: RoomPhase = 'lobby';
   private round = 0;
+  private matchComplete = false;
   private passage: MultiplayerPassage | null = null;
   private startingRound = false;
   private settings: RoomSettings;
@@ -164,6 +165,7 @@ export class RoomEngine {
   private async startRound(expectedPhase: 'lobby' | 'reveal'): Promise<void> {
     if (this.startingRound || this.phase !== expectedPhase) return;
     if (this.roster.size < 2) throw new Error('At least two players are required to start.');
+    if (expectedPhase === 'lobby' && this.matchComplete) this.resetCompletedMatch();
     this.startingRound = true;
     try {
       const passage = await this.provider.nextPassage(this.settings);
@@ -288,7 +290,18 @@ export class RoomEngine {
 
   private finishRound(): void {
     this.guessingEndsAt = null;
-    this.phase = this.round >= this.settings.rounds ? 'summary' : 'reveal';
+    if (this.round >= this.settings.rounds) {
+      this.matchComplete = true;
+      this.phase = 'lobby';
+      return;
+    }
+    this.phase = 'reveal';
+  }
+
+  private resetCompletedMatch(): void {
+    this.round = 0;
+    this.matchComplete = false;
+    for (const player of this.roster.values()) player.totalScore = 0;
   }
 
   private everyPlayer(predicate: (player: PlayerState) => boolean): boolean {
@@ -302,6 +315,7 @@ export class RoomEngine {
       hostId: this.roster.hostId,
       selfId,
       round: this.round,
+      matchComplete: this.matchComplete,
       passageText: this.phase === 'lobby' ? null : this.passage?.text ?? null,
       revealedReference: this.phase === 'reveal' ? this.passage?.reference ?? null : null,
       guessingEndsAt: this.guessingEndsAt,

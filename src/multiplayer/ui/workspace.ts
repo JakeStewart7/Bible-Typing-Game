@@ -61,6 +61,11 @@ export function multiplayerWorkspaceMarkup(): string {
               <div class="cluster">
                 <button id="multiplayer-start" class="primary-btn" type="button">Start round</button>
               </div>
+              <section id="multiplayer-summary" class="match-summary is-hidden" aria-labelledby="multiplayer-summary-heading">
+                <small>MATCH COMPLETE</small>
+                <h4 id="multiplayer-summary-heading">Final standings</h4>
+                <div id="multiplayer-summary-standings" class="score-list"></div>
+              </section>
             </section>
             <section id="multiplayer-typing-phase" class="round-phase is-hidden">
               <div class="round-heading"><div><small>TYPE THE PASSAGE</small><h3>Everyone advances together</h3></div><span id="multiplayer-typing-progress">0%</span></div>
@@ -109,15 +114,8 @@ export function multiplayerWorkspaceMarkup(): string {
               <small>PASSAGE REVEALED</small>
               <h3 id="multiplayer-answer" role="status" aria-live="polite" aria-atomic="true"></h3>
               <div id="multiplayer-scores" class="score-list"></div>
-              ${roomOptions('multiplayer-round', 'Next round')}
+              ${roomOptions('multiplayer-round', 'Next round', false)}
               <button id="multiplayer-ready" class="primary-btn" type="button">Ready for another round</button>
-            </section>
-            <section id="multiplayer-summary-phase" class="round-phase is-hidden">
-              <span class="phase-icon" aria-hidden="true">🏆</span>
-              <small>MATCH COMPLETE</small>
-              <h3>Final standings</h3>
-              <p>Every round is in. See how the room finished.</p>
-              <div id="multiplayer-summary" class="score-list"></div>
             </section>
           </main>
         </div>
@@ -125,7 +123,7 @@ export function multiplayerWorkspaceMarkup(): string {
     </section>`;
 }
 
-function roomOptions(prefix: string, legend: string): string {
+function roomOptions(prefix: string, legend: string, includeRounds = true): string {
   return `<fieldset class="room-settings">
     <legend>${legend}</legend>
     <label for="${prefix}-length">Passage length
@@ -136,9 +134,9 @@ function roomOptions(prefix: string, legend: string): string {
       <span aria-hidden="true"></span>
       <strong>Passage guessing</strong>
     </label>
-    <label for="${prefix}-rounds">Rounds
+    ${includeRounds ? `<label for="${prefix}-rounds">Rounds
       <select id="${prefix}-rounds">${roundOptions()}</select>
-    </label>
+    </label>` : ''}
   </fieldset>`;
 }
 
