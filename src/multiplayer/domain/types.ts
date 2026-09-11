@@ -47,6 +47,12 @@ export type PlayerState = {
   accuracy: number;
 };
 
+export type Encouragement = {
+  id: number;
+  playerName: string;
+  word: string;
+};
+
 export type RoomSnapshot = {
   code: string;
   phase: RoomPhase;
@@ -56,6 +62,8 @@ export type RoomSnapshot = {
   passageText: string | null;
   revealedReference: PassageReference | null;
   guessingEndsAt: number | null;
+  countdownEndsAt: number | null;
+  encouragement: Encouragement | null;
   settings: RoomSettings;
   players: readonly PlayerState[];
 };
@@ -64,6 +72,7 @@ export type PlayerCommand =
   | { type: 'START_ROUND' }
   | { type: 'UPDATE_TYPING'; typedText: string; sequence: number }
   | { type: 'RESTART_TYPING' }
+  | { type: 'SEND_ENCOURAGEMENT'; word: string }
   | { type: 'UPDATE_GUESS'; guess: PassageGuess }
   | { type: 'SUBMIT_GUESS' }
   | { type: 'SET_READY'; ready: boolean }

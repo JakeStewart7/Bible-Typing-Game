@@ -1,6 +1,7 @@
 import { RoomEngine } from '../src/multiplayer/domain/room-engine.ts';
 import { scorePassageGuess } from '../src/multiplayer/domain/scoring.ts';
 import { BOT_DIFFICULTY_OPTIONS } from '../src/multiplayer/domain/settings.ts';
+import { ROUND_COUNTDOWN_MS } from '../src/multiplayer/domain/settings.ts';
 import type { MultiplayerPassage } from '../src/multiplayer/domain/types.ts';
 import { selectPassageWithinLimit } from '../src/multiplayer/infrastructure/bible-passage-provider.ts';
 import {
@@ -107,7 +108,7 @@ test('only the host can add bots and each bot keeps its own difficulty', async (
     text: 'Faith.',
     reference: { book: 'Hebrews', chapter: 11, startVerse: 1, endVerse: 1 }
   };
-  const room = new RoomEngine('BOTS', { nextPassage: async () => passage });
+  const room = new RoomEngine('BOTS', { nextPassage: async () => passage }, undefined, Date.now, 0);
   room.addPlayer('host', 'Host');
   room.addPlayer('guest', 'Guest');
   let guestRejected = false;
@@ -139,7 +140,8 @@ test('guess timer submits each current draft when the deadline expires', async (
     'TIMER',
     { nextPassage: async () => passage },
     { botDifficulty: 'medium', passageLength: 'short', includeGuessing: true },
-    () => now
+    () => now,
+    0
   );
   room.addPlayer('host', 'Host');
   room.addPlayer('guest', 'Guest');
@@ -171,7 +173,9 @@ test('multiplayer can reveal immediately when passage guessing is disabled', asy
   const room = new RoomEngine(
     'DIRECT',
     { nextPassage: async () => passage },
-    { botDifficulty: 'medium', passageLength: 'short', includeGuessing: false }
+    { botDifficulty: 'medium', passageLength: 'short', includeGuessing: false },
+    Date.now,
+    0
   );
   room.addPlayer('host', 'Host');
   room.addPlayer('guest', 'Guest');
@@ -194,7 +198,8 @@ test('multiplayer tracks actual cursors and freezes completed typing statistics'
     'STATS',
     { nextPassage: async () => passage },
     { botDifficulty: 'medium', passageLength: 'short', includeGuessing: true },
-    () => now
+    () => now,
+    0
   );
   room.addPlayer('host', 'Host');
   room.addPlayer('guest', 'Guest');
@@ -225,7 +230,7 @@ test('multiplayer tracks actual cursors and freezes completed typing statistics'
       text: 'Faith',
       reference: { book: 'Hebrews', chapter: 11, startVerse: 1, endVerse: 1 }
     };
-    const room = new RoomEngine('REFRESH', { nextPassage: async () => passage }, undefined, () => now);
+    const room = new RoomEngine('REFRESH', { nextPassage: async () => passage }, undefined, () => now, 0);
     room.addPlayer('host', 'Host');
     room.addPlayer('guest', 'Guest');
     await room.dispatch('host', { type: 'START_ROUND' });
@@ -249,7 +254,8 @@ test('multiplayer restart resets authoritative typing statistics', async () => {
     'RESTART',
     { nextPassage: async () => passage },
     { botDifficulty: 'medium', passageLength: 'short', includeGuessing: true },
-    () => now
+    () => now,
+    0
   );
   room.addPlayer('host', 'Host');
   room.addPlayer('guest', 'Guest');
@@ -269,7 +275,7 @@ test('multiplayer room advances only after every player completes each phase', a
     text: 'Faith comes by hearing.',
     reference: { book: 'Romans', chapter: 10, startVerse: 17, endVerse: 17 }
   };
-  const room = new RoomEngine('FAITH', { nextPassage: async () => passage });
+  const room = new RoomEngine('FAITH', { nextPassage: async () => passage }, undefined, Date.now, 0);
   room.addPlayer('host', 'Host');
   room.addPlayer('guest', 'Guest');
   await room.dispatch('host', { type: 'START_ROUND' });
@@ -301,6 +307,34 @@ test('multiplayer room advances only after every player completes each phase', a
   await room.dispatch('guest', { type: 'SET_READY', ready: true });
   equal(room.getSnapshot('host').round, 2);
   equal(room.getSnapshot('host').phase, 'typing');
+});
+
+test('multiplayer countdown gates typing stats and shares encouragement words', async () => {
+  let now = 1_000;
+  const passage: MultiplayerPassage = {
+    text: 'Faith.',
+    reference: { book: 'Hebrews', chapter: 11, startVerse: 1, endVerse: 1 }
+  };
+  const room = new RoomEngine(
+    'COUNTDOWN',
+    { nextPassage: async () => passage },
+    undefined,
+    () => now
+  );
+  room.addPlayer('host', 'Host');
+  room.addPlayer('guest', 'Guest');
+  await room.dispatch('host', { type: 'START_ROUND' });
+  equal(room.getSnapshot('host').countdownEndsAt, now + ROUND_COUNTDOWN_MS);
+  await room.dispatch('host', { type: 'UPDATE_TYPING', typedText: 'F', sequence: 1 });
+  equal(room.getSnapshot('host').players[0]?.cursor, 0);
+  now += ROUND_COUNTDOWN_MS;
+  room.tick();
+  await room.dispatch('guest', { type: 'SEND_ENCOURAGEMENT', word: 'Strength' });
+  equal(room.getSnapshot('host').encouragement, {
+    id: 1, playerName: 'Guest', word: 'Strength'
+  });
+  await room.dispatch('host', { type: 'UPDATE_TYPING', typedText: 'F', sequence: 1 });
+  equal(room.getSnapshot('host').players[0]?.cursor, 1);
 });
 
 function measureBotWpm(

@@ -7,6 +7,7 @@ import { TypingSessions } from './typing-sessions.ts';
 import {
   DEFAULT_ROOM_SETTINGS,
   GUESS_DURATION_MS,
+  ROUND_COUNTDOWN_MS,
   normalizeRoomSettings
 } from './settings.ts';
 import {
@@ -33,18 +34,24 @@ export class RoomEngine {
   private startingRound = false;
   private settings: RoomSettings;
   private guessingEndsAt: number | null = null;
+  private countdownEndsAt: number | null = null;
+  private encouragementId = 0;
+  private encouragement: RoomSnapshot['encouragement'] = null;
   private readonly clock: () => number;
+  private readonly countdownDurationMs: number;
 
   constructor(
     code: string,
     provider: PassageProvider,
     settings: RoomSettings = DEFAULT_ROOM_SETTINGS,
-    clock: () => number = Date.now
+    clock: () => number = Date.now,
+    countdownDurationMs = ROUND_COUNTDOWN_MS
   ) {
     this.code = code;
     this.provider = provider;
     this.settings = normalizeRoomSettings(settings);
     this.clock = clock;
+    this.countdownDurationMs = countdownDurationMs;
   }
 
   addPlayer(
@@ -54,7 +61,7 @@ export class RoomEngine {
     botDifficulty: RoomSettings['botDifficulty'] | null = null
   ): void {
     if (this.phase !== 'lobby') throw new Error('Players can only join while the room is in the lobby.');
-    const player = this.roster.add(
+    this.roster.add(
       id,
       name,
       kind,
@@ -96,6 +103,9 @@ export class RoomEngine {
       case 'RESTART_TYPING':
         this.restartTyping(player);
         break;
+      case 'SEND_ENCOURAGEMENT':
+        this.sendEncouragement(player, command.word);
+        break;
       case 'UPDATE_GUESS':
         if (this.phase === 'guessing' && !player.guessSubmitted) {
           player.guess = normalizePassageGuess(command.guess);
@@ -130,6 +140,13 @@ export class RoomEngine {
 
   tick(now = this.clock()): void {
     if (this.phase === 'typing') {
+      if (this.countdownEndsAt !== null) {
+        if (now < this.countdownEndsAt) {
+          this.publish();
+          return;
+        }
+        this.countdownEndsAt = null;
+      }
       for (const player of this.roster.values()) this.typingSessions.refresh(player, now);
       this.publish();
       return;
@@ -154,6 +171,8 @@ export class RoomEngine {
       this.passage = passage;
       this.round++;
       this.phase = 'typing';
+      this.countdownEndsAt = this.clock() + this.countdownDurationMs;
+      this.encouragement = null;
       for (const player of this.roster.values()) {
         this.typingSessions.reset(player, passage.text);
       }
@@ -165,6 +184,10 @@ export class RoomEngine {
 
   private updateTyping(player: PlayerState, requestedText: string, sequence: number): void {
     if (this.phase !== 'typing' || !this.passage) return;
+    if (this.countdownEndsAt !== null) {
+      if (this.clock() < this.countdownEndsAt) return;
+      this.countdownEndsAt = null;
+    }
     this.typingSessions.update(
       player,
       this.passage.text,
@@ -175,8 +198,28 @@ export class RoomEngine {
   }
 
   private restartTyping(player: PlayerState): void {
-    if (this.phase !== 'typing' || !this.passage || player.typingComplete) return;
+    if (
+      this.phase !== 'typing'
+      || !this.passage
+      || this.countdownEndsAt !== null
+      || player.typingComplete
+    ) return;
     this.typingSessions.reset(player, this.passage.text);
+  }
+
+  private sendEncouragement(player: PlayerState, rawWord: string): void {
+    if (
+      this.phase !== 'typing'
+      || this.countdownEndsAt !== null
+      || this.everyPlayer(current => current.typingComplete)
+    ) return;
+    const word = rawWord.trim().replace(/\s+/g, ' ').slice(0, 24);
+    if (!/^[\p{L}\p{N}'-]+$/u.test(word)) return;
+    this.encouragement = {
+      id: ++this.encouragementId,
+      playerName: player.name,
+      word
+    };
   }
 
   private updateSettings(playerId: string, settings: RoomSettings): void {
@@ -237,6 +280,8 @@ export class RoomEngine {
       passageText: this.phase === 'lobby' ? null : this.passage?.text ?? null,
       revealedReference: this.phase === 'reveal' ? this.passage?.reference ?? null : null,
       guessingEndsAt: this.guessingEndsAt,
+      countdownEndsAt: this.countdownEndsAt,
+      encouragement: this.encouragement,
       settings: { ...this.settings },
       players: this.roster.snapshot()
     };

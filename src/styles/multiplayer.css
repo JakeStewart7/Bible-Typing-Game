@@ -50,6 +50,11 @@
 .round-phase > p { color: var(--muted); }
 .phase-icon { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 50%; color: var(--page-accent-strong); background: var(--page-accent-soft); font-size: 1.5rem; }
 .multiplayer-passage { min-height: 12rem; max-height: 24rem; padding: 1rem; border-radius: 14px; background: var(--page-surface); }
+.multiplayer-countdown { margin: .75rem 0; color: var(--page-accent-strong); font: 800 clamp(1.25rem, 3vw, 2rem) DM Mono; text-align: center; }
+.multiplayer-encouragement { margin: .75rem auto; width: fit-content; max-width: 100%; padding: .6rem 1rem; border-radius: 999px; color: white; background: var(--page-accent-strong); font-weight: 800; animation: encouragementFlash 1.8s ease-out both; }
+.encouragement-form { display: flex; gap: .5rem; margin: 1rem 0 .25rem; }
+.encouragement-form input { flex: 1; min-width: 0; padding: .65rem .8rem; border: 1px solid var(--page-border); border-radius: 10px; color: var(--ink); background: white; }
+.encouragement-form button { white-space: nowrap; }
 .peer-caret { position: absolute; left: 0; top: 0; width: 3px; border-radius: 99px; background: var(--peer-color); pointer-events: none; z-index: 4; transition: transform .07s linear; }
 .cursor-smoothing-disabled .peer-caret { transition: none; }
 .peer-caret > span { position: absolute; bottom: calc(100% + .2rem); left: 0; padding: .12rem .3rem; border-radius: .3rem; color: white; background: var(--peer-color); font: 700 .58rem Manrope; white-space: nowrap; }
@@ -73,6 +78,7 @@
 .room-settings { width: min(22rem, 100%); display: grid; gap: .75rem; margin: 0 0 1.25rem; padding: 1rem; border: 1px solid var(--page-border); border-radius: 14px; text-align: left; }
 .room-settings legend { padding-inline: .35rem; color: var(--page-accent-strong); font-size: var(--text-small); font-weight: 800; }
 @keyframes guessPopoverIn { from { opacity: 0; transform: translateY(.5rem); } }
+@keyframes encouragementFlash { from { opacity: 0; transform: scale(.8); } 15% { opacity: 1; transform: scale(1.05); } to { opacity: 0; transform: scale(1); } }
 .score-list { width: min(26rem, 100%); display: grid; gap: .5rem; margin: 1rem 0 1.5rem; }
 .score-list div { display: flex; justify-content: space-between; padding: .75rem 1rem; border-radius: 11px; background: var(--page-surface); }
 .score-list span { color: var(--page-accent-strong); font-weight: 800; }
@@ -89,6 +95,7 @@
   .room-toolbar button { grid-column: 1 / -1; }
   .guess-grid { grid-template-columns: repeat(3, 1fr); }
   .guess-grid label:first-child { grid-column: 1 / -1; }
+  .encouragement-form { align-items: stretch; flex-direction: column; }
 }
 
 @media (max-width: 32rem) {

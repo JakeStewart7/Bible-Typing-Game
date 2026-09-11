@@ -16,7 +16,6 @@ import { renderPeerCarets } from './peer-carets';
 import { formatPassageLabel } from '../../memory/domain/passage';
 import { PlayerListView } from './player-list';
 import {
-  playerStatus,
   readPassageLength,
   renderGuessTimer,
   required,
@@ -46,6 +45,7 @@ export class MultiplayerView {
   private readonly progressFill = required('multiplayer-progress-fill');
   private readonly input = requiredInput('multiplayer-input', HTMLInputElement);
   private game: Game = createGame('');
+  private lastEncouragementId = 0;
   private readonly guessInputs = {
     book: requiredInput('multiplayer-guess-book', HTMLInputElement),
     chapter: requiredInput('multiplayer-guess-chapter', HTMLInputElement),
@@ -113,12 +113,6 @@ export class MultiplayerView {
     this.clearTypingValue();
   }
 
-  restartTyping(snapshot: RoomSnapshot): void {
-    this.startTyping(snapshot.passageText ?? '');
-    this.renderTyping(snapshot);
-    this.focusTyping();
-  }
-
   updateTyping(snapshot: RoomSnapshot): TypingInputUpdate {
     const update = updateTypingInput(this.game, this.input.value);
     this.renderTyping(snapshot);
@@ -172,6 +166,7 @@ export class MultiplayerView {
     const passage = snapshot.passageText ?? '';
     const self = snapshot.players.find(player => player.id === snapshot.selfId);
     if (this.game.text !== passage) this.startTyping(passage);
+    if (self?.typedText === '' && this.game.typed.length > 0) this.startTyping(passage);
     const stats = renderTypingExperience(this.game, {
       text: this.passage,
       typedBar: this.typedBar,
@@ -180,7 +175,27 @@ export class MultiplayerView {
     });
     setText('multiplayer-typing-progress', `${stats.progress}%`);
     renderPeerCarets(this.passage, snapshot.players, snapshot.selfId);
-    this.input.disabled = snapshot.phase !== 'typing' || (self?.typingComplete ?? false);
+    const countdownRemaining = snapshot.countdownEndsAt === null
+      ? 0
+      : Math.max(0, snapshot.countdownEndsAt - Date.now());
+    const countdown = required('multiplayer-countdown');
+    countdown.classList.toggle('is-hidden', countdownRemaining === 0);
+    countdown.textContent = countdownRemaining
+      ? `Starting in ${Math.ceil(countdownRemaining / 1000)}`
+      : '';
+    const canEncourage = snapshot.countdownEndsAt === null
+      && snapshot.players.some(player => !player.typingComplete);
+    required('multiplayer-encouragement-form').classList.toggle('is-hidden', !canEncourage);
+    if (snapshot.encouragement && snapshot.encouragement.id > this.lastEncouragementId) {
+      this.lastEncouragementId = snapshot.encouragement.id;
+      const encouragement = required('multiplayer-encouragement');
+      encouragement.textContent = `${snapshot.encouragement.playerName}: ${snapshot.encouragement.word}`;
+      encouragement.classList.remove('is-hidden');
+      window.setTimeout(() => encouragement.classList.add('is-hidden'), 1_800);
+    }
+    this.input.disabled = snapshot.phase !== 'typing'
+      || countdownRemaining > 0
+      || (self?.typingComplete ?? false);
     requiredButton('multiplayer-restart').disabled = this.input.disabled;
   }
 

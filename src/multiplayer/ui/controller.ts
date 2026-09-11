@@ -57,8 +57,15 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
   });
   requiredButton('multiplayer-restart').addEventListener('click', () => {
     if (!snapshot || snapshot.phase !== 'typing') return;
-    view.restartTyping(snapshot);
     void send({ type: 'RESTART_TYPING' });
+  });
+  required('multiplayer-encouragement-form').addEventListener('submit', event => {
+    event.preventDefault();
+    const input = requiredInput('multiplayer-encouragement-input', HTMLInputElement);
+    const word = input.value.trim();
+    if (!word) return;
+    input.value = '';
+    void send({ type: 'SEND_ENCOURAGEMENT', word });
   });
   requiredButton('multiplayer-focus').addEventListener('click', event => {
     const control = event.currentTarget;
@@ -72,7 +79,7 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
     if (!input.disabled) input.focus();
   });
   required('multiplayer-input').addEventListener('input', () => {
-    if (!snapshot || snapshot.phase !== 'typing' || !connection) return;
+    if (!snapshot || snapshot.phase !== 'typing' || !connection || snapshot.countdownEndsAt !== null) return;
     const inputUpdate = view.updateTyping(snapshot);
     if (inputUpdate.advanced) playKey(inputUpdate.lastCharacterCorrect ?? false);
     void run(async () => {

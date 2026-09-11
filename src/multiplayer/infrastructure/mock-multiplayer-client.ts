@@ -64,7 +64,11 @@ export class MockMultiplayerClient implements MultiplayerClient {
     room.tick(now);
     const snapshot = room.getSnapshot('');
     for (const player of snapshot.players.filter(candidate => candidate.kind === 'simulated')) {
-      if (snapshot.phase === 'typing' && snapshot.passageText) {
+      if (
+        snapshot.phase === 'typing'
+        && snapshot.countdownEndsAt === null
+        && snapshot.passageText
+      ) {
         const schedule = this.getBotSchedule(
           player.id,
           snapshot.round,

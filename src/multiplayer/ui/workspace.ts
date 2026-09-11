@@ -66,6 +66,13 @@ export function multiplayerWorkspaceMarkup(): string {
               <div id="multiplayer-hud" class="hud"></div>
               <div class="progress-track"><div id="multiplayer-progress-fill"></div></div>
               <div id="multiplayer-passage" class="text-display multiplayer-passage" tabindex="0" aria-label="Passage to type"></div>
+              <div id="multiplayer-countdown" class="multiplayer-countdown is-hidden" role="status" aria-live="assertive"></div>
+              <div id="multiplayer-encouragement" class="multiplayer-encouragement is-hidden" role="status" aria-live="polite"></div>
+              <form id="multiplayer-encouragement-form" class="encouragement-form">
+                <label class="sr-only" for="multiplayer-encouragement-input">Send encouragement</label>
+                <input id="multiplayer-encouragement-input" maxlength="24" autocomplete="off" placeholder="Encourage someone…">
+                <button class="secondary-btn" type="submit">Send encouragement</button>
+              </form>
               <section id="multiplayer-guessing-phase" class="guess-popover is-hidden" aria-labelledby="multiplayer-guess-heading">
                 <div class="guess-heading">
                   <div><small>NAME THE PASSAGE</small><h3 id="multiplayer-guess-heading">What did you just type?</h3></div>
@@ -93,7 +100,7 @@ export function multiplayerWorkspaceMarkup(): string {
               </div>
               <div class="typing-footer">
                 <button id="multiplayer-focus" class="text-btn" type="button" aria-pressed="false">Focus mode</button>
-                <button id="multiplayer-restart" class="text-btn" type="button">↻ Restart</button>
+                <button id="multiplayer-restart" class="text-btn" type="button">↻ Restart my typing</button>
               </div>
               <p class="phase-help">Your progress stops at the first incorrect character. The guessing phase begins when everyone finishes.</p>
             </section>

@@ -18,6 +18,7 @@ export function playerStatus(player: PlayerState, snapshot: RoomSnapshot): strin
       : 'Joined';
   }
   if (snapshot.phase === 'typing') {
+    if (snapshot.countdownEndsAt !== null) return 'Get ready';
     return player.typingComplete ? 'Finished typing' : 'Typing…';
   }
 
