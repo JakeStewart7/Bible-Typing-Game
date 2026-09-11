@@ -118,6 +118,12 @@ export class MultiplayerView {
     this.clearTypingValue();
   }
 
+  restartTyping(snapshot: RoomSnapshot): void {
+    this.startTyping(snapshot.passageText ?? '');
+    this.renderTyping(snapshot);
+    this.focusTyping();
+  }
+
   updateTyping(snapshot: RoomSnapshot): TypingInputUpdate {
     const update = updateTypingInput(this.game, this.input.value);
     this.renderTyping(snapshot);
@@ -171,7 +177,6 @@ export class MultiplayerView {
     const passage = snapshot.passageText ?? '';
     const self = snapshot.players.find(player => player.id === snapshot.selfId);
     if (this.game.text !== passage) this.startTyping(passage);
-    if (self?.typedText === '' && this.game.typed.length > 0) this.startTyping(passage);
     const stats = renderTypingExperience(this.game, {
       text: this.passage,
       typedBar: this.typedBar,

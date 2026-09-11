@@ -60,6 +60,7 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
   });
   requiredButton('multiplayer-restart').addEventListener('click', () => {
     if (!snapshot || snapshot.phase !== 'typing') return;
+    view.restartTyping(snapshot);
     void send({ type: 'RESTART_TYPING' });
   });
   required('multiplayer-encouragement-form').addEventListener('submit', event => {
