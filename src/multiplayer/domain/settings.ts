@@ -58,7 +58,7 @@ export const PASSAGE_LENGTH_OPTIONS: Record<PassageLength, {
 
 export const DEFAULT_ROOM_SETTINGS: RoomSettings = {
   botDifficulty: 'medium',
-  passageLength: 'medium',
+  passageLength: 'very-short',
   includeGuessing: true,
   rounds: 3
 };
