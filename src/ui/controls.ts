@@ -29,7 +29,7 @@ export function initControls(config: AppConfig) {
           <span class="brand-mark">✦</span>
           <span>Biblical Typology</span>
         </a>
-        <div></div>
+        <button id="home-button" class="home-button" type="button">Menu</button>
         <div class="top-actions">
           <div class="header-profile">
             <div class="level-summary"><strong id="level-label">Level 1</strong><span id="xp-label" class="is-hidden"></span></div>

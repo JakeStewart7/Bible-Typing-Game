@@ -10,18 +10,18 @@ export function multiplayerWorkspaceMarkup(): string {
       <div id="multiplayer-entry" class="multiplayer-entry">
         <section class="surface multiplayer-entry-card multiplayer-entry-card--unified">
           <form id="multiplayer-host-form" class="stack">
-            <label for="multiplayer-name">What should we call you?</label>
+            <label for="multiplayer-name">Choose a display name</label>
             <input id="multiplayer-name" maxlength="24" value="Player" autocomplete="nickname" required>
             <div class="entry-actions">
               <button class="primary-btn" type="submit">Create Room</button>
-              <button id="multiplayer-show-join" class="secondary-btn" type="button" aria-expanded="false" aria-controls="multiplayer-join-form">Join Game</button>
+              <button id="multiplayer-show-join" class="secondary-btn" type="button" aria-expanded="false" aria-controls="multiplayer-join-form">Join Room</button>
             </div>
           </form>
           <form id="multiplayer-join-form" class="stack is-hidden">
             <label for="multiplayer-code">Room code</label>
             <input id="multiplayer-code" maxlength="5" autocomplete="off" placeholder="ABCDE" required>
             <div class="entry-actions">
-              <button class="primary-btn" type="submit">Join Game</button>
+              <button class="primary-btn" type="submit">Join Room</button>
               <button id="multiplayer-cancel-join" class="text-btn" type="button">Cancel</button>
             </div>
           </form>

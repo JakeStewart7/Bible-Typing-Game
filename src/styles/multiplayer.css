@@ -38,6 +38,23 @@
 .multiplayer-entry-card .primary-btn:hover { background: linear-gradient(135deg, #927cf6, #7258e5); }
 .multiplayer-entry-card .secondary-btn { color: #49359d; border: 1px solid rgba(114, 87, 232, .2); background: #f0edff; }
 .multiplayer-entry-card .secondary-btn:hover { background: #e7e1ff; }
+#multiplayer-host-form .primary-btn {
+  background: linear-gradient(135deg, #159a78, #0a6d58);
+  box-shadow: 0 10px 24px rgba(10, 109, 88, .25);
+}
+#multiplayer-host-form .primary-btn:hover { background: linear-gradient(135deg, #20b88f, #0b8068); }
+#multiplayer-show-join {
+  color: #653b1e;
+  border-color: rgba(190, 119, 57, .3);
+  background: linear-gradient(135deg, #fff1d9, #f7d6a9);
+  box-shadow: 0 10px 24px rgba(190, 119, 57, .16);
+}
+#multiplayer-show-join:hover { color: #4e2d17; background: linear-gradient(135deg, #fff7e9, #f2c88f); }
+#multiplayer-join-form .primary-btn {
+  background: linear-gradient(135deg, #d17b3d, #a84e2f);
+  box-shadow: 0 10px 24px rgba(168, 78, 47, .23);
+}
+#multiplayer-join-form .primary-btn:hover { background: linear-gradient(135deg, #e48d4e, #bc5d38); }
 .multiplayer-entry-card--unified #multiplayer-join-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

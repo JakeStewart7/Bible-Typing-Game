@@ -173,6 +173,7 @@ document.querySelector('.brand')?.addEventListener('click', event => {
   event.preventDefault();
   showWorkspace('home');
 });
+document.getElementById('home-button')?.addEventListener('click', () => showWorkspace('home'));
 controls.gameModeEl.addEventListener('change', () => {
   if (controls.gameModeEl.value === 'practice' || controls.gameModeEl.value === 'memory') {
     showWorkspace('practice', controls.gameModeEl.value);
