@@ -1,10 +1,11 @@
 import { DEFAULT_ROOM_SETTINGS, PASSAGE_LENGTH_OPTIONS, ROUND_OPTIONS } from '../domain/settings';
+import { menuNavigationMarkup } from '../../ui/menu-navigation.ts';
 
 export function multiplayerWorkspaceMarkup(): string {
   return `
     <section id="multiplayer-screen" class="app-page multiplayer-screen is-hidden">
+      ${menuNavigationMarkup()}
       <header class="page-header multiplayer-header">
-        <button class="back-to-menu" type="button"><span aria-hidden="true">⌂</span><b>Main menu</b></button>
         <h2>Type together</h2>
       </header>
 
