@@ -20,29 +20,18 @@
 .home-menu {
   position: relative;
   z-index: 1;
-  width: min(100% - 3rem, 56rem);
+  width: min(100% - 3rem, 39rem);
   margin: 0 auto;
-  padding: clamp(3.5rem, 10vh, 7rem) 0 2.5rem;
+  padding: clamp(3.5rem, 12vh, 8rem) 0 2.5rem;
   text-align: center;
 }
-.home-kicker {
-  color: #27816e;
-  font-size: .68rem;
-  font-weight: 900;
-  letter-spacing: .24em;
-}
 .home-menu h1 {
-  margin: .65rem 0 .35rem;
+  margin: 0 0 clamp(2rem, 5vh, 3.5rem);
   color: #173f38;
   font: 700 clamp(2.5rem, 6vw, 4.75rem) Playfair Display;
   letter-spacing: -.055em;
 }
-.home-prompt {
-  margin: 0 0 clamp(1.75rem, 4vh, 3rem);
-  color: #5e7770;
-  font-size: clamp(.85rem, 1.5vw, 1rem);
-}
-.home-mode-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; text-align: left; }
+.home-mode-grid { display: grid; gap: .7rem; text-align: left; }
 .home-mode {
   --home-accent: #278f77;
   --home-soft: #e9f7f1;
@@ -51,11 +40,11 @@
   grid-template-columns: 3.3rem 1fr auto;
   align-items: center;
   gap: .9rem;
-  min-height: 7.2rem;
-  padding: 1rem 1.15rem;
+  min-height: 5.75rem;
+  padding: .85rem 1.15rem;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--home-accent) 23%, white);
-  border-radius: 1.1rem;
+  border-radius: .7rem;
   color: #173f38;
   background: rgba(255, 255, 255, .78);
   box-shadow: 0 1rem 2.5rem rgba(23, 63, 56, .08), 0 1px 0 rgba(255, 255, 255, .9) inset;
@@ -85,28 +74,13 @@
   font-weight: 800;
 }
 .home-mode-copy { display: grid; gap: .3rem; }
-.home-mode-copy strong { color: #204d43; font: 700 1.25rem Playfair Display; }
+.home-mode-copy strong { color: #204d43; font: 700 1.15rem Playfair Display; }
 .home-mode-copy small { color: #6d837e; font-size: .73rem; line-height: 1.35; }
 .home-mode-arrow { color: var(--home-accent); font-size: 1.35rem; font-weight: 700; transition: transform .18s ease; }
 .home-mode:hover .home-mode-arrow { transform: translateX(.2rem); }
-.home-footer {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: .7rem;
-  margin-top: clamp(2.5rem, 7vh, 5rem);
-  color: #8aa29a;
-  font-size: .6rem;
-  font-weight: 900;
-  letter-spacing: .16em;
-}
-.home-footer > span:first-child { color: #3e655a; }
-.home-footer > span:first-child span { color: #278f77; }
-.home-footer i { color: #b7c9c2; font-style: normal; }
 .app-shell.home-active .mode-sidebar { visibility: hidden; width: 0; min-width: 0; padding: 0; border: 0; overflow: hidden; }
 @media (max-width: 680px) {
   .home-menu { width: min(100% - 1.5rem, 34rem); padding-top: 2.75rem; }
-  .home-mode-grid { grid-template-columns: 1fr; gap: .75rem; }
   .home-mode { min-height: 5.8rem; }
   .home-mode-copy small { font-size: .7rem; }
 }
