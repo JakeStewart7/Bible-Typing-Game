@@ -44,7 +44,12 @@ export type PlayerState = {
   guessSubmitted: boolean;
   ready: boolean;
   score: number | null;
-  totalScore: number;
+  totalWpm: number;
+  highestWpm: number;
+  completedRounds: number;
+  totalGuessScore: number;
+  highestGuessScore: number;
+  completedGuessRounds: number;
   wpm: number;
   accuracy: number;
 };

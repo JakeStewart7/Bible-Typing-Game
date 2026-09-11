@@ -361,6 +361,7 @@ test('multiplayer returns to the lobby with standings after the configured round
   equal(snapshot.phase, 'lobby');
   equal(snapshot.matchComplete, true);
   equal(snapshot.round, 3);
+  equal(snapshot.players.map(player => player.completedRounds), [3, 3]);
   equal(snapshot.players.map(player => player.name), ['Host', 'Guest']);
 });
 

@@ -246,15 +246,17 @@ export class MultiplayerView {
   private renderSummary(snapshot: RoomSnapshot): void {
     const summary = required('multiplayer-summary-standings');
     summary.replaceChildren(...[...snapshot.players]
-      .sort((left, right) => right.totalScore - left.totalScore)
+      .sort((left, right) => averageWpm(right) - averageWpm(left))
       .map((player, index) => {
         const row = document.createElement('div');
         const name = document.createElement('strong');
         name.textContent = `${index + 1}. ${player.name}`;
         const score = document.createElement('span');
-        score.textContent = snapshot.settings.includeGuessing
-          ? `${player.totalScore} pts`
-          : `${player.wpm} WPM · ${player.accuracy}%`;
+        score.textContent = `Avg ${averageWpm(player)} WPM · Best ${player.highestWpm} WPM${
+          snapshot.settings.includeGuessing
+            ? ` · Guess avg ${averageGuessScore(player)}% · Best ${player.highestGuessScore}%`
+            : ''
+        }`;
         row.append(name, score);
         return row;
       }));
@@ -293,4 +295,12 @@ export class MultiplayerView {
     required('multiplayer-guessing-phase').classList.toggle('is-hidden', active !== 'guessing');
     required('multiplayer-reveal-phase').classList.toggle('is-hidden', active !== 'reveal');
   }
+}
+
+function averageWpm(player: PlayerState): number {
+  return Math.round(player.totalWpm / Math.max(1, player.completedRounds));
+}
+
+function averageGuessScore(player: PlayerState): number {
+  return Math.round(player.totalGuessScore / Math.max(1, player.completedGuessRounds));
 }

@@ -24,7 +24,12 @@ export function createPlayerState(
     guessSubmitted: false,
     ready: false,
     score: null,
-    totalScore: 0,
+    totalWpm: 0,
+    highestWpm: 0,
+    completedRounds: 0,
+    totalGuessScore: 0,
+    highestGuessScore: 0,
+    completedGuessRounds: 0,
     wpm: 0,
     accuracy: 100
   };

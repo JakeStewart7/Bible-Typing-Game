@@ -282,7 +282,9 @@ export class RoomEngine {
       for (const player of this.roster.values()) {
         const score = scorePassageGuess(player.guess, this.passage.reference);
         player.score = score;
-        player.totalScore += score;
+        player.totalGuessScore += score;
+        player.highestGuessScore = Math.max(player.highestGuessScore, score);
+        player.completedGuessRounds++;
       }
       this.finishRound();
     }
@@ -290,6 +292,11 @@ export class RoomEngine {
 
   private finishRound(): void {
     this.guessingEndsAt = null;
+    for (const player of this.roster.values()) {
+      player.totalWpm += player.wpm;
+      player.highestWpm = Math.max(player.highestWpm, player.wpm);
+      player.completedRounds++;
+    }
     if (this.round >= this.settings.rounds) {
       this.matchComplete = true;
       this.phase = 'lobby';
@@ -301,7 +308,14 @@ export class RoomEngine {
   private resetCompletedMatch(): void {
     this.round = 0;
     this.matchComplete = false;
-    for (const player of this.roster.values()) player.totalScore = 0;
+    for (const player of this.roster.values()) {
+      player.totalWpm = 0;
+      player.highestWpm = 0;
+      player.completedRounds = 0;
+      player.totalGuessScore = 0;
+      player.highestGuessScore = 0;
+      player.completedGuessRounds = 0;
+    }
   }
 
   private everyPlayer(predicate: (player: PlayerState) => boolean): boolean {
