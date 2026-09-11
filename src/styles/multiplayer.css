@@ -39,22 +39,22 @@
 .multiplayer-entry-card .secondary-btn { color: #49359d; border: 1px solid rgba(114, 87, 232, .2); background: #f0edff; }
 .multiplayer-entry-card .secondary-btn:hover { background: #e7e1ff; }
 #multiplayer-host-form .primary-btn {
-  background: linear-gradient(135deg, #7868e8, #5442c2);
-  box-shadow: 0 10px 24px rgba(84, 66, 194, .25);
+  background: linear-gradient(135deg, #776bc9, #5f54ad);
+  box-shadow: 0 10px 24px rgba(95, 84, 173, .2);
 }
-#multiplayer-host-form .primary-btn:hover { background: linear-gradient(135deg, #8979f2, #6250d2); }
+#multiplayer-host-form .primary-btn:hover { background: linear-gradient(135deg, #8679d5, #6c60bb); }
 #multiplayer-show-join {
-  color: #245c78;
-  border-color: rgba(52, 137, 177, .28);
-  background: linear-gradient(135deg, #e7f5fb, #cbe7f3);
-  box-shadow: 0 10px 24px rgba(52, 137, 177, .16);
+  color: #5f54ad;
+  border-color: rgba(95, 84, 173, .2);
+  background: linear-gradient(135deg, #f0edff, #dfd9ff);
+  box-shadow: 0 10px 24px rgba(95, 84, 173, .12);
 }
-#multiplayer-show-join:hover { color: #174c69; background: linear-gradient(135deg, #f0faff, #b9ddec); }
+#multiplayer-show-join:hover { color: #514694; background: linear-gradient(135deg, #f7f5ff, #d5ceff); }
 #multiplayer-join-form .primary-btn {
-  background: linear-gradient(135deg, #4c9fca, #28759d);
-  box-shadow: 0 10px 24px rgba(40, 117, 157, .23);
+  background: linear-gradient(135deg, #776bc9, #5f54ad);
+  box-shadow: 0 10px 24px rgba(95, 84, 173, .2);
 }
-#multiplayer-join-form .primary-btn:hover { background: linear-gradient(135deg, #61b0d8, #3288b4); }
+#multiplayer-join-form .primary-btn:hover { background: linear-gradient(135deg, #8679d5, #6c60bb); }
 .multiplayer-entry-card--unified #multiplayer-join-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
