@@ -197,9 +197,8 @@ export class MultiplayerView {
       encouragement.classList.remove('is-hidden');
       window.setTimeout(() => encouragement.classList.add('is-hidden'), 1_800);
     }
-    this.input.disabled = snapshot.phase !== 'typing'
-      || countdownRemaining > 0
-      || (self?.typingComplete ?? false);
+    this.input.disabled = snapshot.phase !== 'typing' || (self?.typingComplete ?? false);
+    this.input.readOnly = countdownRemaining > 0;
     const finishEveryone = requiredButton('multiplayer-finish-everyone');
     const canFinishEveryone = snapshot.selfId === snapshot.hostId
       && snapshot.countdownEndsAt === null

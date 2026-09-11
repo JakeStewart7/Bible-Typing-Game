@@ -116,6 +116,8 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
     unsubscribe = connection.subscribe(nextSnapshot => {
       const roundChanged = snapshot?.round !== nextSnapshot.round;
       const previousPhase = snapshot?.phase;
+      const countdownCompleted = snapshot?.countdownEndsAt !== null
+        && nextSnapshot.countdownEndsAt === null;
       snapshot = nextSnapshot;
       if (roundChanged) {
         cursorSequence = 0;
@@ -126,6 +128,8 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
       view.render(nextSnapshot);
       if (previousPhase && previousPhase !== nextSnapshot.phase) {
         view.focusPhase(nextSnapshot.phase);
+      } else if (countdownCompleted && nextSnapshot.phase === 'typing') {
+        view.focusTyping();
       } else if (roundChanged && nextSnapshot.phase === 'typing') {
         view.focusTyping();
       }
