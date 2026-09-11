@@ -2,10 +2,11 @@ import { RoomEngine } from '../src/multiplayer/domain/room-engine.ts';
 import { scorePassageGuess } from '../src/multiplayer/domain/scoring.ts';
 import { BOT_DIFFICULTY_OPTIONS } from '../src/multiplayer/domain/settings.ts';
 import { ROUND_COUNTDOWN_MS } from '../src/multiplayer/domain/settings.ts';
-import type { MultiplayerPassage } from '../src/multiplayer/domain/types.ts';
+import type { MultiplayerPassage, RoomSnapshot } from '../src/multiplayer/domain/types.ts';
 import { selectPassageWithinLimit } from '../src/multiplayer/infrastructure/bible-passage-provider.ts';
 import {
   MOCK_REFRESH_INTERVAL_MS,
+  MockMultiplayerClient,
   nextBotTyping,
   nextTypingDelayMs
 } from '../src/multiplayer/infrastructure/mock-multiplayer-client.ts';
@@ -126,6 +127,28 @@ test('only the host can add bots and each bot keeps its own difficulty', async (
     type: 'UPDATE_BOT_DIFFICULTY',
     playerId: bot.id,
     difficulty: 'easy'
+  });
+
+  test('new local multiplayer rooms include hard, very hard, and extreme bots', async () => {
+    const client = new MockMultiplayerClient({
+      nextPassage: async () => ({
+        text: 'Faith.',
+        reference: { book: 'Hebrews', chapter: 11, startVerse: 1, endVerse: 1 }
+      })
+    });
+    const connection = await client.createRoom('Host');
+    let snapshot: RoomSnapshot | null = null;
+    const unsubscribe = connection.subscribe(nextSnapshot => {
+      snapshot = nextSnapshot;
+    });
+    equal(
+      snapshot?.players
+        .filter(player => player.kind === 'simulated')
+        .map(player => player.botDifficulty),
+      ['hard', 'very-hard', 'extreme']
+    );
+    unsubscribe();
+    connection.disconnect();
   });
   equal(room.getSnapshot('host').players.find(player => player.id === bot.id)?.botDifficulty, 'easy');
 });
