@@ -13,24 +13,24 @@ export function multiplayerWorkspaceMarkup(): string {
       </header>
 
       <div id="multiplayer-entry" class="multiplayer-entry">
-        <section class="surface multiplayer-entry-card">
-          <h3>Create a lobby</h3>
-          <p>Open a room, invite players, and choose the next passage together.</p>
-          <form id="multiplayer-create-form" class="stack">
+        <section class="surface multiplayer-entry-card multiplayer-entry-card--unified">
+          <h3>Play together</h3>
+          <p>Choose a name, host a new lobby, or join friends with their room code.</p>
+          <form id="multiplayer-host-form" class="stack">
             <label for="multiplayer-name">Display name</label>
-            <input id="multiplayer-name" maxlength="24" value="Host" autocomplete="nickname" required>
-            <button class="primary-btn" type="submit">Create lobby</button>
+            <input id="multiplayer-name" maxlength="24" value="Player" autocomplete="nickname" required>
+            <div class="entry-actions">
+              <button class="primary-btn" type="submit">Host lobby</button>
+              <button id="multiplayer-show-join" class="secondary-btn" type="button" aria-expanded="false" aria-controls="multiplayer-join-form">Join lobby</button>
+            </div>
           </form>
-        </section>
-        <section class="surface multiplayer-entry-card">
-          <h3>Join a lobby</h3>
-          <p>Enter a five-character code to join a room in this browser session.</p>
-          <form id="multiplayer-join-form" class="stack">
-            <label for="multiplayer-join-name">Display name</label>
-            <input id="multiplayer-join-name" maxlength="24" value="Guest" autocomplete="nickname" required>
+          <form id="multiplayer-join-form" class="stack is-hidden">
             <label for="multiplayer-code">Lobby code</label>
             <input id="multiplayer-code" maxlength="5" autocomplete="off" placeholder="ABCDE" required>
-            <button class="secondary-btn" type="submit">Join lobby</button>
+            <div class="entry-actions">
+              <button class="primary-btn" type="submit">Join with code</button>
+              <button id="multiplayer-cancel-join" class="text-btn" type="button">Cancel</button>
+            </div>
           </form>
         </section>
       </div>

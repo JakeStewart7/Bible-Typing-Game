@@ -13,12 +13,14 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
   let botTimer: number | null = null;
   let cursorSequence = 0;
 
-  bindForm('multiplayer-create-form', () => run(async () => {
+  bindForm('multiplayer-host-form', () => run(async () => {
     await connect(await client.createRoom(inputValue('multiplayer-name'), view.creationSettings()));
   }));
   bindForm('multiplayer-join-form', () => run(async () => {
-    await connect(await client.joinRoom(inputValue('multiplayer-code'), inputValue('multiplayer-join-name')));
+    await connect(await client.joinRoom(inputValue('multiplayer-code'), inputValue('multiplayer-name')));
   }));
+  requiredButton('multiplayer-show-join').addEventListener('click', () => toggleJoinForm(true));
+  requiredButton('multiplayer-cancel-join').addEventListener('click', () => toggleJoinForm(false));
   requiredButton('multiplayer-leave').addEventListener('click', leave);
   requiredButton('multiplayer-add-bot').addEventListener('click', () => run(async () => {
     await send({ type: 'ADD_BOT' });
@@ -180,4 +182,11 @@ function bindForm(id: string, submit: () => Promise<void>): void {
 
 function inputValue(id: string): string {
   return requiredInput(id, HTMLInputElement).value;
+}
+
+function toggleJoinForm(isVisible: boolean): void {
+  required('multiplayer-join-form').classList.toggle('is-hidden', !isVisible);
+  const trigger = requiredButton('multiplayer-show-join');
+  trigger.setAttribute('aria-expanded', String(isVisible));
+  if (isVisible) requiredInput('multiplayer-code', HTMLInputElement).focus();
 }
