@@ -100,6 +100,12 @@ export class RoomEngine {
       case 'UPDATE_TYPING':
         this.updateTyping(player, command.typedText, command.sequence);
         break;
+      case 'FORCE_FINISH_TYPING':
+        this.forceFinishTyping(player, command.playerId);
+        break;
+      case 'FORCE_FINISH_ALL_TYPING':
+        this.forceFinishAllTyping(player);
+        break;
       case 'SEND_ENCOURAGEMENT':
         this.sendEncouragement(player, command.word);
         break;
@@ -207,6 +213,33 @@ export class RoomEngine {
       playerName: player.name,
       word
     };
+  }
+
+  private forceFinishTyping(requester: PlayerState, targetId: string): void {
+    const target = this.roster.get(targetId);
+    if (!target) throw new Error('That player is no longer in the room.');
+    if (requester.id !== target.id && (requester.id !== this.roster.hostId || target.kind !== 'simulated')) {
+      throw new Error('Only the host can finish a simulated player.');
+    }
+    this.completeTyping(target);
+  }
+
+  private forceFinishAllTyping(requester: PlayerState): void {
+    if (requester.id !== this.roster.hostId) throw new Error('Only the host can finish everyone.');
+    for (const player of this.roster.values()) this.completeTyping(player);
+  }
+
+  private completeTyping(player: PlayerState): void {
+    if (this.phase !== 'typing' || !this.passage || this.countdownEndsAt !== null) {
+      throw new Error('Typing has not started yet.');
+    }
+    this.typingSessions.update(
+      player,
+      this.passage.text,
+      this.passage.text,
+      player.cursorSequence + 1,
+      this.clock()
+    );
   }
 
   private updateSettings(playerId: string, settings: RoomSettings): void {

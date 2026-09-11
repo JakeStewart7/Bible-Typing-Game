@@ -24,6 +24,9 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
     await send({ type: 'ADD_BOT' });
   }));
   requiredButton('multiplayer-start').addEventListener('click', () => send({ type: 'START_ROUND' }));
+  requiredButton('multiplayer-finish-everyone').addEventListener('click', () => {
+    void send({ type: 'FORCE_FINISH_ALL_TYPING' });
+  });
   requiredButton('multiplayer-ready').addEventListener('click', () => send({ type: 'SET_READY', ready: true }));
   const settingsControls = [
     ['multiplayer-lobby-length', () => view.lobbySettings()],
@@ -56,6 +59,11 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
       type: 'UPDATE_BOT_DIFFICULTY',
       playerId: target.dataset.playerId,
       difficulty: normalizeBotDifficulty(difficulty)
+    });
+    required('multiplayer-players').addEventListener('click', event => {
+      const target = event.target;
+      if (!(target instanceof HTMLButtonElement) || !target.dataset.playerId) return;
+      void send({ type: 'FORCE_FINISH_TYPING', playerId: target.dataset.playerId });
     });
   });
   required('multiplayer-encouragement-form').addEventListener('submit', event => {

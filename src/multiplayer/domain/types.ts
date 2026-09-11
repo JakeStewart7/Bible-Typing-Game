@@ -73,6 +73,8 @@ export type RoomSnapshot = {
 export type PlayerCommand =
   | { type: 'START_ROUND' }
   | { type: 'UPDATE_TYPING'; typedText: string; sequence: number }
+  | { type: 'FORCE_FINISH_TYPING'; playerId: string }
+  | { type: 'FORCE_FINISH_ALL_TYPING' }
   | { type: 'SEND_ENCOURAGEMENT'; word: string }
   | { type: 'UPDATE_GUESS'; guess: PassageGuess }
   | { type: 'SUBMIT_GUESS' }

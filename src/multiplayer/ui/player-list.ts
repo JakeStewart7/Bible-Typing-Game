@@ -9,6 +9,7 @@ type PlayerRow = {
   metrics: HTMLElement;
   status: HTMLElement;
   difficulty: HTMLSelectElement;
+  finish: HTMLButtonElement;
 };
 
 export class PlayerListView {
@@ -49,8 +50,13 @@ export class PlayerListView {
     metrics.className = 'player-metrics';
     const status = document.createElement('small');
     const difficulty = this.createDifficultySelect(playerId);
-    root.append(identity, metrics, status, difficulty);
-    const row = { root, dot, name, metrics, status, difficulty };
+    const finish = document.createElement('button');
+    finish.className = 'text-btn player-finish is-hidden';
+    finish.type = 'button';
+    finish.dataset.playerId = playerId;
+    finish.textContent = 'Finish typing';
+    root.append(identity, metrics, status, difficulty, finish);
+    const row = { root, dot, name, metrics, status, difficulty, finish };
     this.rows.set(playerId, row);
     return row;
   }
@@ -69,6 +75,13 @@ export class PlayerListView {
       && (snapshot.phase === 'lobby' || snapshot.phase === 'reveal');
     row.difficulty.classList.toggle('is-hidden', !canEditDifficulty);
     row.difficulty.disabled = !canEditDifficulty;
+    const canFinish = snapshot.phase === 'typing'
+      && snapshot.countdownEndsAt === null
+      && !player.typingComplete
+      && (player.id === snapshot.selfId
+        || (snapshot.selfId === snapshot.hostId && player.kind === 'simulated'));
+    row.finish.classList.toggle('is-hidden', !canFinish);
+    row.finish.disabled = !canFinish;
     if (document.activeElement !== row.difficulty) {
       row.difficulty.value = player.botDifficulty ?? snapshot.settings.botDifficulty;
     }

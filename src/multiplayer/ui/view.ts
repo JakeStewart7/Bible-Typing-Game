@@ -200,6 +200,12 @@ export class MultiplayerView {
     this.input.disabled = snapshot.phase !== 'typing'
       || countdownRemaining > 0
       || (self?.typingComplete ?? false);
+    const finishEveryone = requiredButton('multiplayer-finish-everyone');
+    const canFinishEveryone = snapshot.selfId === snapshot.hostId
+      && snapshot.countdownEndsAt === null
+      && snapshot.players.some(player => !player.typingComplete);
+    finishEveryone.classList.toggle('is-hidden', !canFinishEveryone);
+    finishEveryone.disabled = !canFinishEveryone;
   }
 
   private renderGuessing(snapshot: RoomSnapshot, self: PlayerState | undefined): void {

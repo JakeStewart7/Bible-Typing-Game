@@ -363,6 +363,22 @@ test('multiplayer moves to a final summary after the configured rounds', async (
   equal(snapshot.players.map(player => player.name), ['Host', 'Guest']);
 });
 
+test('multiplayer host can force finish bots and everyone during typing', async () => {
+  const passage: MultiplayerPassage = {
+    text: 'Faith.',
+    reference: { book: 'Hebrews', chapter: 11, startVerse: 1, endVerse: 1 }
+  };
+  const room = new RoomEngine('FINISH', { nextPassage: async () => passage }, undefined, Date.now, 0);
+  room.addPlayer('host', 'Host');
+  room.addPlayer('guest', 'Guest');
+  room.addPlayer('bot', 'Bot', 'simulated', 'hard');
+  await room.dispatch('host', { type: 'START_ROUND' });
+  await room.dispatch('host', { type: 'FORCE_FINISH_TYPING', playerId: 'bot' });
+  equal(room.getSnapshot('host').players[2]?.typingComplete, true);
+  await room.dispatch('host', { type: 'FORCE_FINISH_ALL_TYPING' });
+  equal(room.getSnapshot('host').phase, 'guessing');
+});
+
 function measureBotWpm(
   difficulty: keyof typeof BOT_DIFFICULTY_OPTIONS,
   targetWpm: number,

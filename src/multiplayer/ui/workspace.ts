@@ -47,6 +47,7 @@ export function multiplayerWorkspaceMarkup(): string {
           <aside class="surface player-panel">
             <div class="player-panel-heading"><h3>Players</h3><span id="multiplayer-player-count">0</span></div>
             <div id="multiplayer-players" class="player-list" role="list"></div>
+            <button id="multiplayer-finish-everyone" class="text-btn is-hidden" type="button">Finish everyone</button>
           </aside>
           <main class="surface round-panel">
             <section id="multiplayer-lobby-phase" class="round-phase">

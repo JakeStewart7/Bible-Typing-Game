@@ -40,6 +40,7 @@
 .player-row small { padding-left: 1.15rem; color: var(--muted); font-size: .68rem; }
 .player-row .player-metrics { color: var(--ink); font-weight: 800; }
 .bot-difficulty-select { width: 100%; min-height: 2.25rem; margin-top: .25rem; padding: .35rem .5rem; border: 1px solid var(--page-border); border-radius: 8px; color: var(--ink); background: white; font-size: .68rem; }
+.player-finish, #multiplayer-finish-everyone { justify-self: start; margin-top: .25rem; font-size: .7rem; }
 .lobby-bot-controls { display: flex; align-items: end; gap: .75rem; margin: 1rem 0; }
 .lobby-bot-controls label { display: grid; gap: .3rem; color: var(--muted); font-size: var(--text-small); font-weight: 800; text-align: left; }
 .lobby-bot-controls select { min-height: 2.75rem; padding: .5rem; border: 1px solid var(--page-border); border-radius: 10px; background: white; }
