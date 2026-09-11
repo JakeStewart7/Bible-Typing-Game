@@ -70,6 +70,36 @@ export function initControls(config: AppConfig) {
           <button class="mode-nav" data-workspace="multiplayer" aria-label="Together" title="Together"><span>◎</span><div><strong>Together</strong><small>Type and recall as a group</small></div></button>
         </aside>
         <div class="page-viewport">
+      <section id="home-screen" class="app-page home-screen">
+        <div class="home-menu">
+          <div class="home-kicker">MAIN MENU</div>
+          <h1>What will you play?</h1>
+          <p class="home-prompt">Choose your way to type</p>
+          <div class="home-mode-grid" role="navigation" aria-label="Game modes">
+            <button class="home-mode home-mode--journey" type="button" data-home-workspace="campaign">
+              <span class="home-mode-icon" aria-hidden="true">✦</span>
+              <span class="home-mode-copy"><strong>Journey</strong><small>Build your path through Scripture</small></span>
+              <span class="home-mode-arrow" aria-hidden="true">→</span>
+            </button>
+            <button class="home-mode home-mode--practice" type="button" data-home-workspace="practice">
+              <span class="home-mode-icon" aria-hidden="true">⌨</span>
+              <span class="home-mode-copy"><strong>Practice</strong><small>Sharpen your speed and accuracy</small></span>
+              <span class="home-mode-arrow" aria-hidden="true">→</span>
+            </button>
+            <button class="home-mode home-mode--arcade" type="button" data-home-workspace="defense" data-home-mode="defense">
+              <span class="home-mode-icon" aria-hidden="true">◇</span>
+              <span class="home-mode-copy"><strong>Arcade</strong><small>Type fast. Defend the light.</small></span>
+              <span class="home-mode-arrow" aria-hidden="true">→</span>
+            </button>
+            <button class="home-mode home-mode--together" type="button" data-home-workspace="multiplayer">
+              <span class="home-mode-icon" aria-hidden="true">◎</span>
+              <span class="home-mode-copy"><strong>Together</strong><small>Race, recall, and play as a group</small></span>
+              <span class="home-mode-arrow" aria-hidden="true">→</span>
+            </button>
+          </div>
+          <div class="home-footer"><span>VERSE<span>TYPE</span></span><i aria-hidden="true">•</i><span>TYPE WITH PURPOSE</span></div>
+        </div>
+      </section>
       <section id="game-screen" class="app-page game-screen is-hidden">
         <header class="page-header game-intro">
           <div>

@@ -113,13 +113,15 @@ async function fetchCampaignChunk(chunk: CampaignChunk): Promise<void> {
 }
 
 function showWorkspace(workspace: string, selectedMode?: string): void {
+  const homeScreen = document.getElementById('home-screen');
   const gameScreen = document.getElementById('game-screen');
+  homeScreen?.classList.toggle('is-hidden', workspace !== 'home');
   controls.campaignScreenEl.classList.toggle('is-hidden', workspace !== 'campaign');
   controls.multiplayerScreenEl.classList.toggle('is-hidden', workspace !== 'multiplayer');
-  gameScreen?.classList.toggle('is-hidden', workspace === 'campaign');
-  gameScreen?.classList.toggle('is-hidden', workspace === 'multiplayer');
+  gameScreen?.classList.toggle('is-hidden', workspace === 'campaign' || workspace === 'multiplayer' || workspace === 'home');
   gameScreen?.classList.toggle('campaign-play', workspace === 'campaign-play');
   const appShell = document.querySelector<HTMLElement>('.app-shell');
+  appShell?.classList.toggle('home-active', workspace === 'home');
   if (appShell) applyPageTheme(appShell, themeForWorkspace(workspace, selectedMode));
   gameScreen?.scrollTo({ top: 0 });
   controls.campaignScreenEl.scrollTo({ top: 0 });
@@ -158,12 +160,25 @@ document.querySelectorAll<HTMLElement>('.mode-nav').forEach(button => button.add
   }
   showWorkspace(workspace, mode ?? controls.gameModeEl.value);
 }));
+document.querySelectorAll<HTMLElement>('.home-mode').forEach(button => button.addEventListener('click', () => {
+  const workspace = button.dataset.homeWorkspace ?? 'practice';
+  const mode = button.dataset.homeMode;
+  if (mode) {
+    controls.gameModeEl.value = mode;
+    controls.gameModeEl.dispatchEvent(new Event('change'));
+  }
+  showWorkspace(workspace, mode ?? controls.gameModeEl.value);
+}));
+document.querySelector('.brand')?.addEventListener('click', event => {
+  event.preventDefault();
+  showWorkspace('home');
+});
 controls.gameModeEl.addEventListener('change', () => {
   if (controls.gameModeEl.value === 'practice' || controls.gameModeEl.value === 'memory') {
     showWorkspace('practice', controls.gameModeEl.value);
   }
 });
-showWorkspace('campaign');
+showWorkspace('home');
 const sidebar = document.getElementById('mode-sidebar');
 const sidebarToggle = document.getElementById('sidebar-toggle');
 sidebarToggle?.addEventListener('click', () => {
