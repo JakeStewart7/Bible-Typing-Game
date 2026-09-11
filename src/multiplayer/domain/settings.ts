@@ -4,8 +4,14 @@ export const GUESS_DURATION_MS = 30_000;
 export const ROUND_COUNTDOWN_MS = 3_000;
 export const ROUND_OPTIONS: Record<number, string> = {
   1: '1 round',
+  2: '2 rounds',
   3: '3 rounds',
+  4: '4 rounds',
   5: '5 rounds',
+  6: '6 rounds',
+  7: '7 rounds',
+  8: '8 rounds',
+  9: '9 rounds',
   10: '10 rounds'
 };
 
