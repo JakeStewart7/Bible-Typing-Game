@@ -1,5 +1,15 @@
+.multiplayer-screen {
+  --page-accent: #7257e8;
+  --page-accent-hover: #8068f2;
+  --page-accent-strong: #4b35b8;
+  --page-accent-soft: #eeeaff;
+  --page-glow: #e3dcff;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(126, 94, 255, .14), transparent 26rem),
+    radial-gradient(circle at 82% 72%, rgba(255, 184, 92, .1), transparent 24rem);
+}
 .multiplayer-header { justify-content: center; align-items: center; margin-bottom: clamp(1.5rem, 3vw, 2.5rem); text-align: center; }
-.multiplayer-header h2 { margin: 0; font: 700 clamp(2.5rem, 5vw, 4rem) Playfair Display; letter-spacing: -.035em; }
+.multiplayer-header h2 { margin: 0; color: #30206f; font: 700 clamp(2.5rem, 5vw, 4rem) Playfair Display; letter-spacing: -.045em; text-shadow: 0 8px 24px rgba(76, 53, 184, .14); }
 .multiplayer-entry, .multiplayer-room { width: 100%; max-width: var(--content-max); margin: 0 auto; }
 .multiplayer-entry { display: grid; place-items: start center; min-height: clamp(22rem, 50vh, 34rem); }
 .multiplayer-entry-card { padding: clamp(1.25rem, 3vw, 2rem); }
@@ -7,6 +17,11 @@
   width: min(100%, 48rem);
   min-height: 0;
   padding: clamp(2rem, 4vw, 3rem);
+  border: 1px solid rgba(114, 87, 232, .2);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .98), rgba(247, 245, 255, .96)),
+    var(--page-surface);
+  box-shadow: 0 24px 70px rgba(75, 53, 184, .14), 0 2px 0 rgba(255, 255, 255, .8) inset;
 }
 .multiplayer-entry-card form { --stack-gap: .75rem; }
 .multiplayer-entry-card--unified #multiplayer-host-form {
@@ -18,7 +33,11 @@
 .multiplayer-entry-card--unified #multiplayer-host-form > input { max-width: 100%; min-height: 3.15rem; font-size: 1rem; }
 .multiplayer-entry-card form + form { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--page-border); }
 .entry-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-.entry-actions button { min-height: 3.5rem; font-size: .95rem; }
+.entry-actions button { min-height: 3.5rem; font-size: .95rem; letter-spacing: .01em; }
+.multiplayer-entry-card .primary-btn { background: linear-gradient(135deg, #8067f0, #6248d2); box-shadow: 0 10px 24px rgba(98, 72, 210, .24); }
+.multiplayer-entry-card .primary-btn:hover { background: linear-gradient(135deg, #927cf6, #7258e5); }
+.multiplayer-entry-card .secondary-btn { color: #49359d; border: 1px solid rgba(114, 87, 232, .2); background: #f0edff; }
+.multiplayer-entry-card .secondary-btn:hover { background: #e7e1ff; }
 .multiplayer-entry-card--unified #multiplayer-join-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -28,7 +47,7 @@
 .multiplayer-entry-card--unified #multiplayer-join-form label,
 .multiplayer-entry-card--unified #multiplayer-join-form input { grid-column: 1 / -1; }
 .multiplayer-entry-card--unified #multiplayer-join-form .entry-actions { display: contents; }
-.multiplayer-entry-card label, .guess-grid label, .room-settings > label { color: var(--muted); font-size: var(--text-small); font-weight: 800; }
+.multiplayer-entry-card label, .guess-grid label, .room-settings > label { color: #5c4d91; font-size: var(--text-small); font-weight: 800; }
 .multiplayer-entry-card input, .multiplayer-entry-card select, .guess-grid input, .room-settings select {
   width: 100%; padding: .75rem .875rem; border: 1px solid var(--page-border); border-radius: 11px; color: var(--ink); background: white;
 }
@@ -40,14 +59,15 @@
 .guessing-toggle input:checked + span::after { transform: translateX(1.1rem); }
 .guessing-toggle input:focus-visible + span { outline: 3px solid color-mix(in srgb, var(--page-accent) 30%, transparent); outline-offset: 2px; }
 .guessing-toggle input:disabled ~ * { opacity: .55; }
-.room-toolbar { display: grid; grid-template-columns: repeat(3, minmax(7rem, 1fr)) auto; align-items: center; gap: 1rem; padding: 1rem 1.25rem; }
+.room-toolbar { display: grid; grid-template-columns: repeat(3, minmax(7rem, 1fr)) auto; align-items: center; gap: 1rem; padding: 1rem 1.25rem; border-color: rgba(114, 87, 232, .18); box-shadow: 0 12px 30px rgba(75, 53, 184, .08); }
 .room-toolbar > div { display: grid; gap: .2rem; }
 .room-toolbar .room-invite { grid-template-columns: auto auto; align-items: center; justify-content: start; column-gap: .75rem; }
 .room-invite small { grid-column: 1 / -1; }
 .room-invite .text-btn { min-height: auto; padding: .3rem .55rem; font-size: .68rem; }
 .room-toolbar small, .round-heading small, #multiplayer-reveal-phase > small { color: var(--muted); font-size: .65rem; font-weight: 800; letter-spacing: .12em; }
 .room-toolbar strong { font: 700 1rem DM Mono; }
-.room-toolbar > div:first-child strong { color: var(--page-accent-strong); font-size: 1.25rem; letter-spacing: .12em; }
+.room-toolbar > div:first-child strong { color: #5d43c5; font-size: 1.25rem; letter-spacing: .12em; }
+.room-invite .text-btn { color: #6248d2; }
 .multiplayer-status { min-height: 2rem; padding: .45rem .2rem; color: var(--muted); font-size: var(--text-small); }
 .multiplayer-status.is-error { color: var(--error); }
 .multiplayer-layout { display: grid; grid-template-columns: minmax(13rem, 17rem) minmax(0, 1fr); gap: 1rem; align-items: start; }

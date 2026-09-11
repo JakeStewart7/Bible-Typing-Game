@@ -161,10 +161,10 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
     if (!navigator.clipboard) throw new Error('Clipboard access is unavailable in this browser.');
     await navigator.clipboard.writeText(snapshot.code);
     const button = requiredButton('multiplayer-copy-code');
-    button.textContent = 'Invite code copied';
+    button.textContent = 'Room code copied';
     if (inviteResetTimer !== null) window.clearTimeout(inviteResetTimer);
     inviteResetTimer = window.setTimeout(() => {
-      button.textContent = 'Copy invite code';
+      button.textContent = 'Copy room code';
       inviteResetTimer = null;
     }, 1_800);
   }

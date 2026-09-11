@@ -10,7 +10,7 @@ export function multiplayerWorkspaceMarkup(): string {
       <div id="multiplayer-entry" class="multiplayer-entry">
         <section class="surface multiplayer-entry-card multiplayer-entry-card--unified">
           <form id="multiplayer-host-form" class="stack">
-            <label for="multiplayer-name">Your display name</label>
+            <label for="multiplayer-name">What should we call you?</label>
             <input id="multiplayer-name" maxlength="24" value="Player" autocomplete="nickname" required>
             <div class="entry-actions">
               <button class="primary-btn" type="submit">Create Room</button>
@@ -18,7 +18,7 @@ export function multiplayerWorkspaceMarkup(): string {
             </div>
           </form>
           <form id="multiplayer-join-form" class="stack is-hidden">
-            <label for="multiplayer-code">Lobby code</label>
+            <label for="multiplayer-code">Room code</label>
             <input id="multiplayer-code" maxlength="5" autocomplete="off" placeholder="ABCDE" required>
             <div class="entry-actions">
               <button class="primary-btn" type="submit">Join Game</button>
@@ -31,9 +31,9 @@ export function multiplayerWorkspaceMarkup(): string {
       <section id="multiplayer-room" class="multiplayer-room is-hidden">
         <header class="surface room-toolbar">
           <div class="room-invite">
-            <small>INVITE PLAYERS</small>
+            <small>SHARE THIS ROOM</small>
             <strong id="multiplayer-room-code">-----</strong>
-            <button id="multiplayer-copy-code" class="text-btn" type="button">Copy invite code</button>
+            <button id="multiplayer-copy-code" class="text-btn" type="button">Copy room code</button>
           </div>
           <div><small>ROUND</small><strong id="multiplayer-round">Waiting</strong></div>
           <div><small>PHASE</small><strong id="multiplayer-phase" aria-live="polite" aria-atomic="true">Lobby</strong></div>
