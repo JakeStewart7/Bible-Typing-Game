@@ -40,8 +40,8 @@
 .mode-nav strong { font-size: .875rem; }
 .mode-nav small { margin-top: 2px; color: #71867f; font-size: var(--text-small); line-height: 1.35; }
 .brand { display: flex; align-items: center; gap: 7px; color: var(--ink); font-weight: 800; text-decoration: none; font-size: 1.05rem; letter-spacing: -.04em; }
-.home-button { justify-self: center; border: 0; border-bottom: 2px solid transparent; padding: .35rem .75rem; color: var(--muted); background: transparent; font-size: .76rem; font-weight: 800; }
-.home-button:hover, .home-button:focus-visible { color: var(--green-dark); border-bottom-color: var(--green); }
+.back-to-menu { order: -1; border: 1px solid var(--page-border); border-radius: 10px; padding: .55rem .8rem; color: var(--page-accent-strong); background: var(--page-surface); font-size: var(--text-small); font-weight: 800; white-space: nowrap; }
+.back-to-menu:hover { color: var(--page-accent-strong); background: var(--page-accent-soft); transform: translateX(-2px); }
 .brand > span:last-child span { color: var(--green); }
 .brand-mark { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; color: white; background: linear-gradient(135deg, #22b88d, #0d8063); box-shadow: 0 5px 13px #159a7835; }
 .desktop-nav { height: 100%; display: flex; justify-content: center; align-items: stretch; gap: 8px; }
