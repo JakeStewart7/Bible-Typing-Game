@@ -1,43 +1,42 @@
-import { DEFAULT_ROOM_SETTINGS, PASSAGE_LENGTH_OPTIONS } from '../domain/settings';
+import { DEFAULT_ROOM_SETTINGS, PASSAGE_LENGTH_OPTIONS, ROUND_OPTIONS } from '../domain/settings';
+import { menuNavigationMarkup } from '../../ui/menu-navigation.ts';
 
 export function multiplayerWorkspaceMarkup(): string {
   return `
     <section id="multiplayer-screen" class="app-page multiplayer-screen is-hidden">
+      ${menuNavigationMarkup()}
       <header class="page-header multiplayer-header">
-        <div>
-          <div class="eyebrow">Multiplayer practice</div>
-          <h2>Type together</h2>
-          <p>Share a passage, follow everyone's progress, and test your recall as a group.</p>
-        </div>
-        <span class="text-badge text-badge--accent">Local preview</span>
+        <h2>Type together</h2>
       </header>
 
       <div id="multiplayer-entry" class="multiplayer-entry">
-        <section class="surface multiplayer-entry-card">
-          <h3>Create a lobby</h3>
-          <p>Open a room, invite players, and choose the next passage together.</p>
-          <form id="multiplayer-create-form" class="stack">
-            <label for="multiplayer-name">Display name</label>
-            <input id="multiplayer-name" maxlength="24" value="Host" autocomplete="nickname" required>
-            <button class="primary-btn" type="submit">Create lobby</button>
+        <section class="surface multiplayer-entry-card multiplayer-entry-card--unified">
+          <form id="multiplayer-host-form" class="stack">
+            <label for="multiplayer-name">INSCRIBE YOUR NAME</label>
+            <input id="multiplayer-name" maxlength="24" value="Player" autocomplete="nickname" required>
+            <div class="entry-actions">
+              <button class="primary-btn" type="submit">Create Room</button>
+              <button id="multiplayer-show-join" class="secondary-btn" type="button" aria-expanded="false" aria-controls="multiplayer-join-form">Join Room</button>
+            </div>
           </form>
-        </section>
-        <section class="surface multiplayer-entry-card">
-          <h3>Join a lobby</h3>
-          <p>Enter a five-character code to join a room in this browser session.</p>
-          <form id="multiplayer-join-form" class="stack">
-            <label for="multiplayer-join-name">Display name</label>
-            <input id="multiplayer-join-name" maxlength="24" value="Guest" autocomplete="nickname" required>
-            <label for="multiplayer-code">Lobby code</label>
+          <form id="multiplayer-join-form" class="stack is-hidden">
+            <label for="multiplayer-code">Room code</label>
             <input id="multiplayer-code" maxlength="5" autocomplete="off" placeholder="ABCDE" required>
-            <button class="secondary-btn" type="submit">Join lobby</button>
+            <div class="entry-actions">
+              <button class="primary-btn" type="submit">Join Room</button>
+              <button id="multiplayer-cancel-join" class="text-btn" type="button">Cancel</button>
+            </div>
           </form>
         </section>
       </div>
 
       <section id="multiplayer-room" class="multiplayer-room is-hidden">
         <header class="surface room-toolbar">
-          <div><small>LOBBY CODE</small><strong id="multiplayer-room-code">-----</strong></div>
+          <div class="room-invite">
+            <small>SHARE THIS ROOM</small>
+            <strong id="multiplayer-room-code">-----</strong>
+            <button id="multiplayer-copy-code" class="text-btn" type="button">Copy room code</button>
+          </div>
           <div><small>ROUND</small><strong id="multiplayer-round">Waiting</strong></div>
           <div><small>PHASE</small><strong id="multiplayer-phase" aria-live="polite" aria-atomic="true">Lobby</strong></div>
           <button id="multiplayer-leave" class="secondary-btn" type="button">Leave</button>
@@ -45,19 +44,24 @@ export function multiplayerWorkspaceMarkup(): string {
         <div id="multiplayer-status" class="multiplayer-status" role="status" aria-live="polite"></div>
         <div class="multiplayer-layout">
           <aside class="surface player-panel">
-            <div class="player-panel-heading"><h3>Players</h3><span id="multiplayer-player-count">0</span></div>
+            <div class="player-panel-heading"><div><small>ROOM ROSTER</small><h3>Players</h3></div><span id="multiplayer-player-count">0</span></div>
             <div id="multiplayer-players" class="player-list" role="list"></div>
+            <button id="multiplayer-finish-everyone" class="text-btn is-hidden" type="button">Finish everyone</button>
+            <section class="lobby-roster-tools">
+              <div><h4>Simulated players</h4><p>Set each opponent's difficulty in their slot.</p></div>
+              <button id="multiplayer-add-bot" class="secondary-btn" type="button">Add simulated player</button>
+            </section>
+            <section id="multiplayer-summary" class="match-summary is-hidden" aria-labelledby="multiplayer-summary-heading">
+              <small>MATCH COMPLETE</small>
+              <h4 id="multiplayer-summary-heading">Final standings</h4>
+              <div id="multiplayer-summary-standings" class="score-list"></div>
+            </section>
           </aside>
           <main class="surface round-panel">
             <section id="multiplayer-lobby-phase" class="round-phase">
-              <span class="phase-icon" aria-hidden="true">⌛</span>
-              <h3>Waiting in the lobby</h3>
-              <p>Add simulated players, then begin when everyone is present.</p>
-              <div class="lobby-bot-controls">
-                <button id="multiplayer-add-bot" class="secondary-btn" type="button">Add simulated player</button>
-              </div>
               ${roomOptions('multiplayer-lobby', 'Lobby options')}
-              <div class="cluster">
+              <p class="lobby-settings-help">The host controls these settings.</p>
+              <div class="lobby-start">
                 <button id="multiplayer-start" class="primary-btn" type="button">Start round</button>
               </div>
             </section>
@@ -66,6 +70,13 @@ export function multiplayerWorkspaceMarkup(): string {
               <div id="multiplayer-hud" class="hud"></div>
               <div class="progress-track"><div id="multiplayer-progress-fill"></div></div>
               <div id="multiplayer-passage" class="text-display multiplayer-passage" tabindex="0" aria-label="Passage to type"></div>
+              <div id="multiplayer-countdown" class="multiplayer-countdown is-hidden" role="status" aria-live="assertive"></div>
+              <div id="multiplayer-encouragement" class="multiplayer-encouragement is-hidden" role="status" aria-live="polite"></div>
+              <form id="multiplayer-encouragement-form" class="encouragement-form">
+                <label class="sr-only" for="multiplayer-encouragement-input">Send encouragement</label>
+                <input id="multiplayer-encouragement-input" maxlength="24" autocomplete="off" placeholder="Encourage someone…">
+                <button class="secondary-btn" type="submit">Send encouragement</button>
+              </form>
               <section id="multiplayer-guessing-phase" class="guess-popover is-hidden" aria-labelledby="multiplayer-guess-heading">
                 <div class="guess-heading">
                   <div><small>NAME THE PASSAGE</small><h3 id="multiplayer-guess-heading">What did you just type?</h3></div>
@@ -93,7 +104,6 @@ export function multiplayerWorkspaceMarkup(): string {
               </div>
               <div class="typing-footer">
                 <button id="multiplayer-focus" class="text-btn" type="button" aria-pressed="false">Focus mode</button>
-                <button id="multiplayer-restart" class="text-btn" type="button">↻ Restart</button>
               </div>
               <p class="phase-help">Your progress stops at the first incorrect character. The guessing phase begins when everyone finishes.</p>
             </section>
@@ -102,7 +112,7 @@ export function multiplayerWorkspaceMarkup(): string {
               <small>PASSAGE REVEALED</small>
               <h3 id="multiplayer-answer" role="status" aria-live="polite" aria-atomic="true"></h3>
               <div id="multiplayer-scores" class="score-list"></div>
-              ${roomOptions('multiplayer-round', 'Next round')}
+              ${roomOptions('multiplayer-round', 'Next round', false)}
               <button id="multiplayer-ready" class="primary-btn" type="button">Ready for another round</button>
             </section>
           </main>
@@ -111,7 +121,7 @@ export function multiplayerWorkspaceMarkup(): string {
     </section>`;
 }
 
-function roomOptions(prefix: string, legend: string): string {
+function roomOptions(prefix: string, legend: string, includeRounds = true): string {
   return `<fieldset class="room-settings">
     <legend>${legend}</legend>
     <label for="${prefix}-length">Passage length
@@ -122,11 +132,22 @@ function roomOptions(prefix: string, legend: string): string {
       <span aria-hidden="true"></span>
       <strong>Passage guessing</strong>
     </label>
+    ${includeRounds ? `<label for="${prefix}-rounds">Rounds
+      <select id="${prefix}-rounds">${roundOptions()}</select>
+    </label>` : ''}
   </fieldset>`;
 }
 
 function passageLengthOptions(): string {
   return Object.entries(PASSAGE_LENGTH_OPTIONS)
     .map(([value, option]) => `<option value="${value}"${value === DEFAULT_ROOM_SETTINGS.passageLength ? ' selected' : ''}>${option.label} · up to ${option.maximumCharacters} characters</option>`)
+    .join('');
+}
+
+function roundOptions(): string {
+  return Object.entries(ROUND_OPTIONS)
+    .map(([value, label]) =>
+      `<option value="${value}"${Number(value) === DEFAULT_ROOM_SETTINGS.rounds ? ' selected' : ''}>${label}</option>`
+    )
     .join('');
 }

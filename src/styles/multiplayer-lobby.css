@@ -1,0 +1,91 @@
+.multiplayer-room[data-phase="lobby"] .multiplayer-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
+  gap: 1.5rem;
+}
+.multiplayer-room[data-phase="lobby"] .room-toolbar {
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  padding: 1.5rem;
+  gap: 2rem;
+}
+.multiplayer-room[data-phase="lobby"] .room-invite {
+  gap: .5rem 1.25rem;
+}
+.multiplayer-room[data-phase="lobby"] #multiplayer-room-code {
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  letter-spacing: .16em;
+}
+.multiplayer-room[data-phase="lobby"] #multiplayer-copy-code {
+  padding: .7rem 1rem;
+  border-radius: .65rem;
+  background: var(--page-accent-soft);
+  font-size: .85rem;
+}
+.multiplayer-room[data-phase="lobby"] .player-panel-heading h3 {
+  font: 700 1.75rem Playfair Display;
+}
+.multiplayer-room[data-phase="lobby"] .player-list { counter-reset: player-slot; }
+.multiplayer-room[data-phase="lobby"] .player-row {
+  position: relative;
+  counter-increment: player-slot;
+  min-height: 5.5rem;
+  padding: 1rem 1rem 1rem 4.5rem;
+  border: 1px solid var(--page-border);
+  align-content: center;
+}
+.multiplayer-room[data-phase="lobby"] .player-row::before {
+  content: counter(player-slot, decimal-leading-zero);
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--page-accent);
+  font: 500 1.1rem DM Mono;
+}
+.multiplayer-room[data-phase="lobby"] .player-row strong { font-size: 1.1rem; overflow-wrap: anywhere; }
+.multiplayer-room[data-phase="lobby"] .player-row small { font-size: .8rem; }
+.multiplayer-room[data-phase="lobby"] .bot-difficulty-select {
+  max-width: 22rem;
+  font-size: .8rem;
+  margin-top: .5rem;
+}
+.multiplayer-room[data-phase="lobby"] .player-slot-empty { border-style: dashed; color: var(--muted); }
+.multiplayer-room[data-phase="lobby"] .lobby-roster-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--page-border);
+}
+.lobby-roster-tools h4 { margin: 0; font-size: .9rem; }
+.lobby-roster-tools p, .lobby-settings-help { color: var(--muted); font-size: .8rem; line-height: 1.5; }
+.lobby-roster-tools p { margin: .35rem 0 0; }
+.multiplayer-room[data-phase="lobby"] .round-panel { min-height: 0; }
+#multiplayer-lobby-phase { align-self: start; min-width: 0; text-align: left; }
+#multiplayer-lobby-phase .room-settings { width: 100%; min-width: 0; padding: 0; border: 0; margin: 0; gap: 1rem; }
+#multiplayer-lobby-phase .room-settings legend { padding: 0 0 1.25rem; font-size: 1.15rem; }
+#multiplayer-lobby-phase .room-settings > label { padding-bottom: 1rem; border-bottom: 1px solid var(--page-border); }
+#multiplayer-lobby-phase .room-settings .guessing-toggle { display: flex; padding: .75rem; }
+.lobby-start { margin-top: 1.5rem; }
+.lobby-start button { width: 100%; }
+.multiplayer-room:not([data-phase="lobby"]) .match-summary { display: none; }
+.multiplayer-room[data-phase="lobby"] .match-summary,
+.multiplayer-room[data-phase="lobby"] .match-summary .score-list { width: 100%; }
+.multiplayer-room[data-phase="lobby"] .match-summary .score-list div { flex-wrap: wrap; gap: .5rem; }
+@media (max-width: 64rem) {
+  .multiplayer-room[data-phase="lobby"] .multiplayer-layout { grid-template-columns: minmax(0, 1fr) 18rem; gap: 1rem; }
+  .multiplayer-room[data-phase="lobby"] .lobby-roster-tools { align-items: stretch; flex-direction: column; }
+  .multiplayer-room[data-phase="lobby"] .room-toolbar { gap: 1rem; }
+}
+@media (max-width: 48rem) {
+  .multiplayer-room[data-phase="lobby"] .multiplayer-layout { grid-template-columns: minmax(0, 1fr); }
+  .multiplayer-room[data-phase="lobby"] .room-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .multiplayer-room[data-phase="lobby"] .room-invite { grid-column: 1 / -1; }
+  .multiplayer-room[data-phase="lobby"] #multiplayer-copy-code { grid-column: auto; }
+}
+@media (max-width: 32rem) {
+  .multiplayer-room[data-phase="lobby"] .room-invite { grid-template-columns: minmax(0, 1fr); }
+  .multiplayer-room[data-phase="lobby"] #multiplayer-copy-code { justify-self: start; }
+  .multiplayer-room[data-phase="lobby"] .player-row { padding-left: 3.5rem; }
+}

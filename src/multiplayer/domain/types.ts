@@ -7,6 +7,7 @@ export type RoomSettings = {
   botDifficulty: BotDifficulty;
   passageLength: PassageLength;
   includeGuessing: boolean;
+  rounds: number;
 };
 
 export type PassageReference = {
@@ -43,8 +44,20 @@ export type PlayerState = {
   guessSubmitted: boolean;
   ready: boolean;
   score: number | null;
+  totalWpm: number;
+  highestWpm: number;
+  completedRounds: number;
+  totalGuessScore: number;
+  highestGuessScore: number;
+  completedGuessRounds: number;
   wpm: number;
   accuracy: number;
+};
+
+export type Encouragement = {
+  id: number;
+  playerName: string;
+  word: string;
 };
 
 export type RoomSnapshot = {
@@ -53,9 +66,12 @@ export type RoomSnapshot = {
   hostId: string;
   selfId: string;
   round: number;
+  matchComplete: boolean;
   passageText: string | null;
   revealedReference: PassageReference | null;
   guessingEndsAt: number | null;
+  countdownEndsAt: number | null;
+  encouragement: Encouragement | null;
   settings: RoomSettings;
   players: readonly PlayerState[];
 };
@@ -63,7 +79,9 @@ export type RoomSnapshot = {
 export type PlayerCommand =
   | { type: 'START_ROUND' }
   | { type: 'UPDATE_TYPING'; typedText: string; sequence: number }
-  | { type: 'RESTART_TYPING' }
+  | { type: 'FORCE_FINISH_TYPING'; playerId: string }
+  | { type: 'FORCE_FINISH_ALL_TYPING' }
+  | { type: 'SEND_ENCOURAGEMENT'; word: string }
   | { type: 'UPDATE_GUESS'; guess: PassageGuess }
   | { type: 'SUBMIT_GUESS' }
   | { type: 'SET_READY'; ready: boolean }

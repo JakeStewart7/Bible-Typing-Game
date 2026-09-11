@@ -1,6 +1,19 @@
 import type { BotDifficulty, PassageLength, RoomSettings } from './types';
 
 export const GUESS_DURATION_MS = 30_000;
+export const ROUND_COUNTDOWN_MS = 3_000;
+export const ROUND_OPTIONS: Record<number, string> = {
+  1: '1 round',
+  2: '2 rounds',
+  3: '3 rounds',
+  4: '4 rounds',
+  5: '5 rounds',
+  6: '6 rounds',
+  7: '7 rounds',
+  8: '8 rounds',
+  9: '9 rounds',
+  10: '10 rounds'
+};
 
 export const BOT_DIFFICULTY_OPTIONS: Record<BotDifficulty, {
   label: string;
@@ -45,8 +58,9 @@ export const PASSAGE_LENGTH_OPTIONS: Record<PassageLength, {
 
 export const DEFAULT_ROOM_SETTINGS: RoomSettings = {
   botDifficulty: 'medium',
-  passageLength: 'medium',
-  includeGuessing: true
+  passageLength: 'very-short',
+  includeGuessing: true,
+  rounds: 3
 };
 
 export function normalizeRoomSettings(settings: RoomSettings): RoomSettings {
@@ -57,7 +71,10 @@ export function normalizeRoomSettings(settings: RoomSettings): RoomSettings {
     passageLength: settings.passageLength in PASSAGE_LENGTH_OPTIONS
       ? settings.passageLength
       : DEFAULT_ROOM_SETTINGS.passageLength,
-    includeGuessing: settings.includeGuessing !== false
+    includeGuessing: settings.includeGuessing !== false,
+    rounds: typeof settings.rounds === 'number' && settings.rounds in ROUND_OPTIONS
+      ? settings.rounds
+      : DEFAULT_ROOM_SETTINGS.rounds
   };
 }
 

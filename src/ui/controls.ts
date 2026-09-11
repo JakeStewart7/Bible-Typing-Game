@@ -6,6 +6,7 @@ import type { AppConfig } from '../config';
 import { formatVerseSelectionLabel } from '../memory/domain/passage.ts';
 import { practiceWorkspaceMarkup } from './practice-workspace.ts';
 import { multiplayerWorkspaceMarkup } from '../multiplayer/ui/workspace.ts';
+import { menuNavigationMarkup } from './menu-navigation.ts';
 
 export function initControls(config: AppConfig) {
   const developerControls = config.isDevelopment ? `
@@ -25,9 +26,9 @@ export function initControls(config: AppConfig) {
   app.innerHTML = `
     <main class="app-shell">
       <nav class="topbar">
-        <a class="brand" href="#" aria-label="Verse Type home">
+        <a class="brand" href="#" aria-label="Biblical Typology home">
           <span class="brand-mark">✦</span>
-          <span>Verse<span>Type</span></span>
+          <span>Biblical Typology</span>
         </a>
         <div></div>
         <div class="top-actions">
@@ -70,7 +71,31 @@ export function initControls(config: AppConfig) {
           <button class="mode-nav" data-workspace="multiplayer" aria-label="Together" title="Together"><span>◎</span><div><strong>Together</strong><small>Type and recall as a group</small></div></button>
         </aside>
         <div class="page-viewport">
+      <section id="home-screen" class="app-page home-screen">
+        <div class="home-menu">
+          <h1>Biblical Typology</h1>
+          <div class="home-mode-grid" role="navigation" aria-label="Game modes">
+            <button class="home-mode home-mode--journey" type="button" data-home-workspace="campaign">
+              <span class="home-mode-icon" aria-hidden="true">✦</span>
+              <span class="home-mode-copy"><strong>Journey</strong></span>
+            </button>
+            <button class="home-mode home-mode--practice" type="button" data-home-workspace="practice">
+              <span class="home-mode-icon" aria-hidden="true">⌨</span>
+              <span class="home-mode-copy"><strong>Practice</strong></span>
+            </button>
+            <button class="home-mode home-mode--arcade" type="button" data-home-workspace="defense" data-home-mode="defense">
+              <span class="home-mode-icon" aria-hidden="true">◇</span>
+              <span class="home-mode-copy"><strong>Arcade</strong></span>
+            </button>
+            <button class="home-mode home-mode--together" type="button" data-home-workspace="multiplayer">
+              <span class="home-mode-icon" aria-hidden="true">◎</span>
+              <span class="home-mode-copy"><strong>Together</strong></span>
+            </button>
+          </div>
+        </div>
+      </section>
       <section id="game-screen" class="app-page game-screen is-hidden">
+        ${menuNavigationMarkup()}
         <header class="page-header game-intro">
           <div>
             <div class="eyebrow">Practice session</div>
@@ -81,6 +106,7 @@ export function initControls(config: AppConfig) {
         ${practiceWorkspaceMarkup(developerControls)}
       </section>
       <section id="campaign-screen" class="app-page campaign-screen is-hidden">
+        ${menuNavigationMarkup()}
         <header class="page-header campaign-header">
           <div><div class="eyebrow">The Scripture Journey</div><h2>Journey</h2><p>Complete every passage, chapter, and book—one comfortable session at a time.</p></div>
           <div class="campaign-summary"><strong id="campaign-total-stars">0 light</strong><span id="campaign-total-progress">0 of 0 passages</span></div>

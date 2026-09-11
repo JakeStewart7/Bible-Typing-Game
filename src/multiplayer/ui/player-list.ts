@@ -9,6 +9,7 @@ type PlayerRow = {
   metrics: HTMLElement;
   status: HTMLElement;
   difficulty: HTMLSelectElement;
+  finish: HTMLButtonElement;
 };
 
 export class PlayerListView {
@@ -17,6 +18,7 @@ export class PlayerListView {
   constructor(private readonly container: HTMLElement) {}
 
   render(snapshot: RoomSnapshot): void {
+    this.container.querySelectorAll('.player-slot-empty').forEach(element => element.remove());
     const activeIds = new Set(snapshot.players.map(player => player.id));
     for (const [playerId, row] of this.rows) {
       if (activeIds.has(playerId)) continue;
@@ -29,6 +31,16 @@ export class PlayerListView {
       const elementAtIndex = this.container.children.item(index);
       if (elementAtIndex !== row.root) this.container.insertBefore(row.root, elementAtIndex);
     });
+    const slotCount = snapshot.phase === 'lobby'
+      ? Math.max(4, snapshot.players.length + 1)
+      : snapshot.players.length;
+    for (let index = snapshot.players.length; index < slotCount; index += 1) {
+      const slot = document.createElement('div');
+      slot.className = 'player-row player-slot-empty';
+      slot.setAttribute('role', 'listitem');
+      slot.innerHTML = '<i aria-hidden="true">+</i><span>Open slot</span>';
+      this.container.appendChild(slot);
+    }
   }
 
   clear(): void {
@@ -49,8 +61,13 @@ export class PlayerListView {
     metrics.className = 'player-metrics';
     const status = document.createElement('small');
     const difficulty = this.createDifficultySelect(playerId);
-    root.append(identity, metrics, status, difficulty);
-    const row = { root, dot, name, metrics, status, difficulty };
+    const finish = document.createElement('button');
+    finish.className = 'text-btn player-finish is-hidden';
+    finish.type = 'button';
+    finish.dataset.playerId = playerId;
+    finish.textContent = 'Finish typing';
+    root.append(identity, metrics, status, difficulty, finish);
+    const row = { root, dot, name, metrics, status, difficulty, finish };
     this.rows.set(playerId, row);
     return row;
   }
@@ -61,7 +78,7 @@ export class PlayerListView {
     row.metrics.textContent = `${player.wpm} WPM • ${
       typedProgressPercent(player, snapshot.passageText)
     }% typed`;
-    row.metrics.classList.toggle('is-hidden', snapshot.round === 0);
+    row.metrics.classList.toggle('is-hidden', snapshot.round === 0 || snapshot.phase === 'lobby');
     row.status.textContent = playerStatus(player, snapshot);
     row.difficulty.setAttribute('aria-label', `${player.name} difficulty`);
     const canEditDifficulty = player.kind === 'simulated'
@@ -69,6 +86,13 @@ export class PlayerListView {
       && (snapshot.phase === 'lobby' || snapshot.phase === 'reveal');
     row.difficulty.classList.toggle('is-hidden', !canEditDifficulty);
     row.difficulty.disabled = !canEditDifficulty;
+    const canFinish = snapshot.phase === 'typing'
+      && snapshot.countdownEndsAt === null
+      && !player.typingComplete
+      && (player.id === snapshot.selfId
+        || (snapshot.selfId === snapshot.hostId && player.kind === 'simulated'));
+    row.finish.classList.toggle('is-hidden', !canFinish);
+    row.finish.disabled = !canFinish;
     if (document.activeElement !== row.difficulty) {
       row.difficulty.value = player.botDifficulty ?? snapshot.settings.botDifficulty;
     }

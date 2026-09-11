@@ -1,0 +1,82 @@
+.home-screen {
+  position: relative;
+  min-height: 100%;
+  overflow: auto;
+  background:
+    radial-gradient(circle at 50% 5%, rgba(255, 255, 255, .8), transparent 25rem),
+    linear-gradient(145deg, #f4f8f4 0%, #e7f0ec 48%, #dcebe5 100%);
+}
+.home-screen::before, .home-screen::after {
+  position: absolute;
+  content: '';
+  width: 20rem;
+  height: 20rem;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(2px);
+}
+.home-screen::before { top: -10rem; left: -7rem; background: rgba(34, 184, 141, .13); }
+.home-screen::after { right: -8rem; bottom: -11rem; background: rgba(99, 83, 197, .13); }
+.home-menu {
+  position: relative;
+  z-index: 1;
+  width: min(100% - 3rem, 39rem);
+  margin: 0 auto;
+  padding: clamp(3.5rem, 12vh, 8rem) 0 2.5rem;
+  text-align: center;
+}
+.home-menu h1 {
+  margin: 0 0 clamp(2rem, 5vh, 3.5rem);
+  color: #173f38;
+  font: 700 clamp(3rem, 7vw, 5.5rem) Playfair Display;
+  letter-spacing: -.055em;
+}
+.home-mode-grid { display: grid; gap: .7rem; text-align: left; }
+.home-mode {
+  --home-accent: #278f77;
+  --home-soft: #e9f7f1;
+  position: relative;
+  display: grid;
+  grid-template-columns: 4rem 1fr;
+  align-items: center;
+  gap: .9rem;
+  min-height: 6.75rem;
+  padding: 1rem 1.25rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--home-accent) 23%, white);
+  border-radius: .7rem;
+  color: #173f38;
+  background: rgba(255, 255, 255, .78);
+  box-shadow: 0 1rem 2.5rem rgba(23, 63, 56, .08), 0 1px 0 rgba(255, 255, 255, .9) inset;
+  text-align: left;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.home-mode::before { position: absolute; inset: 0 auto 0 0; width: .3rem; content: ''; background: var(--home-accent); }
+.home-mode:hover, .home-mode:focus-visible {
+  transform: translateY(-.25rem);
+  background: white;
+  box-shadow: 0 1.25rem 2.75rem rgba(23, 63, 56, .15), 0 0 0 3px color-mix(in srgb, var(--home-accent) 16%, transparent);
+}
+.home-mode:focus-visible { outline: none; }
+.home-mode--journey { --home-accent: #d08a2d; --home-soft: #fff4dd; }
+.home-mode--practice { --home-accent: #278f77; --home-soft: #e6f6ef; }
+.home-mode--arcade { --home-accent: #c5545f; --home-soft: #fdebed; }
+.home-mode--together { --home-accent: #7257e8; --home-soft: #eeeaff; }
+.home-mode-icon {
+  display: grid;
+  place-items: center;
+  width: 3.7rem;
+  height: 3.7rem;
+  border-radius: .9rem;
+  color: var(--home-accent);
+  background: var(--home-soft);
+  font-size: 1.9rem;
+  font-weight: 800;
+}
+.home-mode-copy { display: grid; align-items: center; }
+.home-mode-copy strong { color: #204d43; font: 700 clamp(1.35rem, 2.5vw, 1.7rem) Playfair Display; }
+.app-shell.home-active .mode-sidebar { visibility: hidden; width: 0; min-width: 0; padding: 0; border: 0; overflow: hidden; }
+@media (max-width: 680px) {
+  .home-menu { width: min(100% - 1.5rem, 34rem); padding-top: 2.75rem; }
+  .home-mode { min-height: 6rem; }
+}

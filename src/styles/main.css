@@ -1,8 +1,10 @@
 @import './tokens.css';
 @import './shell.css';
+@import './home.css';
 @import './components.css';
 @import './journey.css';
 @import './typing.css';
 @import './arcade.css';
 @import './multiplayer.css';
+@import './multiplayer-lobby.css';
 @import './responsive.css';

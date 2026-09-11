@@ -11,23 +11,31 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
   let unsubscribe: (() => void) | null = null;
   let snapshot: RoomSnapshot | null = null;
   let botTimer: number | null = null;
+  let inviteResetTimer: number | null = null;
   let cursorSequence = 0;
 
-  bindForm('multiplayer-create-form', () => run(async () => {
+  bindForm('multiplayer-host-form', () => run(async () => {
     await connect(await client.createRoom(inputValue('multiplayer-name'), view.creationSettings()));
   }));
   bindForm('multiplayer-join-form', () => run(async () => {
-    await connect(await client.joinRoom(inputValue('multiplayer-code'), inputValue('multiplayer-join-name')));
+    await connect(await client.joinRoom(inputValue('multiplayer-code'), inputValue('multiplayer-name')));
   }));
+  requiredButton('multiplayer-show-join').addEventListener('click', () => toggleJoinForm(true));
+  requiredButton('multiplayer-cancel-join').addEventListener('click', () => toggleJoinForm(false));
   requiredButton('multiplayer-leave').addEventListener('click', leave);
+  requiredButton('multiplayer-copy-code').addEventListener('click', () => run(copyInviteCode));
   requiredButton('multiplayer-add-bot').addEventListener('click', () => run(async () => {
     await send({ type: 'ADD_BOT' });
   }));
   requiredButton('multiplayer-start').addEventListener('click', () => send({ type: 'START_ROUND' }));
+  requiredButton('multiplayer-finish-everyone').addEventListener('click', () => {
+    void send({ type: 'FORCE_FINISH_ALL_TYPING' });
+  });
   requiredButton('multiplayer-ready').addEventListener('click', () => send({ type: 'SET_READY', ready: true }));
   const settingsControls = [
     ['multiplayer-lobby-length', () => view.lobbySettings()],
     ['multiplayer-lobby-guessing', () => view.lobbySettings()],
+    ['multiplayer-lobby-rounds', () => view.lobbySettings()],
     ['multiplayer-round-length', () => view.nextRoundSettings()],
     ['multiplayer-round-guessing', () => view.nextRoundSettings()]
   ] as const;
@@ -40,7 +48,8 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
         settings: {
           ...snapshot.settings,
           passageLength: nextSettings.passageLength,
-          includeGuessing: nextSettings.includeGuessing
+          includeGuessing: nextSettings.includeGuessing,
+          rounds: id.endsWith('-rounds') ? nextSettings.rounds : snapshot.settings.rounds
         }
       });
     });
@@ -55,10 +64,18 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
       difficulty: normalizeBotDifficulty(difficulty)
     });
   });
-  requiredButton('multiplayer-restart').addEventListener('click', () => {
-    if (!snapshot || snapshot.phase !== 'typing') return;
-    view.restartTyping(snapshot);
-    void send({ type: 'RESTART_TYPING' });
+  required('multiplayer-players').addEventListener('click', event => {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement) || !target.dataset.playerId) return;
+    void send({ type: 'FORCE_FINISH_TYPING', playerId: target.dataset.playerId });
+  });
+  required('multiplayer-encouragement-form').addEventListener('submit', event => {
+    event.preventDefault();
+    const input = requiredInput('multiplayer-encouragement-input', HTMLInputElement);
+    const word = input.value.trim();
+    if (!word) return;
+    input.value = '';
+    void send({ type: 'SEND_ENCOURAGEMENT', word });
   });
   requiredButton('multiplayer-focus').addEventListener('click', event => {
     const control = event.currentTarget;
@@ -72,7 +89,7 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
     if (!input.disabled) input.focus();
   });
   required('multiplayer-input').addEventListener('input', () => {
-    if (!snapshot || snapshot.phase !== 'typing' || !connection) return;
+    if (!snapshot || snapshot.phase !== 'typing' || !connection || snapshot.countdownEndsAt !== null) return;
     const inputUpdate = view.updateTyping(snapshot);
     if (inputUpdate.advanced) playKey(inputUpdate.lastCharacterCorrect ?? false);
     void run(async () => {
@@ -102,6 +119,8 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
     unsubscribe = connection.subscribe(nextSnapshot => {
       const roundChanged = snapshot?.round !== nextSnapshot.round;
       const previousPhase = snapshot?.phase;
+      const countdownCompleted = snapshot?.countdownEndsAt !== null
+        && nextSnapshot.countdownEndsAt === null;
       snapshot = nextSnapshot;
       if (roundChanged) {
         cursorSequence = 0;
@@ -112,6 +131,8 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
       view.render(nextSnapshot);
       if (previousPhase && previousPhase !== nextSnapshot.phase) {
         view.focusPhase(nextSnapshot.phase);
+      } else if (countdownCompleted && nextSnapshot.phase === 'typing') {
+        view.focusTyping();
       } else if (roundChanged && nextSnapshot.phase === 'typing') {
         view.focusTyping();
       }
@@ -126,11 +147,26 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
     unsubscribe?.();
     connection?.disconnect();
     if (botTimer !== null) window.clearInterval(botTimer);
+    if (inviteResetTimer !== null) window.clearTimeout(inviteResetTimer);
     unsubscribe = null;
     connection = null;
     snapshot = null;
     botTimer = null;
+    inviteResetTimer = null;
     view.showEntry();
+  }
+
+  async function copyInviteCode(): Promise<void> {
+    if (!snapshot) return;
+    if (!navigator.clipboard) throw new Error('Clipboard access is unavailable in this browser.');
+    await navigator.clipboard.writeText(snapshot.code);
+    const button = requiredButton('multiplayer-copy-code');
+    button.textContent = 'Room code copied';
+    if (inviteResetTimer !== null) window.clearTimeout(inviteResetTimer);
+    inviteResetTimer = window.setTimeout(() => {
+      button.textContent = 'Copy room code';
+      inviteResetTimer = null;
+    }, 1_800);
   }
 
   async function send(command: Parameters<RoomConnection['send']>[0]): Promise<void> {
@@ -163,4 +199,11 @@ function bindForm(id: string, submit: () => Promise<void>): void {
 
 function inputValue(id: string): string {
   return requiredInput(id, HTMLInputElement).value;
+}
+
+function toggleJoinForm(isVisible: boolean): void {
+  required('multiplayer-join-form').classList.toggle('is-hidden', !isVisible);
+  const trigger = requiredButton('multiplayer-show-join');
+  trigger.setAttribute('aria-expanded', String(isVisible));
+  if (isVisible) requiredInput('multiplayer-code', HTMLInputElement).focus();
 }

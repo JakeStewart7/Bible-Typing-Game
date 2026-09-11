@@ -15,6 +15,14 @@ import type {
 const rooms = new Map<string, RoomEngine>();
 let nextPlayerNumber = 1;
 export const MOCK_REFRESH_INTERVAL_MS = 100;
+const DEFAULT_SIMULATED_PLAYERS: ReadonlyArray<{
+  name: string;
+  difficulty: BotDifficulty;
+}> = [
+  { name: 'Hard bot', difficulty: 'hard' },
+  { name: 'Very hard bot', difficulty: 'very-hard' },
+  { name: 'Extreme bot', difficulty: 'extreme' }
+];
 
 type BotSchedule = {
   round: number;
@@ -48,7 +56,11 @@ export class MockMultiplayerClient implements MultiplayerClient {
     const code = createRoomCode();
     const room = new RoomEngine(code, this.provider, settings, this.clock);
     rooms.set(code, room);
-    return this.connect(room, playerName);
+    const connection = this.connect(room, playerName);
+    for (const player of DEFAULT_SIMULATED_PLAYERS) {
+      room.addPlayer(createPlayerId(), player.name, 'simulated', player.difficulty);
+    }
+    return connection;
   }
 
   async joinRoom(code: string, playerName: string): Promise<RoomConnection> {
@@ -64,7 +76,11 @@ export class MockMultiplayerClient implements MultiplayerClient {
     room.tick(now);
     const snapshot = room.getSnapshot('');
     for (const player of snapshot.players.filter(candidate => candidate.kind === 'simulated')) {
-      if (snapshot.phase === 'typing' && snapshot.passageText) {
+      if (
+        snapshot.phase === 'typing'
+        && snapshot.countdownEndsAt === null
+        && snapshot.passageText
+      ) {
         const schedule = this.getBotSchedule(
           player.id,
           snapshot.round,

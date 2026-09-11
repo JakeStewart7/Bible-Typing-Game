@@ -16,7 +16,6 @@ import { renderPeerCarets } from './peer-carets';
 import { formatPassageLabel } from '../../memory/domain/passage';
 import { PlayerListView } from './player-list';
 import {
-  playerStatus,
   readPassageLength,
   renderGuessTimer,
   required,
@@ -46,6 +45,7 @@ export class MultiplayerView {
   private readonly progressFill = required('multiplayer-progress-fill');
   private readonly input = requiredInput('multiplayer-input', HTMLInputElement);
   private game: Game = createGame('');
+  private lastEncouragementId = 0;
   private readonly guessInputs = {
     book: requiredInput('multiplayer-guess-book', HTMLInputElement),
     chapter: requiredInput('multiplayer-guess-chapter', HTMLInputElement),
@@ -72,7 +72,10 @@ export class MultiplayerView {
   render(snapshot: RoomSnapshot): void {
     const self = snapshot.players.find(player => player.id === snapshot.selfId);
     setText('multiplayer-room-code', snapshot.code);
-    setText('multiplayer-round', snapshot.round ? String(snapshot.round) : 'Waiting');
+    setText(
+      'multiplayer-round',
+      snapshot.round ? `${snapshot.round}/${snapshot.settings.rounds}` : 'Waiting'
+    );
     setText('multiplayer-phase', PHASE_LABELS[snapshot.phase]);
     setText('multiplayer-player-count', String(snapshot.players.length));
     this.playerList.render(snapshot);
@@ -111,12 +114,6 @@ export class MultiplayerView {
   startTyping(passage: string): void {
     this.game = createGame(passage);
     this.clearTypingValue();
-  }
-
-  restartTyping(snapshot: RoomSnapshot): void {
-    this.startTyping(snapshot.passageText ?? '');
-    this.renderTyping(snapshot);
-    this.focusTyping();
   }
 
   updateTyping(snapshot: RoomSnapshot): TypingInputUpdate {
@@ -163,9 +160,14 @@ export class MultiplayerView {
     const start = requiredButton('multiplayer-start');
     const isHost = snapshot.selfId === snapshot.hostId;
     start.disabled = !isHost || snapshot.players.length < 2;
-    start.textContent = isHost ? 'Start round' : 'Waiting for host';
+    start.textContent = isHost
+      ? snapshot.matchComplete ? 'Start new match' : 'Start round'
+      : 'Waiting for host';
     requiredButton('multiplayer-add-bot').disabled = !isHost;
     this.renderSettings('multiplayer-lobby', snapshot, isHost);
+    const summary = required('multiplayer-summary');
+    summary.classList.toggle('is-hidden', !snapshot.matchComplete);
+    if (snapshot.matchComplete) this.renderSummary(snapshot);
   }
 
   private renderTyping(snapshot: RoomSnapshot): void {
@@ -180,8 +182,32 @@ export class MultiplayerView {
     });
     setText('multiplayer-typing-progress', `${stats.progress}%`);
     renderPeerCarets(this.passage, snapshot.players, snapshot.selfId);
+    const countdownRemaining = snapshot.countdownEndsAt === null
+      ? 0
+      : Math.max(0, snapshot.countdownEndsAt - Date.now());
+    const countdown = required('multiplayer-countdown');
+    countdown.classList.toggle('is-hidden', countdownRemaining === 0);
+    countdown.textContent = countdownRemaining
+      ? `Starting in ${Math.ceil(countdownRemaining / 1000)}`
+      : '';
+    const canEncourage = snapshot.countdownEndsAt === null
+      && snapshot.players.some(player => !player.typingComplete);
+    required('multiplayer-encouragement-form').classList.toggle('is-hidden', !canEncourage);
+    if (snapshot.encouragement && snapshot.encouragement.id > this.lastEncouragementId) {
+      this.lastEncouragementId = snapshot.encouragement.id;
+      const encouragement = required('multiplayer-encouragement');
+      encouragement.textContent = `${snapshot.encouragement.playerName}: ${snapshot.encouragement.word}`;
+      encouragement.classList.remove('is-hidden');
+      window.setTimeout(() => encouragement.classList.add('is-hidden'), 1_800);
+    }
     this.input.disabled = snapshot.phase !== 'typing' || (self?.typingComplete ?? false);
-    requiredButton('multiplayer-restart').disabled = this.input.disabled;
+    this.input.readOnly = countdownRemaining > 0;
+    const finishEveryone = requiredButton('multiplayer-finish-everyone');
+    const canFinishEveryone = snapshot.selfId === snapshot.hostId
+      && snapshot.countdownEndsAt === null
+      && snapshot.players.some(player => !player.typingComplete);
+    finishEveryone.classList.toggle('is-hidden', !canFinishEveryone);
+    finishEveryone.disabled = !canFinishEveryone;
   }
 
   private renderGuessing(snapshot: RoomSnapshot, self: PlayerState | undefined): void {
@@ -217,24 +243,51 @@ export class MultiplayerView {
     required('multiplayer-scores').classList.toggle('is-hidden', !snapshot.settings.includeGuessing);
   }
 
+  private renderSummary(snapshot: RoomSnapshot): void {
+    const summary = required('multiplayer-summary-standings');
+    summary.replaceChildren(...[...snapshot.players]
+      .sort((left, right) => averageWpm(right) - averageWpm(left))
+      .map((player, index) => {
+        const row = document.createElement('div');
+        const name = document.createElement('strong');
+        name.textContent = `${index + 1}. ${player.name}`;
+        const score = document.createElement('span');
+        score.textContent = `Avg ${averageWpm(player)} WPM · Best ${player.highestWpm} WPM${
+          snapshot.settings.includeGuessing
+            ? ` · Guess avg ${averageGuessScore(player)}% · Best ${player.highestGuessScore}%`
+            : ''
+        }`;
+        row.append(name, score);
+        return row;
+      }));
+  }
+
   private readSettings(prefix: string): RoomSettings {
+    const rounds = document.getElementById(`${prefix}-rounds`);
     return {
       botDifficulty: 'medium',
       passageLength: readPassageLength(`${prefix}-length`),
-      includeGuessing: requiredInput(`${prefix}-guessing`, HTMLInputElement).checked
+      includeGuessing: requiredInput(`${prefix}-guessing`, HTMLInputElement).checked,
+      rounds: Number(rounds instanceof HTMLSelectElement
+        ? rounds.value
+        : DEFAULT_ROOM_SETTINGS.rounds)
     };
   }
 
   private renderSettings(prefix: string, snapshot: RoomSnapshot, enabled: boolean): void {
     const passageLength = requiredSelect(`${prefix}-length`);
     const guessing = requiredInput(`${prefix}-guessing`, HTMLInputElement);
+    const rounds = document.getElementById(`${prefix}-rounds`);
     passageLength.value = snapshot.settings.passageLength;
     guessing.checked = snapshot.settings.includeGuessing;
+    if (rounds instanceof HTMLSelectElement) rounds.value = String(snapshot.settings.rounds);
     passageLength.disabled = !enabled;
     guessing.disabled = !enabled;
+    if (rounds instanceof HTMLSelectElement) rounds.disabled = !enabled;
   }
 
   private showPhase(active: RoomPhase): void {
+    this.room.dataset.phase = active;
     required('multiplayer-lobby-phase').classList.toggle('is-hidden', active !== 'lobby');
     required('multiplayer-typing-phase').classList.toggle(
       'is-hidden',
@@ -243,4 +296,12 @@ export class MultiplayerView {
     required('multiplayer-guessing-phase').classList.toggle('is-hidden', active !== 'guessing');
     required('multiplayer-reveal-phase').classList.toggle('is-hidden', active !== 'reveal');
   }
+}
+
+function averageWpm(player: PlayerState): number {
+  return Math.round(player.totalWpm / Math.max(1, player.completedRounds));
+}
+
+function averageGuessScore(player: PlayerState): number {
+  return Math.round(player.totalGuessScore / Math.max(1, player.completedGuessRounds));
 }
