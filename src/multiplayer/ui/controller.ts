@@ -11,6 +11,7 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
   let unsubscribe: (() => void) | null = null;
   let snapshot: RoomSnapshot | null = null;
   let botTimer: number | null = null;
+  let inviteResetTimer: number | null = null;
   let cursorSequence = 0;
 
   bindForm('multiplayer-host-form', () => run(async () => {
@@ -22,6 +23,7 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
   requiredButton('multiplayer-show-join').addEventListener('click', () => toggleJoinForm(true));
   requiredButton('multiplayer-cancel-join').addEventListener('click', () => toggleJoinForm(false));
   requiredButton('multiplayer-leave').addEventListener('click', leave);
+  requiredButton('multiplayer-copy-code').addEventListener('click', () => run(copyInviteCode));
   requiredButton('multiplayer-add-bot').addEventListener('click', () => run(async () => {
     await send({ type: 'ADD_BOT' });
   }));
@@ -145,11 +147,26 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
     unsubscribe?.();
     connection?.disconnect();
     if (botTimer !== null) window.clearInterval(botTimer);
+    if (inviteResetTimer !== null) window.clearTimeout(inviteResetTimer);
     unsubscribe = null;
     connection = null;
     snapshot = null;
     botTimer = null;
+    inviteResetTimer = null;
     view.showEntry();
+  }
+
+  async function copyInviteCode(): Promise<void> {
+    if (!snapshot) return;
+    if (!navigator.clipboard) throw new Error('Clipboard access is unavailable in this browser.');
+    await navigator.clipboard.writeText(snapshot.code);
+    const button = requiredButton('multiplayer-copy-code');
+    button.textContent = 'Invite code copied';
+    if (inviteResetTimer !== null) window.clearTimeout(inviteResetTimer);
+    inviteResetTimer = window.setTimeout(() => {
+      button.textContent = 'Copy invite code';
+      inviteResetTimer = null;
+    }, 1_800);
   }
 
   async function send(command: Parameters<RoomConnection['send']>[0]): Promise<void> {

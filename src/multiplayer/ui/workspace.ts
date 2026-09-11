@@ -4,37 +4,24 @@ export function multiplayerWorkspaceMarkup(): string {
   return `
     <section id="multiplayer-screen" class="app-page multiplayer-screen is-hidden">
       <header class="page-header multiplayer-header">
-        <div>
-          <div class="eyebrow">Multiplayer practice</div>
-          <h2>Type together</h2>
-          <p>Share a passage, follow everyone's progress, and test your recall as a group.</p>
-        </div>
-        <span class="text-badge text-badge--accent">Local preview</span>
+        <h2>Type together</h2>
       </header>
 
       <div id="multiplayer-entry" class="multiplayer-entry">
         <section class="surface multiplayer-entry-card multiplayer-entry-card--unified">
-          <h3>Play together</h3>
-          <p>Choose a name, host a new lobby, or join friends with their room code.</p>
           <form id="multiplayer-host-form" class="stack">
-            <label for="multiplayer-name">Display name</label>
+            <label for="multiplayer-name">Your display name</label>
             <input id="multiplayer-name" maxlength="24" value="Player" autocomplete="nickname" required>
             <div class="entry-actions">
-              <button class="primary-btn entry-action" type="submit">
-                <span class="entry-action-icon" aria-hidden="true">+</span>
-                <span><strong>Host lobby</strong><small>Create a new room</small></span>
-              </button>
-              <button id="multiplayer-show-join" class="secondary-btn entry-action" type="button" aria-expanded="false" aria-controls="multiplayer-join-form">
-                <span class="entry-action-icon" aria-hidden="true">→</span>
-                <span><strong>Join lobby</strong><small>Enter a room code</small></span>
-              </button>
+              <button class="primary-btn" type="submit">Create Room</button>
+              <button id="multiplayer-show-join" class="secondary-btn" type="button" aria-expanded="false" aria-controls="multiplayer-join-form">Join Game</button>
             </div>
           </form>
           <form id="multiplayer-join-form" class="stack is-hidden">
             <label for="multiplayer-code">Lobby code</label>
             <input id="multiplayer-code" maxlength="5" autocomplete="off" placeholder="ABCDE" required>
             <div class="entry-actions">
-              <button class="primary-btn" type="submit">Join with code</button>
+              <button class="primary-btn" type="submit">Join Game</button>
               <button id="multiplayer-cancel-join" class="text-btn" type="button">Cancel</button>
             </div>
           </form>
@@ -43,7 +30,11 @@ export function multiplayerWorkspaceMarkup(): string {
 
       <section id="multiplayer-room" class="multiplayer-room is-hidden">
         <header class="surface room-toolbar">
-          <div><small>LOBBY CODE</small><strong id="multiplayer-room-code">-----</strong></div>
+          <div class="room-invite">
+            <small>INVITE PLAYERS</small>
+            <strong id="multiplayer-room-code">-----</strong>
+            <button id="multiplayer-copy-code" class="text-btn" type="button">Copy invite code</button>
+          </div>
           <div><small>ROUND</small><strong id="multiplayer-round">Waiting</strong></div>
           <div><small>PHASE</small><strong id="multiplayer-phase" aria-live="polite" aria-atomic="true">Lobby</strong></div>
           <button id="multiplayer-leave" class="secondary-btn" type="button">Leave</button>
