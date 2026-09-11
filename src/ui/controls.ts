@@ -25,9 +25,9 @@ export function initControls(config: AppConfig) {
   app.innerHTML = `
     <main class="app-shell">
       <nav class="topbar">
-        <a class="brand" href="#" aria-label="Bible Typology home">
+        <a class="brand" href="#" aria-label="Biblical Typology home">
           <span class="brand-mark">✦</span>
-          <span>Bible Typology</span>
+          <span>Biblical Typology</span>
         </a>
         <div></div>
         <div class="top-actions">
@@ -72,7 +72,7 @@ export function initControls(config: AppConfig) {
         <div class="page-viewport">
       <section id="home-screen" class="app-page home-screen">
         <div class="home-menu">
-          <h1>Bible Typology</h1>
+          <h1>Biblical Typology</h1>
           <div class="home-mode-grid" role="navigation" aria-label="Game modes">
             <button class="home-mode home-mode--journey" type="button" data-home-workspace="campaign">
               <span class="home-mode-icon" aria-hidden="true">✦</span>
