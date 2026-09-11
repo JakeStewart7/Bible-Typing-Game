@@ -58,11 +58,6 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
       difficulty: normalizeBotDifficulty(difficulty)
     });
   });
-  requiredButton('multiplayer-restart').addEventListener('click', () => {
-    if (!snapshot || snapshot.phase !== 'typing') return;
-    view.restartTyping(snapshot);
-    void send({ type: 'RESTART_TYPING' });
-  });
   required('multiplayer-encouragement-form').addEventListener('submit', event => {
     event.preventDefault();
     const input = requiredInput('multiplayer-encouragement-input', HTMLInputElement);

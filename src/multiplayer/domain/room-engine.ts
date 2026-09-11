@@ -100,9 +100,6 @@ export class RoomEngine {
       case 'UPDATE_TYPING':
         this.updateTyping(player, command.typedText, command.sequence);
         break;
-      case 'RESTART_TYPING':
-        this.restartTyping(player);
-        break;
       case 'SEND_ENCOURAGEMENT':
         this.sendEncouragement(player, command.word);
         break;
@@ -195,16 +192,6 @@ export class RoomEngine {
       sequence,
       this.clock()
     );
-  }
-
-  private restartTyping(player: PlayerState): void {
-    if (
-      this.phase !== 'typing'
-      || !this.passage
-      || this.countdownEndsAt !== null
-      || player.typingComplete
-    ) return;
-    this.typingSessions.reset(player, this.passage.text);
   }
 
   private sendEncouragement(player: PlayerState, rawWord: string): void {

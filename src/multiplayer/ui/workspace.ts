@@ -100,7 +100,6 @@ export function multiplayerWorkspaceMarkup(): string {
               </div>
               <div class="typing-footer">
                 <button id="multiplayer-focus" class="text-btn" type="button" aria-pressed="false">Focus mode</button>
-                <button id="multiplayer-restart" class="text-btn" type="button">↻ Restart my typing</button>
               </div>
               <p class="phase-help">Your progress stops at the first incorrect character. The guessing phase begins when everyone finishes.</p>
             </section>

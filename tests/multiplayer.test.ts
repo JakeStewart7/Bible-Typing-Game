@@ -244,32 +244,6 @@ test('multiplayer tracks actual cursors and freezes completed typing statistics'
   });
 });
 
-test('multiplayer restart resets authoritative typing statistics', async () => {
-  let now = 1_000;
-  const passage: MultiplayerPassage = {
-    text: 'Faith',
-    reference: { book: 'Hebrews', chapter: 11, startVerse: 1, endVerse: 1 }
-  };
-  const room = new RoomEngine(
-    'RESTART',
-    { nextPassage: async () => passage },
-    { botDifficulty: 'medium', passageLength: 'short', includeGuessing: true },
-    () => now,
-    0
-  );
-  room.addPlayer('host', 'Host');
-  room.addPlayer('guest', 'Guest');
-  await room.dispatch('host', { type: 'START_ROUND' });
-  await room.dispatch('host', { type: 'UPDATE_TYPING', typedText: 'Fa', sequence: 1 });
-  now = 2_000;
-  await room.dispatch('host', { type: 'RESTART_TYPING' });
-  await room.dispatch('host', { type: 'UPDATE_TYPING', typedText: 'F', sequence: 2 });
-  now = 3_000;
-  await room.dispatch('host', { type: 'UPDATE_TYPING', typedText: passage.text, sequence: 3 });
-  const host = room.getSnapshot('host').players[0]!;
-  equal({ wpm: host.wpm, accuracy: host.accuracy }, { wpm: 60, accuracy: 100 });
-});
-
 test('multiplayer room advances only after every player completes each phase', async () => {
   const passage: MultiplayerPassage = {
     text: 'Faith comes by hearing.',

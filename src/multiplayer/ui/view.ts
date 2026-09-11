@@ -118,12 +118,6 @@ export class MultiplayerView {
     this.clearTypingValue();
   }
 
-  restartTyping(snapshot: RoomSnapshot): void {
-    this.startTyping(snapshot.passageText ?? '');
-    this.renderTyping(snapshot);
-    this.focusTyping();
-  }
-
   updateTyping(snapshot: RoomSnapshot): TypingInputUpdate {
     const update = updateTypingInput(this.game, this.input.value);
     this.renderTyping(snapshot);
@@ -206,7 +200,6 @@ export class MultiplayerView {
     this.input.disabled = snapshot.phase !== 'typing'
       || countdownRemaining > 0
       || (self?.typingComplete ?? false);
-    requiredButton('multiplayer-restart').disabled = this.input.disabled;
   }
 
   private renderGuessing(snapshot: RoomSnapshot, self: PlayerState | undefined): void {
