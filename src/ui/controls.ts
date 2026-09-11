@@ -95,7 +95,7 @@ export function initControls(config: AppConfig) {
       </section>
       <section id="game-screen" class="app-page game-screen is-hidden">
         <header class="page-header game-intro">
-          <button class="back-to-menu" type="button">← Main menu</button>
+          <button class="back-to-menu" type="button"><span aria-hidden="true">⌂</span><b>Main menu</b></button>
           <div>
             <div class="eyebrow">Practice session</div>
             <h2 id="workspace-title">Choose your passage</h2>
@@ -106,7 +106,7 @@ export function initControls(config: AppConfig) {
       </section>
       <section id="campaign-screen" class="app-page campaign-screen is-hidden">
         <header class="page-header campaign-header">
-          <button class="back-to-menu" type="button">← Main menu</button>
+          <button class="back-to-menu" type="button"><span aria-hidden="true">⌂</span><b>Main menu</b></button>
           <div><div class="eyebrow">The Scripture Journey</div><h2>Journey</h2><p>Complete every passage, chapter, and book—one comfortable session at a time.</p></div>
           <div class="campaign-summary"><strong id="campaign-total-stars">0 light</strong><span id="campaign-total-progress">0 of 0 passages</span></div>
         </header>

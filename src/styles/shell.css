@@ -40,8 +40,41 @@
 .mode-nav strong { font-size: .875rem; }
 .mode-nav small { margin-top: 2px; color: #71867f; font-size: var(--text-small); line-height: 1.35; }
 .brand { display: flex; align-items: center; gap: 7px; color: var(--ink); font-weight: 800; text-decoration: none; font-size: 1.05rem; letter-spacing: -.04em; }
-.back-to-menu { order: -1; border: 1px solid var(--page-border); border-radius: 10px; padding: .55rem .8rem; color: var(--page-accent-strong); background: var(--page-surface); font-size: var(--text-small); font-weight: 800; white-space: nowrap; }
-.back-to-menu:hover { color: var(--page-accent-strong); background: var(--page-accent-soft); transform: translateX(-2px); }
+.back-to-menu {
+  order: -1;
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  min-height: 2.75rem;
+  padding: .35rem .9rem .35rem .4rem;
+  border: 1px solid color-mix(in srgb, var(--page-accent) 20%, white);
+  border-radius: 999px;
+  color: var(--page-accent-strong);
+  background: color-mix(in srgb, var(--page-accent) 5%, white);
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--page-accent) 10%, transparent), 0 1px 0 white inset;
+  font-size: var(--text-small);
+  white-space: nowrap;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.back-to-menu span {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  color: white;
+  background: var(--page-accent);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+.back-to-menu b { font-weight: 800; }
+.back-to-menu:hover, .back-to-menu:focus-visible {
+  color: var(--page-accent-strong);
+  background: color-mix(in srgb, var(--page-accent) 10%, white);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--page-accent) 17%, transparent), 0 1px 0 white inset;
+  transform: translateY(-2px);
+}
+.back-to-menu:focus-visible { outline: 3px solid color-mix(in srgb, var(--page-accent) 28%, transparent); outline-offset: 2px; }
 .brand > span:last-child span { color: var(--green); }
 .brand-mark { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; color: white; background: linear-gradient(135deg, #22b88d, #0d8063); box-shadow: 0 5px 13px #159a7835; }
 .desktop-nav { height: 100%; display: flex; justify-content: center; align-items: stretch; gap: 8px; }

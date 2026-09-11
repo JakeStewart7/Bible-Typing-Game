@@ -4,7 +4,7 @@ export function multiplayerWorkspaceMarkup(): string {
   return `
     <section id="multiplayer-screen" class="app-page multiplayer-screen is-hidden">
       <header class="page-header multiplayer-header">
-        <button class="back-to-menu" type="button">← Main menu</button>
+        <button class="back-to-menu" type="button"><span aria-hidden="true">⌂</span><b>Main menu</b></button>
         <h2>Type together</h2>
       </header>
 
