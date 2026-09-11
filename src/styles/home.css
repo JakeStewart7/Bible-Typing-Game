@@ -3,8 +3,8 @@
   min-height: 100%;
   overflow: auto;
   background:
-    radial-gradient(circle at 50% 5%, rgba(124, 99, 67, .16), transparent 28rem),
-    linear-gradient(145deg, #242220 0%, #181716 52%, #10100f 100%);
+    radial-gradient(circle at 50% 5%, rgba(255, 255, 255, .8), transparent 25rem),
+    linear-gradient(145deg, #f4f8f4 0%, #e7f0ec 48%, #dcebe5 100%);
 }
 .home-screen::before, .home-screen::after {
   position: absolute;
@@ -15,8 +15,8 @@
   pointer-events: none;
   filter: blur(2px);
 }
-.home-screen::before { top: -10rem; left: -7rem; background: rgba(157, 119, 69, .12); }
-.home-screen::after { right: -8rem; bottom: -11rem; background: rgba(92, 85, 75, .13); }
+.home-screen::before { top: -10rem; left: -7rem; background: rgba(34, 184, 141, .13); }
+.home-screen::after { right: -8rem; bottom: -11rem; background: rgba(99, 83, 197, .13); }
 .home-menu {
   position: relative;
   z-index: 1;
@@ -27,15 +27,14 @@
 }
 .home-menu h1 {
   margin: 0 0 clamp(2rem, 5vh, 3.5rem);
-  color: #eee3cf;
+  color: #173f38;
   font: 700 clamp(3rem, 7vw, 5.5rem) Playfair Display;
   letter-spacing: -.055em;
-  text-shadow: 0 3px 0 #090908, 0 12px 28px rgba(0, 0, 0, .4);
 }
 .home-mode-grid { display: grid; gap: .7rem; text-align: left; }
 .home-mode {
-  --home-accent: #b58a55;
-  --home-soft: #39322a;
+  --home-accent: #278f77;
+  --home-soft: #e9f7f1;
   position: relative;
   display: grid;
   grid-template-columns: 4rem 1fr;
@@ -44,25 +43,25 @@
   min-height: 6.75rem;
   padding: 1rem 1.25rem;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--home-accent) 30%, #181716);
+  border: 1px solid color-mix(in srgb, var(--home-accent) 23%, white);
   border-radius: .7rem;
-  color: #e8dfd1;
-  background: linear-gradient(100deg, rgba(58, 54, 49, .96), rgba(38, 36, 33, .96));
-  box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, .26), 0 1px 0 rgba(255, 255, 255, .06) inset;
+  color: #173f38;
+  background: rgba(255, 255, 255, .78);
+  box-shadow: 0 1rem 2.5rem rgba(23, 63, 56, .08), 0 1px 0 rgba(255, 255, 255, .9) inset;
   text-align: left;
   transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
 }
 .home-mode::before { position: absolute; inset: 0 auto 0 0; width: .3rem; content: ''; background: var(--home-accent); }
 .home-mode:hover, .home-mode:focus-visible {
   transform: translateY(-.25rem);
-  background: linear-gradient(100deg, rgba(69, 64, 57, .98), rgba(45, 42, 38, .98));
-  box-shadow: 0 1.25rem 2.75rem rgba(0, 0, 0, .42), 0 0 0 3px color-mix(in srgb, var(--home-accent) 22%, transparent);
+  background: white;
+  box-shadow: 0 1.25rem 2.75rem rgba(23, 63, 56, .15), 0 0 0 3px color-mix(in srgb, var(--home-accent) 16%, transparent);
 }
 .home-mode:focus-visible { outline: none; }
-.home-mode--journey { --home-accent: #c19a62; --home-soft: #433628; }
-.home-mode--practice { --home-accent: #aaa49a; --home-soft: #3b3a37; }
-.home-mode--arcade { --home-accent: #a96b55; --home-soft: #432e29; }
-.home-mode--together { --home-accent: #9b8b72; --home-soft: #3d3932; }
+.home-mode--journey { --home-accent: #d08a2d; --home-soft: #fff4dd; }
+.home-mode--practice { --home-accent: #278f77; --home-soft: #e6f6ef; }
+.home-mode--arcade { --home-accent: #c5545f; --home-soft: #fdebed; }
+.home-mode--together { --home-accent: #7257e8; --home-soft: #eeeaff; }
 .home-mode-icon {
   display: grid;
   place-items: center;
@@ -75,12 +74,8 @@
   font-weight: 800;
 }
 .home-mode-copy { display: grid; align-items: center; }
-.home-mode-copy strong { color: #eee3cf; font: 700 clamp(1.35rem, 2.5vw, 1.7rem) Playfair Display; text-shadow: 0 1px 0 #111; }
+.home-mode-copy strong { color: #204d43; font: 700 clamp(1.35rem, 2.5vw, 1.7rem) Playfair Display; }
 .app-shell.home-active .mode-sidebar { visibility: hidden; width: 0; min-width: 0; padding: 0; border: 0; overflow: hidden; }
-.app-shell.home-active .topbar { border-bottom-color: #3e3932; background: #111110; }
-.app-shell.home-active .brand { color: #eee3cf; }
-.app-shell.home-active .brand-mark { color: #171614; background: linear-gradient(135deg, #d4b27c, #8f673e); box-shadow: 0 5px 13px rgba(0, 0, 0, .35); }
-.app-shell.home-active .settings-toggle { color: #181716; background: linear-gradient(135deg, #d4b27c, #8f673e); box-shadow: 0 .4rem 1rem rgba(0, 0, 0, .3); }
 @media (max-width: 680px) {
   .home-menu { width: min(100% - 1.5rem, 34rem); padding-top: 2.75rem; }
   .home-mode { min-height: 6rem; }
