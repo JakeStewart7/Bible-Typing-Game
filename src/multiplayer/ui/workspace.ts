@@ -10,7 +10,7 @@ export function multiplayerWorkspaceMarkup(): string {
       <div id="multiplayer-entry" class="multiplayer-entry">
         <section class="surface multiplayer-entry-card multiplayer-entry-card--unified">
           <form id="multiplayer-host-form" class="stack">
-            <label for="multiplayer-name">Choose a display name</label>
+            <label for="multiplayer-name">INSCRIBE YOUR NAME</label>
             <input id="multiplayer-name" maxlength="24" value="Player" autocomplete="nickname" required>
             <div class="entry-actions">
               <button class="primary-btn" type="submit">Create Room</button>
