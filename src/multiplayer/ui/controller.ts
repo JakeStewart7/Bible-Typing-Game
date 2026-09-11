@@ -28,8 +28,10 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
   const settingsControls = [
     ['multiplayer-lobby-length', () => view.lobbySettings()],
     ['multiplayer-lobby-guessing', () => view.lobbySettings()],
+    ['multiplayer-lobby-rounds', () => view.lobbySettings()],
     ['multiplayer-round-length', () => view.nextRoundSettings()],
-    ['multiplayer-round-guessing', () => view.nextRoundSettings()]
+    ['multiplayer-round-guessing', () => view.nextRoundSettings()],
+    ['multiplayer-round-rounds', () => view.nextRoundSettings()]
   ] as const;
   for (const [id, readSettings] of settingsControls) {
     required(id).addEventListener('change', () => {
@@ -40,7 +42,8 @@ export function createMultiplayerController(client: MultiplayerClient): { show()
         settings: {
           ...snapshot.settings,
           passageLength: nextSettings.passageLength,
-          includeGuessing: nextSettings.includeGuessing
+          includeGuessing: nextSettings.includeGuessing,
+          rounds: nextSettings.rounds
         }
       });
     });

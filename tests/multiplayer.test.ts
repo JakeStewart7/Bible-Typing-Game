@@ -337,6 +337,35 @@ test('multiplayer countdown gates typing stats and shares encouragement words', 
   equal(room.getSnapshot('host').players[0]?.cursor, 1);
 });
 
+test('multiplayer moves to a final summary after the configured rounds', async () => {
+  const passage: MultiplayerPassage = {
+    text: 'Faith.',
+    reference: { book: 'Hebrews', chapter: 11, startVerse: 1, endVerse: 1 }
+  };
+  const room = new RoomEngine(
+    'ROUNDS',
+    { nextPassage: async () => passage },
+    { botDifficulty: 'medium', passageLength: 'short', includeGuessing: false, rounds: 3 },
+    Date.now,
+    0
+  );
+  room.addPlayer('host', 'Host');
+  room.addPlayer('guest', 'Guest');
+  await room.dispatch('host', { type: 'START_ROUND' });
+  await completeTyping(room, passage.text);
+  equal(room.getSnapshot('host').phase, 'reveal');
+  await room.dispatch('host', { type: 'SET_READY', ready: true });
+  await room.dispatch('guest', { type: 'SET_READY', ready: true });
+  await completeTyping(room, passage.text);
+  await room.dispatch('host', { type: 'SET_READY', ready: true });
+  await room.dispatch('guest', { type: 'SET_READY', ready: true });
+  await completeTyping(room, passage.text);
+  const snapshot = room.getSnapshot('host');
+  equal(snapshot.phase, 'summary');
+  equal(snapshot.round, 3);
+  equal(snapshot.players.map(player => player.name), ['Host', 'Guest']);
+});
+
 function measureBotWpm(
   difficulty: keyof typeof BOT_DIFFICULTY_OPTIONS,
   targetWpm: number,
@@ -356,5 +385,11 @@ function measureBotWpm(
     typedText = nextBotTyping(passage, typedText, difficulty, random);
     elapsedMs += nextTypingDelayMs(actionWpm, typedText, difficulty, random);
   }
+
   return Math.round((passage.length / 5) / (elapsedMs / 60_000));
+}
+
+async function completeTyping(room: RoomEngine, text: string): Promise<void> {
+  await room.dispatch('host', { type: 'UPDATE_TYPING', typedText: text, sequence: 1 });
+  await room.dispatch('guest', { type: 'UPDATE_TYPING', typedText: text, sequence: 1 });
 }

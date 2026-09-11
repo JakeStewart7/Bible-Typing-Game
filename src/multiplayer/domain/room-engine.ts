@@ -254,16 +254,21 @@ export class RoomEngine {
         this.phase = 'guessing';
         this.guessingEndsAt = now + GUESS_DURATION_MS;
       } else {
-        this.phase = 'reveal';
-        this.guessingEndsAt = null;
+        this.finishRound();
       }
     } else if (this.phase === 'guessing' && this.everyPlayer(player => player.guessSubmitted)) {
       for (const player of this.roster.values()) {
-        player.score = scorePassageGuess(player.guess, this.passage.reference);
+        const score = scorePassageGuess(player.guess, this.passage.reference);
+        player.score = score;
+        player.totalScore += score;
       }
-      this.phase = 'reveal';
-      this.guessingEndsAt = null;
+      this.finishRound();
     }
+  }
+
+  private finishRound(): void {
+    this.guessingEndsAt = null;
+    this.phase = this.round >= this.settings.rounds ? 'summary' : 'reveal';
   }
 
   private everyPlayer(predicate: (player: PlayerState) => boolean): boolean {

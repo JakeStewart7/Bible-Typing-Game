@@ -1,4 +1,4 @@
-export type RoomPhase = 'lobby' | 'typing' | 'guessing' | 'reveal';
+export type RoomPhase = 'lobby' | 'typing' | 'guessing' | 'reveal' | 'summary';
 export type PlayerKind = 'human' | 'simulated';
 export type BotDifficulty = 'easy' | 'medium' | 'hard' | 'very-hard' | 'extreme';
 export type PassageLength = 'very-short' | 'short' | 'medium' | 'long' | 'very-long';
@@ -7,6 +7,7 @@ export type RoomSettings = {
   botDifficulty: BotDifficulty;
   passageLength: PassageLength;
   includeGuessing: boolean;
+  rounds: number;
 };
 
 export type PassageReference = {
@@ -43,6 +44,7 @@ export type PlayerState = {
   guessSubmitted: boolean;
   ready: boolean;
   score: number | null;
+  totalScore: number;
   wpm: number;
   accuracy: number;
 };

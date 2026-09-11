@@ -24,6 +24,7 @@ export function createPlayerState(
     guessSubmitted: false,
     ready: false,
     score: null,
+    totalScore: 0,
     wpm: 0,
     accuracy: 100
   };

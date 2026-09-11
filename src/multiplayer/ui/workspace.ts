@@ -1,4 +1,4 @@
-import { DEFAULT_ROOM_SETTINGS, PASSAGE_LENGTH_OPTIONS } from '../domain/settings';
+import { DEFAULT_ROOM_SETTINGS, PASSAGE_LENGTH_OPTIONS, ROUND_OPTIONS } from '../domain/settings';
 
 export function multiplayerWorkspaceMarkup(): string {
   return `
@@ -112,6 +112,13 @@ export function multiplayerWorkspaceMarkup(): string {
               ${roomOptions('multiplayer-round', 'Next round')}
               <button id="multiplayer-ready" class="primary-btn" type="button">Ready for another round</button>
             </section>
+            <section id="multiplayer-summary-phase" class="round-phase is-hidden">
+              <span class="phase-icon" aria-hidden="true">🏆</span>
+              <small>MATCH COMPLETE</small>
+              <h3>Final standings</h3>
+              <p>Every round is in. See how the room finished.</p>
+              <div id="multiplayer-summary" class="score-list"></div>
+            </section>
           </main>
         </div>
       </section>
@@ -129,11 +136,22 @@ function roomOptions(prefix: string, legend: string): string {
       <span aria-hidden="true"></span>
       <strong>Passage guessing</strong>
     </label>
+    <label for="${prefix}-rounds">Rounds
+      <select id="${prefix}-rounds">${roundOptions()}</select>
+    </label>
   </fieldset>`;
 }
 
 function passageLengthOptions(): string {
   return Object.entries(PASSAGE_LENGTH_OPTIONS)
     .map(([value, option]) => `<option value="${value}"${value === DEFAULT_ROOM_SETTINGS.passageLength ? ' selected' : ''}>${option.label} · up to ${option.maximumCharacters} characters</option>`)
+    .join('');
+}
+
+function roundOptions(): string {
+  return Object.entries(ROUND_OPTIONS)
+    .map(([value, label]) =>
+      `<option value="${value}"${Number(value) === DEFAULT_ROOM_SETTINGS.rounds ? ' selected' : ''}>${label}</option>`
+    )
     .join('');
 }
