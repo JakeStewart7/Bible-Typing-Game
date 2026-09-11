@@ -46,10 +46,10 @@
 #multiplayer-show-join {
   color: #5f54ad;
   border-color: rgba(95, 84, 173, .2);
-  background: linear-gradient(135deg, #f0edff, #dfd9ff);
+  background: #e9e5ff;
   box-shadow: 0 10px 24px rgba(95, 84, 173, .12);
 }
-#multiplayer-show-join:hover { color: #514694; background: linear-gradient(135deg, #f7f5ff, #d5ceff); }
+#multiplayer-show-join:hover { color: #514694; background: #ded8ff; }
 #multiplayer-join-form .primary-btn {
   background: linear-gradient(135deg, #776bc9, #5f54ad);
   box-shadow: 0 10px 24px rgba(95, 84, 173, .2);
