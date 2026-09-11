@@ -287,6 +287,7 @@ export class MultiplayerView {
   }
 
   private showPhase(active: RoomPhase): void {
+    this.room.dataset.phase = active;
     required('multiplayer-lobby-phase').classList.toggle('is-hidden', active !== 'lobby');
     required('multiplayer-typing-phase').classList.toggle(
       'is-hidden',

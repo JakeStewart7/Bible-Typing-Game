@@ -18,6 +18,7 @@ export class PlayerListView {
   constructor(private readonly container: HTMLElement) {}
 
   render(snapshot: RoomSnapshot): void {
+    this.container.querySelectorAll('.player-slot-empty').forEach(element => element.remove());
     const activeIds = new Set(snapshot.players.map(player => player.id));
     for (const [playerId, row] of this.rows) {
       if (activeIds.has(playerId)) continue;
@@ -30,6 +31,16 @@ export class PlayerListView {
       const elementAtIndex = this.container.children.item(index);
       if (elementAtIndex !== row.root) this.container.insertBefore(row.root, elementAtIndex);
     });
+    const slotCount = snapshot.phase === 'lobby'
+      ? Math.max(4, snapshot.players.length + 1)
+      : snapshot.players.length;
+    for (let index = snapshot.players.length; index < slotCount; index += 1) {
+      const slot = document.createElement('div');
+      slot.className = 'player-row player-slot-empty';
+      slot.setAttribute('role', 'listitem');
+      slot.innerHTML = '<i aria-hidden="true">+</i><span>Open slot</span>';
+      this.container.appendChild(slot);
+    }
   }
 
   clear(): void {
@@ -67,7 +78,7 @@ export class PlayerListView {
     row.metrics.textContent = `${player.wpm} WPM • ${
       typedProgressPercent(player, snapshot.passageText)
     }% typed`;
-    row.metrics.classList.toggle('is-hidden', snapshot.round === 0);
+    row.metrics.classList.toggle('is-hidden', snapshot.round === 0 || snapshot.phase === 'lobby');
     row.status.textContent = playerStatus(player, snapshot);
     row.difficulty.setAttribute('aria-label', `${player.name} difficulty`);
     const canEditDifficulty = player.kind === 'simulated'

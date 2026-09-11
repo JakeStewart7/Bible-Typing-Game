@@ -43,27 +43,26 @@ export function multiplayerWorkspaceMarkup(): string {
         <div id="multiplayer-status" class="multiplayer-status" role="status" aria-live="polite"></div>
         <div class="multiplayer-layout">
           <aside class="surface player-panel">
-            <div class="player-panel-heading"><h3>Players</h3><span id="multiplayer-player-count">0</span></div>
+            <div class="player-panel-heading"><div><small>ROOM ROSTER</small><h3>Players</h3></div><span id="multiplayer-player-count">0</span></div>
             <div id="multiplayer-players" class="player-list" role="list"></div>
             <button id="multiplayer-finish-everyone" class="text-btn is-hidden" type="button">Finish everyone</button>
+            <section class="lobby-roster-tools">
+              <div><h4>Simulated players</h4><p>Set each opponent's difficulty in their slot.</p></div>
+              <button id="multiplayer-add-bot" class="secondary-btn" type="button">Add simulated player</button>
+            </section>
+            <section id="multiplayer-summary" class="match-summary is-hidden" aria-labelledby="multiplayer-summary-heading">
+              <small>MATCH COMPLETE</small>
+              <h4 id="multiplayer-summary-heading">Final standings</h4>
+              <div id="multiplayer-summary-standings" class="score-list"></div>
+            </section>
           </aside>
           <main class="surface round-panel">
             <section id="multiplayer-lobby-phase" class="round-phase">
-              <span class="phase-icon" aria-hidden="true">⌛</span>
-              <h3>Waiting in the lobby</h3>
-              <p>Add simulated players, then begin when everyone is present.</p>
-              <div class="lobby-bot-controls">
-                <button id="multiplayer-add-bot" class="secondary-btn" type="button">Add simulated player</button>
-              </div>
               ${roomOptions('multiplayer-lobby', 'Lobby options')}
-              <div class="cluster">
+              <p class="lobby-settings-help">The host controls these settings.</p>
+              <div class="lobby-start">
                 <button id="multiplayer-start" class="primary-btn" type="button">Start round</button>
               </div>
-              <section id="multiplayer-summary" class="match-summary is-hidden" aria-labelledby="multiplayer-summary-heading">
-                <small>MATCH COMPLETE</small>
-                <h4 id="multiplayer-summary-heading">Final standings</h4>
-                <div id="multiplayer-summary-standings" class="score-list"></div>
-              </section>
             </section>
             <section id="multiplayer-typing-phase" class="round-phase is-hidden">
               <div class="round-heading"><div><small>TYPE THE PASSAGE</small><h3>Everyone advances together</h3></div><span id="multiplayer-typing-progress">0%</span></div>
