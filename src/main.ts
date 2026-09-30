@@ -22,6 +22,8 @@ import { createPlaylistController } from './memory/ui/playlist-controller.ts';
 import { createMultiplayerController } from './multiplayer/ui/controller.ts';
 import { MockMultiplayerClient } from './multiplayer/infrastructure/mock-multiplayer-client.ts';
 import { BiblePassageProvider } from './multiplayer/infrastructure/bible-passage-provider.ts';
+import { createStrongholdController } from './stronghold/ui/controller.ts';
+import { LocalStrongholdConnection } from './stronghold/infrastructure/local-connection.ts';
 
 import trackDetermination from '../assets/music/determination.mp3';
 import trackApple from '../assets/music/apple_cider.ogg';
@@ -40,6 +42,8 @@ applyCursorSmoothing();
 const multiplayerController = createMultiplayerController(
   new MockMultiplayerClient(new BiblePassageProvider())
 );
+const strongholdController = createStrongholdController(new LocalStrongholdConnection());
+window.addEventListener('beforeunload', () => strongholdController.dispose(), { once: true });
 
 // ----------------------------
 // Game state (keep instance export for other modules/tests)
@@ -118,7 +122,9 @@ function showWorkspace(workspace: string, selectedMode?: string): void {
   homeScreen?.classList.toggle('is-hidden', workspace !== 'home');
   controls.campaignScreenEl.classList.toggle('is-hidden', workspace !== 'campaign');
   controls.multiplayerScreenEl.classList.toggle('is-hidden', workspace !== 'multiplayer');
-  gameScreen?.classList.toggle('is-hidden', workspace === 'campaign' || workspace === 'multiplayer' || workspace === 'home');
+  document.getElementById('stronghold-screen')?.classList.toggle('is-hidden', workspace !== 'stronghold');
+  strongholdController.setActive(workspace === 'stronghold');
+  gameScreen?.classList.toggle('is-hidden', workspace === 'campaign' || workspace === 'multiplayer' || workspace === 'stronghold' || workspace === 'home');
   gameScreen?.classList.toggle('campaign-play', workspace === 'campaign-play');
   const appShell = document.querySelector<HTMLElement>('.app-shell');
   appShell?.classList.toggle('home-active', workspace === 'home');
@@ -130,7 +136,8 @@ function showWorkspace(workspace: string, selectedMode?: string): void {
     const practiceActive = workspace === 'practice' && button.dataset.workspace === 'practice';
     const modeActive = workspace === 'defense' && button.dataset.mode === selectedMode;
     const multiplayerActive = workspace === 'multiplayer' && button.dataset.workspace === 'multiplayer';
-    button.classList.toggle('active', campaignActive || practiceActive || modeActive || multiplayerActive);
+    const strongholdActive = workspace === 'stronghold' && button.dataset.workspace === 'stronghold';
+    button.classList.toggle('active', campaignActive || practiceActive || modeActive || multiplayerActive || strongholdActive);
   });
   if (workspace === 'defense') {
     const mode = document.getElementById('game-mode') as HTMLSelectElement | null;
@@ -144,6 +151,8 @@ function showWorkspace(workspace: string, selectedMode?: string): void {
   } else if (workspace === 'multiplayer') {
     gameController.leaveCampaign();
     multiplayerController.show();
+  } else if (workspace === 'stronghold') {
+    gameController.leaveCampaign();
   } else if (workspace === 'campaign') campaignController.renderBooks();
 }
 

@@ -5,6 +5,7 @@ import './arcade.test.ts';
 import './campaign-journey.test.ts';
 import './persistence.test.ts';
 import './multiplayer.test.ts';
+import './stronghold.test.ts';
 import { runTests } from './harness.ts';
 
 await runTests();

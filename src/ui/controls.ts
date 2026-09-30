@@ -6,6 +6,7 @@ import type { AppConfig } from '../config';
 import { formatVerseSelectionLabel } from '../memory/domain/passage.ts';
 import { practiceWorkspaceMarkup } from './practice-workspace.ts';
 import { multiplayerWorkspaceMarkup } from '../multiplayer/ui/workspace.ts';
+import { strongholdWorkspaceMarkup } from '../stronghold/ui/workspace.ts';
 import { menuNavigationMarkup } from './menu-navigation.ts';
 
 export function initControls(config: AppConfig) {
@@ -69,6 +70,7 @@ export function initControls(config: AppConfig) {
           <button class="mode-nav" data-workspace="practice" aria-label="Practice" title="Practice"><span>⌨</span><div><strong>Practice</strong><small>Practice with text guidance</small></div></button>
           <button class="mode-nav" data-workspace="defense" data-mode="defense" aria-label="Arcade" title="Arcade"><span>◇</span><div><strong>Arcade</strong><small>Repel the shadows</small></div></button>
           <button class="mode-nav" data-workspace="multiplayer" aria-label="Together" title="Together"><span>◎</span><div><strong>Together</strong><small>Type and recall as a group</small></div></button>
+          <button class="mode-nav" data-workspace="stronghold" aria-label="Stronghold" title="Stronghold"><span>♜</span><div><strong>Stronghold</strong><small>Build and defend together</small></div></button>
         </aside>
         <div class="page-viewport">
       <section id="home-screen" class="app-page home-screen">
@@ -90,6 +92,10 @@ export function initControls(config: AppConfig) {
             <button class="home-mode home-mode--together" type="button" data-home-workspace="multiplayer">
               <span class="home-mode-icon" aria-hidden="true">◎</span>
               <span class="home-mode-copy"><strong>Together</strong></span>
+            </button>
+            <button class="home-mode home-mode--stronghold" type="button" data-home-workspace="stronghold">
+              <span class="home-mode-icon" aria-hidden="true">♜</span>
+              <span class="home-mode-copy"><strong>Stronghold</strong></span>
             </button>
           </div>
         </div>
@@ -122,6 +128,7 @@ export function initControls(config: AppConfig) {
         <div id="campaign-content" class="campaign-content"></div>
       </section>
       ${multiplayerWorkspaceMarkup()}
+      ${strongholdWorkspaceMarkup()}
         </div>
       </div>
 
