@@ -26,11 +26,11 @@ export function renderTierChallenge(elements: StrongholdElements, snapshot: Stro
     }
     setText(entry.name, `Player ${index + 1}`);
     setText(entry.progress, `${player.contribution}/${TIER_QUOTA}`);
-    setText(entry.typed, player.typed || (player.contribution >= TIER_QUOTA ? 'Contribution complete' : 'Typing...'));
+    setText(entry.typed, player.contribution >= TIER_QUOTA ? 'Done' : player.typed);
     entry.typed.classList.toggle('is-hidden', player.id === snapshot.selfId);
   });
   setText(requireElement('stronghold-tier-title', HTMLElement), `Tier ${snapshot.tier + 1}`);
-  setText(requireElement('stronghold-tier-description', HTMLElement), `Complete ${TIER_QUOTA} phrases each to upgrade every role. The battlefield is paused.`);
+  setText(requireElement('stronghold-tier-description', HTMLElement), `${TIER_QUOTA} phrases each`);
   if (snapshot.phase === 'tier-up' && running) {
     if (elements.typing.parentElement !== elements.tierSlot) elements.tierSlot.append(elements.typing);
     const ownContribution = elements.contributionCards.get(snapshot.selfId);

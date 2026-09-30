@@ -21,7 +21,9 @@ export function createStrongholdController(connection: StrongholdConnection) {
   function display(): void {
     if (!snapshot) return;
     renderStronghold(elements, snapshot, selected, running(), paused);
-    setText(elements.feedback, errorMessage || (paused ? 'Paused. Resume when your squad is ready.' : snapshot.message));
+    const feedback = errorMessage || (paused ? 'Paused' : snapshot.message);
+    setText(elements.feedback, feedback);
+    elements.feedback.classList.toggle('is-hidden', !feedback);
     if (!elements.typing.classList.contains('is-hidden')) {
       const layout = `${snapshot.phase}/${running()}/${elements.typing.parentElement?.id}`;
       const stats = typingDirty || layout !== typingLayout

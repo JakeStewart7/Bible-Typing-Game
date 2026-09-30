@@ -5,7 +5,7 @@ A typing game for the Bible.
 
 Choose **Stronghold** from the main menu or sidebar to play a local cooperative
 typing strategy game with three simulated teammates. The full-screen battlefield
-follows the Paint design: bright-green map, gray castle, colored shape-coded
+follows the Paint design: borderless bright-green map, gray castle, colored shape-coded
 units, upper-right population/resource HUD, central hexagonal **Tier Up** button,
 and four colored player panels along the bottom. Switch Player 1's role dropdown
 between Economy, Army production, Army control, and Defenses; a teammate takes
@@ -14,6 +14,12 @@ supplies and recruit units, or complete construction phrases and place buildings
 on the battlefield. Builders construct and repair automatically. Connect resource
 nodes to the castle with relays no more than 155 map units apart; destroying a
 relay interrupts deliveries from disconnected nodes.
+
+Controls and typing use larger, high-contrast text; repeated captions stay out of
+the battlefield. Enemy troops are dark-red squares (melee), diamonds (archers),
+and triangles (siege), with red outlines. Castle and enemy-base health appear in
+the HUD. **Help** contains the map key and instructions. On narrow screens the
+player panels scroll instead of shrinking their text.
 
 Ready up to pause the battle for a shared tier challenge: everyone completes
 three private phrases. Tier 1 unlocks warriors, barracks and towers, tier 2 adds

@@ -45,7 +45,7 @@ export function createStronghold(): StrongholdState {
     ].map(node => ({ ...node, id: 100 + node.x, remaining: node.rich ? 1200 : 800 })),
     upgrades: { economy: 0, production: 0, defenses: 0 },
     technology: { economy: 0, warrior: 0, archer: 0, catapult: 0, 'tower-1': 0, 'tower-2': 0, 'tower-3': 0 },
-    rally: { x: 500, y: 450 }, message: 'Build your economy, ready up together, then take the enemy stronghold.'
+    rally: { x: 500, y: 450 }, message: ''
   };
   addBuilding(state, 'castle', BASE, true);
   addBuilding(state, 'enemy-base', ENEMY_BASE, true, true);

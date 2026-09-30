@@ -7,15 +7,15 @@ import { createSvgLayer, setAttribute, setText } from './dom-updates.ts';
 function health(hp: number, max: number, y: number, width = 26): string {
   return `<rect x="${-width / 2}" y="${y}" width="${width}" height="3" fill="#1d3029"/><rect data-health x="${-width / 2}" y="${y}" width="${width * Math.max(0, hp / max)}" height="3" fill="#a6ed89"/>`;
 }
-function unitMarkup(unit: Unit, selected: boolean): string {
+export function unitMarkup(unit: Unit, selected: boolean): string {
   const shape = unit.kind === 'worker' ? '<circle r="8" fill="#fff" stroke="#b88051" stroke-width="2"/>'
     : unit.kind === 'builder' ? '<path d="M0 -11 L10 8 L-10 8 Z" fill="#cec0df" stroke="#a64caf" stroke-width="2"/>'
     : unit.kind === 'warrior' ? '<rect x="-8" y="-8" width="16" height="16" fill="#ffb3c9" stroke="#ff1726" stroke-width="2"/>'
     : unit.kind === 'archer' ? '<path d="M0 -10 L8 0 L0 10 L-8 0 Z" fill="#9ed7e6" stroke="#00aeef" stroke-width="2"/>'
     : unit.kind === 'catapult' ? '<path d="M0 -12 L10 9 L-10 9 Z" fill="#f0e3a7" stroke="#cfb000" stroke-width="2"/>'
-    : unit.formation === 'archer' ? '<path d="M0 -10 L8 0 L0 10 L-8 0 Z" fill="#ad5361" stroke="#ff7c87"/>'
-    : unit.formation === 'catapult' ? '<path d="M0 -12 L10 9 L-10 9 Z" fill="#ad5361" stroke="#ff7c87"/>'
-    : '<path d="M0 -14 L5 -7 L13 -7 L9 0 L13 7 L5 7 L0 14 L-5 7 L-13 7 L-9 0 L-13 -7 L-5 -7 Z" fill="#91a8b7" stroke="#7f8b91" stroke-width="2"/>';
+    : unit.formation === 'archer' ? '<path d="M0 -10 L8 0 L0 10 L-8 0 Z" fill="#870018" stroke="#ff1726" stroke-width="2"/>'
+    : unit.formation === 'catapult' ? '<path d="M0 -12 L10 9 L-10 9 Z" fill="#870018" stroke="#ff1726" stroke-width="2"/>'
+    : '<rect x="-8" y="-8" width="16" height="16" fill="#870018" stroke="#ff1726" stroke-width="2"/>';
   return `<circle data-selected r="16" fill="none" stroke="#fff" stroke-width="2" visibility="${selected ? 'visible' : 'hidden'}"/>${shape}${health(unit.hp, unit.maxHp, 13, 20)}<title>${unit.kind}${unit.formation ? ' ' + unit.formation : ''}: ${Math.ceil(unit.hp)} HP</title>`;
 }
 function buildingMarkup(building: Building): string {
@@ -25,7 +25,7 @@ function buildingMarkup(building: Building): string {
     : building.kind === 'relay' ? `<path d="M-4 16 L-4 -7 L-9 -12 L0 -18 L9 -12 L4 -7 L4 16 Z" fill="${color}" stroke="#7f7f7f" stroke-width="2"/>`
     : building.kind === 'wall' ? `<rect x="-23" y="-4" width="46" height="8" fill="${building.enemy ? color : '#ffdb58'}" stroke="${building.enemy ? '#ff1726' : '#e8ad23'}" stroke-width="3"/>`
     : `<rect x="${-size}" y="${-size}" width="${size * 2}" height="${size * 2}" fill="${color}" stroke="${building.enemy ? '#ff1726' : '#7f7f7f'}" stroke-width="4"/><path d="M${-size} ${-size} v-10 h10 v10 h10 v-10 h10 v10" fill="none" stroke="${color}" stroke-width="7"/>`;
-  return `${shape}${health(building.hp, building.maxHp, size + 6, size * 2)}<title></title>${building.kind === 'barracks' ? `<text data-tier y="5" text-anchor="middle" fill="#263c32" font-size="12">T${building.tier}</text>` : ''}${building.kind === 'castle' || building.kind === 'enemy-base' ? '<text y="-50" text-anchor="middle" class="stronghold-base-label"></text>' : ''}`;
+  return `${shape}${health(building.hp, building.maxHp, size + 6, size * 2)}<title></title>${building.kind === 'barracks' ? `<text data-tier y="5" text-anchor="middle" fill="#111" font-size="16">T${building.tier}</text>` : ''}`;
 }
 function relayLinks(snapshot: StrongholdSnapshot): string {
   // Snapshot world data matches the logistics inputs; private player fields are not needed.
@@ -51,8 +51,7 @@ function position(element: Element, point: { x: number; y: number }, scale = 1):
   setAttribute(element, 'transform', `translate(${point.x} ${point.y}) scale(${scale})`);
 }
 export function createBattlefieldRenderer(map: SVGSVGElement) {
-  map.innerHTML = `<ellipse cx="500" cy="325" rx="495" ry="320" fill="#1faf4c" stroke="#c5eb20" stroke-width="3"/>
-    <g data-layer="links"></g><g data-layer="nodes"></g><g data-layer="chunks"></g><g data-layer="buildings"></g><g data-layer="units"></g>
+  map.innerHTML = `<g data-layer="links"></g><g data-layer="nodes"></g><g data-layer="chunks"></g><g data-layer="buildings"></g><g data-layer="units"></g>
     <g data-layer="rally"><path d="M0 14V-15l20 7-20 7" fill="#e7d98b" stroke="#e7d98b" opacity=".6"/><title>Production rally point</title></g>`;
   function layer(name: string): SVGGElement {
     const found = map.querySelector(`[data-layer="${name}"]`);
@@ -79,16 +78,14 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     const width = building.kind === 'castle' || building.kind === 'enemy-base' ? 68 : 28;
     setAttribute(child(element, '[data-health]'), 'width', String(width * Math.max(0, building.hp / building.maxHp)));
     setText(child(element, 'title'), `${building.kind} / T${building.tier}: ${Math.ceil(building.hp)} HP, ${Math.round(building.progress * 100)}% built`);
-    const label = element.querySelector('.stronghold-base-label');
-    if (label) setText(label, `${building.enemy ? 'ENEMY STRONGHOLD' : 'YOUR CASTLE'} / ${Math.max(0, Math.ceil(building.hp))}`);
     const tier = element.querySelector('[data-tier]');
     if (tier) setText(tier, `T${building.tier}`);
   }, building => `${building.kind}/${building.enemy}`);
   const renderNodes = createSvgLayer<ResourceNode>(layer('nodes'), node =>
-    `<circle r="${node.rich ? 27 : 24}" stroke="${node.rich ? '#a64caf' : '#00aeef'}" stroke-width="3"/><text y="-1" text-anchor="middle" font-size="8" fill="#111">${node.rich ? 'Rich resource' : 'Resource'}</text><text y="9" text-anchor="middle" font-size="8" fill="#111">node</text><text data-remaining y="37" text-anchor="middle" font-size="8" fill="#111"></text><title>${node.rich ? 'Rich' : 'Standard'} resource node</title>`, (element, node) => {
+    `<circle r="${node.rich ? 27 : 24}" stroke="${node.rich ? '#a64caf' : '#00aeef'}" stroke-width="3"/><title></title>`, (element, node) => {
     position(element, node);
     setAttribute(child(element, 'circle'), 'fill', node.remaining <= 0 ? '#aaa' : node.rich ? '#ccc0e0' : '#9ed7e6');
-    setText(child(element, '[data-remaining]'), String(Math.ceil(node.remaining)));
+    setText(child(element, 'title'), `${node.rich ? 'Rich' : 'Standard'} resource node: ${Math.ceil(node.remaining)} remaining`);
   }, node => String(node.rich));
   const renderChunks = createSvgLayer<ResourceChunk>(layer('chunks'), () => '<circle r="3"/>', (element, chunk) => {
     position(element, chunk);

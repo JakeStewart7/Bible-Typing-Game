@@ -1,9 +1,9 @@
 import { requireElement } from '../../shared/dom.ts';
-import { ACTION_LABELS, BUILDING_CAPS, EVENT_LABELS, ROLE_ACTIONS, TIER_MAX, TIER_QUOTA, UNIT_CAPS } from '../domain/rules.ts';
+import { BUILDING_CAPS, EVENT_LABELS, ROLE_ACTIONS, TIER_MAX, TIER_QUOTA, UNIT_CAPS } from '../domain/rules.ts';
 import { taskPhrases, upgradeLimit } from '../domain/technology.ts';
 import { ROLES, UPGRADE_TARGETS, type StrongholdSnapshot } from '../domain/types.ts';
 import { createBattlefieldRenderer } from './battlefield.ts';
-import { setText } from './dom-updates.ts';
+import { setAttribute, setText } from './dom-updates.ts';
 import { PLAYER_IDS } from './workspace.ts';
 import { renderTierChallenge } from './tier-view.ts';
 
@@ -61,6 +61,7 @@ export function renderStronghold(
   const army = self.role === 'army' && !challenge;
   text('stronghold-resources', String(Math.floor(snapshot.resources)));
   text('stronghold-castle', `${Math.max(0, Math.ceil(castle?.hp ?? 0))}/${castle?.maxHp ?? 1000}`);
+  text('stronghold-enemy', String(Math.max(0, Math.ceil(snapshot.buildings.find(building => building.kind === 'enemy-base')?.hp ?? 0))));
   text('stronghold-wave', `Wave ${snapshot.wave + 1}: ${Math.ceil(snapshot.waveIn)}s`);
   text('stronghold-event', EVENT_LABELS[snapshot.event]);
   text('stronghold-tower-count', `${snapshot.buildings.filter(building => building.kind === 'tower' && !building.enemy).length}/${BUILDING_CAPS.tower}`);
@@ -85,18 +86,17 @@ export function renderStronghold(
   elements.placement.classList.toggle('is-hidden', !placing || terminal);
   const inputDisabled = !running || terminal || (challenge && self.contribution >= TIER_QUOTA) || placing;
   if (elements.input.disabled !== inputDisabled) elements.input.disabled = inputDisabled;
-  text('stronghold-typing-label', challenge ? `Phrase to Type / Player 1 / Tier ${snapshot.tier + 1}` : 'Your phrase to type');
+  text('stronghold-typing-label', 'Your phrase');
   text('stronghold-selection', `${selected.size} selected / ${snapshot.units.filter(unit => ['warrior', 'archer', 'catapult'].includes(unit.kind)).length} army units`);
   for (const entry of elements.playerCards) {
     const player = snapshot.players.find(candidate => candidate.id === entry.id);
     if (!player) continue;
     const own = player.id === self.id;
     entry.card.classList.toggle('is-you', own);
-    entry.phraseSlot.querySelector('.stronghold-private-label')?.classList.toggle('is-hidden', own);
-    setText(entry.name, `${player.name} / ${own ? 'You' : 'Simulated'}${player.ready && !challenge ? ' / Ready' : ''}`);
+    setText(entry.name, `${own ? 'You' : `${player.name}, simulated teammate`}${player.ready && !challenge ? ', ready' : ''}`);
     setText(entry.task, challenge ? `${player.contribution}/${TIER_QUOTA} tier phrases` : player.role === 'army'
-      ? 'Select troops; Shift-click adds to your selection.' : `${ACTION_LABELS[player.action]} / ${player.actionPhrases}/${taskPhrases(player)} phrases`);
-    setText(entry.typed, player.typed || (player.role === 'army' && !challenge ? 'Mouse orders / no typing' : 'Waiting to type...'));
+      ? 'Shift-click to select more.' : `${player.actionPhrases}/${taskPhrases(player)} phrases`);
+    setText(entry.typed, player.role === 'army' && !challenge ? '' : player.typed);
     entry.typed.classList.toggle('is-hidden', own && !army);
     const width = `${challenge ? player.contribution / TIER_QUOTA * 100 : (player.actionPhrases + player.progress) / taskPhrases(player) * 100}%`;
     if (entry.progress.style.width !== width) entry.progress.style.width = width;
@@ -109,8 +109,10 @@ export function renderStronghold(
         const capped = button.upgrade ? snapshot.technology[button.upgrade] >= upgradeLimit(snapshot.tier, button.upgrade) : false;
         const disabled = !own || !running || challenge || terminal || snapshot.tier < button.minimumTier || capped;
         if (button.element.disabled !== disabled) button.element.disabled = disabled;
-        button.element.classList.toggle('selected', own && button.action === player.action
-          && (!button.tier || button.tier === player.constructionTier) && (!button.upgrade || button.upgrade === player.upgradeTarget));
+        const selectedAction = button.action === player.action
+          && (!button.tier || button.tier === player.constructionTier) && (!button.upgrade || button.upgrade === player.upgradeTarget);
+        button.element.classList.toggle('selected', selectedAction);
+        setAttribute(button.element, 'aria-pressed', String(selectedAction));
         const level = button.element.querySelector('[data-upgrade-level]');
         if (level && button.upgrade) setText(level, `Level ${snapshot.technology[button.upgrade]}`);
       }
