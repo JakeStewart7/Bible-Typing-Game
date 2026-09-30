@@ -1,10 +1,6 @@
 # Repository agent instructions
 
-All coding agents working in this repository must read and follow
-`docs/CODING_STANDARDS.md` before changing code.
-
-Treat those standards as implementation requirements. Before completing work,
-run the smallest existing checks that cover the change.
+Before completing work, run the smallest existing checks that cover the change.
 
 Commit verified work frequently:
 

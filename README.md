@@ -1,7 +1,59 @@
 # Bible-Typing-Game
 A typing game for the Bible.
 
-Development conventions are documented in [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md).
+## Stronghold
+
+Choose **Stronghold** from the main menu or sidebar to play a local cooperative
+typing strategy game with three simulated teammates. The full-screen battlefield
+follows the Paint design: borderless bright-green map, gray castle, colored shape-coded
+units, upper-right population/resource HUD, central hexagonal **Tier Up** button,
+and four colored player panels along the bottom. Switch Player 1's role dropdown
+between Economy, Army production, Army control, and Defenses; a teammate takes
+your previous role. Type exact phrases to earn shared
+supplies and recruit units, or complete construction phrases and place buildings
+on the battlefield. Builders construct and repair automatically. Connect resource
+nodes to the castle with relays no more than 155 map units apart; destroying a
+relay interrupts deliveries from disconnected nodes.
+
+Controls and typing use larger, high-contrast text; repeated captions stay out of
+the battlefield. Enemy troops are dark-red squares (melee), diamonds (archers),
+and triangles (siege), with red outlines. Castle and enemy-base health appear in
+the HUD. **Help** contains the map key and instructions. On narrow screens the
+player panels scroll instead of shrinking their text.
+
+Ready up to pause the battle for a shared tier challenge: everyone completes
+three private phrases. Tier 1 unlocks warriors, barracks and towers, tier 2 adds
+archers, and tier 3 adds catapults. Barracks automatically train units at their
+selected construction tier and consume shared supplies. Separate tiles let you
+build tier 1, 2 or 3 barracks and towers. Higher-tier construction and manual
+training require one, two or three completed phrases respectively.
+Higher-tier barracks and towers have more health, and troop upgrades enlarge
+their map icons as well as improving their combat stats.
+Each troop type and tower tier has its own resource-funded upgrade button and
+once-per-tier limit beginning at its unlock tier. Economy gets two upgrades at
+tier 0 and one additional upgrade per subsequent tier. World events cycle through
+scripture, left-hand, vowel, number, symbol and code drills without discarding a
+phrase already in progress. Enemy waves add ranged and siege formations as their
+base develops. Select troops with
+click/Shift-click or **Select all troops**, then click the battlefield, enter map
+coordinates, or use **Defend** / **Assault base**. Destroy the enemy
+stronghold before invading waves destroy yours.
+
+The game pauses when you leave the mode, hide the tab, or select **Pause**.
+The complete simulation and UI refresh on animation frames at a 60 Hz target;
+SVG entities and teammate cards are retained rather than rebuilt each frame.
+**New game** resets the match. Local matches are not saved across reloads.
+No additional dependencies or downloads are needed.
+
+`src/stronghold/domain/` implements the authoritative simulation with explicit
+commands and detached per-player snapshots. Only the recipient's target phrase
+is included; other players expose their typed text and progress.
+`StrongholdConnection` is the UI's transport port, implemented by
+`LocalStrongholdConnection` for offline play. A future network adapter can send
+commands to a host running `StrongholdEngine` and deliver its per-player
+snapshots. It must validate incoming message schemas and enforce connection-bound
+player identities, monotonic command sequencing, and an authoritative host clock.
+The current mode is explicitly simulated, not cross-device multiplayer.
 
 ## Multiplayer foundation
 
