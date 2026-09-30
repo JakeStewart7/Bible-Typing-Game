@@ -4,6 +4,8 @@ import { renderTypingExperience, updateTypingInput } from '../../typing/session.
 import { ROLE_ACTIONS } from '../domain/rules.ts';
 import { ROLES, type Point, type StrongholdCommand, type StrongholdConnection, type StrongholdSnapshot } from '../domain/types.ts';
 import { renderStronghold, strongholdElements } from './view.ts';
+import { calculateStats } from '../../game/stats.ts';
+import { setText } from './dom-updates.ts';
 
 export function createStrongholdController(connection: StrongholdConnection) {
   const elements = strongholdElements();
@@ -14,16 +16,22 @@ export function createStrongholdController(connection: StrongholdConnection) {
   let shown = false;
   let paused = false;
   let errorMessage = '';
+  let typingDirty = true;
+  let typingLayout = '';
   const running = (): boolean => shown && !paused && !document.hidden;
   function display(): void {
     if (!snapshot) return;
     renderStronghold(elements, snapshot, selected, running(), paused);
-    elements.feedback.textContent = errorMessage || (paused ? 'Paused. Resume when your squad is ready.' : snapshot.message);
+    setText(elements.feedback, errorMessage || (paused ? 'Paused. Resume when your squad is ready.' : snapshot.message));
     if (!elements.typing.classList.contains('is-hidden')) {
-      const stats = renderTypingExperience(typing, {
-        text: elements.phrase, typedBar: elements.typedBar, progressFill: elements.progressFill
-      });
-      requireElement('stronghold-typing-stats', HTMLElement).textContent = `${stats.wpm} WPM / ${Math.round(stats.accuracy)}% accuracy`;
+      const layout = `${snapshot.phase}/${running()}/${elements.typing.parentElement?.id}`;
+      const stats = typingDirty || layout !== typingLayout
+        ? renderTypingExperience(typing, {
+          text: elements.phrase, typedBar: elements.typedBar, progressFill: elements.progressFill
+        }) : calculateStats(typing);
+      typingDirty = false;
+      typingLayout = layout;
+      setText(requireElement('stronghold-typing-stats', HTMLElement), `${stats.wpm} WPM / ${Math.round(stats.accuracy)}% accuracy`);
     }
   }
   async function send(command: StrongholdCommand): Promise<void> {
@@ -41,6 +49,7 @@ export function createStrongholdController(connection: StrongholdConnection) {
     if (phraseId !== self.phraseId) {
       phraseId = self.phraseId;
       typing = createGame(self.phrase);
+      typingDirty = true;
       elements.input.value = self.typed;
       if (self.typed) updateTypingInput(typing, self.typed);
     }
@@ -84,6 +93,7 @@ export function createStrongholdController(connection: StrongholdConnection) {
   elements.input.addEventListener('input', () => {
     if (!snapshot) return;
     updateTypingInput(typing, elements.input.value);
+    typingDirty = true;
     send({ type: 'TYPE', phraseId, text: elements.input.value });
   });
   elements.phrase.addEventListener('click', () => elements.input.focus({ preventScroll: true }));
@@ -134,6 +144,8 @@ export function createStrongholdController(connection: StrongholdConnection) {
   elements.dialog.addEventListener('cancel', event => { event.preventDefault(); togglePause(); });
   const visibility = (): void => { connection.setActive(running()); display(); };
   document.addEventListener('visibilitychange', visibility);
+  const resize = (): void => { typingDirty = true; display(); };
+  window.addEventListener('resize', resize);
   return {
     setActive(active: boolean): void {
       shown = active;
@@ -144,6 +156,7 @@ export function createStrongholdController(connection: StrongholdConnection) {
     dispose(): void {
       unsubscribe();
       document.removeEventListener('visibilitychange', visibility);
+      window.removeEventListener('resize', resize);
       if (elements.dialog.open) elements.dialog.close();
       connection.dispose();
     }

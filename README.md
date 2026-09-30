@@ -23,6 +23,8 @@ coordinates, or use **Defend castle** / **Assault enemy base**. Destroy the enem
 stronghold before invading waves destroy yours.
 
 The game pauses when you leave the mode, hide the tab, or select **Pause**.
+The complete simulation and UI refresh on animation frames at a 60 Hz target;
+SVG entities and teammate cards are retained rather than rebuilt each frame.
 **New stronghold** resets the match. Local matches are not saved across reloads.
 No additional dependencies or downloads are needed.
 
