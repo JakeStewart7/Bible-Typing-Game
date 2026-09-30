@@ -1,68 +1,96 @@
 import { menuNavigationMarkup } from '../../ui/menu-navigation.ts';
-import { ACTION_LABELS, COSTS, MIN_TIER, ROLE_ACTIONS, ROLE_LABELS } from '../domain/rules.ts';
-import { ROLES } from '../domain/types.ts';
+import { ACTION_LABELS, COSTS, MIN_TIER, ROLE_LABELS } from '../domain/rules.ts';
+import { UPGRADE_OPTIONS } from '../domain/technology.ts';
+import { ROLES, type Action, type Role, type UpgradeTarget } from '../domain/types.ts';
 
+export const PLAYER_IDS = ['you', 'bot-1', 'bot-2', 'bot-3'] as const;
+function tile(action: Action, label = ACTION_LABELS[action], tier?: number): string {
+  return `<button type="button" class="stronghold-build-tile" data-action="${action}"${tier ? ` data-tier="${tier}"` : ''} data-min-tier="${tier ?? MIN_TIER[action]}">
+    ${label}<small>${action === 'resources' ? 'Earn supplies' : `${COSTS[action] * (tier ?? 1)} supplies`}</small></button>`;
+}
+function upgrade(target: UpgradeTarget): string {
+  const option = UPGRADE_OPTIONS[target];
+  return `<button type="button" class="stronghold-upgrade-tile" data-action="upgrade" data-stronghold-upgrade="${target}" data-min-tier="${option.tier}" title="Upgrade ${option.label}">
+    <span aria-hidden="true">⌃</span> ${option.cost}<span class="sr-only"> supplies: upgrade ${option.label}</span><small data-upgrade-level="${target}">Level 0</small></button>`;
+}
+function roleActions(role: Role): string {
+  if (role === 'economy') return `<div class="stronghold-build-row">${tile('resources', 'Type for supplies')}${tile('worker', 'Gatherer')}${tile('relay', 'Resource relay')}</div>${upgrade('economy')}`;
+  if (role === 'production') return `<div class="stronghold-build-row">${[1, 2, 3].map(tier => tile('barracks', `Barracks<br>Tier ${tier}`, tier)).join('')}</div>
+    <div class="stronghold-build-row">${tile('warrior', 'Warrior<br>(T1 unit)')}${tile('archer', 'Archer<br>(T2 unit)')}${tile('catapult', 'Catapult<br>(T3 unit)')}</div>
+    <div class="stronghold-build-row">${upgrade('warrior')}${upgrade('archer')}${upgrade('catapult')}</div>`;
+  if (role === 'defenses') return `<div class="stronghold-build-row">${tile('builder', 'Builder')}${tile('wall', 'Wall')}</div>
+    <div class="stronghold-build-row">${[1, 2, 3].map(tier => tile('tower', `Tower<br>Tier ${tier}`, tier)).join('')}</div>
+    <div class="stronghold-build-row">${upgrade('tower-1')}${upgrade('tower-2')}${upgrade('tower-3')}</div>`;
+  return '<p class="stronghold-army-help">No typing. Select troops on the map and move them to defend the gatherers or attack the enemy base.</p>';
+}
+function playerCard(id: string, index: number): string {
+  return `<section class="stronghold-player" data-player="${id}">
+    <div class="stronghold-phrase-slot" id="stronghold-phrase-slot-${id}"><span class="stronghold-private-label">Private phrase / teammate's typing below</span></div>
+    <div class="stronghold-player-frame">
+      <header><h3>Player ${index + 1}</h3><label class="sr-only" for="stronghold-role-${id}">Player ${index + 1} role</label>
+      <select id="stronghold-role-${id}" class="stronghold-role-select" data-player="${id}">${ROLES.map(role => `<option value="${role}">${ROLE_LABELS[role]}</option>`).join('')}</select></header>
+      <small id="stronghold-name-${id}" class="stronghold-player-name"></small>
+      <div class="stronghold-player-progress"><div id="stronghold-progress-${id}"></div></div>
+      <div class="stronghold-player-actions" id="stronghold-player-actions-${id}">${ROLES.map(role => `<div class="stronghold-actions" data-role="${role}">${roleActions(role)}</div>`).join('')}</div>
+      <p id="stronghold-task-${id}" class="stronghold-player-task"></p>
+      <div id="stronghold-typed-slot-${id}" class="stronghold-typed-slot"><p id="stronghold-typed-${id}" class="stronghold-peer-typed"></p></div>
+    </div>
+  </section>`;
+}
 export function strongholdWorkspaceMarkup(): string {
   return `<section id="stronghold-screen" class="app-page stronghold-screen is-hidden">
-    ${menuNavigationMarkup()}
-    <header class="stronghold-heading">
-      <div><small>COOPERATIVE TYPING / LOCAL SQUAD</small><h2>Stronghold</h2><p>Build together. Hold the line. Take their stronghold.</p></div>
-      <div class="stronghold-controls"><button id="stronghold-pause" class="secondary-btn" type="button">Pause</button><button id="stronghold-restart" class="text-btn" type="button">New stronghold</button></div>
-    </header>
-    <div class="stronghold-hud surface">
-      <div><small>SHARED SUPPLIES</small><strong id="stronghold-resources">100</strong></div>
-      <div><small>CASTLE</small><strong id="stronghold-castle">1000 / 1000</strong></div>
-      <div><small>NEXT WAVE</small><strong id="stronghold-wave">30s</strong></div>
-      <div><small>WORLD EVENT</small><strong id="stronghold-event">Scripture watch</strong></div>
-      <button id="stronghold-ready" class="stronghold-tier" type="button">Tier 0 / Ready up</button>
+    <div class="stronghold-stage">
+      <div class="stronghold-battlefield">
+        <svg id="stronghold-map" viewBox="0 0 1000 650" role="img" aria-label="Stronghold battlefield: select troops to issue army orders, or complete a construction task and click to place it." tabindex="0"></svg>
+        <div id="stronghold-outcome" class="stronghold-outcome is-hidden"><h3 id="stronghold-outcome-title"></h3><p id="stronghold-outcome-copy"></p><button id="stronghold-play-again" class="primary-btn" type="button">Build again</button></div>
+      </div>
+      <nav class="stronghold-map-toolbar" aria-label="Stronghold controls">${menuNavigationMarkup()}
+        <button id="stronghold-pause" type="button">Pause</button><button id="stronghold-restart" type="button">New game</button>
+        <span>Stronghold / local squad</span>
+      </nav>
+      <button id="stronghold-ready" class="stronghold-tier" type="button"><span id="stronghold-tier-label">Tier 0</span><strong id="stronghold-tier-action">Tier Up</strong></button>
+      <aside class="stronghold-hud" aria-label="Kingdom status">
+        <div class="stronghold-populations">
+          <span title="Towers"><i class="stronghold-symbol stronghold-symbol--tower"></i><b id="stronghold-tower-count">0/8</b></span>
+          <span title="Warriors"><i class="stronghold-symbol stronghold-symbol--warrior"></i><b id="stronghold-warrior-count">2/18</b></span>
+          <span title="Builders"><i class="stronghold-symbol stronghold-symbol--builder"></i><b id="stronghold-builder-count">1/4</b></span>
+          <span title="Gatherers"><i class="stronghold-symbol stronghold-symbol--worker"></i><b id="stronghold-worker-count">2/12</b></span>
+          <span title="Shared resource chunks"><i class="stronghold-symbol stronghold-symbol--resource"></i><b id="stronghold-resources">100</b></span>
+        </div>
+        <div class="stronghold-watch"><span>Castle <b id="stronghold-castle"></b></span><span id="stronghold-wave"></span><span id="stronghold-event"></span></div>
+      </aside>
+      <details class="stronghold-guide"><summary>Map key / how to play</summary>
+        <div class="stronghold-legend"><span>★ Invader</span><span>□ Warrior</span><span>◇ Archer</span><span>▲ Catapult</span><span>△ Builder</span><span>○ Gatherer</span></div>
+        <p>Type exact phrases for supplies and units. Barracks automatically train their tier's units using shared supplies. Higher-tier construction and training require more phrases.</p>
+        <p>Gatherers mine blue nodes; purple rich nodes give twice as much. Build relays within 155 map units to connect them to the castle. Blue lines carry resource chunks; a destroyed relay stops upstream deliveries.</p>
+        <p>Builders automatically travel to construction sites and repair damage. Select a construction tile, finish its phrases, then click the map to place it.</p>
+        <p>Change your role with Player 1's dropdown; a teammate takes your old role. Army control uses map clicks, not typing. Invaders aggro nearby warriors before gatherers and structures.</p>
+        <p>Everyone readies up and types three private phrases to advance a tier. Economy has two upgrades at tier 0, then one more per tier. Each troop and tower type has one upgrade per tier starting at its unlock tier.</p>
+        <p>The enemy base develops ranged units, siege units and more towers. Destroy it to win. World events add left-hand, vowel, number, symbol and code drills. Pause, hide the tab or return to the menu to pause the local match.</p>
+      </details>
+      <p id="stronghold-feedback" class="stronghold-feedback" role="status" aria-live="polite"></p>
+      <div class="stronghold-squad">${PLAYER_IDS.map(playerCard).join('')}</div>
+      <section id="stronghold-typing" class="stronghold-typing">
+        <div class="stronghold-typing-heading"><small id="stronghold-typing-label">Your phrase to type</small><span id="stronghold-typing-stats"></span></div>
+        <div id="stronghold-phrase" class="text-display" tabindex="0" aria-label="Your private phrase to type"></div>
+        <div class="progress-track"><div id="stronghold-typing-progress"></div></div>
+      </section>
+      <div id="stronghold-typed-area" class="typed-area stronghold-typed-area">
+        <label class="sr-only" for="stronghold-input">Type your Stronghold phrase exactly</label>
+        <div id="stronghold-typed-bar" class="typed-bar" aria-hidden="true"></div><input id="stronghold-input" class="typing-input" autocomplete="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <section id="stronghold-army-orders" class="stronghold-army-orders is-hidden">
+        <button id="stronghold-select-army" type="button">Select all troops</button><button id="stronghold-defend" type="button">Defend</button><button id="stronghold-assault" type="button">Assault base</button>
+        <details><summary>Coordinate orders</summary><label>X<input id="stronghold-order-x" type="number" min="20" max="980" value="500"></label><label>Y<input id="stronghold-order-y" type="number" min="20" max="630" value="450"></label>
+          <button id="stronghold-order" type="button">Move selected</button><button id="stronghold-rally" type="button">Set rally</button></details><p id="stronghold-selection"></p>
+      </section>
+      <div id="stronghold-placement" class="stronghold-placement is-hidden"><span>Click the map to build, or place by coordinates:</span><label>X<input id="stronghold-build-x" type="number" min="20" max="980" value="500"></label><label>Y<input id="stronghold-build-y" type="number" min="130" max="630" value="400"></label><button id="stronghold-build" type="button">Place building</button></div>
     </div>
-    <div class="stronghold-battlefield">
-      <svg id="stronghold-map" viewBox="0 0 1000 650" role="img" aria-label="Stronghold battlefield. Use Army control to select troops and issue orders, or complete a building phrase then choose a location." tabindex="0"></svg>
-      <div class="stronghold-map-label"><span>YOUR KINGDOM</span><small>Enemy stronghold to the north</small></div>
-      <div id="stronghold-outcome" class="stronghold-outcome is-hidden"><h3 id="stronghold-outcome-title"></h3><p id="stronghold-outcome-copy"></p><button id="stronghold-play-again" class="primary-btn" type="button">Build again</button></div>
-      <div class="stronghold-legend"><span class="legend-workers">o Gatherer</span><span class="legend-builders">△ Builder</span><span class="legend-warriors">□ Warrior</span><span>◇ Archer</span><span>▲ Catapult</span><span class="legend-invaders">✦ Invader</span><span>Blue lines: relay network</span></div>
-    </div>
-    <p id="stronghold-feedback" class="stronghold-feedback" role="status" aria-live="polite"></p>
-    <div class="stronghold-squad">${ROLES.map((role, index) => `
-      <section class="stronghold-player" data-role="${role}">
-        <header><div><small id="stronghold-name-${role}">PLAYER ${index + 1}</small><h3>${ROLE_LABELS[role]}</h3></div><button class="text-btn stronghold-take-role" data-role="${role}" type="button">Take role</button></header>
-        <div class="stronghold-player-progress"><div id="stronghold-progress-${role}"></div></div>
-        <p id="stronghold-task-${role}" class="stronghold-player-task"></p>
-        <p id="stronghold-typed-${role}" class="stronghold-peer-typed"></p>
-        <div id="stronghold-actions-${role}" class="stronghold-actions">${ROLE_ACTIONS[role].map(action => `<button data-action="${action}" type="button" title="${ACTION_LABELS[action]} / ${COSTS[action]} supplies / tier ${MIN_TIER[action]}">${ACTION_LABELS[action]}<small>${COSTS[action] ? COSTS[action] + ' supplies' : 'Earn supplies'}${MIN_TIER[action] ? ' / T' + MIN_TIER[action] : ''}</small></button>`).join('')}</div>
-      </section>`).join('')}</div>
-    <section id="stronghold-typing" class="stronghold-typing surface">
-      <div class="stronghold-typing-heading"><small id="stronghold-typing-label">YOUR PHRASE</small><span id="stronghold-typing-stats"></span></div>
-      <div id="stronghold-phrase" class="text-display" tabindex="0" aria-label="Your phrase to type"></div>
-      <div class="progress-track"><div id="stronghold-typing-progress"></div></div>
-      <label class="sr-only" for="stronghold-input">Type your Stronghold phrase exactly</label>
-      <div class="typed-area"><div id="stronghold-typed-bar" class="typed-bar" aria-hidden="true"></div><input id="stronghold-input" class="typing-input" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
-    </section>
-    <section id="stronghold-army-orders" class="stronghold-army-orders surface is-hidden">
-      <div><h3>Command the army</h3><p>Click a troop to select it; Shift-click adds troops. Click the field to move and attack nearby enemies.</p></div>
-      <button id="stronghold-select-army" class="secondary-btn" type="button">Select all troops</button>
-      <button id="stronghold-defend" class="secondary-btn" type="button">Defend castle</button>
-      <button id="stronghold-assault" class="primary-btn" type="button">Assault enemy base</button>
-      <label>Map order X<input id="stronghold-order-x" type="number" min="20" max="980" value="500"></label>
-      <label>Y<input id="stronghold-order-y" type="number" min="20" max="630" value="450"></label>
-      <button id="stronghold-order" class="secondary-btn" type="button">Move selected</button>
-      <button id="stronghold-rally" class="text-btn" type="button">Set production rally</button>
-      <p id="stronghold-selection"></p>
-    </section>
-    <div id="stronghold-placement" class="stronghold-placement is-hidden"><label>Build X<input id="stronghold-build-x" type="number" min="20" max="980" value="500"></label><label>Y<input id="stronghold-build-y" type="number" min="130" max="630" value="400"></label><button id="stronghold-build" class="primary-btn" type="button">Place building</button><p>Click the map or enter a location. Builders move to the site and construct it.</p></div>
-    <details class="stronghold-guide surface"><summary>How your squad holds the line</summary>
-      <p><b>Economy:</b> type for supplies, recruit autonomous gatherers, and connect resource nodes to the castle with relays (155 map units apart). Rich purple nodes yield twice as much but are exposed. Chunks stop if their relay route is destroyed.</p>
-      <p><b>Army production:</b> unlock barracks and warriors at tier 1, archers at tier 2, and catapults at tier 3. Barracks continuously train units using shared supplies. New barracks produce the highest unit allowed by their construction tier.</p>
-      <p><b>Army control:</b> no typing outside tier-up. Select your army and defend workers, or lead a push north. Units fight automatically; towers and the enemy base become stronger over time.</p>
-      <p><b>Defenses:</b> recruit builders, type a construction phrase, then place walls or towers. Builders construct one project each and repair damaged buildings automatically. Walls intercept nearby invaders.</p>
-      <p><b>Tier up:</b> ready up and your simulated teammates will lock in. The battle pauses while everyone completes three private phrases; teammate typed text and contributions remain visible. Higher tiers use fewer, longer words.</p>
-      <p>Switch freely between roles; a teammate takes your previous role. World events introduce left-hand, vowel, number, symbol, and code drills. The match pauses when you leave Stronghold or hide the tab. Local simulation only: no room codes or online players yet.</p>
-    </details>
     <dialog id="stronghold-tier-dialog" class="stronghold-tier-dialog">
-      <small>EVERY VOICE COUNTS</small><h2 id="stronghold-tier-title">Advance together</h2><p>The battlefield is paused. Each player must finish three phrases.</p>
-      <div id="stronghold-tier-contributions" class="stronghold-tier-contributions"></div>
       <div id="stronghold-tier-typing-slot"></div>
-      <button id="stronghold-tier-pause" class="text-btn" type="button">Pause challenge</button>
+      <p class="stronghold-tier-help">Each player sees their own phrase. Watch everyone's typing and contributions below.</p>
+      <div class="stronghold-tier-status"><h2 id="stronghold-tier-title">Tier Up</h2><p id="stronghold-tier-description"></p><button id="stronghold-tier-pause" type="button">Pause challenge</button></div>
+      <div id="stronghold-tier-contributions" class="stronghold-tier-contributions"></div>
     </dialog>
   </section>`;
 }

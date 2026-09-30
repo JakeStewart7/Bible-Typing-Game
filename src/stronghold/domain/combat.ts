@@ -1,5 +1,6 @@
 import { distance, ENEMY_BASE, moveToward, UNIT_CAPS, UNIT_RULES } from './rules.ts';
 import { addBuilding, addUnit } from './state.ts';
+import { towerUpgrade, unitUpgrade } from './technology.ts';
 import type { Building, Point, StrongholdState, Unit } from './types.ts';
 
 type Target = (Unit | Building) & Point;
@@ -35,7 +36,7 @@ function updateUnit(state: StrongholdState, unit: Unit, seconds: number): void {
   }
   if (!target) return;
   if (distance(unit, target) > rule.range) moveToward(unit, target, seconds * rule.speed);
-  else attack(unit, target, rule.damage + (unit.kind === 'invader' ? state.wave : state.upgrades.production * 3));
+  else attack(unit, target, rule.damage + (unit.kind === 'invader' ? state.wave : unitUpgrade(state, unit) * 3));
 }
 
 export function spawnWave(state: StrongholdState): void {
@@ -68,7 +69,7 @@ export function updateCombat(state: StrongholdState, seconds: number): void {
     tower.cooldown = Math.max(0, tower.cooldown - seconds);
     const target = closest(tower, state.units.filter(unit => (unit.kind === 'invader') !== tower.enemy
       && distance(unit, tower) <= 150 + tower.tier * 15));
-    if (target) attack(tower, target, tower.enemy ? 8 + state.wave : 18 + state.upgrades.defenses * 5);
+    if (target) attack(tower, target, tower.enemy ? 8 + state.wave : 18 + tower.tier * 3 + towerUpgrade(state, tower.tier) * 5);
   }
   const enemyBase = state.buildings.find(building => building.kind === 'enemy-base');
   const castle = state.buildings.find(building => building.kind === 'castle');

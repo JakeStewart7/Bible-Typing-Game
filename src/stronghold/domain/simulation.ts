@@ -46,7 +46,12 @@ function updateBot(state: StrongholdState, player: Participant, seconds: number)
       return;
     }
     const action = botAction(state, player);
-    if (action !== player.action) { player.action = action; assignPhrase(state, player); }
+    if (action !== player.action) {
+      player.action = action;
+      player.actionPhrases = 0;
+      player.constructionTier = Math.max(1, state.tier);
+      assignPhrase(state, player);
+    }
     if (actionProblem(state, player, action)) return;
     if (['relay', 'barracks', 'tower', 'wall'].includes(action) && player.typed === player.phrase) {
       const count = state.buildings.filter(building => building.kind === action && !building.enemy).length;

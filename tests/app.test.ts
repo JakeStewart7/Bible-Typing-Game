@@ -7,6 +7,7 @@ import './persistence.test.ts';
 import './multiplayer.test.ts';
 import './stronghold.test.ts';
 import './stronghold-refresh.test.ts';
+import './stronghold-technology.test.ts';
 import { runTests } from './harness.ts';
 
 await runTests();

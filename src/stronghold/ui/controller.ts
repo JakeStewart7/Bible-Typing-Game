@@ -1,7 +1,6 @@
 import { createGame, type Game } from '../../game/state.ts';
 import { requireElement } from '../../shared/dom.ts';
 import { renderTypingExperience, updateTypingInput } from '../../typing/session.ts';
-import { ROLE_ACTIONS } from '../domain/rules.ts';
 import { ROLES, type Point, type StrongholdCommand, type StrongholdConnection, type StrongholdSnapshot } from '../domain/types.ts';
 import { renderStronghold, strongholdElements } from './view.ts';
 import { calculateStats } from '../../game/stats.ts';
@@ -97,14 +96,19 @@ export function createStrongholdController(connection: StrongholdConnection) {
     send({ type: 'TYPE', phraseId, text: elements.input.value });
   });
   elements.phrase.addEventListener('click', () => elements.input.focus({ preventScroll: true }));
-  for (const role of ROLES) {
-    elements.screen.querySelector<HTMLButtonElement>(`.stronghold-take-role[data-role="${role}"]`)?.addEventListener('click', () => {
+  for (const card of elements.playerCards) {
+    card.roleSelect.addEventListener('change', () => {
+      const role = ROLES.find(candidate => candidate === card.roleSelect.value);
+      if (!role) { errorMessage = 'Unknown Stronghold role.'; display(); return; }
       selected.clear(); send({ type: 'ROLE', role }); elements.input.focus({ preventScroll: true });
     });
-    for (const action of ROLE_ACTIONS[role]) {
-      elements.screen.querySelector<HTMLButtonElement>(`#stronghold-actions-${role} [data-action="${action}"]`)?.addEventListener('click', () => {
-        send({ type: 'ACTION', action }); elements.input.focus({ preventScroll: true });
-      });
+    for (const group of card.groups) {
+      for (const button of group.buttons) {
+        button.element.addEventListener('click', () => {
+          send({ type: 'ACTION', action: button.action, tier: button.tier, upgrade: button.upgrade });
+          elements.input.focus({ preventScroll: true });
+        });
+      }
     }
   }
   elements.map.addEventListener('click', event => {

@@ -3,6 +3,8 @@ export type Role = typeof ROLES[number];
 export type Point = { x: number; y: number };
 export type UnitKind = 'worker' | 'builder' | 'warrior' | 'archer' | 'catapult' | 'invader';
 export type ArmyUnitKind = 'warrior' | 'archer' | 'catapult';
+export const UPGRADE_TARGETS = ['economy', 'warrior', 'archer', 'catapult', 'tower-1', 'tower-2', 'tower-3'] as const;
+export type UpgradeTarget = typeof UPGRADE_TARGETS[number];
 export type BuildingKind = 'castle' | 'enemy-base' | 'relay' | 'barracks' | 'tower' | 'wall';
 export type Phase = 'playing' | 'tier-up' | 'won' | 'lost';
 export type WorldEvent = 'peace' | 'left-hand' | 'vowels' | 'numbers' | 'symbols' | 'code';
@@ -22,6 +24,7 @@ export type Participant = {
   id: string; name: string; color: string; role: Role; simulated: boolean;
   action: Action; phrase: string; typed: string; phraseId: number;
   completed: number; ready: boolean; contribution: number; typingCredit: number;
+  constructionTier: number; upgradeTarget: UpgradeTarget; actionPhrases: number;
 };
 export type StrongholdState = {
   phase: Phase; tier: number; elapsed: number; wave: number; waveIn: number;
@@ -29,6 +32,7 @@ export type StrongholdState = {
   players: Participant[]; units: Unit[]; buildings: Building[];
   nodes: ResourceNode[]; chunks: ResourceChunk[]; nextId: number;
   upgrades: Record<'economy' | 'production' | 'defenses', number>;
+  technology: Record<UpgradeTarget, number>;
   rally: Point; message: string;
 };
 export type StrongholdSnapshot = Omit<StrongholdState, 'players' | 'nextId'> & {
@@ -37,7 +41,7 @@ export type StrongholdSnapshot = Omit<StrongholdState, 'players' | 'nextId'> & {
 };
 export type StrongholdCommand =
   | { type: 'ROLE'; role: Role }
-  | { type: 'ACTION'; action: Action }
+  | { type: 'ACTION'; action: Action; tier?: number; upgrade?: UpgradeTarget }
   | { type: 'TYPE'; phraseId: number; text: string }
   | { type: 'READY'; ready: boolean }
   | { type: 'PLACE'; kind: 'relay' | 'barracks' | 'tower' | 'wall'; point: Point }
