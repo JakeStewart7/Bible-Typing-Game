@@ -2,26 +2,30 @@ import { menuNavigationMarkup } from '../../ui/menu-navigation.ts';
 import { ACTION_LABELS, COSTS, LENGTH_LABELS, MIN_TIER, ROLE_LABELS } from '../domain/rules.ts';
 import { UPGRADE_OPTIONS } from '../domain/technology.ts';
 import { PHRASE_LENGTHS, ROLES, type Action, type Role, type UpgradeTarget } from '../domain/types.ts';
+import { taskShortcut } from './keyboard.ts';
 
 export const PLAYER_IDS = ['you', 'bot-1', 'bot-2', 'bot-3'] as const;
-function tile(action: Action, label = ACTION_LABELS[action], tier?: number): string {
-  return `<button type="button" class="stronghold-build-tile" data-action="${action}"${tier ? ` data-tier="${tier}"` : ''} data-min-tier="${tier ?? MIN_TIER[action]}">
-    <span class="stronghold-action-label">${label}</span>${action === 'resources' ? '' : `<span class="stronghold-cost">${COSTS[action] === 0 ? 'Free' : `${COSTS[action] * (tier ?? 1)}<span class="sr-only"> supplies</span>`}</span>`}</button>`;
+function tile(action: Action, label: string, tier: number | undefined, shortcut: string): string {
+  return `<button type="button" class="stronghold-build-tile" data-action="${action}"${tier ? ` data-tier="${tier}"` : ''} data-min-tier="${tier ?? MIN_TIER[action]}" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}">
+    <kbd class="stronghold-hotkey">Alt+${shortcut}</kbd><span class="stronghold-action-label">${label}</span>${action === 'resources' ? '' : `<span class="stronghold-cost">${COSTS[action] === 0 ? 'Free' : `${COSTS[action] * (tier ?? 1)}<span class="sr-only"> supplies</span>`}</span>`}</button>`;
 }
-function upgrade(target: UpgradeTarget): string {
+function upgrade(target: UpgradeTarget, shortcut: string): string {
   const option = UPGRADE_OPTIONS[target];
-  return `<button type="button" class="stronghold-upgrade-tile" data-action="upgrade" data-stronghold-upgrade="${target}" data-min-tier="${option.tier}" title="Upgrade ${option.label}">
-    <span class="stronghold-action-label">Upgrade<span class="sr-only"> ${option.label}</span></span><span class="stronghold-cost">${option.cost}<span class="sr-only"> supplies</span></span><small data-upgrade-level="${target}">Level 0</small></button>`;
+  return `<button type="button" class="stronghold-upgrade-tile" data-action="upgrade" data-stronghold-upgrade="${target}" data-min-tier="${option.tier}" title="Upgrade ${option.label}" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}">
+    <kbd class="stronghold-hotkey">Alt+${shortcut}</kbd><span class="stronghold-action-label">Upgrade<span class="sr-only"> ${option.label}</span></span><span class="stronghold-cost">${option.cost}<span class="sr-only"> supplies</span></span><small data-upgrade-level="${target}">Level 0</small></button>`;
 }
 function roleActions(role: Role): string {
-  if (role === 'economy') return `<div class="stronghold-build-row">${tile('resources', 'Supplies')}${tile('worker', 'Gatherer')}${tile('relay', 'Relay')}</div>${upgrade('economy')}`;
-  if (role === 'production') return `<div class="stronghold-build-row">${[1, 2, 3].map(tier => tile('barracks', `Barracks<br>Tier ${tier}`, tier)).join('')}</div>
-    <div class="stronghold-build-row">${tile('resources', 'Supplies')}${tile('warrior', 'Warrior')}${tile('archer', 'Archer')}${tile('catapult', 'Catapult')}</div>
-    <div class="stronghold-build-row">${upgrade('warrior')}${upgrade('archer')}${upgrade('catapult')}</div>`;
-  if (role === 'defenses') return `<div class="stronghold-build-row">${tile('builder', 'Builder')}${tile('wall', 'Wall')}</div>
-    <div class="stronghold-build-row">${[1, 2, 3].map(tier => tile('tower', `Tower<br>Tier ${tier}`, tier)).join('')}</div>
-    <div class="stronghold-build-row">${upgrade('tower-1')}${upgrade('tower-2')}${upgrade('tower-3')}</div>`;
-  return `${tile('resources', 'Supplies')}<p class="stronghold-army-help">Drag to select troops, then click to move. Shift adds to your selection.</p>`;
+  let index = 0;
+  const task = (action: Action, label = ACTION_LABELS[action], tier?: number) => tile(action, label, tier, taskShortcut(index++));
+  const improvement = (target: UpgradeTarget) => upgrade(target, taskShortcut(index++));
+  if (role === 'economy') return `<div class="stronghold-build-row">${task('resources', 'Supplies')}${task('worker', 'Gatherer')}${task('relay', 'Relay')}</div>${improvement('economy')}`;
+  if (role === 'production') return `<div class="stronghold-build-row">${[1, 2, 3].map(tier => task('barracks', `Barracks<br>Tier ${tier}`, tier)).join('')}</div>
+    <div class="stronghold-build-row">${task('resources', 'Supplies')}${task('warrior', 'Warrior')}${task('archer', 'Archer')}${task('catapult', 'Catapult')}</div>
+    <div class="stronghold-build-row">${improvement('warrior')}${improvement('archer')}${improvement('catapult')}</div>`;
+  if (role === 'defenses') return `<div class="stronghold-build-row">${task('builder', 'Builder')}${task('wall', 'Wall')}</div>
+    <div class="stronghold-build-row">${[1, 2, 3].map(tier => task('tower', `Tower<br>Tier ${tier}`, tier)).join('')}</div>
+    <div class="stronghold-build-row">${improvement('tower-1')}${improvement('tower-2')}${improvement('tower-3')}</div>`;
+  return `${task('resources', 'Supplies')}<p class="stronghold-army-help">Drag to select troops, then click to move. Shift adds to your selection.</p>`;
 }
 function playerCard(id: string, index: number): string {
   return `<section class="stronghold-player" data-player="${id}">
@@ -46,6 +50,13 @@ export function strongholdWorkspaceMarkup(): string {
         <button id="stronghold-pause" type="button">Pause</button><button id="stronghold-restart" type="button">New game</button>
         <button id="stronghold-computers" type="button" aria-pressed="false">Stop computers</button>
       </nav>
+      <div class="stronghold-map-camera" role="group" aria-label="Map zoom and navigation">
+        <button id="stronghold-zoom-out" type="button" aria-label="Zoom out">-</button>
+        <output id="stronghold-zoom">120%</output>
+        <button id="stronghold-zoom-in" type="button" aria-label="Zoom in">+</button>
+        <button id="stronghold-zoom-fit" type="button">Fit map</button>
+        <span>Alt-drag or middle-drag to pan</span>
+      </div>
       <button id="stronghold-ready" class="stronghold-tier" type="button"><span id="stronghold-tier-label">Tier 0</span><strong id="stronghold-tier-action">Tier Up</strong></button>
       <aside class="stronghold-hud" aria-label="Kingdom status">
         <div class="stronghold-populations">
@@ -64,7 +75,9 @@ export function strongholdWorkspaceMarkup(): string {
         <p>Gatherers strike resource nodes and carry yellow supply chunks to the nearest relay or castle. Relays forward supplies through links within 155 map units. Purple nodes yield twice as much. Broken connections stop relay deliveries.</p>
         <p>In Unit Control, drag or click to select troops, then click to move. Shift adds troops. Join a role with Player 1's dropdown; everyone on that role shares the selected task and completed work.</p>
         <p>The Army teammate earns supplies at Tier 0, builds a barracks after Tier 1 unlocks, then trains troops. Unit Control can type for supplies while issuing orders.</p>
-        <p>Each task keeps its completed work when you switch tasks or roles. Building tiers and upgrade types keep separate progress. Medium is the default length.</p>
+        <p>Each task keeps its completed work when you switch tasks or roles. Building tiers and upgrade types keep separate progress. Dev options sets the defaults for new matches.</p>
+        <p>Use Left/Down for shorter text, Right/Up for longer text, or click the faded length options. Shift+arrows still selects typed text. Alt+number chooses the matching option in your current role; Alt+0 is the tenth option.</p>
+        <p>The map starts zoomed toward the home base. Use +/- and Fit map to zoom, and Alt-drag or middle-drag to pan. Shift-drag still adds troops to your selection.</p>
         <p>Stop computers pauses simulated teammates and their barracks, not the battlefield. Resume them to finish a shared tier challenge.</p>
         <p>World events begin at 1, 3, 5 and subsequent odd minutes of battle time, last 35 seconds, and leave normal typing between events.</p>
         <p>Tier Up requires three phrases from each player. Barracks train their tier's units automatically. Destroy the enemy base to win.</p>
@@ -80,6 +93,7 @@ export function strongholdWorkspaceMarkup(): string {
             <select id="stronghold-dev-length">${PHRASE_LENGTHS.map(length => `<option value="${length}">${LENGTH_LABELS[length]}</option>`).join('')}</select>
           </label>
           <label>Starting supplies <input id="stronghold-dev-resources" type="number" min="0" max="10000" step="1" required></label>
+          <label>Starting map zoom <input id="stronghold-dev-zoom" type="number" min="1" max="2" step="0.1" required></label>
           <p>Saved on this device. Applying starts a new match; New game uses these defaults.</p>
           <button type="submit">Apply &amp; new game</button>
         </form>
@@ -92,9 +106,11 @@ export function strongholdWorkspaceMarkup(): string {
       <div class="stronghold-squad">${PLAYER_IDS.map(playerCard).join('')}</div>
       <div id="stronghold-private-slot">
         <section id="stronghold-private" class="stronghold-private" aria-label="Your private typing area">
-          <label class="stronghold-length-label" for="stronghold-length">Length
-            <select id="stronghold-length">${PHRASE_LENGTHS.map(length => `<option value="${length}">${LENGTH_LABELS[length]}</option>`).join('')}</select>
-          </label>
+          <div class="stronghold-length-panel"><span id="stronghold-length-label">Length &#8593;/&#8595;</span>
+            <div id="stronghold-length" class="stronghold-length-wheel" role="listbox" aria-labelledby="stronghold-length-label" aria-activedescendant="stronghold-length-medium" tabindex="0">
+              ${PHRASE_LENGTHS.map(length => `<button id="stronghold-length-${length}" type="button" role="option" data-length="${length}" value="${length}" aria-selected="${length === 'medium'}" tabindex="-1">${LENGTH_LABELS[length]}</button>`).join('')}
+            </div>
+          </div>
           <section id="stronghold-typing" class="stronghold-typing">
             <div id="stronghold-phrase" class="text-display" tabindex="0" aria-label="Your private text to type"></div>
             <div class="progress-track is-hidden" aria-hidden="true"><div id="stronghold-typing-progress"></div></div>
@@ -106,8 +122,8 @@ export function strongholdWorkspaceMarkup(): string {
         </section>
       </div>
       <section id="stronghold-army-orders" class="stronghold-army-orders is-hidden">
-        <button id="stronghold-select-army" type="button">Select all troops</button><button id="stronghold-defend" type="button">Defend</button><button id="stronghold-assault" type="button">Assault base</button>
-        <button id="stronghold-rally" type="button">Set rally on map</button><p id="stronghold-selection"></p>
+        <button id="stronghold-select-army" type="button" data-shortcut="2" aria-keyshortcuts="Alt+2"><kbd class="stronghold-hotkey">Alt+2</kbd>Select all troops</button><button id="stronghold-defend" type="button" data-shortcut="3" aria-keyshortcuts="Alt+3"><kbd class="stronghold-hotkey">Alt+3</kbd>Defend</button><button id="stronghold-assault" type="button" data-shortcut="4" aria-keyshortcuts="Alt+4"><kbd class="stronghold-hotkey">Alt+4</kbd>Assault base</button>
+        <button id="stronghold-rally" type="button" data-shortcut="5" aria-keyshortcuts="Alt+5"><kbd class="stronghold-hotkey">Alt+5</kbd>Set rally on map</button><p id="stronghold-selection"></p>
       </section>
       <div id="stronghold-placement" class="stronghold-placement is-hidden"><span>Click the map to place the shadow.</span><button id="stronghold-cancel-placement" type="button">Cancel</button></div>
     </div>

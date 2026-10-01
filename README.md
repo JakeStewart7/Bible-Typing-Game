@@ -34,10 +34,25 @@ Costs appear in separate player-colored badges. Selections, buttons, the input's
 light palette. Your typed text appears both in the central input and in your
 small player display, just like your teammates' typed text.
 
-**Dev options** sets the starting computer state, default text length and starting
-supplies (0-10,000). **Apply & new game** saves these defaults on this device and
+**Dev options** sets the starting computer state, default text length, starting
+supplies (0-10,000), and starting map zoom (1.0-2.0). **Apply & new game** saves these defaults on this device and
 starts a fresh match. Subsequent **New game** actions and page reloads use the
 saved defaults; changing them does not save an ongoing match.
+
+The slim, stretched private typing strip leaves more height for the battlefield.
+The map starts at **120% zoom**, focused toward the home base. Use **+/-**,
+**Fit map**, and **Alt-drag or middle-drag** to navigate without issuing orders.
+Fit shows the entire map; zoom and pan do not change world coordinates or speed.
+Shift-drag retains additive army selection.
+
+The length selector is a faded reel: **Left/Down** selects shorter entries,
+**Right/Up** longer entries, from anywhere outside dropdowns and dev fields.
+Clicking an option also works; endpoints do not wrap or discard current typing.
+Shift+arrows still selects typed text. **Alt+1...9** selects the corresponding
+visible task in your current role; **Alt+0** selects Army's tenth option.
+Each button displays its shortcut, and locked tasks remain locked. Unit Control
+also uses Alt+2 for selection, Alt+3 for Defend, Alt+4 for Assault and Alt+5
+for rally placement. Keyboard actions restore typing focus.
 
 **Relay** starts placement immediately, with no typing requirement or work spent.
 A translucent building shadow follows the map cursor; its outline is red at
@@ -61,7 +76,9 @@ All units move at 30% of their original speed and have twice their original heal
 including wave and troop-upgrade health bonuses. The home castle has 10,000 HP,
 ten times its original health. Moving units bob gently; attacks and harvesting
 briefly flash a strike toward their target. Reduced-motion preferences disable
-the bob and attack-size pulse. Full-width player progress bars are three times
+the bob and attack-size pulse. Square warriors and square enemies instead rock
+back and forth on alternating lower corners; triangle motion is unchanged.
+Full-width player progress bars are three times
 thicker for visibility and show the same progress for everyone sharing a role.
 Their outer borders are thick black around an inner player-colored rim. The event
 history aligns with Player 1's left edge above the bottom panels, starts at the

@@ -6,8 +6,9 @@ import { distance } from '../domain/rules.ts';
 import { renderStronghold, strongholdElements } from './view.ts';
 import { mapPoint, readyBuilding, troopsInRectangle, type PlacementKind } from './map-controls.ts';
 import { setText } from './dom-updates.ts';
-import type { DeveloperOptions } from '../infrastructure/developer-options.ts';
-import { validateMatchOptions } from '../domain/options.ts';
+import { validateDeveloperOptions, type DeveloperOptions } from '../infrastructure/developer-options.ts';
+import { MIN_MAP_ZOOM, MAX_MAP_ZOOM } from './map-camera.ts';
+import { actionShortcutKey, arrowLength } from './keyboard.ts';
 
 export function createStrongholdController(connection: StrongholdConnection, developer: {
   defaults: DeveloperOptions; save(options: DeveloperOptions): void;
@@ -19,9 +20,18 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   const startingComputers = requireElement('stronghold-dev-computers', HTMLSelectElement);
   const startingLength = requireElement('stronghold-dev-length', HTMLSelectElement);
   const startingResources = requireElement('stronghold-dev-resources', HTMLInputElement);
+  const startingZoom = requireElement('stronghold-dev-zoom', HTMLInputElement);
   startingComputers.value = defaults.computersPaused ? 'stopped' : 'started';
   startingLength.value = defaults.length;
   startingResources.value = String(defaults.resources);
+  startingZoom.value = String(defaults.mapZoom);
+  elements.camera.reset(defaults.mapZoom);
+  function updateCameraControls(): void {
+    setText(requireElement('stronghold-zoom', HTMLElement), `${Math.round(elements.camera.zoom * 100)}%`);
+    requireElement('stronghold-zoom-out', HTMLButtonElement).disabled = elements.camera.zoom <= MIN_MAP_ZOOM;
+    requireElement('stronghold-zoom-in', HTMLButtonElement).disabled = elements.camera.zoom >= MAX_MAP_ZOOM;
+  }
+  updateCameraControls();
   const selected = new Set<number>();
   let snapshot: StrongholdSnapshot | null = null;
   let typing: Game = createGame('');
@@ -37,6 +47,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   let rallyPlacement = false;
   let cursor: Point | null = null;
   let drag: { start: Point; end: Point; pointer: number; additive: boolean; unitId: number | null; moved: boolean } | null = null;
+  let pan: { pointer: number; start: Point; center: Point; matrix: DOMMatrix } | null = null;
   const running = (): boolean => shown && !paused && !document.hidden;
   const self = () => snapshot?.players.find(player => player.id === snapshot?.selfId);
   const placing = (): PlacementKind | null => snapshot && running() && snapshot.phase === 'playing' && !placementCancelled
@@ -48,6 +59,8 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     }
   }
   function clearDrag(): void {
+    if (pan && elements.map.hasPointerCapture(pan.pointer)) elements.map.releasePointerCapture(pan.pointer);
+    pan = null;
     if (drag && elements.map.hasPointerCapture(drag.pointer)) elements.map.releasePointerCapture(drag.pointer);
     drag = null;
     elements.mapControls.selection(null, null);
@@ -119,6 +132,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     relayPlacement = false; placementCancelled = false; rallyPlacement = false;
     errorMessage = ''; phraseId = -1;
     clearDrag();
+    elements.camera.reset(defaults.mapZoom); updateCameraControls();
     connection.restart(defaults);
     connection.setActive(running());
     focusTyping();
@@ -142,12 +156,18 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     void send({ type: 'TYPE', phraseId, text: elements.input.value });
   });
   elements.phrase.addEventListener('click', focusTyping);
-  elements.length.addEventListener('change', () => {
-    const length = PHRASE_LENGTHS.find(value => value === elements.length.value);
-    if (length) {
-      elements.input.focus({ preventScroll: true });
-      void send({ type: 'LENGTH', length });
-    }
+  for (const option of elements.lengthOptions) option.element.addEventListener('click', () => {
+    if (self()?.length !== option.length) void send({ type: 'LENGTH', length: option.length });
+    else focusTyping();
+  });
+  for (const [id, change] of [['stronghold-zoom-out', -.1], ['stronghold-zoom-in', .1]] as const) {
+    requireElement(id, HTMLButtonElement).addEventListener('click', () => {
+      clearDrag(); elements.camera.setZoom(elements.camera.zoom + change); cursor = null;
+      updateCameraControls(); display(); focusTyping();
+    });
+  }
+  requireElement('stronghold-zoom-fit', HTMLButtonElement).addEventListener('click', () => {
+    clearDrag(); elements.camera.reset(1); cursor = null; updateCameraControls(); display(); focusTyping();
   });
   for (const card of elements.playerCards) {
     card.roleSelect.addEventListener('change', () => {
@@ -167,7 +187,16 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     }
   }
   elements.map.addEventListener('pointerdown', event => {
-    if (!running() || event.button !== 0 || snapshot?.phase !== 'playing') return;
+    if (!running() || snapshot?.phase !== 'playing') return;
+    if (event.button === 1 || (event.button === 0 && event.altKey)) {
+      const matrix = elements.map.getScreenCTM();
+      const point = mapPoint(elements.map, event.clientX, event.clientY);
+      if (!matrix || !point) return;
+      pan = { pointer: event.pointerId, start: point, center: elements.camera.center, matrix: matrix.inverse() };
+      elements.map.setPointerCapture(event.pointerId); event.preventDefault();
+      return;
+    }
+    if (event.button !== 0) return;
     const point = mapPoint(elements.map, event.clientX, event.clientY);
     if (!point) return;
     const target = event.target instanceof Element ? event.target.closest('[data-unit]') : null;
@@ -178,6 +207,13 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     event.preventDefault();
   });
   elements.map.addEventListener('pointermove', event => {
+    if (pan && pan.pointer === event.pointerId) {
+      const point = elements.map.createSVGPoint();
+      point.x = event.clientX; point.y = event.clientY;
+      const location = point.matrixTransform(pan.matrix);
+      elements.camera.panTo({ x: pan.center.x + pan.start.x - location.x, y: pan.center.y + pan.start.y - location.y });
+      return;
+    }
     cursor = mapPoint(elements.map, event.clientX, event.clientY);
     if (drag && drag.pointer === event.pointerId && cursor) {
       drag.end = cursor;
@@ -190,11 +226,12 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     }
   });
   elements.map.addEventListener('pointerleave', () => {
-    if (drag) return;
+    if (drag || pan) return;
     cursor = null;
     if (snapshot) elements.mapControls.ghost(snapshot, null, null);
   });
   elements.map.addEventListener('pointerup', event => {
+    if (pan?.pointer === event.pointerId) { clearDrag(); cursor = null; display(); focusTyping(); return; }
     if (!drag || event.pointerId !== drag.pointer || !snapshot) return;
     const gesture = drag;
     const point = mapPoint(elements.map, event.clientX, event.clientY) ?? gesture.end;
@@ -232,9 +269,10 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       if (!length) throw new Error('Choose a valid default text length.');
       if (!['started', 'stopped'].includes(startingComputers.value)) throw new Error('Choose whether computers start or stop.');
       const options: DeveloperOptions = {
-        resources: startingResources.valueAsNumber, length, computersPaused: startingComputers.value === 'stopped'
+        resources: startingResources.valueAsNumber, length, computersPaused: startingComputers.value === 'stopped',
+        mapZoom: startingZoom.valueAsNumber
       };
-      validateMatchOptions(options);
+      validateDeveloperOptions(options);
       developer.save(options);
       defaults = { ...options };
       developerPanel.open = false;
@@ -276,6 +314,29 @@ export function createStrongholdController(connection: StrongholdConnection, dev
         display();
       }
       return;
+    }
+    const shortcut = actionShortcutKey(event);
+    const player = self();
+    if (shortcut && player && snapshot.phase === 'playing') {
+      const own = elements.playerCards.find(card => card.id === player.id);
+      const button = own?.groups.find(group => group.role === player.role)?.buttons.find(button => button.element.dataset.shortcut === shortcut)?.element
+        ?? (player.role === 'army' ? elements.orders.querySelector<HTMLButtonElement>(`[data-shortcut="${shortcut}"]`) : null);
+      if (button) {
+        event.preventDefault();
+        if (!event.repeat) button.click();
+        focusTyping();
+        return;
+      }
+    }
+    if (player && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey
+      && !elements.input.disabled && !(document.activeElement instanceof HTMLSelectElement)) {
+      const length = arrowLength(player.length, event.key);
+      if (length) {
+        event.preventDefault();
+        if (length !== player.length) void send({ type: 'LENGTH', length });
+        else focusTyping();
+        return;
+      }
     }
     if (event.ctrlKey || event.metaKey || event.altKey || event.key.length !== 1 || elements.input.disabled
       || document.activeElement === elements.input || document.activeElement instanceof HTMLSelectElement) return;

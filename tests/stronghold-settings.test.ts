@@ -64,12 +64,14 @@ test('Stronghold developer defaults persist independently of the current match a
     removeItem: key => { values.delete(key); }
   });
   equal(readDeveloperOptions(storage), DEFAULT_DEVELOPER_OPTIONS);
-  const options = { resources: 25, length: 'long' as const, computersPaused: true };
+  const options = { resources: 25, length: 'long' as const, computersPaused: true, mapZoom: 1.5 };
   writeDeveloperOptions(storage, options);
   equal(readDeveloperOptions(storage), options);
   const saved = readDeveloperOptions(storage);
   saved.resources = 100;
   equal(readDeveloperOptions(storage).resources, 25);
+  values.set('stronghold-developer-options', '{"resources":25,"length":"long","computersPaused":true}');
+  equal(readDeveloperOptions(storage), { ...options, mapZoom: 1.2 });
   values.set('stronghold-developer-options', '{"length":"obsolete"}');
   equal(readDeveloperOptions(storage), DEFAULT_DEVELOPER_OPTIONS);
 });

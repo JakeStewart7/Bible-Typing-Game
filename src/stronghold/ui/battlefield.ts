@@ -17,6 +17,10 @@ export function unitMotionTransform(unit: Unit, previous: Point | undefined, ela
   if (attacking) return 'scale(1.15)';
   if (!previous || distance(unit, previous) < .001) return '';
   const stride = Math.sin(elapsed * 16 + unit.id);
+  if (unit.kind === 'warrior' || (unit.kind === 'invader' && (unit.formation === null || unit.formation === 'warrior'))) {
+    // Pivot on the planted bottom corner; the opposite corner lifts on each stride.
+    return `rotate(${stride * 14} ${stride >= 0 ? 8 : -8} 8)`;
+  }
   return `translate(0 ${stride * 1.5}) rotate(${stride * 5})`;
 }
 export function unitMarkup(unit: Unit, selected: boolean): string {

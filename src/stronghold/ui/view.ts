@@ -1,7 +1,8 @@
 import { requireElement } from '../../shared/dom.ts';
 import { BUILDING_CAPS, EVENT_LABELS, ROLE_ACTIONS, TIER_MAX, TIER_QUOTA, UNIT_CAPS } from '../domain/rules.ts';
 import { taskWork, upgradeLimit } from '../domain/technology.ts';
-import { ROLES, UPGRADE_TARGETS, type StrongholdSnapshot } from '../domain/types.ts';
+import { PHRASE_LENGTHS, ROLES, UPGRADE_TARGETS, type StrongholdSnapshot } from '../domain/types.ts';
+import { createMapCamera } from './map-camera.ts';
 import { createBattlefieldRenderer } from './battlefield.ts';
 import { setAttribute, setText } from './dom-updates.ts';
 import { PLAYER_IDS } from './workspace.ts';
@@ -36,13 +37,15 @@ export function strongholdElements() {
     screen: requireElement('stronghold-screen', HTMLElement), map, playerCards,
     renderBattlefield: createBattlefieldRenderer(map),
     mapControls: createMapControls(map),
+    camera: createMapCamera(map),
     renderEventLog: createEventLog(requireElement('stronghold-event-log', HTMLElement)),
     contributionCards: new Map<string, { card: HTMLElement; name: HTMLElement; progress: HTMLElement; typed: HTMLElement }>(),
     input: requireElement('stronghold-input', HTMLInputElement), phrase: requireElement('stronghold-phrase', HTMLElement),
     typedBar: requireElement('stronghold-typed-bar', HTMLElement), progressFill: requireElement('stronghold-typing-progress', HTMLElement),
     typing: requireElement('stronghold-typing', HTMLElement), typedArea: requireElement('stronghold-typed-area', HTMLElement),
     privateTyping: requireElement('stronghold-private', HTMLElement), privateSlot: requireElement('stronghold-private-slot', HTMLElement),
-    length: requireElement('stronghold-length', HTMLSelectElement),
+    length: requireElement('stronghold-length', HTMLElement),
+    lengthOptions: PHRASE_LENGTHS.map(length => ({ length, element: requireElement(`stronghold-length-${length}`, HTMLButtonElement) })),
     worldEvent: requireElement('stronghold-world-event', HTMLElement),
     computerButtons: ['stronghold-computers', 'stronghold-tier-computers'].map(id => requireElement(id, HTMLButtonElement)),
     orders: requireElement('stronghold-army-orders', HTMLElement), placement: requireElement('stronghold-placement', HTMLElement),
@@ -107,8 +110,15 @@ export function renderStronghold(
   elements.placement.classList.toggle('is-hidden', !placing || terminal);
   const inputDisabled = !running || terminal;
   if (elements.input.disabled !== inputDisabled) elements.input.disabled = inputDisabled;
-  if (elements.length.value !== self.length) elements.length.value = self.length;
-  elements.length.disabled = !running || terminal;
+  setAttribute(elements.length, 'aria-activedescendant', `stronghold-length-${self.length}`);
+  setAttribute(elements.length, 'aria-disabled', String(!running || terminal));
+  for (const option of elements.lengthOptions) {
+    const offset = PHRASE_LENGTHS.indexOf(self.length) - PHRASE_LENGTHS.indexOf(option.length);
+    option.element.style.setProperty('--length-offset', String(offset));
+    option.element.style.setProperty('--length-opacity', offset === 0 ? '1' : Math.abs(offset) === 1 ? '.4' : '.18');
+    setAttribute(option.element, 'aria-selected', String(option.length === self.length));
+    option.element.disabled = !running || terminal;
+  }
   text('stronghold-selection', `${selected.size} selected / ${snapshot.units.filter(unit => ['warrior', 'archer', 'catapult'].includes(unit.kind)).length} army units`);
   for (const entry of elements.playerCards) {
     const player = snapshot.players.find(candidate => candidate.id === entry.id);

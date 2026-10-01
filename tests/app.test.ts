@@ -12,6 +12,7 @@ import './stronghold-presentation.test.ts';
 import './stronghold-pacing.test.ts';
 import './stronghold-workflow.test.ts';
 import './stronghold-settings.test.ts';
+import './stronghold-controls.test.ts';
 import { runTests } from './harness.ts';
 
 await runTests();
