@@ -69,6 +69,21 @@ export function strongholdWorkspaceMarkup(): string {
         <p>World events begin at 1, 3, 5 and subsequent odd minutes of battle time, last 35 seconds, and leave normal typing between events.</p>
         <p>Tier Up requires three phrases from each player. Barracks train their tier's units automatically. Destroy the enemy base to win.</p>
       </details>
+      <details id="stronghold-dev-options" class="stronghold-dev-options">
+        <summary>Dev options</summary>
+        <form id="stronghold-dev-form" class="stronghold-dev-panel">
+          <h3>New match defaults</h3>
+          <label>Computers start
+            <select id="stronghold-dev-computers"><option value="started">Started</option><option value="stopped">Stopped</option></select>
+          </label>
+          <label>Default text length
+            <select id="stronghold-dev-length">${PHRASE_LENGTHS.map(length => `<option value="${length}">${LENGTH_LABELS[length]}</option>`).join('')}</select>
+          </label>
+          <label>Starting supplies <input id="stronghold-dev-resources" type="number" min="0" max="10000" step="1" required></label>
+          <p>Saved on this device. Applying starts a new match; New game uses these defaults.</p>
+          <button type="submit">Apply &amp; new game</button>
+        </form>
+      </details>
       <p id="stronghold-feedback" class="stronghold-feedback" role="status" aria-live="polite"></p>
       <aside class="stronghold-event-panel" aria-label="World event and history">
         <div id="stronghold-world-event" class="stronghold-world-event is-hidden" aria-live="polite"><strong id="stronghold-event"></strong><span id="stronghold-event-time"></span></div>

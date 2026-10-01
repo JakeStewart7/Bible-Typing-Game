@@ -48,6 +48,14 @@
 .stronghold-guide summary { cursor: pointer; width: fit-content; font-weight: bold; }
 .stronghold-guide[open] { max-height: calc(100% - var(--deck-height) - 70px); overflow: auto; border: 2px solid #111; background: #eee; padding: 8px; }
 .stronghold-guide p { line-height: 1.4; margin: 8px 0; }
+.stronghold-dev-options { position: absolute; top: 60px; left: 95px; z-index: 7; font-size: 16px; }
+.stronghold-dev-options summary { cursor: pointer; }
+.stronghold-dev-panel { position: absolute; top: 28px; left: 0; width: min(340px, calc(100vw - 16px)); padding: 12px; background: #eee; border: 2px solid #111; display: grid; gap: 10px; }
+.stronghold-dev-panel h3, .stronghold-dev-panel p { margin: 0; }
+.stronghold-dev-panel p { font-size: 14px; }
+.stronghold-dev-panel label { display: grid; gap: 4px; }
+.stronghold-dev-panel :is(input, select, button) { width: 100%; min-height: 36px; border: 2px solid #111; border-radius: 0; background: white; color: #111; font: inherit; padding: 4px; }
+.stronghold-dev-panel button { background: var(--player-fill); }
 .stronghold-legend { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 0; font-weight: bold; }
 .stronghold-feedback { position: absolute; top: 112px; left: 27%; right: 27%; z-index: 4; margin: 0; font-size: 16px; text-align: center; font-weight: bold; color: #111; background: #ffffffd9; padding: 4px 8px; border: 1px solid #555; }
 .stronghold-event-panel { position: absolute; bottom: calc(var(--deck-height) + 18px); left: var(--squad-inset); width: min(24%, 380px); z-index: 4; }
@@ -136,6 +144,8 @@
   .stronghold-populations { gap: 4px; }.stronghold-populations > span { font-size: 14px; gap: 2px; }.stronghold-symbol { width: 15px; height: 15px; flex-basis: 15px; }
   .stronghold-tier { top: 54px; left: 8px; width: 66px; height: 80px; padding: 14px 5px; font-size: 16px; }.stronghold-tier span { font-size: 14px; }
   .stronghold-guide { top: 150px; left: 8px; }
+  .stronghold-dev-options { top: 150px; }
+  .stronghold-dev-panel { left: -87px; }
   #stronghold-map { top: 180px; height: calc(100% - var(--deck-height) - 420px); }
   .stronghold-squad { bottom: 4px; grid-template-columns: minmax(0, 1fr); gap: 6px; }
   .stronghold-private { width: calc(100% - 20px); bottom: calc(var(--deck-height) + 22px); }

@@ -5,6 +5,9 @@ import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { addBuilding, createStronghold } from '../src/stronghold/domain/state.ts';
 import type { Participant, StrongholdCommand, StrongholdState } from '../src/stronghold/domain/types.ts';
 import { equal, test } from './harness.ts';
+import { AppStorage } from '../src/persistence/storage.ts';
+import { DEFAULT_DEVELOPER_OPTIONS, readDeveloperOptions, writeDeveloperOptions } from '../src/stronghold/infrastructure/developer-options.ts';
+import { isMatchOptions } from '../src/stronghold/domain/options.ts';
 
 function human(state: StrongholdState): Participant {
   const player = state.players.find(player => player.id === 'you');
@@ -23,6 +26,53 @@ function quietMatch(): StrongholdState {
   state.waveIn = 10000;
   return state;
 }
+
+test('Stronghold developer defaults are validated, copied and reused by new matches', () => {
+  const options = { resources: 175, length: 'short' as const, computersPaused: true };
+  const engine = new StrongholdEngine(options);
+  options.resources = 0;
+  const initial = engine.snapshot('you');
+  equal(initial.resources, 175);
+  equal(initial.computersPaused, true);
+  equal(initial.players.every(player => player.length === 'short'), true);
+  equal(Object.values(initial.roleTasks).every(role => role.length === 'short'), true);
+  engine.send('you', { type: 'COMPUTERS', paused: false });
+  engine.restart();
+  equal(engine.snapshot('you').resources, 175);
+  equal(engine.snapshot('you').computersPaused, true);
+  engine.restart({ resources: 0, length: 'extra-long', computersPaused: false });
+  equal(engine.snapshot('you').resources, 0);
+  equal(engine.snapshot('you').players.every(player => player.length === 'extra-long'), true);
+  const before = engine.snapshot('you');
+  let rejected = false;
+  try { engine.restart({ resources: NaN, length: 'medium', computersPaused: true }); }
+  catch (error) { rejected = error instanceof Error && error.message.includes('starting supplies'); }
+  equal(rejected, true);
+  equal(engine.snapshot('you'), before);
+  for (const value of [null, {}, { resources: -1, length: 'short', computersPaused: false },
+    { resources: 10001, length: 'short', computersPaused: false },
+    { resources: 1.5, length: 'short', computersPaused: false },
+    { resources: 50, length: 'invalid', computersPaused: false },
+    { resources: 50, length: 'short', computersPaused: 'true' }]) equal(isMatchOptions(value), false);
+});
+
+test('Stronghold developer defaults persist independently of the current match and tolerate obsolete stored data', () => {
+  const values = new Map<string, string>();
+  const storage = new AppStorage({
+    getItem: key => values.get(key) ?? null,
+    setItem: (key, value) => { values.set(key, value); },
+    removeItem: key => { values.delete(key); }
+  });
+  equal(readDeveloperOptions(storage), DEFAULT_DEVELOPER_OPTIONS);
+  const options = { resources: 25, length: 'long' as const, computersPaused: true };
+  writeDeveloperOptions(storage, options);
+  equal(readDeveloperOptions(storage), options);
+  const saved = readDeveloperOptions(storage);
+  saved.resources = 100;
+  equal(readDeveloperOptions(storage).resources, 25);
+  values.set('stronghold-developer-options', '{"length":"obsolete"}');
+  equal(readDeveloperOptions(storage), DEFAULT_DEVELOPER_OPTIONS);
+});
 
 test('Stronghold starts with 50 supplies, Medium text and running computers, and restart clears task banks', () => {
   const engine = new StrongholdEngine();

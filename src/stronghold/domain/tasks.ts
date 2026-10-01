@@ -1,4 +1,4 @@
-import type { Participant, RoleTasks, StrongholdState, TaskSelection } from './types.ts';
+import type { Participant, PhraseLength, RoleTasks, StrongholdState, TaskSelection } from './types.ts';
 
 export function taskKey(task: TaskSelection): string {
   if (task.action === 'barracks' || task.action === 'tower') return `${task.action}:${task.constructionTier}`;
@@ -6,8 +6,8 @@ export function taskKey(task: TaskSelection): string {
   return task.action === 'relay' ? 'resources' : task.action;
 }
 
-export function createRoleTasks(selection: TaskSelection): RoleTasks {
-  return { selection, length: 'medium', progress: {} };
+export function createRoleTasks(selection: TaskSelection, length: PhraseLength = 'medium'): RoleTasks {
+  return { selection, length, progress: {} };
 }
 
 export function saveRoleTask(state: StrongholdState, player: Participant): void {

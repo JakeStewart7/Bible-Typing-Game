@@ -2,7 +2,8 @@ import { BASE, ENEMY_BASE, UNIT_HEALTH_MULTIPLIER, UNIT_RULES } from './rules.ts
 import { assignPhrase } from './phrases.ts';
 import { unitUpgrade } from './technology.ts';
 import { createRoleTasks } from './tasks.ts';
-import type { ArmyUnitKind, Building, BuildingKind, Participant, Point, StrongholdState, Unit, UnitKind } from './types.ts';
+import { DEFAULT_MATCH_OPTIONS, validateMatchOptions } from './options.ts';
+import type { ArmyUnitKind, Building, BuildingKind, Participant, Point, StrongholdMatchOptions, StrongholdState, Unit, UnitKind } from './types.ts';
 
 export function addUnit(state: StrongholdState, kind: UnitKind, point: Point, formation: ArmyUnitKind | null = null): Unit {
   const hp = ((formation ? UNIT_RULES[formation].hp : UNIT_RULES[kind].hp)
@@ -23,7 +24,8 @@ export function addBuilding(
   state.buildings.push(building);
   return building;
 }
-export function createStronghold(): StrongholdState {
+export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH_OPTIONS): StrongholdState {
+  validateMatchOptions(options);
   const roster: Pick<Participant, 'id' | 'name' | 'color' | 'role' | 'simulated'>[] = [
     { id: 'you', name: 'You', color: '#ff1726', role: 'economy', simulated: false },
     { id: 'bot-1', name: 'Miriam', color: '#00aeef', role: 'production', simulated: true },
@@ -31,13 +33,13 @@ export function createStronghold(): StrongholdState {
     { id: 'bot-3', name: 'Esther', color: '#18b644', role: 'defenses', simulated: true }
   ];
   const state: StrongholdState = {
-    phase: 'playing', tier: 0, elapsed: 0, wave: 0, waveIn: 30, resources: 50,
+    phase: 'playing', tier: 0, elapsed: 0, wave: 0, waveIn: 30, resources: options.resources,
     event: 'peace', eventIn: 60, nextId: 1, units: [], buildings: [], chunks: [],
     players: roster.map(player => ({
       ...player, action: player.role === 'defenses' ? 'builder' : 'resources',
       phrase: '', typed: '', phraseId: 0, completed: 0, ready: false, contribution: 0, typingCredit: 0,
       constructionTier: 1, upgradeTarget: player.role === 'production' ? 'warrior' : player.role === 'defenses' ? 'tower-1' : 'economy',
-      actionPhrases: 0, work: 0, length: 'medium'
+      actionPhrases: 0, work: 0, length: options.length
     })),
     nodes: [
       { x: 290, y: 530, rich: false }, { x: 730, y: 520, rich: false },
@@ -48,12 +50,12 @@ export function createStronghold(): StrongholdState {
     upgrades: { economy: 0, production: 0, defenses: 0 },
     technology: { economy: 0, warrior: 0, archer: 0, catapult: 0, 'tower-1': 0, 'tower-2': 0, 'tower-3': 0 },
     rally: { x: 500, y: 450 }, message: '', events: [{ id: 1, elapsed: 0, playerId: null, text: 'Stronghold started' }],
-    computersPaused: false,
+    computersPaused: options.computersPaused,
     roleTasks: {
-      economy: createRoleTasks({ action: 'resources', constructionTier: 1, upgradeTarget: 'economy' }),
-      production: createRoleTasks({ action: 'resources', constructionTier: 1, upgradeTarget: 'warrior' }),
-      army: createRoleTasks({ action: 'resources', constructionTier: 1, upgradeTarget: 'economy' }),
-      defenses: createRoleTasks({ action: 'builder', constructionTier: 1, upgradeTarget: 'tower-1' })
+      economy: createRoleTasks({ action: 'resources', constructionTier: 1, upgradeTarget: 'economy' }, options.length),
+      production: createRoleTasks({ action: 'resources', constructionTier: 1, upgradeTarget: 'warrior' }, options.length),
+      army: createRoleTasks({ action: 'resources', constructionTier: 1, upgradeTarget: 'economy' }, options.length),
+      defenses: createRoleTasks({ action: 'builder', constructionTier: 1, upgradeTarget: 'tower-1' }, options.length)
     }
   };
   addBuilding(state, 'castle', BASE, true);

@@ -6,9 +6,22 @@ import { distance } from '../domain/rules.ts';
 import { renderStronghold, strongholdElements } from './view.ts';
 import { mapPoint, readyBuilding, troopsInRectangle, type PlacementKind } from './map-controls.ts';
 import { setText } from './dom-updates.ts';
+import type { DeveloperOptions } from '../infrastructure/developer-options.ts';
+import { validateMatchOptions } from '../domain/options.ts';
 
-export function createStrongholdController(connection: StrongholdConnection) {
+export function createStrongholdController(connection: StrongholdConnection, developer: {
+  defaults: DeveloperOptions; save(options: DeveloperOptions): void;
+}) {
   const elements = strongholdElements();
+  let defaults = { ...developer.defaults };
+  const developerPanel = requireElement('stronghold-dev-options', HTMLDetailsElement);
+  const developerForm = requireElement('stronghold-dev-form', HTMLFormElement);
+  const startingComputers = requireElement('stronghold-dev-computers', HTMLSelectElement);
+  const startingLength = requireElement('stronghold-dev-length', HTMLSelectElement);
+  const startingResources = requireElement('stronghold-dev-resources', HTMLInputElement);
+  startingComputers.value = defaults.computersPaused ? 'stopped' : 'started';
+  startingLength.value = defaults.length;
+  startingResources.value = String(defaults.resources);
   const selected = new Set<number>();
   let snapshot: StrongholdSnapshot | null = null;
   let typing: Game = createGame('');
@@ -29,6 +42,7 @@ export function createStrongholdController(connection: StrongholdConnection) {
   const placing = (): PlacementKind | null => snapshot && running() && snapshot.phase === 'playing' && !placementCancelled
     ? relayPlacement ? 'relay' : readyBuilding(snapshot) : null;
   function focusTyping(): void {
+    if (developerPanel.open && document.activeElement instanceof Element && developerPanel.contains(document.activeElement)) return;
     if (running() && !elements.input.disabled && !(document.activeElement instanceof HTMLSelectElement)) {
       elements.input.focus({ preventScroll: true });
     }
@@ -105,7 +119,7 @@ export function createStrongholdController(connection: StrongholdConnection) {
     relayPlacement = false; placementCancelled = false; rallyPlacement = false;
     errorMessage = ''; phraseId = -1;
     clearDrag();
-    connection.restart();
+    connection.restart(defaults);
     connection.setActive(running());
     focusTyping();
   }
@@ -210,6 +224,26 @@ export function createStrongholdController(connection: StrongholdConnection) {
   });
   for (const id of ['stronghold-pause', 'stronghold-tier-pause']) requireElement(id, HTMLButtonElement).addEventListener('click', togglePause);
   for (const id of ['stronghold-restart', 'stronghold-play-again']) requireElement(id, HTMLButtonElement).addEventListener('click', restart);
+  developerForm.addEventListener('submit', event => {
+    event.preventDefault();
+    if (!developerForm.reportValidity()) return;
+    try {
+      const length = PHRASE_LENGTHS.find(length => length === startingLength.value);
+      if (!length) throw new Error('Choose a valid default text length.');
+      if (!['started', 'stopped'].includes(startingComputers.value)) throw new Error('Choose whether computers start or stop.');
+      const options: DeveloperOptions = {
+        resources: startingResources.valueAsNumber, length, computersPaused: startingComputers.value === 'stopped'
+      };
+      validateMatchOptions(options);
+      developer.save(options);
+      defaults = { ...options };
+      developerPanel.open = false;
+      restart();
+    } catch (error) {
+      errorMessage = `Could not apply dev options: ${error instanceof Error ? error.message : String(error)}`;
+      display();
+    }
+  });
   requireElement('stronghold-select-army', HTMLButtonElement).addEventListener('click', () => {
     selected.clear(); armyIds().forEach(id => selected.add(id)); display(); focusTyping();
   });
@@ -221,11 +255,16 @@ export function createStrongholdController(connection: StrongholdConnection) {
   requireElement('stronghold-cancel-placement', HTMLButtonElement).addEventListener('click', cancelPlacement);
   elements.dialog.addEventListener('cancel', event => { event.preventDefault(); togglePause(); });
   const clicked = (event: MouseEvent): void => {
+    if (event.target instanceof Node && !developerPanel.contains(event.target)) developerPanel.open = false;
     if (!(event.target instanceof HTMLSelectElement)) queueMicrotask(focusTyping);
   };
   elements.screen.addEventListener('click', clicked);
   const keyboard = (event: KeyboardEvent): void => {
     if (!running() || !snapshot || event.isComposing) return;
+    if (developerPanel.open && document.activeElement instanceof Element && developerPanel.contains(document.activeElement)) {
+      if (event.key === 'Escape') { event.preventDefault(); developerPanel.open = false; focusTyping(); }
+      return;
+    }
     if (event.key === 'Escape' && snapshot.phase === 'playing') { cancelPlacement(); return; }
     if (event.altKey && placing() && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter'].includes(event.key)) {
       event.preventDefault();

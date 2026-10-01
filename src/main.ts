@@ -24,6 +24,7 @@ import { MockMultiplayerClient } from './multiplayer/infrastructure/mock-multipl
 import { BiblePassageProvider } from './multiplayer/infrastructure/bible-passage-provider.ts';
 import { createStrongholdController } from './stronghold/ui/controller.ts';
 import { LocalStrongholdConnection } from './stronghold/infrastructure/local-connection.ts';
+import { readDeveloperOptions, writeDeveloperOptions } from './stronghold/infrastructure/developer-options.ts';
 
 import trackDetermination from '../assets/music/determination.mp3';
 import trackApple from '../assets/music/apple_cider.ogg';
@@ -42,7 +43,10 @@ applyCursorSmoothing();
 const multiplayerController = createMultiplayerController(
   new MockMultiplayerClient(new BiblePassageProvider())
 );
-const strongholdController = createStrongholdController(new LocalStrongholdConnection());
+const strongholdDefaults = readDeveloperOptions(storage);
+const strongholdController = createStrongholdController(new LocalStrongholdConnection(undefined, strongholdDefaults), {
+  defaults: strongholdDefaults, save: options => writeDeveloperOptions(storage, options)
+});
 window.addEventListener('beforeunload', () => strongholdController.dispose(), { once: true });
 
 // ----------------------------

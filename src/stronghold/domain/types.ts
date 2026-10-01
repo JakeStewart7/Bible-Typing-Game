@@ -2,6 +2,7 @@ export const ROLES = ['economy', 'production', 'army', 'defenses'] as const;
 export type Role = typeof ROLES[number];
 export const PHRASE_LENGTHS = ['short', 'medium', 'long', 'extra-long'] as const;
 export type PhraseLength = typeof PHRASE_LENGTHS[number];
+export type StrongholdMatchOptions = { resources: number; length: PhraseLength; computersPaused: boolean };
 export type Point = { x: number; y: number };
 export type UnitKind = 'worker' | 'builder' | 'warrior' | 'archer' | 'catapult' | 'invader';
 export type ArmyUnitKind = 'warrior' | 'archer' | 'catapult';
@@ -60,6 +61,6 @@ export interface StrongholdConnection {
   subscribe(listener: (snapshot: StrongholdSnapshot) => void): () => void;
   send(command: StrongholdCommand): Promise<void>;
   setActive(active: boolean): void;
-  restart(): void;
+  restart(options?: StrongholdMatchOptions): void;
   dispose(): void;
 }

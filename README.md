@@ -34,6 +34,11 @@ Costs appear in separate player-colored badges. Selections, buttons, the input's
 light palette. Your typed text appears both in the central input and in your
 small player display, just like your teammates' typed text.
 
+**Dev options** sets the starting computer state, default text length and starting
+supplies (0-10,000). **Apply & new game** saves these defaults on this device and
+starts a fresh match. Subsequent **New game** actions and page reloads use the
+saved defaults; changing them does not save an ongoing match.
+
 **Relay** starts placement immediately, with no typing requirement or work spent.
 A translucent building shadow follows the map cursor; its outline is red at
 illegal sites. Click to place, or use Alt+arrow keys and Alt+Enter. Escape or
