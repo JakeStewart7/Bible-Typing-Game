@@ -4,6 +4,7 @@ import { ACTION_LABELS, BASE, BUILDING_CAPS, distance, LENGTH_LABELS, MIN_TIER, 
 import { applyUpgrade, taskCost, taskWork, upgradeLimit, UPGRADE_OPTIONS } from './technology.ts';
 import { ENTITY_LABELS, playerEvent, recordEvent } from './events.ts';
 import { PHRASE_LENGTHS, type Action, type BuildingKind, type Participant, type Point, type StrongholdCommand, type StrongholdState } from './types.ts';
+import { restoreRoleTask, saveRoleTask, taskKey } from './tasks.ts';
 
 type ActionWorld = Pick<StrongholdState, 'tier' | 'resources' | 'units' | 'technology'>;
 type TaskPlayer = Pick<Participant, 'role' | 'action' | 'constructionTier' | 'upgradeTarget' | 'work'>;
@@ -48,7 +49,7 @@ export function completePhrase(state: StrongholdState, player: Participant): voi
       state.phase = 'playing';
       state.message = `Tier ${state.tier} unlocked! New units, defenses and upgrades are available.`;
       recordEvent(state, `Tier ${state.tier} unlocked`);
-      state.players.forEach(other => { other.ready = false; other.actionPhrases = 0; other.work = 0; assignPhrase(state, other); });
+      state.players.forEach(other => { other.ready = false; restoreRoleTask(state, other); assignPhrase(state, other); });
       return;
     }
   } else {
@@ -89,21 +90,26 @@ export function completePhrase(state: StrongholdState, player: Participant): voi
 
 export function executeCommand(state: StrongholdState, player: Participant, command: StrongholdCommand): void {
   if (state.phase === 'won' || state.phase === 'lost') throw new Error('This match is over. Start a new stronghold.');
+  if (command.type === 'COMPUTERS') {
+    if (player.simulated) throw new Error('Only a human player can control the computers.');
+    if (typeof command.paused !== 'boolean') throw new Error('Invalid computer pause state.');
+    if (state.computersPaused === command.paused) return;
+    state.computersPaused = command.paused;
+    recordEvent(state, command.paused ? 'Computers stopped' : 'Computers resumed');
+    return;
+  }
   if (command.type === 'ROLE') {
     if (state.phase !== 'playing') throw new Error('Finish the shared tier challenge before switching roles.');
     if (!Object.prototype.hasOwnProperty.call(ROLE_ACTIONS, command.role)) throw new Error('Unknown role.');
     if (player.role === command.role) return;
+    saveRoleTask(state, player);
     const partner = state.players.find(other => other.role === command.role);
     player.role = command.role;
     player.ready = false;
     playerEvent(state, player, `joined ${ROLE_LABELS[player.role]}`);
     if (partner) copyRoleTask(partner, player, true);
     else {
-      player.action = ROLE_ACTIONS[player.role][0] ?? 'resources';
-      player.actionPhrases = 0;
-      player.work = 0;
-      player.constructionTier = Math.max(1, state.tier);
-      player.upgradeTarget = player.role === 'production' ? 'warrior' : player.role === 'defenses' ? 'tower-1' : 'economy';
+      restoreRoleTask(state, player);
       assignPhrase(state, player);
     }
     return;
@@ -111,6 +117,7 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
   if (command.type === 'LENGTH') {
     if (!PHRASE_LENGTHS.includes(command.length)) throw new Error('Unknown phrase length.');
     player.length = command.length;
+    state.roleTasks[player.role].length = command.length;
     assignPhrase(state, player);
     playerEvent(state, player, `selected ${LENGTH_LABELS[player.length]} text`);
     return;
@@ -143,12 +150,10 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     const upgrade = command.upgrade ?? (player.role === 'production' ? 'warrior' : player.role === 'defenses' ? 'tower-1' : 'economy');
     if (!Object.prototype.hasOwnProperty.call(UPGRADE_OPTIONS, upgrade)
       || ((command.action === 'upgrade' || command.upgrade !== undefined) && UPGRADE_OPTIONS[upgrade].role !== player.role)) throw new Error('This upgrade belongs to another role.');
-    if (player.action === command.action && player.constructionTier === tier && player.upgradeTarget === upgrade) return;
-    player.action = command.action;
-    player.constructionTier = tier;
-    player.upgradeTarget = upgrade;
-    player.actionPhrases = 0;
-    player.work = 0;
+    const selection = { action: command.action, constructionTier: tier, upgradeTarget: upgrade };
+    if (player.action === command.action && taskKey(player) === taskKey(selection)) return;
+    saveRoleTask(state, player);
+    restoreRoleTask(state, player, selection);
     assignPhrase(state, player);
     return;
   }

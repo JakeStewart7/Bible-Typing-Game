@@ -43,6 +43,8 @@ export function strongholdElements() {
     typing: requireElement('stronghold-typing', HTMLElement), typedArea: requireElement('stronghold-typed-area', HTMLElement),
     privateTyping: requireElement('stronghold-private', HTMLElement), privateSlot: requireElement('stronghold-private-slot', HTMLElement),
     length: requireElement('stronghold-length', HTMLSelectElement),
+    worldEvent: requireElement('stronghold-world-event', HTMLElement),
+    computerButtons: ['stronghold-computers', 'stronghold-tier-computers'].map(id => requireElement(id, HTMLButtonElement)),
     orders: requireElement('stronghold-army-orders', HTMLElement), placement: requireElement('stronghold-placement', HTMLElement),
     dialog: requireElement('stronghold-tier-dialog', HTMLDialogElement), tierSlot: requireElement('stronghold-tier-typing-slot', HTMLElement),
     feedback: requireElement('stronghold-feedback', HTMLElement)
@@ -78,6 +80,12 @@ export function renderStronghold(
   text('stronghold-wave', `Wave ${snapshot.wave + 1}: ${Math.ceil(snapshot.waveIn)}s`);
   text('stronghold-event', EVENT_LABELS[snapshot.event]);
   text('stronghold-event-time', `${Math.ceil(snapshot.eventIn)}s`);
+  elements.worldEvent.classList.toggle('is-hidden', snapshot.event === 'peace');
+  for (const button of elements.computerButtons) {
+    setText(button, snapshot.computersPaused ? 'Resume computers' : 'Stop computers');
+    setAttribute(button, 'aria-pressed', String(snapshot.computersPaused));
+    button.disabled = !running || terminal;
+  }
   text('stronghold-tower-count', `${snapshot.buildings.filter(building => building.kind === 'tower' && !building.enemy).length}/${BUILDING_CAPS.tower}`);
   for (const kind of ['warrior', 'builder', 'worker'] as const) text(`stronghold-${kind}-count`, `${snapshot.units.filter(unit => unit.kind === kind).length}/${UNIT_CAPS[kind]}`);
   text('stronghold-tier-label', `Tier ${snapshot.tier}`);

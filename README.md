@@ -19,12 +19,15 @@ Unit Control can also type for supplies, and typing stays available while a
 building is ready for placement or your tier contribution is finished.
 Only pause, hidden/inactive gameplay and a finished match disable the input.
 
-Choose **Short** (tiny words), **Medium** (long words), **Long** (short phrases),
+Matches start with **50 supplies** and **Medium** text. Choose **Short** (tiny words), **Medium** (long words), **Long** (short phrases),
 or **Extra Long** (full sentences) in the Length selector. A fully correct entry
 adds 1, 2, 3 or 4 work respectively; partial or incorrect text never fills the
 player bar. A basic task needs 8 work, with higher-tier construction/training
-needing 16 or 24. Changing length preserves earned work; choosing a different
-task resets that role's work. Filling the bar recruits a unit, earns supplies,
+needing 16 or 24. Each role keeps independent completed work for every task,
+building tier and upgrade type, even when that role becomes unoccupied.
+Switching tasks, roles or lengths and completing tier challenges preserves this
+work; only completing or placing that specific task resets its bar.
+Filling the bar recruits a unit, earns supplies,
 upgrades technology, or makes construction ready. Gatherers are **free** to create.
 Costs appear in separate player-colored badges. Selections, buttons, the input's
 **Type here** prompt and basic arrow/text cursors share each player's dark and
@@ -42,7 +45,8 @@ nearest completed relay or castle before harvesting again. Relays forward deposi
 chunks to the castle through links no more than 155 map units apart; destroying a
 relay interrupts deliveries until the route is restored.
 
-Controls and typing use larger, high-contrast text; repeated captions stay out of
+Controls, typing and logs use consistent bold Arial-family typography and larger,
+high-contrast text; repeated captions stay out of
 the battlefield. Enemy troops are dark-red squares (melee), diamonds (archers),
 and triangles (siege), with red outlines. Castle and enemy-base health appear in
 the HUD. **Help** contains the map key and instructions. On narrow screens the
@@ -55,12 +59,14 @@ briefly flash a strike toward their target. Reduced-motion preferences disable
 the bob and attack-size pulse. Full-width player progress bars are three times
 thicker for visibility and show the same progress for everyone sharing a role.
 Their outer borders are thick black around an inner player-colored rim. The event
-history sits on the left above the bottom panels, with a transparent background,
+history aligns with Player 1's left edge above the bottom panels, starts at the
+top of a stable-height window and fills downward, with a transparent background,
 player-colored action text and gray world events. Dark text outlines keep entries
 readable over different battlefield colors. History is retained for the whole
 match and resets with **New game**. The taller history window has no visible
 scrollbar, fades smoothly at its edges, and can still be scrolled. The current
-world event and its countdown sit directly above it in a soft purple panel.
+world event and its countdown sit slightly above it in a soft purple panel,
+hidden between events.
 
 Ready up to pause the battle for a shared tier challenge: everyone completes
 three private phrases. Tier 1 unlocks warriors, barracks and towers, tier 2 adds
@@ -70,13 +76,21 @@ build tier 1, 2 or 3 barracks and towers. Higher-tier construction and manual
 training require 8, 16 or 24 completed-entry work respectively.
 The simulated Army teammate earns supplies at Tier 0 instead of waiting idle
 for locked training; after Tier 1 unlocks it builds a barracks and trains troops.
+**Stop computers** pauses simulated teammates' typing, readiness, construction
+choices and army orders, along with automatic production at their barracks.
+The battlefield, existing units and human-owned barracks keep running; the human
+can still type. **Resume computers** continues them without catching up missed
+typing time. The toggle is also available during tier challenges, which require
+the computers' contributions before they can finish.
 Higher-tier barracks and towers have more health, and troop upgrades enlarge
 their map icons as well as improving their combat stats.
 Each troop type and tower tier has its own resource-funded upgrade button and
 once-per-tier limit beginning at its unlock tier. Economy gets two upgrades at
-tier 0 and one additional upgrade per subsequent tier. World events cycle through
-scripture, left-hand, vowel, number, symbol and code drills without discarding a
-phrase already in progress. Enemy waves add ranged and siege formations as their
+tier 0 and one additional upgrade per subsequent tier. World events begin at
+**1:00, 3:00, 5:00**, and subsequent odd minutes of active battle time, each
+lasting **35 seconds**. They rotate through left-hand, vowel, number, symbol
+and code drills, with normal scripture typing between events, without discarding
+a phrase already in progress at either transition. Enemy waves add ranged and siege formations as their
 base develops. Select troops with
 click/Shift-click, drag a selection rectangle (Shift adds to the selection), or
 **Select all troops**, then click the battlefield or use **Defend** / **Assault

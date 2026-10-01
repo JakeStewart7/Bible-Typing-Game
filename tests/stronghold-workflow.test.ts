@@ -57,12 +57,12 @@ test('Stronghold relays require only legal placement and do not spend typing wor
   const player = state.players[0];
   if (!player) throw new Error('Missing player.');
   executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
-  equal(player.work, 4);
+  equal(player.work, 2);
   const phraseId = player.phraseId;
   equal(placementProblem(state, player, 'relay', { x: 500, y: 595 }), 'Leave space between buildings.');
   executeCommand(state, player, { type: 'PLACE', kind: 'relay', point: { x: 350, y: 540 } });
-  equal(state.resources, 85);
-  equal(player.work, 4);
+  equal(state.resources, 35);
+  equal(player.work, 2);
   equal(player.phraseId, phraseId);
   equal(state.events.at(-1)?.text, 'Player 1 placed Relay');
   executeCommand(state, player, { type: 'ROLE', role: 'army' });
@@ -73,13 +73,13 @@ test('Stronghold army control can always type for shared supplies', () => {
   const engine = new StrongholdEngine();
   engine.send('you', { type: 'ROLE', role: 'army' });
   engine.send('you', { type: 'ACTION', action: 'resources' });
-  for (let entry = 0; entry < 2; entry++) {
+  for (let entry = 0; entry < 4; entry++) {
     const player = engine.snapshot('you').players.find(candidate => candidate.id === 'you');
     if (!player) throw new Error('Missing player.');
     engine.send('you', { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
   }
   const snapshot = engine.snapshot('you');
-  equal(snapshot.resources, 118);
+  equal(snapshot.resources, 68);
   equal(snapshot.players.filter(player => player.role === 'army').every(player => player.work === 0), true);
   equal(snapshot.players.every(player => player.id === 'you' || player.phrase === ''), true);
 });
@@ -128,7 +128,7 @@ test('Stronghold central private typing, length controls and distinct costs repl
   equal(markup.includes('>Unit Control</option>'), true);
   equal(markup.includes('Army production'), false);
   equal(markup.includes('Army control'), false);
-  equal(markup.includes('class="stronghold-world-event"'), true);
+  equal(markup.includes('id="stronghold-world-event" class="stronghold-world-event is-hidden"'), true);
   equal(markup.includes('class="stronghold-work-track"'), true);
 });
 

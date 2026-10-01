@@ -40,7 +40,7 @@ test('Stronghold gatherers carry a single harvested chunk before returning to a 
   state.nodes = [{ id: 100, x: 500, y: 500, remaining: 100, rich: false }];
   const worker = addUnit(state, 'worker', { x: 500, y: 500 });
   updateLogistics(state, .1);
-  equal(state.resources, 100);
+  equal(state.resources, 50);
   equal(state.nodes[0]?.remaining, 96);
   equal(state.chunks[0]?.carrier, worker.id);
   equal(worker.attackTarget, { x: 500, y: 500 });
@@ -48,9 +48,9 @@ test('Stronghold gatherers carry a single harvested chunk before returning to a 
   equal(state.chunks.length, 1);
   equal(state.chunks[0]?.y, worker.y);
   equal(state.nodes[0]?.remaining, 96);
-  equal(state.resources, 100);
+  equal(state.resources, 50);
   for (let step = 0; step < 70; step++) updateLogistics(state, .1);
-  equal(state.resources, 104);
+  equal(state.resources, 54);
   equal(state.chunks.length, 0);
   equal(state.nodes[0]?.remaining, 96);
 });
@@ -67,7 +67,7 @@ test('Stronghold gatherers choose the nearest completed depot and reroute when i
   equal(state.chunks[0]?.carrier, null);
   equal(state.chunks[0]?.target, relay.id);
   equal(state.chunks[0]?.y, relay.y);
-  equal(state.resources, 100);
+  equal(state.resources, 50);
   relay.hp = 0;
   state.chunks = [];
   worker.x = 500; worker.y = 300; worker.cooldown = 0;
@@ -76,7 +76,7 @@ test('Stronghold gatherers choose the nearest completed depot and reroute when i
   updateLogistics(state, 1);
   equal(worker.y > y, true);
   equal(state.chunks[0]?.carrier, worker.id);
-  equal(state.resources, 100);
+  equal(state.resources, 50);
 });
 
 test('Stronghold dropped cargo survives a gatherer death and routes without duplicate supplies', () => {
@@ -88,9 +88,9 @@ test('Stronghold dropped cargo survives a gatherer death and routes without dupl
   worker.hp = 0;
   for (let step = 0; step < 20; step++) updateLogistics(state, .1);
   equal(state.chunks.length, 0);
-  equal(state.resources, 104);
+  equal(state.resources, 54);
   updateLogistics(state, 1);
-  equal(state.resources, 104);
+  equal(state.resources, 54);
 });
 
 test('Stronghold role members share typing, task phases and placement without duplicate costs', () => {
@@ -98,15 +98,16 @@ test('Stronghold role members share typing, task phases and placement without du
   state.players.forEach(player => { player.simulated = false; });
   const [you, teammate] = state.players;
   if (!you || !teammate) throw new Error('Missing players.');
+  executeCommand(state, you, { type: 'LENGTH', length: 'extra-long' });
   executeCommand(state, teammate, { type: 'ROLE', role: 'economy' });
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase.slice(0, 5) });
   equal(teammate.typed, you.typed);
   const oldId = you.phraseId;
   executeCommand(state, teammate, { type: 'TYPE', phraseId: teammate.phraseId, text: teammate.phrase });
-  equal(state.resources, 100);
+  equal(state.resources, 50);
   equal(you.work, 4);
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
-  equal(state.resources, 118);
+  equal(state.resources, 68);
   equal(you.typed, '');
   equal(you.phrase, teammate.phrase);
   equal(you.phraseId > oldId, true);
@@ -117,6 +118,7 @@ test('Stronghold role members share typing, task phases and placement without du
   state.tier = 3; state.resources = 500;
   executeCommand(state, you, { type: 'ROLE', role: 'defenses' });
   executeCommand(state, teammate, { type: 'ROLE', role: 'defenses' });
+  executeCommand(state, you, { type: 'LENGTH', length: 'extra-long' });
   executeCommand(state, you, { type: 'ACTION', action: 'tower', tier: 2 });
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
   equal(teammate.actionPhrases, 1);

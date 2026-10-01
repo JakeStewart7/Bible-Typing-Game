@@ -28,6 +28,9 @@ export type Participant = {
   completed: number; ready: boolean; contribution: number; typingCredit: number;
   constructionTier: number; upgradeTarget: UpgradeTarget; actionPhrases: number; work: number; length: PhraseLength;
 };
+export type TaskSelection = Pick<Participant, 'action' | 'constructionTier' | 'upgradeTarget'>;
+export type TaskProgress = Pick<Participant, 'work' | 'actionPhrases'>;
+export type RoleTasks = { selection: TaskSelection; length: PhraseLength; progress: Record<string, TaskProgress> };
 export type StrongholdEvent = { id: number; elapsed: number; playerId: string | null; text: string };
 export type StrongholdState = {
   phase: Phase; tier: number; elapsed: number; wave: number; waveIn: number;
@@ -37,6 +40,7 @@ export type StrongholdState = {
   upgrades: Record<'economy' | 'production' | 'defenses', number>;
   technology: Record<UpgradeTarget, number>;
   rally: Point; message: string; events: StrongholdEvent[];
+  roleTasks: Record<Role, RoleTasks>; computersPaused: boolean;
 };
 export type StrongholdSnapshot = Omit<StrongholdState, 'players' | 'nextId'> & {
   selfId: string;
@@ -46,6 +50,7 @@ export type StrongholdCommand =
   | { type: 'ROLE'; role: Role }
   | { type: 'ACTION'; action: Action; tier?: number; upgrade?: UpgradeTarget }
   | { type: 'LENGTH'; length: PhraseLength }
+  | { type: 'COMPUTERS'; paused: boolean }
   | { type: 'TYPE'; phraseId: number; text: string }
   | { type: 'READY'; ready: boolean }
   | { type: 'PLACE'; kind: 'relay' | 'barracks' | 'tower' | 'wall'; point: Point }

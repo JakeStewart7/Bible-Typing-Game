@@ -5,6 +5,7 @@ import { taskPhrases, unitUpgrade, upgradeLimit } from '../src/stronghold/domain
 import type { Participant, StrongholdState } from '../src/stronghold/domain/types.ts';
 import { equal, test } from './harness.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
+import { PHRASE_WORK } from '../src/stronghold/domain/rules.ts';
 
 function self(state: StrongholdState): Participant {
   const player = state.players.find(candidate => candidate.id === 'you');
@@ -13,7 +14,7 @@ function self(state: StrongholdState): Participant {
 }
 function finish(state: StrongholdState): void {
   const player = self(state);
-  for (let entry = 0; entry < 2; entry++) executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+  for (let entry = 0; entry < Math.ceil(8 / PHRASE_WORK[player.length]); entry++) executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
 }
 function rejects(run: () => void): void {
   try { run(); } catch (error) { equal(error instanceof Error, true); return; }
@@ -108,7 +109,7 @@ test('Stronghold rejects invalid construction tiers and upgrades from the wrong 
   rejects(() => executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade', upgrade: 'catapult' }));
   equal(self(state).phraseId, phraseId);
   equal(self(state).action, 'resources');
-  equal(state.resources, 100);
+  equal(state.resources, 50);
 });
 
 test('Stronghold sketch controls do not collide with Arcade upgrade selectors', () => {
@@ -128,10 +129,10 @@ test('Stronghold completed construction keeps typing available without duplicate
   finish(state);
   equal(self(state).work, 8);
   equal(self(state).phraseId > phraseId, true);
-  equal(state.resources, 100);
+  equal(state.resources, 50);
   executeCommand(state, self(state), { type: 'TYPE', phraseId: self(state).phraseId, text: '' });
   equal(self(state).typed, '');
   executeCommand(state, self(state), { type: 'PLACE', kind: 'wall', point: { x: 360, y: 540 } });
-  equal(state.resources, 85);
+  equal(state.resources, 35);
   equal(self(state).work, 0);
 });

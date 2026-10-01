@@ -44,6 +44,7 @@ export function strongholdWorkspaceMarkup(): string {
       </div>
       <nav class="stronghold-map-toolbar" aria-label="Stronghold controls">${menuNavigationMarkup()}
         <button id="stronghold-pause" type="button">Pause</button><button id="stronghold-restart" type="button">New game</button>
+        <button id="stronghold-computers" type="button" aria-pressed="false">Stop computers</button>
       </nav>
       <button id="stronghold-ready" class="stronghold-tier" type="button"><span id="stronghold-tier-label">Tier 0</span><strong id="stronghold-tier-action">Tier Up</strong></button>
       <aside class="stronghold-hud" aria-label="Kingdom status">
@@ -52,7 +53,7 @@ export function strongholdWorkspaceMarkup(): string {
           <span title="Warriors"><span class="sr-only">Warriors: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--warrior"></i><b id="stronghold-warrior-count">2/18</b></span>
           <span title="Builders"><span class="sr-only">Builders: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--builder"></i><b id="stronghold-builder-count">1/4</b></span>
           <span title="Gatherers"><span class="sr-only">Gatherers: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--worker"></i><b id="stronghold-worker-count">2/12</b></span>
-          <span title="Shared supplies"><span class="sr-only">Supplies: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--resource"></i><b id="stronghold-resources">100</b></span>
+          <span title="Shared supplies"><span class="sr-only">Supplies: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--resource"></i><b id="stronghold-resources">50</b></span>
         </div>
         <div class="stronghold-watch"><span>Castle <b id="stronghold-castle"></b></span><span>Enemy <b id="stronghold-enemy"></b></span><span id="stronghold-wave"></span></div>
       </aside>
@@ -63,11 +64,14 @@ export function strongholdWorkspaceMarkup(): string {
         <p>Gatherers strike resource nodes and carry yellow supply chunks to the nearest relay or castle. Relays forward supplies through links within 155 map units. Purple nodes yield twice as much. Broken connections stop relay deliveries.</p>
         <p>In Unit Control, drag or click to select troops, then click to move. Shift adds troops. Join a role with Player 1's dropdown; everyone on that role shares the selected task and completed work.</p>
         <p>The Army teammate earns supplies at Tier 0, builds a barracks after Tier 1 unlocks, then trains troops. Unit Control can type for supplies while issuing orders.</p>
+        <p>Each task keeps its completed work when you switch tasks or roles. Building tiers and upgrade types keep separate progress. Medium is the default length.</p>
+        <p>Stop computers pauses simulated teammates and their barracks, not the battlefield. Resume them to finish a shared tier challenge.</p>
+        <p>World events begin at 1, 3, 5 and subsequent odd minutes of battle time, last 35 seconds, and leave normal typing between events.</p>
         <p>Tier Up requires three phrases from each player. Barracks train their tier's units automatically. Destroy the enemy base to win.</p>
       </details>
       <p id="stronghold-feedback" class="stronghold-feedback" role="status" aria-live="polite"></p>
       <aside class="stronghold-event-panel" aria-label="World event and history">
-        <div class="stronghold-world-event" aria-live="polite"><strong id="stronghold-event"></strong><span id="stronghold-event-time"></span></div>
+        <div id="stronghold-world-event" class="stronghold-world-event is-hidden" aria-live="polite"><strong id="stronghold-event"></strong><span id="stronghold-event-time"></span></div>
         <div id="stronghold-event-log" class="stronghold-event-log" role="log" aria-label="Stronghold events" aria-live="polite" aria-relevant="additions" tabindex="0"></div>
       </aside>
       <div class="stronghold-squad">${PLAYER_IDS.map(playerCard).join('')}</div>
@@ -94,7 +98,7 @@ export function strongholdWorkspaceMarkup(): string {
     </div>
     <dialog id="stronghold-tier-dialog" class="stronghold-tier-dialog">
       <div id="stronghold-tier-typing-slot"></div>
-      <div class="stronghold-tier-status"><h2 id="stronghold-tier-title">Tier Up</h2><p id="stronghold-tier-description"></p><button id="stronghold-tier-pause" type="button">Pause challenge</button></div>
+      <div class="stronghold-tier-status"><h2 id="stronghold-tier-title">Tier Up</h2><p id="stronghold-tier-description"></p><button id="stronghold-tier-pause" type="button">Pause challenge</button><button id="stronghold-tier-computers" type="button" aria-pressed="false">Stop computers</button></div>
       <div id="stronghold-tier-contributions" class="stronghold-tier-contributions"></div>
     </dialog>
   </section>`;

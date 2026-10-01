@@ -3,12 +3,12 @@ import { rallyArmy, spawnWave, updateCombat } from './combat.ts';
 import { updateLogistics } from './logistics.ts';
 import { assignPhrase } from './phrases.ts';
 import { addUnit } from './state.ts';
-import { distance, EVENT_LABELS, TIER_MAX, TIER_QUOTA, UNIT_CAPS } from './rules.ts';
+import { distance, TIER_MAX, TIER_QUOTA, UNIT_CAPS } from './rules.ts';
 import { taskWork } from './technology.ts';
 import { ENTITY_LABELS, recordEvent } from './events.ts';
-import type { Action, Participant, Point, StrongholdState, WorldEvent } from './types.ts';
+import type { Action, Participant, Point, StrongholdState } from './types.ts';
+import { updateWorldEvent } from './world-events.ts';
 
-const EVENTS: readonly WorldEvent[] = ['peace', 'left-hand', 'vowels', 'numbers', 'symbols', 'code'];
 const BOT_RELAY_SITES = [
   { x: 360, y: 540 }, { x: 640, y: 540 }, { x: 250, y: 435 }, { x: 760, y: 435 },
   { x: 390, y: 390 }, { x: 650, y: 390 }, { x: 650, y: 255 },
@@ -83,6 +83,7 @@ function updateBot(state: StrongholdState, player: Participant, seconds: number)
 }
 function produceArmy(state: StrongholdState, seconds: number): void {
   for (const barracks of state.buildings.filter(building => building.kind === 'barracks' && building.progress === 1 && building.hp > 0)) {
+    if (state.computersPaused && state.players.some(player => player.id === barracks.ownerId && player.simulated)) continue;
     barracks.cooldown = Math.max(0, barracks.cooldown - seconds);
     const kind = state.tier >= 3 && barracks.tier >= 3 ? 'catapult' : state.tier >= 2 && barracks.tier >= 2 ? 'archer' : 'warrior';
     const cost = kind === 'catapult' ? 35 : kind === 'archer' ? 20 : 10;
@@ -99,16 +100,13 @@ export function advanceStronghold(state: StrongholdState, seconds: number): void
   if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 1) throw new Error('Simulation steps must be between zero and one second.');
   if (state.phase === 'won' || state.phase === 'lost') return;
   for (const player of state.players) {
-    if (player.simulated) updateBot(state, player, seconds);
+    if (player.simulated && !state.computersPaused) updateBot(state, player, seconds);
   }
   if (state.phase !== 'playing') return;
   state.elapsed += seconds;
   state.waveIn -= seconds;
-  state.eventIn -= seconds;
   if (state.waveIn <= 0) spawnWave(state);
-  if (state.eventIn <= 0) {
-    state.event = EVENTS[(Math.floor(state.elapsed / 60)) % EVENTS.length] ?? 'peace';
-    state.eventIn = 60;
+  if (updateWorldEvent(state)) {
     const refreshedRoles = new Set<string>();
     state.players.forEach(player => {
       if (player.typed.length === 0 && !refreshedRoles.has(player.role)) {
@@ -116,8 +114,6 @@ export function advanceStronghold(state: StrongholdState, seconds: number): void
         refreshedRoles.add(player.role);
       }
     });
-    state.message = 'The world event changed. New phrases use the next drill; finish any phrase already in progress.';
-    recordEvent(state, EVENT_LABELS[state.event]);
   }
   updateLogistics(state, seconds);
   produceArmy(state, seconds);

@@ -205,6 +205,9 @@ export function createStrongholdController(connection: StrongholdConnection) {
     const player = self();
     if (player) void send({ type: 'READY', ready: !player.ready });
   });
+  for (const button of elements.computerButtons) button.addEventListener('click', () => {
+    if (snapshot) void send({ type: 'COMPUTERS', paused: !snapshot.computersPaused });
+  });
   for (const id of ['stronghold-pause', 'stronghold-tier-pause']) requireElement(id, HTMLButtonElement).addEventListener('click', togglePause);
   for (const id of ['stronghold-restart', 'stronghold-play-again']) requireElement(id, HTMLButtonElement).addEventListener('click', restart);
   requireElement('stronghold-select-army', HTMLButtonElement).addEventListener('click', () => {

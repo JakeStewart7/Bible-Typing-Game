@@ -4,7 +4,7 @@ import { updateCombat, spawnWave } from '../src/stronghold/domain/combat.ts';
 import { connectedRelays, updateLogistics } from '../src/stronghold/domain/logistics.ts';
 import { addBuilding, addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
-import { TIER_QUOTA } from '../src/stronghold/domain/rules.ts';
+import { PHRASE_WORK, TIER_QUOTA } from '../src/stronghold/domain/rules.ts';
 import { LocalStrongholdConnection } from '../src/stronghold/infrastructure/local-connection.ts';
 import { themeForWorkspace } from '../src/ui/page-theme.ts';
 import type { Participant, StrongholdState } from '../src/stronghold/domain/types.ts';
@@ -16,7 +16,7 @@ function self(state: StrongholdState): Participant {
   return player;
 }
 function finish(state: StrongholdState, player = self(state)): void {
-  const entries = state.phase === 'tier-up' ? 1 : 2;
+  const entries = state.phase === 'tier-up' ? 1 : Math.ceil(8 / PHRASE_WORK[player.length]);
   for (let entry = 0; entry < entries; entry++) executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
 }
 function rejects(run: () => void, message: string): void {
@@ -34,7 +34,7 @@ test('Stronghold snapshots are independent and expose only each player private p
   equal(snapshot.players.find(player => player.id === 'you')?.phrase.length !== 0, true);
   snapshot.resources = 0;
   snapshot.units.length = 0;
-  equal(engine.snapshot('you').resources, 100);
+  equal(engine.snapshot('you').resources, 50);
   equal(engine.snapshot('you').units.length, 5);
   rejects(() => engine.snapshot('stranger'), 'Unknown');
 });
@@ -44,9 +44,9 @@ test('Stronghold typing requires exact phrase and rejects expired phrase IDs', (
   const player = self(state);
   const phraseId = player.phraseId;
   executeCommand(state, player, { type: 'TYPE', phraseId, text: player.phrase.toLowerCase() });
-  equal(state.resources, 100);
+  equal(state.resources, 50);
   finish(state);
-  equal(state.resources, 118);
+  equal(state.resources, 68);
   rejects(() => executeCommand(state, player, { type: 'TYPE', phraseId, text: 'old' }), 'expired');
   rejects(() => executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase + 'x' }), 'Invalid');
 });
@@ -58,7 +58,7 @@ test('Stronghold role selection joins teammates without displacing them', () => 
   equal(state.players.find(player => player.id === 'bot-2')?.role, 'army');
   equal(new Set(state.players.map(player => player.role)).size, 3);
   finish(state);
-  equal(state.resources, 118);
+  equal(state.resources, 68);
   rejects(() => executeCommand(state, self(state), { type: 'ACTION', action: 'tower' }), 'another role');
 });
 
@@ -96,15 +96,15 @@ test('Stronghold simulated teammates ready up and finish their own tier phrases'
 test('Stronghold building placement costs once and waits for a nearby builder', () => {
   const state = createStronghold();
   executeCommand(state, self(state), { type: 'ACTION', action: 'relay' });
-  equal(state.resources, 100);
+  equal(state.resources, 50);
   executeCommand(state, self(state), { type: 'PLACE', kind: 'relay', point: { x: 380, y: 540 } });
-  equal(state.resources, 85);
+  equal(state.resources, 35);
   const relay = state.buildings.find(building => building.kind === 'relay');
   equal(relay?.progress, 0);
   for (let index = 0; index < 60; index++) updateLogistics(state, .25);
   equal(relay?.progress, 1);
   executeCommand(state, self(state), { type: 'PLACE', kind: 'relay', point: { x: 650, y: 540 } });
-  equal(state.resources, 70);
+  equal(state.resources, 20);
 });
 
 test('Stronghold rejects illegal sites, insufficient resources and locked actions without spending', () => {
@@ -147,10 +147,10 @@ test('Stronghold relay destruction disconnects upstream resources until a route 
   first.hp = 0;
   updateLogistics(state, .5);
   equal(state.chunks[0]?.y, 305);
-  equal(state.resources, 100);
+  equal(state.resources, 50);
   first.hp = first.maxHp;
   for (let index = 0; index < 60; index++) updateLogistics(state, .25);
-  equal(state.resources, 108);
+  equal(state.resources, 58);
   equal(state.chunks.length, 0);
 });
 
@@ -208,7 +208,7 @@ test('Stronghold completed barracks train units and consume supplies, unfinished
   barracks.progress = 1;
   advanceStronghold(state, .1);
   equal(state.units[0]?.kind, 'archer');
-  equal(state.resources, 80);
+  equal(state.resources, 30);
   equal(state.units[0]?.destination, state.rally);
 });
 
@@ -221,7 +221,7 @@ test('Stronghold waves grow enemy defenses, world events change drills and termi
   state.elapsed = 59.9; state.eventIn = .1;
   advanceStronghold(state, .25);
   equal(state.event, 'left-hand');
-  equal(self(state).phrase.includes('We ') || self(state).phrase.includes('Steward'), true);
+  equal(self(state).phrase.includes('We') || self(state).phrase.includes('Steward'), true);
   const enemyBase = state.buildings.find(building => building.kind === 'enemy-base');
   if (!enemyBase) throw new Error('Missing enemy base.');
   enemyBase.hp = 0;
@@ -265,7 +265,7 @@ test('Stronghold event changes preserve an in-progress typing phrase', () => {
   equal(player.typed, phrase.slice(0, 3));
   finish(state);
   equal(state.event, 'left-hand');
-  equal(player.phrase.includes('We ') || player.phrase.includes('Steward'), true);
+  equal(player.phrase.includes('We') || player.phrase.includes('Steward'), true);
 });
 
 test('Stronghold simulated economy builds a connected relay network while the human commands the army', () => {
@@ -323,7 +323,7 @@ test('Stronghold local transport publishes detached snapshots, reports rejection
   catch (error) { rejected = error instanceof Error && error.message.includes('friendly'); }
   equal(rejected, true);
   connection.restart();
-  equal(resources, 100);
+  equal(resources, 50);
   equal(emissions, 3);
   unsubscribe();
   await connection.send({ type: 'READY', ready: true });

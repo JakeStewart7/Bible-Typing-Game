@@ -1,4 +1,5 @@
 import type { Participant, PhraseLength, StrongholdState } from './types.ts';
+import { saveRoleTask } from './tasks.ts';
 
 const SCRIPTURE: Record<PhraseLength, readonly string[]> = {
   short: ['God', 'love', 'hope', 'pray', 'joy', 'walk'],
@@ -29,6 +30,7 @@ export function copyRoleTask(source: Participant, target: Participant, newPhrase
 
 export function synchronizeRoleTask(state: StrongholdState, player: Participant, newPhrase = false): void {
   if (state.phase !== 'playing') return;
+  saveRoleTask(state, player);
   for (const other of state.players) {
     if (other !== player && other.role === player.role) copyRoleTask(player, other, newPhrase);
   }
