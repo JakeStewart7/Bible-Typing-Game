@@ -30,13 +30,14 @@ export const BUILDING_CAPS: Record<BuildingKind, number> = {
   castle: 1, 'enemy-base': 1, relay: 16, barracks: 6, tower: 8, wall: 16
 };
 export const UNIT_RULES: Record<UnitKind, { hp: number; speed: number; damage: number; range: number }> = {
-  worker: { hp: 35, speed: 42, damage: 0, range: 0 },
-  builder: { hp: 55, speed: 50, damage: 0, range: 0 },
-  warrior: { hp: 100, speed: 62, damage: 12, range: 26 },
-  archer: { hp: 65, speed: 55, damage: 9, range: 120 },
-  catapult: { hp: 110, speed: 32, damage: 30, range: 165 },
-  invader: { hp: 60, speed: 38, damage: 8, range: 25 }
+  worker: { hp: 35, speed: 12.6, damage: 0, range: 0 },
+  builder: { hp: 55, speed: 15, damage: 0, range: 0 },
+  warrior: { hp: 100, speed: 18.6, damage: 12, range: 26 },
+  archer: { hp: 65, speed: 16.5, damage: 9, range: 120 },
+  catapult: { hp: 110, speed: 9.6, damage: 30, range: 165 },
+  invader: { hp: 60, speed: 11.4, damage: 8, range: 25 }
 };
+export const UNIT_HEALTH_MULTIPLIER = 2;
 export const EVENT_LABELS: Record<WorldEvent, string> = {
   peace: 'Scripture watch', 'left-hand': 'Left-hand drill', vowels: 'Vowel storm',
   numbers: 'Number siege', symbols: 'Symbol storm', code: 'Code formation'

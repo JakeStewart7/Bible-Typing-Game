@@ -53,6 +53,10 @@ export function createStrongholdController(connection: StrongholdConnection) {
       typingDirty = true;
       elements.input.value = self.typed;
       if (self.typed) updateTypingInput(typing, self.typed);
+    } else if (elements.input.value !== self.typed) {
+      elements.input.value = self.typed;
+      updateTypingInput(typing, self.typed);
+      typingDirty = true;
     }
     for (const id of selected) if (!next.units.some(unit => unit.id === id)) selected.delete(id);
     display();

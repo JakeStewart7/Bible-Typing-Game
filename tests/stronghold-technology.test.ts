@@ -89,7 +89,7 @@ test('Stronghold upgrades are tracked independently for each troop and tower tie
   executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade', upgrade: 'warrior' });
   finish(state);
   equal(state.technology.warrior, 1);
-  equal(warrior.maxHp, oldHp + 10);
+  equal(warrior.maxHp, oldHp + 20);
   equal(state.resources, 490);
   finish(state);
   equal(state.technology.warrior, 1);
@@ -98,7 +98,7 @@ test('Stronghold upgrades are tracked independently for each troop and tower tie
   finish(state);
   equal(state.technology.archer, 0);
   equal(unitUpgrade(state, { kind: 'archer' }), 0);
-  equal(addUnit(state, 'warrior', { x: 500, y: 500 }).maxHp, oldHp + 10);
+  equal(addUnit(state, 'warrior', { x: 500, y: 500 }).maxHp, oldHp + 20);
 });
 
 test('Stronghold rejects invalid construction tiers and upgrades from the wrong role atomically', () => {

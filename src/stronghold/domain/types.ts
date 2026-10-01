@@ -12,14 +12,14 @@ export type Action = 'resources' | 'worker' | 'relay' | 'barracks' | 'warrior' |
 export type Unit = Point & {
   id: number; kind: UnitKind; hp: number; maxHp: number;
   destination: Point | null; cooldown: number; task: number | null;
-  formation: ArmyUnitKind | null;
+  formation: ArmyUnitKind | null; attackTarget: Point | null;
 };
 export type Building = Point & {
   id: number; kind: BuildingKind; hp: number; maxHp: number;
-  tier: number; progress: number; cooldown: number; enemy: boolean;
+  tier: number; progress: number; cooldown: number; enemy: boolean; attackTarget: Point | null;
 };
 export type ResourceNode = Point & { id: number; rich: boolean; remaining: number };
-export type ResourceChunk = Point & { id: number; amount: number; target: number | null };
+export type ResourceChunk = Point & { id: number; amount: number; target: number | null; carrier: number | null };
 export type Participant = {
   id: string; name: string; color: string; role: Role; simulated: boolean;
   action: Action; phrase: string; typed: string; phraseId: number;

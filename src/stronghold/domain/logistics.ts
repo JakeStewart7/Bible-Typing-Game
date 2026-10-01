@@ -1,4 +1,4 @@
-import { distance, moveToward, RELAY_RANGE } from './rules.ts';
+import { distance, moveToward, RELAY_RANGE, UNIT_RULES } from './rules.ts';
 import type { Building, StrongholdState, Unit } from './types.ts';
 
 export function connectedRelays(state: StrongholdState): Building[] {
@@ -18,6 +18,22 @@ export function connectedRelays(state: StrongholdState): Building[] {
 }
 
 function updateWorker(state: StrongholdState, worker: Unit, seconds: number): void {
+  worker.cooldown = Math.max(0, worker.cooldown - seconds);
+  const cargo = state.chunks.find(chunk => chunk.carrier === worker.id);
+  if (cargo) {
+    const depot = state.buildings.filter(building => (building.kind === 'relay' || building.kind === 'castle')
+      && building.hp > 0 && building.progress === 1).sort((a, b) => distance(worker, a) - distance(worker, b))[0];
+    if (depot) moveToward(worker, depot, seconds * UNIT_RULES.worker.speed);
+    cargo.x = worker.x;
+    cargo.y = worker.y;
+    if (depot && distance(worker, depot) <= 14) {
+      cargo.carrier = null;
+      cargo.x = depot.x;
+      cargo.y = depot.y;
+      cargo.target = depot.id;
+    }
+    return;
+  }
   let node = state.nodes.find(candidate => candidate.id === worker.task && candidate.remaining > 0);
   if (!node) {
     node = state.nodes.filter(candidate => candidate.remaining > 0)
@@ -25,19 +41,12 @@ function updateWorker(state: StrongholdState, worker: Unit, seconds: number): vo
     worker.task = node?.id ?? null;
   }
   if (!node) return;
-  moveToward(worker, node, seconds * 42);
-  worker.cooldown -= seconds;
+  moveToward(worker, node, seconds * UNIT_RULES.worker.speed);
   if (distance(worker, node) > 14 || worker.cooldown > 0) return;
   const amount = Math.min(node.remaining, (node.rich ? 8 : 4) + state.upgrades.economy * 2);
   node.remaining -= amount;
-  const depot = state.buildings.filter(building => (building.kind === 'relay' || building.kind === 'castle')
-    && building.hp > 0 && building.progress === 1).sort((a, b) => distance(node, a) - distance(node, b))[0];
-  if (depot && distance(node, depot) <= RELAY_RANGE) {
-    state.chunks.push({ id: state.nextId++, x: node.x, y: node.y, amount, target: depot.id });
-  } else {
-    // Resources without a nearby depot remain on the map until a relay reaches them.
-    state.chunks.push({ id: state.nextId++, x: node.x, y: node.y, amount, target: null });
-  }
+  state.chunks.push({ id: state.nextId++, x: worker.x, y: worker.y, amount, target: null, carrier: worker.id });
+  worker.attackTarget = { x: node.x, y: node.y };
   worker.cooldown = 3;
 }
 
@@ -48,7 +57,7 @@ function updateBuilder(state: StrongholdState, builder: Unit, seconds: number, c
     (a.progress === 1 ? 1 : 0) - (b.progress === 1 ? 1 : 0) || distance(builder, a) - distance(builder, b))[0];
   if (!project) return;
   if (project.progress < 1) claimed.add(project.id);
-  moveToward(builder, project, seconds * 50);
+  moveToward(builder, project, seconds * UNIT_RULES.builder.speed);
   if (distance(builder, project) > 22) return;
   if (project.progress < 1) project.progress = Math.min(1, project.progress + seconds / 8);
   else project.hp = Math.min(project.maxHp, project.hp + seconds * (5 + state.upgrades.defenses));
@@ -78,7 +87,13 @@ export function updateLogistics(state: StrongholdState, seconds: number): void {
     }
   }
   for (const chunk of state.chunks) {
-    let depot = state.buildings.find(building => building.id === chunk.target && building.hp > 0);
+    if (chunk.carrier !== null) {
+      const carrier = state.units.find(unit => unit.id === chunk.carrier && unit.hp > 0);
+      if (carrier) continue;
+      chunk.carrier = null;
+      chunk.target = null;
+    }
+    let depot = state.buildings.find(building => building.id === chunk.target && building.hp > 0 && building.progress === 1);
     if (!depot) depot = state.buildings.filter(building => (building.kind === 'relay' || building.kind === 'castle')
       && building.hp > 0 && building.progress === 1 && distance(chunk, building) <= RELAY_RANGE)
       .sort((a, b) => distance(chunk, a) - distance(chunk, b))[0];

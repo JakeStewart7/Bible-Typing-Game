@@ -61,8 +61,8 @@ export function strongholdWorkspaceMarkup(): string {
       <details class="stronghold-guide"><summary>Help</summary>
         <div class="stronghold-legend"><span>Dark red: enemies</span><span>□ Warrior</span><span>◇ Archer</span><span>▲ Catapult</span><span>△ Builder</span><span>○ Gatherer</span></div>
         <p>Type phrases for supplies and units. Finish a building's phrases, then click the map to place it. Builders construct and repair automatically.</p>
-        <p>Connect blue resource nodes to the castle with relays within 155 map units. Purple nodes yield twice as much. Broken connections stop deliveries.</p>
-        <p>Select troops, then click to move. Shift-click adds troops. Change your role with Player 1's dropdown.</p>
+        <p>Gatherers strike resource nodes and carry yellow supply chunks to the nearest relay or castle. Relays forward supplies through links within 155 map units. Purple nodes yield twice as much. Broken connections stop relay deliveries.</p>
+        <p>Select troops, then click to move. Shift-click adds troops. Join a role with Player 1's dropdown; everyone on that role shares the selected task and typing progress.</p>
         <p>Tier Up requires three phrases from each player. Barracks train their tier's units automatically. Destroy the enemy base to win.</p>
       </details>
       <p id="stronghold-feedback" class="stronghold-feedback" role="status" aria-live="polite"></p>

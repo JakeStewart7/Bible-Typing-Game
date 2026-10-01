@@ -14,6 +14,23 @@ const DRILLS = {
   code: ['const faith = true;', 'if (hope) { stand(); }', 'guard.keep("watch");']
 } as const;
 
+export function copyRoleTask(source: Participant, target: Participant, newPhrase: boolean): void {
+  target.action = source.action;
+  target.constructionTier = source.constructionTier;
+  target.upgradeTarget = source.upgradeTarget;
+  target.actionPhrases = source.actionPhrases;
+  target.phrase = source.phrase;
+  target.typed = source.typed;
+  if (newPhrase) { target.phraseId++; target.typingCredit = 0; }
+}
+
+export function synchronizeRoleTask(state: StrongholdState, player: Participant, newPhrase = false): void {
+  if (state.phase !== 'playing') return;
+  for (const other of state.players) {
+    if (other !== player && other.role === player.role) copyRoleTask(player, other, newPhrase);
+  }
+}
+
 export function assignPhrase(state: StrongholdState, player: Participant): void {
   player.phraseId++;
   player.typed = '';
@@ -23,4 +40,5 @@ export function assignPhrase(state: StrongholdState, player: Participant): void 
     ? SCRIPTURE[Math.min(3, tier)] ?? SCRIPTURE[0]
     : DRILLS[state.event];
   player.phrase = phrases[(player.phraseId + state.players.indexOf(player)) % phrases.length] ?? '';
+  synchronizeRoleTask(state, player, true);
 }

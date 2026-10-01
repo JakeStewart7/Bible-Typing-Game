@@ -1,4 +1,4 @@
-import { actionProblem, completePhrase, executeCommand } from './actions.ts';
+import { actionProblem, executeCommand } from './actions.ts';
 import { rallyArmy, spawnWave, updateCombat } from './combat.ts';
 import { updateLogistics } from './logistics.ts';
 import { assignPhrase } from './phrases.ts';
@@ -40,20 +40,20 @@ function updateBot(state: StrongholdState, player: Participant, seconds: number)
       executeCommand(state, player, { type: 'READY', ready: true });
     }
     if (state.players.every(other => other.ready)) return;
+    const humanOnRole = state.players.some(other => !other.simulated && other.role === player.role);
     if (player.role === 'army') {
+      if (humanOnRole) return;
       const soldiers = state.units.filter(unit => ['warrior', 'archer', 'catapult'].includes(unit.kind));
       rallyArmy(state, state.tier >= 2 && soldiers.length >= 8 ? { x: 500, y: 100 } : state.rally);
       return;
     }
-    const action = botAction(state, player);
+    const action = humanOnRole ? player.action : botAction(state, player);
     if (action !== player.action) {
-      player.action = action;
-      player.actionPhrases = 0;
-      player.constructionTier = Math.max(1, state.tier);
-      assignPhrase(state, player);
+      executeCommand(state, player, { type: 'ACTION', action });
     }
     if (actionProblem(state, player, action)) return;
     if (['relay', 'barracks', 'tower', 'wall'].includes(action) && player.typed === player.phrase) {
+      if (humanOnRole) return;
       const count = state.buildings.filter(building => building.kind === action && !building.enemy).length;
       const point = action === 'relay' ? nextRelaySite(state) : action === 'barracks'
         ? { x: 620 + count * 48, y: 575 }
@@ -69,12 +69,13 @@ function updateBot(state: StrongholdState, player: Participant, seconds: number)
       return;
     }
   } else if (player.contribution >= TIER_QUOTA) return;
+  if (!player.phrase.startsWith(player.typed)) return;
   player.typingCredit += seconds * 5;
   const characters = Math.floor(player.typingCredit);
   if (characters === 0) return;
   player.typingCredit -= characters;
-  player.typed = player.phrase.slice(0, player.typed.length + characters);
-  if (player.typed === player.phrase) completePhrase(state, player);
+  executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId,
+    text: player.phrase.slice(0, player.typed.length + characters) });
 }
 function produceArmy(state: StrongholdState, seconds: number): void {
   for (const barracks of state.buildings.filter(building => building.kind === 'barracks' && building.progress === 1 && building.hp > 0)) {
@@ -102,8 +103,12 @@ export function advanceStronghold(state: StrongholdState, seconds: number): void
   if (state.eventIn <= 0) {
     state.event = EVENTS[(Math.floor(state.elapsed / 60)) % EVENTS.length] ?? 'peace';
     state.eventIn = 60;
+    const refreshedRoles = new Set<string>();
     state.players.forEach(player => {
-      if (player.typed.length === 0) assignPhrase(state, player);
+      if (player.typed.length === 0 && !refreshedRoles.has(player.role)) {
+        assignPhrase(state, player);
+        refreshedRoles.add(player.role);
+      }
     });
     state.message = 'The world event changed. New phrases use the next drill; finish any phrase already in progress.';
   }

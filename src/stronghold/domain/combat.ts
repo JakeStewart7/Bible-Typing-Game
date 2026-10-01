@@ -14,6 +14,7 @@ function attack(origin: Unit | Building, target: Target, damage: number): void {
   if (origin.cooldown > 0) return;
   target.hp -= damage;
   origin.cooldown = 1;
+  origin.attackTarget = { x: target.x, y: target.y };
 }
 function updateUnit(state: StrongholdState, unit: Unit, seconds: number): void {
   const rule = UNIT_RULES[unit.formation ?? unit.kind];

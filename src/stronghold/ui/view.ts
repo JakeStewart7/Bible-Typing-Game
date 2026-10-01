@@ -60,7 +60,7 @@ export function renderStronghold(
   const challenge = snapshot.phase === 'tier-up';
   const army = self.role === 'army' && !challenge;
   text('stronghold-resources', String(Math.floor(snapshot.resources)));
-  text('stronghold-castle', `${Math.max(0, Math.ceil(castle?.hp ?? 0))}/${castle?.maxHp ?? 1000}`);
+  text('stronghold-castle', `${Math.max(0, Math.ceil(castle?.hp ?? 0))}/${castle?.maxHp ?? 10000}`);
   text('stronghold-enemy', String(Math.max(0, Math.ceil(snapshot.buildings.find(building => building.kind === 'enemy-base')?.hp ?? 0))));
   text('stronghold-wave', `Wave ${snapshot.wave + 1}: ${Math.ceil(snapshot.waveIn)}s`);
   text('stronghold-event', EVENT_LABELS[snapshot.event]);
@@ -95,10 +95,10 @@ export function renderStronghold(
     entry.card.classList.toggle('is-you', own);
     setText(entry.name, `${own ? 'You' : `${player.name}, simulated teammate`}${player.ready && !challenge ? ', ready' : ''}`);
     setText(entry.task, challenge ? `${player.contribution}/${TIER_QUOTA} tier phrases` : player.role === 'army'
-      ? 'Shift-click to select more.' : `${player.actionPhrases}/${taskPhrases(player)} phrases`);
+      ? 'Shift-click to select more.' : `${player.actionPhrases}/${taskPhrases(player)} shared role phrases`);
     setText(entry.typed, player.role === 'army' && !challenge ? '' : player.typed);
     entry.typed.classList.toggle('is-hidden', own && !army);
-    const width = `${challenge ? player.contribution / TIER_QUOTA * 100 : (player.actionPhrases + player.progress) / taskPhrases(player) * 100}%`;
+    const width = `${Math.min(100, challenge ? player.contribution / TIER_QUOTA * 100 : (player.actionPhrases + player.progress) / taskPhrases(player) * 100)}%`;
     if (entry.progress.style.width !== width) entry.progress.style.width = width;
     if (entry.roleSelect.value !== player.role) entry.roleSelect.value = player.role;
     const roleDisabled = !own || challenge || terminal || !running;

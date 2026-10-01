@@ -1,4 +1,4 @@
-import { assignPhrase } from './phrases.ts';
+import { assignPhrase, copyRoleTask, synchronizeRoleTask } from './phrases.ts';
 import { addBuilding, addUnit } from './state.ts';
 import { ACTION_LABELS, BASE, BUILDING_CAPS, distance, MIN_TIER, ROLE_ACTIONS, TIER_MAX, TIER_QUOTA, UNIT_CAPS, validPoint } from './rules.ts';
 import { applyUpgrade, taskCost, taskPhrases, upgradeLimit, UPGRADE_OPTIONS } from './technology.ts';
@@ -42,6 +42,7 @@ export function completePhrase(state: StrongholdState, player: Participant): voi
       return;
     }
     if (player.action === 'relay' || player.action === 'barracks' || player.action === 'tower' || player.action === 'wall') {
+      synchronizeRoleTask(state, player);
       state.message = 'Choose a location on the battlefield; builders will construct it.';
       return;
     }
@@ -64,18 +65,17 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
   if (command.type === 'ROLE') {
     if (state.phase !== 'playing') throw new Error('Finish the shared tier challenge before switching roles.');
     if (!Object.prototype.hasOwnProperty.call(ROLE_ACTIONS, command.role)) throw new Error('Unknown role.');
+    if (player.role === command.role) return;
     const partner = state.players.find(other => other.role === command.role);
-    if (!partner || partner === player) return;
-    const previousRole = player.role;
-    player.role = partner.role;
-    partner.role = previousRole;
-    for (const changed of [player, partner]) {
-      changed.action = ROLE_ACTIONS[changed.role][0] ?? 'resources';
-      changed.ready = false;
-      changed.actionPhrases = 0;
-      changed.constructionTier = Math.max(1, state.tier);
-      changed.upgradeTarget = changed.role === 'production' ? 'warrior' : changed.role === 'defenses' ? 'tower-1' : 'economy';
-      assignPhrase(state, changed);
+    player.role = command.role;
+    player.ready = false;
+    if (partner) copyRoleTask(partner, player, true);
+    else {
+      player.action = ROLE_ACTIONS[player.role][0] ?? 'resources';
+      player.actionPhrases = 0;
+      player.constructionTier = Math.max(1, state.tier);
+      player.upgradeTarget = player.role === 'production' ? 'warrior' : player.role === 'defenses' ? 'tower-1' : 'economy';
+      assignPhrase(state, player);
     }
     return;
   }
@@ -90,6 +90,7 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     }
     player.typed = command.text;
     if (player.typed === player.phrase) completePhrase(state, player);
+    else synchronizeRoleTask(state, player);
     return;
   }
   if (command.type === 'READY') {

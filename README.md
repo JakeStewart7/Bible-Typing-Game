@@ -8,18 +8,30 @@ typing strategy game with three simulated teammates. The full-screen battlefield
 follows the Paint design: borderless bright-green map, gray castle, colored shape-coded
 units, upper-right population/resource HUD, central hexagonal **Tier Up** button,
 and four colored player panels along the bottom. Switch Player 1's role dropdown
-between Economy, Army production, Army control, and Defenses; a teammate takes
-your previous role. Type exact phrases to earn shared
+between Economy, Army production, Army control, and Defenses to join that role.
+Players on the same role share the selected task, typed phrase and completed
+task phrases; each finished task costs and rewards supplies only once. Simulated
+teammates help type your chosen task without changing it or placing your buildings.
+Roles can be left unoccupied. Type exact phrases to earn shared
 supplies and recruit units, or complete construction phrases and place buildings
-on the battlefield. Builders construct and repair automatically. Connect resource
-nodes to the castle with relays no more than 155 map units apart; destroying a
-relay interrupts deliveries from disconnected nodes.
+on the battlefield. Builders construct and repair automatically. Gatherers strike
+resource nodes, collect a visible yellow chunk, then physically carry it to the
+nearest completed relay or castle before harvesting again. Relays forward deposited
+chunks to the castle through links no more than 155 map units apart; destroying a
+relay interrupts deliveries until the route is restored.
 
 Controls and typing use larger, high-contrast text; repeated captions stay out of
 the battlefield. Enemy troops are dark-red squares (melee), diamonds (archers),
 and triangles (siege), with red outlines. Castle and enemy-base health appear in
 the HUD. **Help** contains the map key and instructions. On narrow screens the
 player panels scroll instead of shrinking their text.
+The castle is a clean square and towers use T-shaped map and HUD icons.
+All units move at 30% of their original speed and have twice their original health,
+including wave and troop-upgrade health bonuses. The home castle has 10,000 HP,
+ten times its original health. Moving units bob gently; attacks and harvesting
+briefly flash a strike toward their target. Reduced-motion preferences disable
+the bob and attack-size pulse. Full-width player progress bars are three times
+thicker for visibility and show the same progress for everyone sharing a role.
 
 Ready up to pause the battle for a shared tier challenge: everyone completes
 three private phrases. Tier 1 unlocks warriors, barracks and towers, tier 2 adds

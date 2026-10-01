@@ -1,23 +1,23 @@
-import { BASE, ENEMY_BASE, UNIT_RULES } from './rules.ts';
+import { BASE, ENEMY_BASE, UNIT_HEALTH_MULTIPLIER, UNIT_RULES } from './rules.ts';
 import { assignPhrase } from './phrases.ts';
 import { unitUpgrade } from './technology.ts';
 import type { ArmyUnitKind, Building, BuildingKind, Participant, Point, StrongholdState, Unit, UnitKind } from './types.ts';
 
 export function addUnit(state: StrongholdState, kind: UnitKind, point: Point, formation: ArmyUnitKind | null = null): Unit {
-  const hp = (formation ? UNIT_RULES[formation].hp : UNIT_RULES[kind].hp)
-    + (kind === 'invader' ? state.wave * 5 : unitUpgrade(state, { kind }) * 10);
-  const unit: Unit = { ...point, id: state.nextId++, kind, hp, maxHp: hp, destination: null, cooldown: 0, task: null, formation };
+  const hp = ((formation ? UNIT_RULES[formation].hp : UNIT_RULES[kind].hp)
+    + (kind === 'invader' ? state.wave * 5 : unitUpgrade(state, { kind }) * 10)) * UNIT_HEALTH_MULTIPLIER;
+  const unit: Unit = { ...point, id: state.nextId++, kind, hp, maxHp: hp, destination: null, cooldown: 0, task: null, formation, attackTarget: null };
   state.units.push(unit);
   return unit;
 }
 export function addBuilding(
   state: StrongholdState, kind: BuildingKind, point: Point, complete = false, enemy = false, tier = state.tier
 ): Building {
-  const hp = kind === 'castle' ? 1000 : kind === 'enemy-base' ? 1200 : kind === 'wall' ? 260
+  const hp = kind === 'castle' ? 10000 : kind === 'enemy-base' ? 1200 : kind === 'wall' ? 260
     : 160 + (kind === 'tower' ? 60 : kind === 'barracks' ? 40 : 0) * Math.max(0, tier - 1);
   const building: Building = {
     ...point, id: state.nextId++, kind, hp, maxHp: hp, tier,
-    progress: complete ? 1 : 0, cooldown: 0, enemy
+    progress: complete ? 1 : 0, cooldown: 0, enemy, attackTarget: null
   };
   state.buildings.push(building);
   return building;

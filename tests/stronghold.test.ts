@@ -51,12 +51,12 @@ test('Stronghold typing requires exact phrase and rejects expired phrase IDs', (
   rejects(() => executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase + 'x' }), 'Invalid');
 });
 
-test('Stronghold role swapping preserves one participant per role and changes private tasks', () => {
+test('Stronghold role selection joins teammates without displacing them', () => {
   const state = createStronghold();
   executeCommand(state, self(state), { type: 'ROLE', role: 'army' });
   equal(self(state).role, 'army');
-  equal(state.players.find(player => player.id === 'bot-2')?.role, 'economy');
-  equal(new Set(state.players.map(player => player.role)).size, 4);
+  equal(state.players.find(player => player.id === 'bot-2')?.role, 'army');
+  equal(new Set(state.players.map(player => player.role)).size, 3);
   rejects(() => finish(state), 'map orders');
   rejects(() => executeCommand(state, self(state), { type: 'ACTION', action: 'tower' }), 'another role');
 });
@@ -142,7 +142,7 @@ test('Stronghold relay destruction disconnects upstream resources until a route 
   const first = addBuilding(state, 'relay', { x: 500, y: 450 }, true);
   const upstream = addBuilding(state, 'relay', { x: 500, y: 305 }, true);
   equal(connectedRelays(state).length, 3);
-  state.chunks = [{ id: 99, x: 500, y: 305, amount: 8, target: upstream.id }];
+  state.chunks = [{ id: 99, x: 500, y: 305, amount: 8, target: upstream.id, carrier: null }];
   first.hp = 0;
   updateLogistics(state, .5);
   equal(state.chunks[0]?.y, 305);
@@ -263,12 +263,15 @@ test('Stronghold event changes preserve an in-progress typing phrase', () => {
   equal(player.phrase.includes('We ') || player.phrase.includes('Steward'), true);
 });
 
-test('Stronghold simulated economy builds a connected relay network when the human commands the army', () => {
+test('Stronghold simulated economy builds a connected relay network while the human commands the army', () => {
   const state = createStronghold();
   state.resources = 2000;
   state.waveIn = 10000;
   executeCommand(state, self(state), { type: 'ROLE', role: 'army' });
-  for (let index = 0; index < 200; index++) advanceStronghold(state, .5);
+  const teammate = state.players.find(player => player.id === 'bot-2');
+  if (!teammate) throw new Error('Missing teammate.');
+  executeCommand(state, teammate, { type: 'ROLE', role: 'economy' });
+  for (let index = 0; index < 400; index++) advanceStronghold(state, .5);
   equal(state.buildings.some(building => building.kind === 'relay'), true);
   equal(connectedRelays(state).length > 1, true);
   equal(state.units.filter(unit => unit.kind === 'worker').length, 5);

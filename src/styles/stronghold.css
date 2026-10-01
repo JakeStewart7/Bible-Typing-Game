@@ -29,7 +29,7 @@
 .stronghold-symbol--resource { background: #00aeef; border: 3px solid #9ed7e6; border-radius: 50%; }
 .stronghold-symbol--builder { background: #a64caf; clip-path: polygon(50% 0, 100% 100%, 0 100%); position: relative; }
 .stronghold-symbol--builder::after { content: ''; position: absolute; inset: 5px 4px 3px; background: #cec0df; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-.stronghold-symbol--tower { background: #ffd500; clip-path: polygon(25% 0, 65% 33%, 53% 42%, 100% 100%, 20% 55%, 34% 46%, 0 15%); }
+.stronghold-symbol--tower { background: #ffd500; clip-path: polygon(0 0, 100% 0, 100% 30%, 65% 30%, 65% 100%, 35% 100%, 35% 30%, 0 30%); }
 .stronghold-watch { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-top: 7px; padding-top: 5px; border-top: 1px solid #777; font-size: 14px; }
 .stronghold-tier {
   position: absolute; top: 8px; left: calc(50% - 46px); width: 92px; height: 110px;
@@ -62,7 +62,7 @@
 .stronghold-player h3 { color: #111; font: bold 24px/1.2 Arial, sans-serif; margin: 0; white-space: nowrap; }
 .stronghold-role-select { width: 57%; min-width: 0; min-height: 36px; height: 36px; border: 2px solid #111; border-radius: 0; background: white; color: #111; font: bold 14px Arial, sans-serif; padding: 2px; }
 .stronghold-role-select:disabled { opacity: 1; color: #111; }
-.stronghold-player-progress { height: 6px; flex: 0 0 6px; border: 1px solid var(--player-color); margin: 6px 0; background: white; overflow: hidden; }
+.stronghold-player-progress { height: 18px; flex: 0 0 18px; width: 100%; border: 1px solid var(--player-color); margin: 6px 0; background: white; overflow: hidden; }
 .stronghold-player-progress > div { height: 100%; background: var(--player-fill); max-width: 100%; }
 .stronghold-player-actions { flex: 1; min-height: 0; overflow-y: auto; }
 .stronghold-actions { display: grid; gap: 4px; }
