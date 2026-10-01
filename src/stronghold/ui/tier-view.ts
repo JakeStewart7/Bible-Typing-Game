@@ -27,19 +27,15 @@ export function renderTierChallenge(elements: StrongholdElements, snapshot: Stro
     setText(entry.name, `Player ${index + 1}`);
     setText(entry.progress, `${player.contribution}/${TIER_QUOTA}`);
     setText(entry.typed, player.contribution >= TIER_QUOTA ? 'Done' : player.typed);
-    entry.typed.classList.toggle('is-hidden', player.id === snapshot.selfId);
+    entry.typed.classList.remove('is-hidden');
   });
   setText(requireElement('stronghold-tier-title', HTMLElement), `Tier ${snapshot.tier + 1}`);
   setText(requireElement('stronghold-tier-description', HTMLElement), `${TIER_QUOTA} phrases each`);
   if (snapshot.phase === 'tier-up' && running) {
-    if (elements.typing.parentElement !== elements.tierSlot) elements.tierSlot.append(elements.typing);
-    const ownContribution = elements.contributionCards.get(snapshot.selfId);
-    if (!ownContribution) throw new Error('Missing local Stronghold contribution.');
-    if (elements.typedArea.parentElement !== ownContribution.card) ownContribution.card.append(elements.typedArea);
+    if (elements.privateTyping.parentElement !== elements.tierSlot) elements.tierSlot.append(elements.privateTyping);
     if (!elements.dialog.open) { elements.dialog.showModal(); elements.input.focus({ preventScroll: true }); }
   } else {
     if (elements.dialog.open) elements.dialog.close();
-    if (elements.typing.parentElement !== ownCard.phraseSlot) ownCard.phraseSlot.append(elements.typing);
-    if (elements.typedArea.parentElement !== ownCard.typedSlot) ownCard.typedSlot.append(elements.typedArea);
+    if (elements.privateTyping.parentElement !== elements.privateSlot) elements.privateSlot.append(elements.privateTyping);
   }
 }

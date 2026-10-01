@@ -13,7 +13,7 @@ function self(state: StrongholdState): Participant {
 }
 function finish(state: StrongholdState): void {
   const player = self(state);
-  executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+  for (let entry = 0; entry < 2; entry++) executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
 }
 function rejects(run: () => void): void {
   try { run(); } catch (error) { equal(error instanceof Error, true); return; }
@@ -32,7 +32,7 @@ test('Stronghold tier-specific barracks require their own typing work, cost and 
   equal(state.resources, 460);
   executeCommand(state, self(state), { type: 'ACTION', action: 'barracks', tier: 3 });
   finish(state); finish(state);
-  equal(self(state).actionPhrases, 2);
+  equal(self(state).work, 16);
   rejects(() => executeCommand(state, self(state), { type: 'PLACE', kind: 'barracks', point: { x: 770, y: 570 } }));
   finish(state);
   executeCommand(state, self(state), { type: 'PLACE', kind: 'barracks', point: { x: 770, y: 570 } });
@@ -53,7 +53,7 @@ test('Stronghold towers retain selected tiers and advanced units require more ph
   executeCommand(state, self(state), { type: 'ROLE', role: 'defenses' });
   executeCommand(state, self(state), { type: 'ACTION', action: 'tower', tier: 2 });
   finish(state);
-  equal(self(state).actionPhrases, 1);
+  equal(self(state).work, 8);
   finish(state);
   executeCommand(state, self(state), { type: 'PLACE', kind: 'tower', point: { x: 360, y: 425 } });
   equal(state.buildings.find(building => building.kind === 'tower' && !building.enemy)?.tier, 2);
@@ -119,17 +119,19 @@ test('Stronghold sketch controls do not collide with Arcade upgrade selectors', 
   equal(markup.includes('id="stronghold-role-you"'), true);
 });
 
-test('Stronghold completed construction freezes its phrase until placement without duplicate credit', () => {
+test('Stronghold completed construction keeps typing available without duplicate work or costs', () => {
   const state = createStronghold();
-  executeCommand(state, self(state), { type: 'ACTION', action: 'relay' });
+  executeCommand(state, self(state), { type: 'ROLE', role: 'defenses' });
+  executeCommand(state, self(state), { type: 'ACTION', action: 'wall' });
   finish(state);
-  const completed = self(state).completed;
+  const phraseId = self(state).phraseId;
   finish(state);
-  equal(self(state).actionPhrases, 1);
-  equal(self(state).completed, completed);
-  rejects(() => executeCommand(state, self(state), { type: 'TYPE', phraseId: self(state).phraseId, text: '' }));
-  equal(self(state).typed, self(state).phrase);
-  executeCommand(state, self(state), { type: 'PLACE', kind: 'relay', point: { x: 360, y: 540 } });
+  equal(self(state).work, 8);
+  equal(self(state).phraseId > phraseId, true);
+  equal(state.resources, 100);
+  executeCommand(state, self(state), { type: 'TYPE', phraseId: self(state).phraseId, text: '' });
+  equal(self(state).typed, '');
+  executeCommand(state, self(state), { type: 'PLACE', kind: 'wall', point: { x: 360, y: 540 } });
   equal(state.resources, 85);
-  equal(self(state).actionPhrases, 0);
+  equal(self(state).work, 0);
 });

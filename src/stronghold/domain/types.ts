@@ -1,5 +1,7 @@
 export const ROLES = ['economy', 'production', 'army', 'defenses'] as const;
 export type Role = typeof ROLES[number];
+export const PHRASE_LENGTHS = ['short', 'medium', 'long', 'extra-long'] as const;
+export type PhraseLength = typeof PHRASE_LENGTHS[number];
 export type Point = { x: number; y: number };
 export type UnitKind = 'worker' | 'builder' | 'warrior' | 'archer' | 'catapult' | 'invader';
 export type ArmyUnitKind = 'warrior' | 'archer' | 'catapult';
@@ -16,7 +18,7 @@ export type Unit = Point & {
 };
 export type Building = Point & {
   id: number; kind: BuildingKind; hp: number; maxHp: number;
-  tier: number; progress: number; cooldown: number; enemy: boolean; attackTarget: Point | null;
+  tier: number; progress: number; cooldown: number; enemy: boolean; attackTarget: Point | null; ownerId: string | null;
 };
 export type ResourceNode = Point & { id: number; rich: boolean; remaining: number };
 export type ResourceChunk = Point & { id: number; amount: number; target: number | null; carrier: number | null };
@@ -24,8 +26,9 @@ export type Participant = {
   id: string; name: string; color: string; role: Role; simulated: boolean;
   action: Action; phrase: string; typed: string; phraseId: number;
   completed: number; ready: boolean; contribution: number; typingCredit: number;
-  constructionTier: number; upgradeTarget: UpgradeTarget; actionPhrases: number;
+  constructionTier: number; upgradeTarget: UpgradeTarget; actionPhrases: number; work: number; length: PhraseLength;
 };
+export type StrongholdEvent = { id: number; elapsed: number; playerId: string | null; text: string };
 export type StrongholdState = {
   phase: Phase; tier: number; elapsed: number; wave: number; waveIn: number;
   resources: number; event: WorldEvent; eventIn: number;
@@ -33,7 +36,7 @@ export type StrongholdState = {
   nodes: ResourceNode[]; chunks: ResourceChunk[]; nextId: number;
   upgrades: Record<'economy' | 'production' | 'defenses', number>;
   technology: Record<UpgradeTarget, number>;
-  rally: Point; message: string;
+  rally: Point; message: string; events: StrongholdEvent[];
 };
 export type StrongholdSnapshot = Omit<StrongholdState, 'players' | 'nextId'> & {
   selfId: string;
@@ -42,6 +45,7 @@ export type StrongholdSnapshot = Omit<StrongholdState, 'players' | 'nextId'> & {
 export type StrongholdCommand =
   | { type: 'ROLE'; role: Role }
   | { type: 'ACTION'; action: Action; tier?: number; upgrade?: UpgradeTarget }
+  | { type: 'LENGTH'; length: PhraseLength }
   | { type: 'TYPE'; phraseId: number; text: string }
   | { type: 'READY'; ready: boolean }
   | { type: 'PLACE'; kind: 'relay' | 'barracks' | 'tower' | 'wall'; point: Point }

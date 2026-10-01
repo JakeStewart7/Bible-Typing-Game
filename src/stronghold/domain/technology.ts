@@ -22,6 +22,9 @@ export function taskPhrases(player: Pick<Participant, 'action' | 'constructionTi
   if (player.action === 'tower' || player.action === 'barracks') return player.constructionTier;
   return Math.max(1, MIN_TIER[player.action]);
 }
+export function taskWork(player: Pick<Participant, 'action' | 'constructionTier'>): number {
+  return taskPhrases(player) * 8;
+}
 export function unitUpgrade(state: Pick<StrongholdState, 'technology'>, unit: Pick<Unit, 'kind'>): number {
   return unit.kind === 'warrior' || unit.kind === 'archer' || unit.kind === 'catapult'
     ? state.technology[unit.kind] : 0;

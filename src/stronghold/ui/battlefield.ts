@@ -3,6 +3,7 @@ import { distance, RELAY_RANGE } from '../domain/rules.ts';
 import { towerUpgrade, unitUpgrade } from '../domain/technology.ts';
 import type { Building, Point, ResourceChunk, ResourceNode, StrongholdSnapshot, Unit } from '../domain/types.ts';
 import { createSvgLayer, setAttribute, setText } from './dom-updates.ts';
+import { playerTheme } from './player-theme.ts';
 
 function health(hp: number, max: number, y: number, width = 26): string {
   return `<rect x="${-width / 2}" y="${y}" width="${width}" height="3" fill="#1d3029"/><rect data-health x="${-width / 2}" y="${y}" width="${width * Math.max(0, hp / max)}" height="3" fill="#a6ed89"/>`;
@@ -84,6 +85,7 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
   let selection: ReadonlySet<number> = new Set();
   let technology: Pick<StrongholdSnapshot, 'technology'> | null = null;
   let elapsed = 0;
+  let selectionColor = '#ffb3c9';
   const previousUnits = new Map<number, Point>();
   const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
   const renderUnits = createSvgLayer<Unit>(layer('units'), unit => unitMarkup(unit, false), (element, unit) => {
@@ -97,6 +99,9 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     setAttribute(element, 'data-unit', String(unit.id));
     setAttribute(element, 'class', 'stronghold-map-unit');
     setAttribute(child(element, '[data-selected]'), 'visibility', selection.has(unit.id) ? 'visible' : 'hidden');
+    setAttribute(child(element, '[data-selected]'), 'stroke', selectionColor);
+    setAttribute(child(element, '[data-selected]'), 'fill', selectionColor);
+    setAttribute(child(element, '[data-selected]'), 'fill-opacity', '.2');
     setAttribute(child(element, '[data-health]'), 'width', String(20 * Math.max(0, unit.hp / unit.maxHp)));
     setText(child(element, 'title'), `${unit.kind}${unit.formation ? ' ' + unit.formation : ''}: ${Math.ceil(unit.hp)} HP / upgrade ${level}`);
   }, unit => `${unit.kind}/${unit.formation}`);
@@ -131,6 +136,8 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     selection = selected;
     technology = snapshot;
     elapsed = snapshot.elapsed;
+    const self = snapshot.players.find(player => player.id === snapshot.selfId);
+    if (self) selectionColor = playerTheme(self.color).light;
     const livingUnits = new Set(snapshot.units.map(unit => unit.id));
     for (const id of previousUnits.keys()) if (!livingUnits.has(id)) previousUnits.delete(id);
     const signature = snapshot.buildings.filter(building => building.kind === 'castle' || building.kind === 'relay')

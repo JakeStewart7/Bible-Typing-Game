@@ -1,5 +1,6 @@
 import { distance, moveToward, RELAY_RANGE, UNIT_RULES } from './rules.ts';
 import type { Building, StrongholdState, Unit } from './types.ts';
+import { ENTITY_LABELS, recordEvent } from './events.ts';
 
 export function connectedRelays(state: StrongholdState): Building[] {
   const connected = state.buildings.filter(building => building.kind === 'castle' && building.hp > 0);
@@ -45,6 +46,7 @@ function updateWorker(state: StrongholdState, worker: Unit, seconds: number): vo
   if (distance(worker, node) > 14 || worker.cooldown > 0) return;
   const amount = Math.min(node.remaining, (node.rich ? 8 : 4) + state.upgrades.economy * 2);
   node.remaining -= amount;
+  if (node.remaining === 0) recordEvent(state, 'Resource node depleted');
   state.chunks.push({ id: state.nextId++, x: worker.x, y: worker.y, amount, target: null, carrier: worker.id });
   worker.attackTarget = { x: node.x, y: node.y };
   worker.cooldown = 3;
@@ -59,7 +61,10 @@ function updateBuilder(state: StrongholdState, builder: Unit, seconds: number, c
   if (project.progress < 1) claimed.add(project.id);
   moveToward(builder, project, seconds * UNIT_RULES.builder.speed);
   if (distance(builder, project) > 22) return;
-  if (project.progress < 1) project.progress = Math.min(1, project.progress + seconds / 8);
+  if (project.progress < 1) {
+    project.progress = Math.min(1, project.progress + seconds / 8);
+    if (project.progress === 1) recordEvent(state, `${ENTITY_LABELS[project.kind]} constructed`, project.ownerId);
+  }
   else project.hp = Math.min(project.maxHp, project.hp + seconds * (5 + state.upgrades.defenses));
 }
 

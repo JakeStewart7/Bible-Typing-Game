@@ -1,12 +1,12 @@
-import type { Action, BuildingKind, Point, Role, UnitKind, WorldEvent } from './types.ts';
+import type { Action, BuildingKind, PhraseLength, Point, Role, UnitKind, WorldEvent } from './types.ts';
 
 export const ROLE_LABELS: Record<Role, string> = {
-  economy: 'Economy', production: 'Army production', army: 'Army control', defenses: 'Defenses'
+  economy: 'Economy', production: 'Army', army: 'Unit Control', defenses: 'Defenses'
 };
 export const ROLE_ACTIONS: Record<Role, readonly Action[]> = {
   economy: ['resources', 'worker', 'relay', 'upgrade'],
-  production: ['barracks', 'warrior', 'archer', 'catapult', 'upgrade'],
-  army: [],
+  production: ['resources', 'barracks', 'warrior', 'archer', 'catapult', 'upgrade'],
+  army: ['resources'],
   defenses: ['builder', 'tower', 'wall', 'upgrade']
 };
 export const ACTION_LABELS: Record<Action, string> = {
@@ -16,7 +16,7 @@ export const ACTION_LABELS: Record<Action, string> = {
   wall: 'Place wall', upgrade: 'Upgrade role'
 };
 export const COSTS: Record<Action, number> = {
-  resources: 0, worker: 20, relay: 15, barracks: 40, warrior: 10,
+  resources: 0, worker: 0, relay: 15, barracks: 40, warrior: 10,
   archer: 20, catapult: 35, builder: 25, tower: 25, wall: 15, upgrade: 60
 };
 export const MIN_TIER: Record<Action, number> = {
@@ -38,6 +38,8 @@ export const UNIT_RULES: Record<UnitKind, { hp: number; speed: number; damage: n
   invader: { hp: 60, speed: 11.4, damage: 8, range: 25 }
 };
 export const UNIT_HEALTH_MULTIPLIER = 2;
+export const PHRASE_WORK: Record<PhraseLength, number> = { short: 1, medium: 2, long: 3, 'extra-long': 4 };
+export const LENGTH_LABELS: Record<PhraseLength, string> = { short: 'Short', medium: 'Medium', long: 'Long', 'extra-long': 'Extra Long' };
 export const EVENT_LABELS: Record<WorldEvent, string> = {
   peace: 'Scripture watch', 'left-hand': 'Left-hand drill', vowels: 'Vowel storm',
   numbers: 'Number siege', symbols: 'Symbol storm', code: 'Code formation'

@@ -17,7 +17,7 @@ export function addBuilding(
     : 160 + (kind === 'tower' ? 60 : kind === 'barracks' ? 40 : 0) * Math.max(0, tier - 1);
   const building: Building = {
     ...point, id: state.nextId++, kind, hp, maxHp: hp, tier,
-    progress: complete ? 1 : 0, cooldown: 0, enemy, attackTarget: null
+    progress: complete ? 1 : 0, cooldown: 0, enemy, attackTarget: null, ownerId: null
   };
   state.buildings.push(building);
   return building;
@@ -33,9 +33,10 @@ export function createStronghold(): StrongholdState {
     phase: 'playing', tier: 0, elapsed: 0, wave: 0, waveIn: 30, resources: 100,
     event: 'peace', eventIn: 60, nextId: 1, units: [], buildings: [], chunks: [],
     players: roster.map(player => ({
-      ...player, action: player.role === 'economy' ? 'resources' : player.role === 'defenses' ? 'builder' : 'warrior',
+      ...player, action: player.role === 'defenses' ? 'builder' : 'resources',
       phrase: '', typed: '', phraseId: 0, completed: 0, ready: false, contribution: 0, typingCredit: 0,
-      constructionTier: 1, upgradeTarget: player.role === 'production' ? 'warrior' : player.role === 'defenses' ? 'tower-1' : 'economy', actionPhrases: 0
+      constructionTier: 1, upgradeTarget: player.role === 'production' ? 'warrior' : player.role === 'defenses' ? 'tower-1' : 'economy',
+      actionPhrases: 0, work: 0, length: 'extra-long'
     })),
     nodes: [
       { x: 290, y: 530, rich: false }, { x: 730, y: 520, rich: false },
@@ -45,7 +46,7 @@ export function createStronghold(): StrongholdState {
     ].map(node => ({ ...node, id: 100 + node.x, remaining: node.rich ? 1200 : 800 })),
     upgrades: { economy: 0, production: 0, defenses: 0 },
     technology: { economy: 0, warrior: 0, archer: 0, catapult: 0, 'tower-1': 0, 'tower-2': 0, 'tower-3': 0 },
-    rally: { x: 500, y: 450 }, message: ''
+    rally: { x: 500, y: 450 }, message: '', events: [{ id: 1, elapsed: 0, playerId: null, text: 'Stronghold started' }]
   };
   addBuilding(state, 'castle', BASE, true);
   addBuilding(state, 'enemy-base', ENEMY_BASE, true, true);

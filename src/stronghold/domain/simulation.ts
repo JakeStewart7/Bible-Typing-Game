@@ -3,7 +3,9 @@ import { rallyArmy, spawnWave, updateCombat } from './combat.ts';
 import { updateLogistics } from './logistics.ts';
 import { assignPhrase } from './phrases.ts';
 import { addUnit } from './state.ts';
-import { distance, TIER_MAX, TIER_QUOTA, UNIT_CAPS } from './rules.ts';
+import { distance, EVENT_LABELS, TIER_MAX, TIER_QUOTA, UNIT_CAPS } from './rules.ts';
+import { taskWork } from './technology.ts';
+import { ENTITY_LABELS, recordEvent } from './events.ts';
 import type { Action, Participant, Point, StrongholdState, WorldEvent } from './types.ts';
 
 const EVENTS: readonly WorldEvent[] = ['peace', 'left-hand', 'vowels', 'numbers', 'symbols', 'code'];
@@ -16,6 +18,7 @@ function nextRelaySite(state: StrongholdState): Point | undefined {
   return BOT_RELAY_SITES.find(site => !state.buildings.some(building => building.hp > 0 && distance(site, building) < 38));
 }
 function botAction(state: StrongholdState, player: Participant): Action {
+  if (player.role === 'army') return 'resources';
   if (player.role === 'economy') {
     if (state.resources < 75) return 'resources';
     if (state.units.filter(unit => unit.kind === 'worker').length < 5) return 'worker';
@@ -29,6 +32,7 @@ function botAction(state: StrongholdState, player: Participant): Action {
     if (state.upgrades.defenses < state.tier) return 'upgrade';
     return state.buildings.filter(building => building.kind === 'wall').length < 8 ? 'wall' : 'builder';
   }
+  if (state.tier === 0) return 'resources';
   if (!state.buildings.some(building => building.kind === 'barracks') && state.tier > 0) return 'barracks';
   if (state.tier === 3 && state.units.filter(unit => unit.kind === 'catapult').length < 3) return 'catapult';
   if (state.tier >= 2 && state.units.filter(unit => unit.kind === 'archer').length < 5) return 'archer';
@@ -42,17 +46,17 @@ function updateBot(state: StrongholdState, player: Participant, seconds: number)
     if (state.players.every(other => other.ready)) return;
     const humanOnRole = state.players.some(other => !other.simulated && other.role === player.role);
     if (player.role === 'army') {
-      if (humanOnRole) return;
-      const soldiers = state.units.filter(unit => ['warrior', 'archer', 'catapult'].includes(unit.kind));
-      rallyArmy(state, state.tier >= 2 && soldiers.length >= 8 ? { x: 500, y: 100 } : state.rally);
-      return;
+      if (!humanOnRole) {
+        const soldiers = state.units.filter(unit => ['warrior', 'archer', 'catapult'].includes(unit.kind));
+        rallyArmy(state, state.tier >= 2 && soldiers.length >= 8 ? { x: 500, y: 100 } : state.rally);
+      }
     }
     const action = humanOnRole ? player.action : botAction(state, player);
     if (action !== player.action) {
       executeCommand(state, player, { type: 'ACTION', action });
     }
     if (actionProblem(state, player, action)) return;
-    if (['relay', 'barracks', 'tower', 'wall'].includes(action) && player.typed === player.phrase) {
+    if (['relay', 'barracks', 'tower', 'wall'].includes(action) && (action === 'relay' || player.work >= taskWork(player))) {
       if (humanOnRole) return;
       const count = state.buildings.filter(building => building.kind === action && !building.enemy).length;
       const point = action === 'relay' ? nextRelaySite(state) : action === 'barracks'
@@ -86,6 +90,8 @@ function produceArmy(state: StrongholdState, seconds: number): void {
     state.resources -= cost;
     const unit = addUnit(state, kind, { x: barracks.x, y: barracks.y - 30 });
     unit.destination = { ...state.rally };
+    const owner = state.players.find(player => player.id === barracks.ownerId);
+    recordEvent(state, `${owner ? `Player ${state.players.indexOf(owner) + 1}` : 'Barracks'} created ${ENTITY_LABELS[kind]}`, barracks.ownerId);
     barracks.cooldown = 12;
   }
 }
@@ -111,6 +117,7 @@ export function advanceStronghold(state: StrongholdState, seconds: number): void
       }
     });
     state.message = 'The world event changed. New phrases use the next drill; finish any phrase already in progress.';
+    recordEvent(state, EVENT_LABELS[state.event]);
   }
   updateLogistics(state, seconds);
   produceArmy(state, seconds);

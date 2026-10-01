@@ -2,7 +2,6 @@ import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
 import { actionProblem, executeCommand } from '../src/stronghold/domain/actions.ts';
 import { updateCombat, spawnWave } from '../src/stronghold/domain/combat.ts';
 import { connectedRelays, updateLogistics } from '../src/stronghold/domain/logistics.ts';
-import { assignPhrase } from '../src/stronghold/domain/phrases.ts';
 import { addBuilding, addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { TIER_QUOTA } from '../src/stronghold/domain/rules.ts';
@@ -17,7 +16,8 @@ function self(state: StrongholdState): Participant {
   return player;
 }
 function finish(state: StrongholdState, player = self(state)): void {
-  executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+  const entries = state.phase === 'tier-up' ? 1 : 2;
+  for (let entry = 0; entry < entries; entry++) executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
 }
 function rejects(run: () => void, message: string): void {
   try { run(); } catch (error) { equal(error instanceof Error && error.message.includes(message), true); return; }
@@ -57,7 +57,8 @@ test('Stronghold role selection joins teammates without displacing them', () => 
   equal(self(state).role, 'army');
   equal(state.players.find(player => player.id === 'bot-2')?.role, 'army');
   equal(new Set(state.players.map(player => player.role)).size, 3);
-  rejects(() => finish(state), 'map orders');
+  finish(state);
+  equal(state.resources, 118);
   rejects(() => executeCommand(state, self(state), { type: 'ACTION', action: 'tower' }), 'another role');
 });
 
@@ -95,7 +96,6 @@ test('Stronghold simulated teammates ready up and finish their own tier phrases'
 test('Stronghold building placement costs once and waits for a nearby builder', () => {
   const state = createStronghold();
   executeCommand(state, self(state), { type: 'ACTION', action: 'relay' });
-  finish(state);
   equal(state.resources, 100);
   executeCommand(state, self(state), { type: 'PLACE', kind: 'relay', point: { x: 380, y: 540 } });
   equal(state.resources, 85);
@@ -103,7 +103,8 @@ test('Stronghold building placement costs once and waits for a nearby builder', 
   equal(relay?.progress, 0);
   for (let index = 0; index < 60; index++) updateLogistics(state, .25);
   equal(relay?.progress, 1);
-  rejects(() => executeCommand(state, self(state), { type: 'PLACE', kind: 'relay', point: { x: 650, y: 540 } }), 'phrase first');
+  executeCommand(state, self(state), { type: 'PLACE', kind: 'relay', point: { x: 650, y: 540 } });
+  equal(state.resources, 70);
 });
 
 test('Stronghold rejects illegal sites, insufficient resources and locked actions without spending', () => {
@@ -189,7 +190,7 @@ test('Stronghold only army role orders friendly troops and rejects nonfinite map
   const state = createStronghold();
   const warrior = state.units.find(unit => unit.kind === 'warrior');
   if (!warrior) throw new Error('Missing warrior.');
-  rejects(() => executeCommand(state, self(state), { type: 'MOVE', ids: [warrior.id], point: { x: 500, y: 100 } }), 'Army control');
+  rejects(() => executeCommand(state, self(state), { type: 'MOVE', ids: [warrior.id], point: { x: 500, y: 100 } }), 'Unit Control');
   executeCommand(state, self(state), { type: 'ROLE', role: 'army' });
   executeCommand(state, self(state), { type: 'MOVE', ids: [warrior.id], point: { x: 500, y: 100 } });
   equal(warrior.destination, { x: 500, y: 100 });
@@ -237,15 +238,19 @@ test('Stronghold waves grow enemy defenses, world events change drills and termi
   equal(loss.phase, 'lost');
 });
 
-test('Stronghold higher-tier scripture uses fewer longer words', () => {
+test('Stronghold length selection distinguishes tiny words, long words, phrases and sentences', () => {
   const state = createStronghold();
   const player = self(state);
-  player.phraseId = 0; assignPhrase(state, player);
-  const initialWords = player.phrase.split(' ').length;
-  state.tier = 3;
-  player.phraseId = 0; assignPhrase(state, player);
-  equal(player.phrase.split(' ').length < initialWords, true);
-  equal(Math.max(...player.phrase.split(' ').map(word => word.length)) >= 12, true);
+  executeCommand(state, player, { type: 'LENGTH', length: 'short' });
+  equal(player.phrase.length <= 4, true);
+  executeCommand(state, player, { type: 'LENGTH', length: 'medium' });
+  equal(player.phrase.includes(' '), false);
+  equal(player.phrase.length >= 10, true);
+  executeCommand(state, player, { type: 'LENGTH', length: 'long' });
+  equal(player.phrase.split(' ').length >= 3, true);
+  equal(player.phrase.length < 25, true);
+  executeCommand(state, player, { type: 'LENGTH', length: 'extra-long' });
+  equal(player.phrase.split(' ').length >= 7, true);
 });
 
 test('Stronghold event changes preserve an in-progress typing phrase', () => {
