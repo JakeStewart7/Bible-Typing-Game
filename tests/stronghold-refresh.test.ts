@@ -61,3 +61,18 @@ test('Stronghold cancels paused frames, ignores inactive elapsed time and bounds
   connection.dispose();
   equal(clock.callbacks.size, 0);
 });
+
+test('Stronghold local connection publishes developer defaults and preserves them on restart', () => {
+  const clock = new FakeFrameClock();
+  const connection = new LocalStrongholdConnection(clock, { resources: 75, length: 'short', computersPaused: true });
+  let resources = 0;
+  let length = '';
+  let stopped = false;
+  connection.subscribe(snapshot => { resources = snapshot.resources; length = snapshot.players[0]?.length ?? ''; stopped = snapshot.computersPaused; });
+  equal([resources, length, stopped], [75, 'short', true]);
+  connection.restart({ resources: 20, length: 'long', computersPaused: false });
+  equal([resources, length, stopped], [20, 'long', false]);
+  connection.restart();
+  equal([resources, length, stopped], [20, 'long', false]);
+  connection.dispose();
+});

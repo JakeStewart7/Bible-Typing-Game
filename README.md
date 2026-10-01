@@ -8,35 +8,116 @@ typing strategy game with three simulated teammates. The full-screen battlefield
 follows the Paint design: borderless bright-green map, gray castle, colored shape-coded
 units, upper-right population/resource HUD, central hexagonal **Tier Up** button,
 and four colored player panels along the bottom. Switch Player 1's role dropdown
-between Economy, Army production, Army control, and Defenses; a teammate takes
-your previous role. Type exact phrases to earn shared
-supplies and recruit units, or complete construction phrases and place buildings
-on the battlefield. Builders construct and repair automatically. Connect resource
-nodes to the castle with relays no more than 155 map units apart; destroying a
-relay interrupts deliveries from disconnected nodes.
+between Economy, Army, Unit Control, and Defenses to join that role.
+Players on the same role share the selected task, typed text and completed
+work; each finished task costs and rewards supplies only once. Simulated
+teammates help type your chosen task without changing it or placing your buildings.
+Roles can be left unoccupied. The prominent private typing area is centered above
+the bottom panels. Focus returns to its input after game buttons, role/length
+changes, map gestures and new entries, without interrupting an open dropdown.
+Unit Control can also type for supplies, and typing stays available while a
+building is ready for placement or your tier contribution is finished.
+Only pause, hidden/inactive gameplay and a finished match disable the input.
 
-Controls and typing use larger, high-contrast text; repeated captions stay out of
+Matches start with **50 supplies** and **Medium** text. Choose **Short** (tiny words), **Medium** (long words), **Long** (short phrases),
+or **Extra Long** (full sentences) in the Length selector. A fully correct entry
+adds 1, 2, 3 or 4 work respectively; partial or incorrect text never fills the
+player bar. A basic task needs 8 work, with higher-tier construction/training
+needing 16 or 24. Each role keeps independent completed work for every task,
+building tier and upgrade type, even when that role becomes unoccupied.
+Switching tasks, roles or lengths and completing tier challenges preserves this
+work; only completing or placing that specific task resets its bar.
+Filling the bar recruits a unit, earns supplies,
+upgrades technology, or makes construction ready. Gatherers are **free** to create.
+Costs appear in separate player-colored badges. Selections, buttons, the input's
+**Type here** prompt and basic arrow/text cursors share each player's dark and
+light palette. Your typed text appears both in the central input and in your
+small player display, just like your teammates' typed text.
+
+**Dev options** sets the starting computer state, default text length, starting
+supplies (0-10,000), and starting map zoom (1.0-2.0). **Apply & new game** saves these defaults on this device and
+starts a fresh match. Subsequent **New game** actions and page reloads use the
+saved defaults; changing them does not save an ongoing match.
+
+The slim, stretched private typing strip leaves more height for the battlefield.
+The map starts at **120% zoom**, focused toward the home base. Use **+/-**,
+**Fit map**, and **Alt-drag or middle-drag** to navigate without issuing orders.
+Fit shows the entire map; zoom and pan do not change world coordinates or speed.
+Shift-drag retains additive army selection.
+
+The length selector is a faded reel: **Left/Down** selects shorter entries,
+**Right/Up** longer entries, from anywhere outside dropdowns and dev fields.
+Clicking an option also works; endpoints do not wrap or discard current typing.
+Shift+arrows still selects typed text. **Alt+1...9** selects the corresponding
+visible task in your current role; **Alt+0** selects Army's tenth option.
+Each button displays its shortcut, and locked tasks remain locked. Unit Control
+also uses Alt+2 for selection, Alt+3 for Defend, Alt+4 for Assault and Alt+5
+for rally placement. Keyboard actions restore typing focus.
+
+**Relay** starts placement immediately, with no typing requirement or work spent.
+A translucent building shadow follows the map cursor; its outline is red at
+illegal sites. Click to place, or use Alt+arrow keys and Alt+Enter. Escape or
+**Cancel** dismisses placement; selecting the same prepared building resumes it
+without losing work. Relays still cost 15 supplies. Other buildings need their
+work bar filled first. Builders construct and repair automatically. Gatherers strike
+resource nodes, collect a visible yellow chunk, then physically carry it to the
+nearest completed relay or castle before harvesting again. Relays forward deposited
+chunks to the castle through links no more than 155 map units apart; destroying a
+relay interrupts deliveries until the route is restored.
+
+Controls, typing and logs use consistent bold Arial-family typography and larger,
+high-contrast text; repeated captions stay out of
 the battlefield. Enemy troops are dark-red squares (melee), diamonds (archers),
 and triangles (siege), with red outlines. Castle and enemy-base health appear in
 the HUD. **Help** contains the map key and instructions. On narrow screens the
 player panels scroll instead of shrinking their text.
+The castle is a clean square and towers use T-shaped map and HUD icons.
+All units move at 30% of their original speed and have twice their original health,
+including wave and troop-upgrade health bonuses. The home castle has 10,000 HP,
+ten times its original health. Moving units bob gently; attacks and harvesting
+briefly flash a strike toward their target. Reduced-motion preferences disable
+the bob and attack-size pulse. Square warriors and square enemies instead rock
+back and forth on alternating lower corners; triangle motion is unchanged.
+Full-width player progress bars are three times
+thicker for visibility and show the same progress for everyone sharing a role.
+Their outer borders are thick black around an inner player-colored rim. The event
+history aligns with Player 1's left edge above the bottom panels, starts at the
+top of a stable-height window and fills downward, with a transparent background,
+player-colored action text and gray world events. Dark text outlines keep entries
+readable over different battlefield colors. History is retained for the whole
+match and resets with **New game**. The taller history window has no visible
+scrollbar, fades smoothly at its edges, and can still be scrolled. The current
+world event and its countdown sit slightly above it in a soft purple panel,
+hidden between events.
 
 Ready up to pause the battle for a shared tier challenge: everyone completes
 three private phrases. Tier 1 unlocks warriors, barracks and towers, tier 2 adds
 archers, and tier 3 adds catapults. Barracks automatically train units at their
 selected construction tier and consume shared supplies. Separate tiles let you
 build tier 1, 2 or 3 barracks and towers. Higher-tier construction and manual
-training require one, two or three completed phrases respectively.
+training require 8, 16 or 24 completed-entry work respectively.
+The simulated Army teammate earns supplies at Tier 0 instead of waiting idle
+for locked training; after Tier 1 unlocks it builds a barracks and trains troops.
+**Stop computers** pauses simulated teammates' typing, readiness, construction
+choices and army orders, along with automatic production at their barracks.
+The battlefield, existing units and human-owned barracks keep running; the human
+can still type. **Resume computers** continues them without catching up missed
+typing time. The toggle is also available during tier challenges, which require
+the computers' contributions before they can finish.
 Higher-tier barracks and towers have more health, and troop upgrades enlarge
 their map icons as well as improving their combat stats.
 Each troop type and tower tier has its own resource-funded upgrade button and
 once-per-tier limit beginning at its unlock tier. Economy gets two upgrades at
-tier 0 and one additional upgrade per subsequent tier. World events cycle through
-scripture, left-hand, vowel, number, symbol and code drills without discarding a
-phrase already in progress. Enemy waves add ranged and siege formations as their
+tier 0 and one additional upgrade per subsequent tier. World events begin at
+**1:00, 3:00, 5:00**, and subsequent odd minutes of active battle time, each
+lasting **35 seconds**. They rotate through left-hand, vowel, number, symbol
+and code drills, with normal scripture typing between events, without discarding
+a phrase already in progress at either transition. Enemy waves add ranged and siege formations as their
 base develops. Select troops with
-click/Shift-click or **Select all troops**, then click the battlefield, enter map
-coordinates, or use **Defend** / **Assault base**. Destroy the enemy
+click/Shift-click, drag a selection rectangle (Shift adds to the selection), or
+**Select all troops**, then click the battlefield or use **Defend** / **Assault
+base**. **Set rally on map** makes the next map click the production rally point.
+No coordinate fields are needed. Destroy the enemy
 stronghold before invading waves destroy yours.
 
 The game pauses when you leave the mode, hide the tab, or select **Pause**.

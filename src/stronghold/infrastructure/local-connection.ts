@@ -1,11 +1,12 @@
 import { StrongholdEngine } from '../domain/engine.ts';
-import type { StrongholdCommand, StrongholdConnection, StrongholdSnapshot } from '../domain/types.ts';
+import type { StrongholdCommand, StrongholdConnection, StrongholdMatchOptions, StrongholdSnapshot } from '../domain/types.ts';
+import { DEFAULT_MATCH_OPTIONS } from '../domain/options.ts';
 import { browserFrameClock, createFrameScheduler, type FrameClock, type FrameScheduler } from '../../shared/frame-scheduler.ts';
 
 export const STRONGHOLD_REFRESH_HZ = 60;
 const STEP_SECONDS = 1 / STRONGHOLD_REFRESH_HZ;
 export class LocalStrongholdConnection implements StrongholdConnection {
-  private engine = new StrongholdEngine();
+  private engine: StrongholdEngine;
   private listeners = new Set<(snapshot: StrongholdSnapshot) => void>();
   private readonly frames: FrameScheduler;
   private readonly clock: FrameClock;
@@ -13,7 +14,8 @@ export class LocalStrongholdConnection implements StrongholdConnection {
   private previousTime = 0;
   private accumulated = 0;
 
-  constructor(clock: FrameClock = browserFrameClock) {
+  constructor(clock: FrameClock = browserFrameClock, options: StrongholdMatchOptions = DEFAULT_MATCH_OPTIONS) {
+    this.engine = new StrongholdEngine(options);
     this.clock = clock;
     this.frames = createFrameScheduler(time => this.advanceFrame(time), clock);
   }
@@ -35,8 +37,8 @@ export class LocalStrongholdConnection implements StrongholdConnection {
     this.previousTime = this.clock.now();
     if (active) this.frames.schedule();
   }
-  restart(): void {
-    this.engine.restart();
+  restart(options?: StrongholdMatchOptions): void {
+    this.engine.restart(options);
     this.accumulated = 0;
     this.previousTime = this.clock.now();
     this.publish();

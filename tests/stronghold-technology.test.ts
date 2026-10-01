@@ -5,6 +5,7 @@ import { taskPhrases, unitUpgrade, upgradeLimit } from '../src/stronghold/domain
 import type { Participant, StrongholdState } from '../src/stronghold/domain/types.ts';
 import { equal, test } from './harness.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
+import { PHRASE_WORK } from '../src/stronghold/domain/rules.ts';
 
 function self(state: StrongholdState): Participant {
   const player = state.players.find(candidate => candidate.id === 'you');
@@ -13,7 +14,7 @@ function self(state: StrongholdState): Participant {
 }
 function finish(state: StrongholdState): void {
   const player = self(state);
-  executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+  for (let entry = 0; entry < Math.ceil(8 / PHRASE_WORK[player.length]); entry++) executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
 }
 function rejects(run: () => void): void {
   try { run(); } catch (error) { equal(error instanceof Error, true); return; }
@@ -32,7 +33,7 @@ test('Stronghold tier-specific barracks require their own typing work, cost and 
   equal(state.resources, 460);
   executeCommand(state, self(state), { type: 'ACTION', action: 'barracks', tier: 3 });
   finish(state); finish(state);
-  equal(self(state).actionPhrases, 2);
+  equal(self(state).work, 16);
   rejects(() => executeCommand(state, self(state), { type: 'PLACE', kind: 'barracks', point: { x: 770, y: 570 } }));
   finish(state);
   executeCommand(state, self(state), { type: 'PLACE', kind: 'barracks', point: { x: 770, y: 570 } });
@@ -53,7 +54,7 @@ test('Stronghold towers retain selected tiers and advanced units require more ph
   executeCommand(state, self(state), { type: 'ROLE', role: 'defenses' });
   executeCommand(state, self(state), { type: 'ACTION', action: 'tower', tier: 2 });
   finish(state);
-  equal(self(state).actionPhrases, 1);
+  equal(self(state).work, 8);
   finish(state);
   executeCommand(state, self(state), { type: 'PLACE', kind: 'tower', point: { x: 360, y: 425 } });
   equal(state.buildings.find(building => building.kind === 'tower' && !building.enemy)?.tier, 2);
@@ -89,7 +90,7 @@ test('Stronghold upgrades are tracked independently for each troop and tower tie
   executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade', upgrade: 'warrior' });
   finish(state);
   equal(state.technology.warrior, 1);
-  equal(warrior.maxHp, oldHp + 10);
+  equal(warrior.maxHp, oldHp + 20);
   equal(state.resources, 490);
   finish(state);
   equal(state.technology.warrior, 1);
@@ -98,7 +99,7 @@ test('Stronghold upgrades are tracked independently for each troop and tower tie
   finish(state);
   equal(state.technology.archer, 0);
   equal(unitUpgrade(state, { kind: 'archer' }), 0);
-  equal(addUnit(state, 'warrior', { x: 500, y: 500 }).maxHp, oldHp + 10);
+  equal(addUnit(state, 'warrior', { x: 500, y: 500 }).maxHp, oldHp + 20);
 });
 
 test('Stronghold rejects invalid construction tiers and upgrades from the wrong role atomically', () => {
@@ -108,7 +109,7 @@ test('Stronghold rejects invalid construction tiers and upgrades from the wrong 
   rejects(() => executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade', upgrade: 'catapult' }));
   equal(self(state).phraseId, phraseId);
   equal(self(state).action, 'resources');
-  equal(state.resources, 100);
+  equal(state.resources, 50);
 });
 
 test('Stronghold sketch controls do not collide with Arcade upgrade selectors', () => {
@@ -119,17 +120,19 @@ test('Stronghold sketch controls do not collide with Arcade upgrade selectors', 
   equal(markup.includes('id="stronghold-role-you"'), true);
 });
 
-test('Stronghold completed construction freezes its phrase until placement without duplicate credit', () => {
+test('Stronghold completed construction keeps typing available without duplicate work or costs', () => {
   const state = createStronghold();
-  executeCommand(state, self(state), { type: 'ACTION', action: 'relay' });
+  executeCommand(state, self(state), { type: 'ROLE', role: 'defenses' });
+  executeCommand(state, self(state), { type: 'ACTION', action: 'wall' });
   finish(state);
-  const completed = self(state).completed;
+  const phraseId = self(state).phraseId;
   finish(state);
-  equal(self(state).actionPhrases, 1);
-  equal(self(state).completed, completed);
-  rejects(() => executeCommand(state, self(state), { type: 'TYPE', phraseId: self(state).phraseId, text: '' }));
-  equal(self(state).typed, self(state).phrase);
-  executeCommand(state, self(state), { type: 'PLACE', kind: 'relay', point: { x: 360, y: 540 } });
-  equal(state.resources, 85);
-  equal(self(state).actionPhrases, 0);
+  equal(self(state).work, 8);
+  equal(self(state).phraseId > phraseId, true);
+  equal(state.resources, 50);
+  executeCommand(state, self(state), { type: 'TYPE', phraseId: self(state).phraseId, text: '' });
+  equal(self(state).typed, '');
+  executeCommand(state, self(state), { type: 'PLACE', kind: 'wall', point: { x: 360, y: 540 } });
+  equal(state.resources, 35);
+  equal(self(state).work, 0);
 });

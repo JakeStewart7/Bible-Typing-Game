@@ -1,4 +1,4 @@
-import { COSTS, MIN_TIER } from './rules.ts';
+import { COSTS, MIN_TIER, UNIT_HEALTH_MULTIPLIER } from './rules.ts';
 import type { Participant, Role, StrongholdState, UpgradeTarget, Unit } from './types.ts';
 
 export const UPGRADE_OPTIONS: Record<UpgradeTarget, { label: string; role: Role; tier: number; cost: number }> = {
@@ -22,6 +22,9 @@ export function taskPhrases(player: Pick<Participant, 'action' | 'constructionTi
   if (player.action === 'tower' || player.action === 'barracks') return player.constructionTier;
   return Math.max(1, MIN_TIER[player.action]);
 }
+export function taskWork(player: Pick<Participant, 'action' | 'constructionTier'>): number {
+  return taskPhrases(player) * 8;
+}
 export function unitUpgrade(state: Pick<StrongholdState, 'technology'>, unit: Pick<Unit, 'kind'>): number {
   return unit.kind === 'warrior' || unit.kind === 'archer' || unit.kind === 'catapult'
     ? state.technology[unit.kind] : 0;
@@ -33,6 +36,6 @@ export function applyUpgrade(state: StrongholdState, player: Participant): void 
   state.technology[player.upgradeTarget]++;
   if (player.role !== 'army') state.upgrades[player.role]++;
   for (const unit of state.units) {
-    if (unit.kind === player.upgradeTarget) { unit.maxHp += 10; unit.hp += 10; }
+    if (unit.kind === player.upgradeTarget) { unit.maxHp += 10 * UNIT_HEALTH_MULTIPLIER; unit.hp += 10 * UNIT_HEALTH_MULTIPLIER; }
   }
 }
