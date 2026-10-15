@@ -22,6 +22,10 @@ Unit Control can select and move gatherers and builders as well as troops.
 After reaching a manual destination, gatherers and builders wait two seconds,
 then automatically resume the nearest resource, construction or repair job.
 Builders rock and show small pulsing sparks while building or repairing.
+Each new construction job takes the nearest available living builder, not the
+first builder in the unit list. Busy builders keep their current job; manually
+moving builders and those in their two-second idle wait are unavailable.
+Completed or destroyed jobs release their builders for reassignment.
 
 Matches start with **50 supplies** and **Medium** text. Choose **Short** (3-5
 characters), **Medium** (6-8), **Long** (8-15), or **Extra Long** (15-25) in the

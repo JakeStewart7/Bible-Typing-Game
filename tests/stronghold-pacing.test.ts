@@ -165,6 +165,79 @@ test('Stronghold manual gatherer movement keeps carried supplies attached and re
   equal(worker.idleTime, 1);
 });
 
+test('Stronghold construction selects the nearest free builder regardless of unit order', () => {
+  for (const reverse of [false, true]) {
+    const state = createStronghold();
+    state.units = [];
+    const far = addUnit(state, 'builder', { x: 800, y: 500 });
+    const near = addUnit(state, 'builder', { x: 110, y: 300 });
+    if (reverse) state.units.reverse();
+    const project = addBuilding(state, 'wall', { x: 100, y: 300 });
+    updateLogistics(state, .1);
+    equal(near.task, project.id);
+    equal(near.attackTarget, { x: project.x, y: project.y });
+    equal(project.progress, .1 / 8);
+    equal(far.task, null);
+    equal({ x: far.x, y: far.y }, { x: 800, y: 500 });
+  }
+});
+
+test('Stronghold construction assigns distinct nearest builders to multiple pending sites', () => {
+  const state = createStronghold();
+  state.units = [];
+  const right = addUnit(state, 'builder', { x: 800, y: 400 });
+  const left = addUnit(state, 'builder', { x: 100, y: 400 });
+  const first = addBuilding(state, 'wall', { x: 110, y: 400 });
+  const second = addBuilding(state, 'wall', { x: 790, y: 400 });
+  updateLogistics(state, .1);
+  equal(left.task, first.id);
+  equal(right.task, second.id);
+  equal(first.progress, .1 / 8);
+  equal(second.progress, .1 / 8);
+});
+
+test('Stronghold busy, manually moving, waiting and dead builders cannot steal a new construction job', () => {
+  const state = createStronghold();
+  state.units = [];
+  const busy = addUnit(state, 'builder', { x: 100, y: 300 });
+  const original = addBuilding(state, 'wall', { x: 105, y: 300 });
+  updateLogistics(state, .1);
+  const moving = addUnit(state, 'builder', { x: 110, y: 300 });
+  moving.destination = { x: 300, y: 300 }; moving.idleTime = 0;
+  const waiting = addUnit(state, 'builder', { x: 110, y: 300 });
+  waiting.idleTime = 1;
+  const dead = addUnit(state, 'builder', { x: 110, y: 300 });
+  dead.hp = 0;
+  const available = addUnit(state, 'builder', { x: 700, y: 300 });
+  const next = addBuilding(state, 'wall', { x: 110, y: 300 });
+  updateLogistics(state, .1);
+  equal(busy.task, original.id);
+  equal(available.task, next.id);
+  equal(moving.task, null);
+  equal(waiting.task, null);
+  equal(dead.task, null);
+  equal(next.progress, 0);
+  equal(available.x < 700, true);
+});
+
+test('Stronghold builders release completed or destroyed jobs before the next nearest assignment', () => {
+  for (const finished of [true, false]) {
+    const state = createStronghold();
+    state.units = [];
+    const near = addUnit(state, 'builder', { x: 110, y: 300 });
+    const original = addBuilding(state, 'wall', { x: 100, y: 300 });
+    updateLogistics(state, .1);
+    if (finished) original.progress = 1;
+    else original.hp = 0;
+    const far = addUnit(state, 'builder', { x: 800, y: 500 });
+    const next = addBuilding(state, 'wall', { x: 120, y: 300 });
+    updateLogistics(state, .1);
+    equal(near.task, next.id);
+    equal(far.task, null);
+    equal(next.progress, .1 / 8);
+  }
+});
+
 test('Stronghold gatherers carry a single harvested chunk before returning to a resource node', () => {
   const state = createStronghold();
   state.units = [];
