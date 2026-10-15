@@ -123,9 +123,10 @@ test('Stronghold rejects illegal sites, insufficient resources and locked action
 
 test('Stronghold upgrades obey per-tier limits and population caps', () => {
   const state = createStronghold();
-  executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade' });
   state.resources = 1000;
-  finish(state); finish(state); finish(state);
+  executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade' });
+  executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade' });
+  rejects(() => executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade' }), 'Upgrade limit');
   equal(state.upgrades.economy, 2);
   equal(state.resources, 880);
   executeCommand(state, self(state), { type: 'ACTION', action: 'worker' });
@@ -134,7 +135,10 @@ test('Stronghold upgrades obey per-tier limits and population caps', () => {
   finish(state);
   equal(state.units.filter(unit => unit.kind === 'worker').length, 12);
   equal(state.resources, resources);
-  equal(self(state).typed, '');
+  equal(self(state).work >= 32, true);
+  const cappedWork = self(state).work;
+  finish(state);
+  equal(self(state).work, cappedWork);
 });
 
 test('Stronghold towers have 50 percent more health across tiers, sides and construction states', () => {

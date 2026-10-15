@@ -1,6 +1,8 @@
 import { requireElement } from '../../shared/dom.ts';
 import { BUILDING_CAPS, EVENT_LABELS, ROLE_ACTIONS, TIER_MAX, TIER_QUOTA, UNIT_CAPS } from '../domain/rules.ts';
 import { taskWork, upgradeLimit } from '../domain/technology.ts';
+import { actionProblem } from '../domain/actions.ts';
+import { taskKey } from '../domain/tasks.ts';
 import { PHRASE_LENGTHS, ROLES, UPGRADE_TARGETS, type StrongholdSnapshot } from '../domain/types.ts';
 import { createMapCamera } from './map-camera.ts';
 import { createBattlefieldRenderer } from './battlefield.ts';
@@ -10,7 +12,7 @@ import { renderTierChallenge } from './tier-view.ts';
 import { createEventLog } from './event-log.ts';
 import { createMapControls, readyBuilding } from './map-controls.ts';
 import { applyPlayerTheme, playerCursor } from './player-theme.ts';
-import { bankedWork } from './work-progress.ts';
+import { workProgress } from './work-progress.ts';
 
 export function strongholdElements() {
   const map = document.getElementById('stronghold-map');
@@ -24,7 +26,8 @@ export function strongholdElements() {
       const buttons = [...element.querySelectorAll<HTMLButtonElement>('[data-action]')].map(button => {
         const action = ROLE_ACTIONS[role].find(candidate => candidate === button.dataset.action);
         if (!action) throw new Error('Unknown Stronghold action button.');
-        return { element: button, action, tier: button.dataset.tier ? Number(button.dataset.tier) : undefined,
+        return { element: button, action, miniBar: button.querySelector<HTMLElement>('[data-task-progress]'),
+          miniFill: button.querySelector<HTMLElement>('[data-task-fill]'), tier: button.dataset.tier ? Number(button.dataset.tier) : undefined,
           upgrade: UPGRADE_TARGETS.find(target => target === button.dataset.strongholdUpgrade), minimumTier: Number(button.dataset.minTier) };
       });
       return { role, element, buttons };
@@ -32,7 +35,7 @@ export function strongholdElements() {
     return { id, card, groups, roleSelect: requireElement(`stronghold-role-${id}`, HTMLSelectElement),
       name: requireElement(`stronghold-name-${id}`, HTMLElement),
       typed: requireElement(`stronghold-typed-${id}`, HTMLElement), progress: requireElement(`stronghold-progress-${id}`, HTMLElement),
-      readyCount: requireElement(`stronghold-ready-count-${id}`, HTMLElement),
+      progressLabel: requireElement(`stronghold-progress-label-${id}`, HTMLElement),
       actions: requireElement(`stronghold-player-actions-${id}`, HTMLElement) };
   });
   return {
@@ -135,7 +138,7 @@ export function renderStronghold(
     setText(entry.name, `${own ? 'You' : `${player.name}, simulated teammate`}${player.ready && !challenge ? ', ready' : ''}`);
     setText(entry.typed, player.typed);
     entry.typed.classList.remove('is-hidden');
-    const bank = bankedWork(player.work, taskWork(player));
+    const bank = workProgress(player.work, taskWork(player));
     const percent = challenge ? player.contribution / TIER_QUOTA * 100 : bank.percent;
     const width = `${percent}%`;
     if (entry.progress.style.width !== width) entry.progress.style.width = width;
@@ -144,10 +147,7 @@ export function renderStronghold(
       setAttribute(progressBar, 'aria-valuenow', String(Math.round(percent)));
       setAttribute(progressBar, 'aria-valuetext', challenge ? `${player.contribution} of ${TIER_QUOTA} tier entries` : bank.description);
     }
-    const track = entry.progress.parentElement;
-    if (track) track.style.backgroundColor = challenge ? '#fff' : bank.base;
-    entry.progress.style.backgroundColor = challenge ? '#ffa3b0' : bank.fill;
-    setText(entry.readyCount, challenge ? `${player.contribution}/${TIER_QUOTA}` : bank.label);
+    setText(entry.progressLabel, challenge ? `${player.contribution}/${TIER_QUOTA}` : bank.label);
     if (entry.roleSelect.value !== player.role) entry.roleSelect.value = player.role;
     const roleDisabled = !own || challenge || terminal || !running;
     if (entry.roleSelect.disabled !== roleDisabled) entry.roleSelect.disabled = roleDisabled;
@@ -155,12 +155,22 @@ export function renderStronghold(
       group.element.classList.toggle('is-hidden', group.role !== player.role);
       for (const button of group.buttons) {
         const capped = button.upgrade ? snapshot.technology[button.upgrade] >= upgradeLimit(snapshot.tier, button.upgrade) : false;
-        const disabled = !own || !running || challenge || terminal || snapshot.tier < button.minimumTier || capped;
+        const selection = { action: button.action, constructionTier: button.tier ?? 1, upgradeTarget: button.upgrade ?? player.upgradeTarget };
+        const purchaseProblem = button.miniBar ? null : actionProblem(snapshot, { ...player, ...selection }, button.action);
+        const disabled = !own || !running || challenge || terminal || snapshot.tier < button.minimumTier || capped || Boolean(purchaseProblem);
         if (button.element.disabled !== disabled) button.element.disabled = disabled;
-        const selectedAction = own && relayPlacement ? button.action === 'relay' : button.action === player.action
+        const selectedAction = own && relayPlacement ? button.action === 'relay' : Boolean(button.miniBar) && button.action === player.action
           && (!button.tier || button.tier === player.constructionTier) && (!button.upgrade || button.upgrade === player.upgradeTarget);
         button.element.classList.toggle('selected', selectedAction);
         setAttribute(button.element, 'aria-pressed', String(selectedAction));
+        if (button.miniBar && button.miniFill) {
+          const saved = snapshot.roleTasks[group.role].progress[taskKey(selection)];
+          const progress = workProgress(saved?.work ?? 0, taskWork(selection));
+          const width = `${progress.percent}%`;
+          if (button.miniFill.style.width !== width) button.miniFill.style.width = width;
+          setAttribute(button.miniBar, 'aria-valuenow', String(Math.round(progress.percent)));
+          setAttribute(button.miniBar, 'aria-valuetext', progress.description);
+        }
         const level = button.element.querySelector('[data-upgrade-level]');
         if (level && button.upgrade) setText(level, `Level ${snapshot.technology[button.upgrade]}`);
       }

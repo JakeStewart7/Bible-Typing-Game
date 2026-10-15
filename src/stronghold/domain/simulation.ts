@@ -3,7 +3,7 @@ import { rallyArmy, spawnWave, updateCombat } from './combat.ts';
 import { updateLogistics } from './logistics.ts';
 import { assignPhrase } from './phrases.ts';
 import { addUnit } from './state.ts';
-import { distance, TIER_MAX, TIER_QUOTA, UNIT_CAPS } from './rules.ts';
+import { distance, isTypingAction, TIER_MAX, TIER_QUOTA, UNIT_CAPS } from './rules.ts';
 import { taskWork } from './technology.ts';
 import { ENTITY_LABELS, recordEvent } from './events.ts';
 import type { Action, Participant, Point, StrongholdState } from './types.ts';
@@ -52,6 +52,14 @@ function updateBot(state: StrongholdState, player: Participant, seconds: number)
       }
     }
     const action = humanOnRole ? player.action : botAction(state, player);
+    if (!isTypingAction(action) && action !== 'relay') {
+      if (actionProblem(state, { ...player, action }, action)) return;
+      player.typingCredit += seconds;
+      if (player.typingCredit < 1) return;
+      player.typingCredit = 0;
+      executeCommand(state, player, { type: 'ACTION', action });
+      return;
+    }
     if (action !== player.action) {
       executeCommand(state, player, { type: 'ACTION', action });
     }

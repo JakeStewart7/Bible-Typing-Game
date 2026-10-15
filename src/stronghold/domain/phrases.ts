@@ -5,7 +5,9 @@ const WORDS: Record<PhraseLength, readonly string[]> = {
   short: ['tree', 'bird', 'hope', 'path', 'warm', 'kind'],
   medium: ['sunshine', 'kindness', 'mountain', 'together', 'we stand', 'a garden'],
   long: ['gentle river', 'quiet meadow', 'silver cloud', 'little robin', 'appreciation'],
-  'extra-long': ['beautiful garden', 'morning sunlight', 'peaceful village', 'distant mountain', 'misunderstanding']
+  'extra-long': ['a quiet morning beside the river', 'bright sunshine over the garden',
+    'little birds resting in the trees', 'a gentle breeze through the meadow',
+    'the soft light of a new beginning', 'walking together beneath the stars']
 };
 
 export function copyRoleTask(source: Participant, target: Participant): void {

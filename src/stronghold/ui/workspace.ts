@@ -1,5 +1,5 @@
 import { menuNavigationMarkup } from '../../ui/menu-navigation.ts';
-import { ACTION_LABELS, COSTS, LENGTH_LABELS, MIN_TIER, ROLE_LABELS } from '../domain/rules.ts';
+import { ACTION_LABELS, COSTS, isTypingAction, LENGTH_LABELS, MIN_TIER, ROLE_LABELS, TEXT_LENGTH_BONUSES } from '../domain/rules.ts';
 import { UPGRADE_OPTIONS } from '../domain/technology.ts';
 import { PHRASE_LENGTHS, ROLES, type Action, type Role, type UpgradeTarget } from '../domain/types.ts';
 import { taskShortcut } from './keyboard.ts';
@@ -7,7 +7,7 @@ import { taskShortcut } from './keyboard.ts';
 export const PLAYER_IDS = ['you', 'bot-1', 'bot-2', 'bot-3'] as const;
 function tile(action: Action, label: string, tier: number | undefined, shortcut: string): string {
   return `<button type="button" class="stronghold-build-tile" data-action="${action}"${tier ? ` data-tier="${tier}"` : ''} data-min-tier="${tier ?? MIN_TIER[action]}" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}">
-    <kbd class="stronghold-hotkey">Alt+${shortcut}</kbd><span class="stronghold-action-label">${label}</span>${action === 'resources' ? '' : `<span class="stronghold-cost">${COSTS[action] === 0 ? 'Free' : `${COSTS[action] * (tier ?? 1)}<span class="sr-only"> supplies</span>`}</span>`}</button>`;
+    <kbd class="stronghold-hotkey">Alt+${shortcut}</kbd><span class="stronghold-action-label">${label}</span>${COSTS[action] > 0 ? `<span class="stronghold-cost">${COSTS[action] * (tier ?? 1)}<span class="sr-only"> supplies</span></span>` : ''}${isTypingAction(action) ? `<span class="stronghold-task-progress" data-task-progress role="progressbar" aria-label="${ACTION_LABELS[action]}${tier ? ` tier ${tier}` : ''} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span data-task-fill></span></span>` : ''}</button>`;
 }
 function upgrade(target: UpgradeTarget, shortcut: string): string {
   const option = UPGRADE_OPTIONS[target];
@@ -33,7 +33,7 @@ function playerCard(id: string, index: number): string {
       <header><h3>Player ${index + 1}</h3><label class="sr-only" for="stronghold-role-${id}">Player ${index + 1} role</label>
       <select id="stronghold-role-${id}" class="stronghold-role-select" data-player="${id}">${ROLES.map(role => `<option value="${role}">${ROLE_LABELS[role]}</option>`).join('')}</select></header>
       <small id="stronghold-name-${id}" class="sr-only"></small>
-      <div class="stronghold-player-progress" role="progressbar" aria-label="Player ${index + 1} completed task work" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="stronghold-work-track"><div id="stronghold-progress-${id}"></div></div><span id="stronghold-ready-count-${id}" class="stronghold-ready-count">0 ready</span></div>
+      <div class="stronghold-player-progress" role="progressbar" aria-label="Player ${index + 1} selected task progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="stronghold-work-track"><div id="stronghold-progress-${id}"></div></div><span id="stronghold-progress-label-${id}" class="stronghold-progress-label">0%</span></div>
       <div class="stronghold-player-actions" id="stronghold-player-actions-${id}">${ROLES.map(role => `<div class="stronghold-actions" data-role="${role}">${roleActions(role)}</div>`).join('')}</div>
       <div id="stronghold-typed-slot-${id}" class="stronghold-typed-slot"><p id="stronghold-typed-${id}" class="stronghold-peer-typed"></p></div>
     </div>
@@ -70,14 +70,14 @@ export function strongholdWorkspaceMarkup(): string {
       </aside>
       <details class="stronghold-guide"><summary>Help</summary>
         <div class="stronghold-legend"><span>Dark red: enemies</span><span>□ Warrior</span><span>◇ Archer</span><span>▲ Catapult</span><span>△ Builder</span><span>○ Gatherer</span></div>
-        <p>Each correctly completed character, including spaces, earns one point. A basic bar takes 32 points; higher-tier tasks take 64 or 96. Short is 3-5 characters, Medium 6-8, Long 8-15, and Extra Long 15-25. All lengths use normal words or word groups.</p>
+        <p>Completed characters, including spaces, advance your selected free task. Short is 1-5 characters at 1x, Medium 6-11 at 1.1x, Long 12-24 at 1.25x, and Extra Long 25-40 at 1.5x. All lengths use normal words or word groups.</p>
         <p>Relays need no typing: select Relay and click the map to place its shadow. Other buildings need a full work bar first. Escape cancels placement. Builders construct and repair automatically.</p>
         <p>Gatherers strike resource nodes and carry yellow supply chunks to the nearest relay or castle. Relays forward supplies through links within 155 map units. Purple nodes yield twice as much. Broken connections stop relay deliveries.</p>
         <p>In Unit Control, left-click or drag to select friendly units, right-click to move, and left-click empty ground to deselect. Shift adds units. Right-click cancels placement or rally targeting; left-click places the building or rally point. A plus badge on the cursor shows targeting mode.</p>
         <p>Gatherers and builders resume nearest work after two idle seconds at their destination. Builders and walls cost no supplies, only typing work.</p>
-        <p>Keep typing to bank more construction bars. The ready counter shows completed bars, while three red shades loop without losing banked work. Placing a building spends one bar and preserves the rest. Other actions execute automatically when eligible.</p>
+        <p>Supplies, Gatherers, Barracks, Builders, Walls and Towers need typing, not supplies. Each typing option has a small progress bar; select it to show its progress in the main player-colored bar. More expensive buildings fill more slowly. Excess progress from a completed entry carries into the next bar. Once construction is ready, further entries do not bank more completions. Troops, upgrades and relays cost supplies without typing.</p>
         <p>The Army teammate earns supplies at Tier 0, builds a barracks after Tier 1 unlocks, then trains troops. Unit Control can type for supplies while issuing orders.</p>
-        <p>Each task keeps its completed work when you switch tasks or roles. Building tiers and upgrade types keep separate progress. Dev options sets the defaults for new matches.</p>
+        <p>Each typing task keeps its progress when you switch tasks or roles. Building tiers keep separate progress. Dev options sets the defaults for new matches.</p>
         <p>Use Left/Down for shorter text, Right/Up for longer text, or click the faded length options. Shift+arrows still selects typed text. Alt+number chooses the matching displayed option in your current role.</p>
         <p>The map starts zoomed toward the home base. Use +/- and Fit map to zoom, and Alt-drag or middle-drag to pan. Shift-drag still adds troops to your selection.</p>
         <p>Stop computers pauses simulated teammates and their barracks, not the battlefield. Resume them to finish a shared tier challenge.</p>
@@ -113,7 +113,7 @@ export function strongholdWorkspaceMarkup(): string {
         <section id="stronghold-private" class="stronghold-private" aria-label="Your private typing area">
           <div class="stronghold-length-panel"><span id="stronghold-length-label" class="sr-only">Text length</span>
             <div id="stronghold-length" class="stronghold-length-wheel" role="listbox" aria-labelledby="stronghold-length-label" aria-activedescendant="stronghold-length-medium" tabindex="0">
-              ${PHRASE_LENGTHS.map(length => `<button id="stronghold-length-${length}" type="button" role="option" data-length="${length}" value="${length}" aria-selected="${length === 'medium'}" tabindex="-1">${LENGTH_LABELS[length]}</button>`).join('')}
+              ${PHRASE_LENGTHS.map(length => `<button id="stronghold-length-${length}" type="button" role="option" data-length="${length}" value="${length}" aria-selected="${length === 'medium'}" tabindex="-1">${LENGTH_LABELS[length]} <small class="stronghold-length-bonus">${TEXT_LENGTH_BONUSES[length]}x</small></button>`).join('')}
             </div>
           </div>
           <section id="stronghold-typing" class="stronghold-typing">

@@ -82,7 +82,7 @@
 .stronghold-event-log[data-overflowing="true"] { mask-image: linear-gradient(to bottom, transparent, #000 32px, #000 calc(100% - 8px), transparent); }
 .stronghold-event-log::-webkit-scrollbar { display: none; }
 .stronghold-event-log p { margin: 4px 0; font: var(--stronghold-font-weight) 17px/1.45 var(--stronghold-font); overflow-wrap: anywhere; paint-order: stroke fill; -webkit-text-stroke: 3px #111; text-shadow: 0 1px 3px #111, 1px 0 2px #111, -1px 0 2px #111; }
-.stronghold-private { position: absolute; bottom: calc(var(--deck-height) + 14px); left: 0; right: 0; z-index: 5; border: 0; background: #fff; box-shadow: none; padding: 6px; display: grid; justify-content: center; grid-template-columns: 100px minmax(0, 420px); grid-template-rows: auto 36px; gap: 2px 8px; }
+.stronghold-private { position: absolute; bottom: calc(var(--deck-height) + 14px); left: 0; right: 0; z-index: 5; border: 0; background: #fff; box-shadow: none; padding: 6px; display: grid; justify-content: center; grid-template-columns: 120px minmax(0, 420px); grid-template-rows: auto 36px; gap: 2px 8px; }
 .stronghold-length-panel { grid-column: 1; grid-row: 2; align-self: center; text-align: center; min-width: 0; font-size: 12px; }
 .stronghold-length-wheel { position: relative; height: 44px; overflow: hidden; mask-image: linear-gradient(transparent, #000 12px, #000 calc(100% - 12px), transparent); }
 .stronghold-length-wheel button { position: absolute; top: calc(50% - 12px); left: 0; width: 100%; height: 24px; min-height: 0; padding: 0; border: 0; border-radius: 0; font: var(--stronghold-font-weight) 16px var(--stronghold-font); background: transparent; color: #111; transform: translateY(calc(var(--length-offset, 0) * 22px)); opacity: var(--length-opacity, .4); transition: transform 140ms ease, opacity 140ms ease; box-shadow: none; }
@@ -94,8 +94,11 @@
 .stronghold-player h3 { color: #111; font: var(--stronghold-font-weight) 24px/1.2 var(--stronghold-font); margin: 0; white-space: nowrap; }
 .stronghold-role-select { width: 57%; min-width: 0; min-height: 36px; height: 36px; border: 2px solid #111; border-radius: 0; background: white; color: #111; font: var(--stronghold-font-weight) 14px var(--stronghold-font); padding: 2px; }
 .stronghold-role-select:disabled { opacity: 1; color: #111; }
-.stronghold-player-progress { position: relative; height: 26px; flex: 0 0 26px; width: 100%; border: 3px solid #9b1027; padding: 2px; margin: 6px 0; background: #9b1027; overflow: hidden; }
-.stronghold-ready-count { position: absolute; inset: 0; display: grid; place-items: center; color: #540a18; font-size: 13px; line-height: 1; text-shadow: 0 1px #fff; pointer-events: none; }
+.stronghold-player-progress { position: relative; height: 26px; flex: 0 0 26px; width: 100%; border: 3px solid var(--player-color); padding: 2px; margin: 6px 0; background: white; overflow: hidden; }
+.stronghold-progress-label { position: absolute; inset: 0; display: grid; place-items: center; color: #111; font-size: 13px; line-height: 1; text-shadow: 0 1px #fff; pointer-events: none; }
+.stronghold-task-progress { display: block; width: min(90px, calc(100% - 8px)); height: 14px; margin: 5px auto 0; border: 2px solid var(--player-color); background: white; overflow: hidden; }
+.stronghold-task-progress > span { display: block; width: 0; height: 100%; background: var(--player-fill); }
+.stronghold-length-bonus { font-size: 9px; }
 .stronghold-work-track { height: 100%; background: white; }
 .stronghold-work-track > div { height: 100%; background: var(--player-fill); max-width: 100%; }
 .stronghold-player-actions { flex: 1; min-height: 0; overflow-y: auto; }
@@ -166,7 +169,7 @@
   .stronghold-map-camera { top: 180px; right: 8px; }
   .stronghold-map-camera span { display: none; }
   .stronghold-squad { bottom: 4px; grid-template-columns: minmax(0, 1fr); gap: 6px; }
-  .stronghold-private { grid-template-columns: 80px minmax(0, 420px); gap: 2px 4px; }
+  .stronghold-private { grid-template-columns: 96px minmax(0, 420px); gap: 2px 4px; }
   .stronghold-length-wheel button { font-size: 14px; }
   .stronghold-event-panel { width: calc(100% - 20px); bottom: calc(var(--deck-height) + 148px); }
   .stronghold-world-event { width: min(100%, 360px); padding: 4px 8px; font-size: 14px; }

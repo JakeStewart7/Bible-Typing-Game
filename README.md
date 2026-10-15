@@ -30,24 +30,30 @@ first builder in the unit list. Busy builders keep their current job; manually
 moving builders and those in their two-second idle wait are unavailable.
 Completed or destroyed jobs release their builders for reassignment.
 
-Matches start with **50 supplies** and **Medium** text. Choose **Short** (3-5
-characters), **Medium** (6-8), **Long** (8-15), or **Extra Long** (15-25) in the
+Matches start with **50 supplies** and **Medium** text. Choose **Short** (1-5
+characters, 1x), **Medium** (6-11, 1.1x), **Long** (12-24, 1.25x), or
+**Extra Long** (25-40, 1.5x) in the
 length scroller. Entries are normal words or word groups, including during world
-events and tier challenges. A fully correct entry earns exactly its character
-count, including spaces; partial or incorrect text earns nothing.
-A basic task needs **32 points**, with higher-tier construction/training
-needing 64 or 96. Each role keeps independent completed work for every task,
-building tier and upgrade type, even when that role becomes unoccupied.
+events and tier challenges. A fully correct entry earns its character count,
+including spaces, times its length bonus; partial or incorrect text earns nothing.
+**Supplies, Gatherer, Barracks, Builder, Wall and Tower** use typing without
+spending supplies. Each typing tile has a thick, player-colored mini progress bar,
+not a money or Free badge. Selecting it shows that task's progress in the main
+player-colored experience bar. Bars have the same size: more expensive tasks
+fill more slowly, with barracks and tower requirements proportional to their
+former supplies costs and construction tier. The UI shows percentages, not those
+internal character costs. Each role keeps independent progress for every typing task
+and building tier, even when that role becomes unoccupied.
 Switching tasks, roles or lengths and completing tier challenges preserves this
-work. Completed construction bars stack without a limit; the **ready** counter
-shows how many can be placed, and the bar layers cycle through three increasingly
-dark light-red shades without resetting the count. Placement spends just one
-bar and keeps all remaining points. Other eligible tasks execute automatically;
-blocked tasks retain their points until they can execute on a later completion.
-Filling the bar recruits a unit, earns supplies,
-upgrades technology, or makes construction ready. Gatherers, builders and walls
-are **free** in supplies; each still needs its typing work.
-Costs appear in separate player-colored badges. Selections, buttons, the input's
+work. A full construction bar shows **Ready**, without a stacked completion counter
+or cycling red layers. Excess from the entry that fills it carries into the next
+bar after placement; further entries while it is ready do not bank extra
+completions. Supplies, Gatherers and Builders execute automatically when their
+bars fill and retain entry overflow. Blocked tasks retain their earned progress.
+**Warriors, Archers, Catapults and upgrades** are immediate supplies purchases,
+requiring no typing and leaving the selected typing task and private input untouched.
+Relays also use supplies without typing, paid when their map location is placed.
+Only paid actions show supplies-cost badges. Selections, buttons, the input's
 **Type here** prompt and basic arrow/text cursors share each player's dark and
 light palette. Your typed text appears both in the central input and in your
 small player display, just like your teammates' typed text.
@@ -68,7 +74,7 @@ troops. Later waves grow by one invader at a time, up to 18; their intervals
 start at 78 seconds and gradually shorten to no less than 45 seconds.
 Friendly and enemy towers have **50% more health and damage**. Tier 1/2/3 towers
 have 240/330/420 health; damage scaling includes tower upgrades and enemy waves.
-Tower attack range, firing interval, construction work and supplies costs are unchanged.
+Tower attack range and firing interval are unchanged.
 Switching to another browser tab automatically pauses Stronghold, including
 the battlefield and computer typing. Returning resumes without catching up
 the time spent away; switching screens or using Pause also stops the simulation.
@@ -142,8 +148,8 @@ Ready up to pause the battle for a shared tier challenge: everyone completes
 three private phrases. Tier 1 unlocks warriors, barracks and towers, tier 2 adds
 archers, and tier 3 adds catapults. Barracks automatically train units at their
 selected construction tier and consume shared supplies. Separate tiles let you
-build tier 1, 2 or 3 barracks and towers. Higher-tier construction and manual
-training require 32, 64 or 96 character points respectively.
+build tier 1, 2 or 3 barracks and towers. Higher-tier construction fills more
+slowly; manual troop purchases require only supplies, not typing.
 The simulated Army teammate earns supplies at Tier 0 instead of waiting idle
 for locked training; after Tier 1 unlocks it builds a barracks and trains troops.
 **Stop computers** pauses simulated teammates' typing, readiness, construction

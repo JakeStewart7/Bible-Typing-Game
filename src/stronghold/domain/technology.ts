@@ -1,4 +1,4 @@
-import { COSTS, MIN_TIER, UNIT_HEALTH_MULTIPLIER } from './rules.ts';
+import { COSTS, TEXT_LENGTH_BONUSES, UNIT_HEALTH_MULTIPLIER } from './rules.ts';
 import type { Participant, Role, StrongholdState, UpgradeTarget, Unit } from './types.ts';
 
 export const UPGRADE_OPTIONS: Record<UpgradeTarget, { label: string; role: Role; tier: number; cost: number }> = {
@@ -18,12 +18,13 @@ export function taskCost(player: Pick<Participant, 'action' | 'constructionTier'
   if (player.action === 'tower' || player.action === 'barracks') return COSTS[player.action] * player.constructionTier;
   return COSTS[player.action];
 }
-export function taskPhrases(player: Pick<Participant, 'action' | 'constructionTier'>): number {
-  if (player.action === 'tower' || player.action === 'barracks') return player.constructionTier;
-  return Math.max(1, MIN_TIER[player.action]);
-}
 export function taskWork(player: Pick<Participant, 'action' | 'constructionTier'>): number {
-  return taskPhrases(player) * 32;
+  if (player.action === 'tower') return 25 * player.constructionTier;
+  if (player.action === 'barracks') return 40 * player.constructionTier;
+  return 32;
+}
+export function phraseWork(player: Pick<Participant, 'phrase' | 'length'>): number {
+  return Math.round(player.phrase.length * TEXT_LENGTH_BONUSES[player.length] * 100) / 100;
 }
 export function unitUpgrade(state: Pick<StrongholdState, 'technology'>, unit: Pick<Unit, 'kind'>): number {
   return unit.kind === 'warrior' || unit.kind === 'archer' || unit.kind === 'catapult'
