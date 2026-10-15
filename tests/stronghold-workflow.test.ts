@@ -223,5 +223,9 @@ test('Stronghold player themes pair light highlights and dark basic cursors for 
     equal(theme.color, player.color);
     equal(theme.light !== theme.bold, true);
     equal(decodeURIComponent(playerCursor(player.color)).includes(`fill="${theme.bold}"`), true);
+    const placementCursor = decodeURIComponent(playerCursor(player.color, true));
+    equal(placementCursor.includes('M20 23.5h7m-3.5-3.5v7'), true);
+    equal(placementCursor.includes(`stroke="${theme.bold}"`), true);
+    equal(placementCursor !== decodeURIComponent(playerCursor(player.color)), true);
   }
 });

@@ -20,12 +20,12 @@ function roleActions(role: Role): string {
   const improvement = (target: UpgradeTarget) => upgrade(target, taskShortcut(index++));
   if (role === 'economy') return `<div class="stronghold-build-row">${task('resources', 'Supplies')}${task('worker', 'Gatherer')}${task('relay', 'Relay')}</div>${improvement('economy')}`;
   if (role === 'production') return `<div class="stronghold-build-row">${[1, 2, 3].map(tier => task('barracks', `Barracks<br>Tier ${tier}`, tier)).join('')}</div>
-    <div class="stronghold-build-row">${task('resources', 'Supplies')}${task('warrior', 'Warrior')}${task('archer', 'Archer')}${task('catapult', 'Catapult')}</div>
+    <div class="stronghold-build-row">${task('warrior', 'Warrior')}${task('archer', 'Archer')}${task('catapult', 'Catapult')}</div>
     <div class="stronghold-build-row">${improvement('warrior')}${improvement('archer')}${improvement('catapult')}</div>`;
   if (role === 'defenses') return `<div class="stronghold-build-row">${task('builder', 'Builder')}${task('wall', 'Wall')}</div>
     <div class="stronghold-build-row">${[1, 2, 3].map(tier => task('tower', `Tower<br>Tier ${tier}`, tier)).join('')}</div>
     <div class="stronghold-build-row">${improvement('tower-1')}${improvement('tower-2')}${improvement('tower-3')}</div>`;
-  return `${task('resources', 'Supplies')}<p class="stronghold-army-help">Drag to select troops, then click to move. Shift adds to your selection.</p>`;
+  return '<p class="stronghold-army-help">Left-click or drag to select units. Right-click to move. Left-click empty ground to deselect. Shift adds to your selection.</p>';
 }
 function playerCard(id: string, index: number): string {
   return `<section class="stronghold-player" data-player="${id}">
@@ -43,7 +43,7 @@ export function strongholdWorkspaceMarkup(): string {
   return `<section id="stronghold-screen" class="app-page stronghold-screen is-hidden">
     <div class="stronghold-stage">
       <div class="stronghold-battlefield">
-        <svg id="stronghold-map" viewBox="0 0 1000 650" role="img" aria-label="Stronghold battlefield: select troops to issue army orders, or complete a construction task and click to place it." tabindex="0"></svg>
+        <svg id="stronghold-map" viewBox="0 0 1000 650" role="img" aria-label="Stronghold battlefield: left-click or drag to select friendly units, right-click to move, or left-click to place a prepared building." tabindex="0"></svg>
         <div id="stronghold-outcome" class="stronghold-outcome is-hidden"><h3 id="stronghold-outcome-title"></h3><p id="stronghold-outcome-copy"></p><button id="stronghold-play-again" class="primary-btn" type="button">Build again</button></div>
       </div>
       <nav class="stronghold-map-toolbar" aria-label="Stronghold controls">${menuNavigationMarkup()}
@@ -73,11 +73,12 @@ export function strongholdWorkspaceMarkup(): string {
         <p>Each correctly completed character, including spaces, earns one point. A basic bar takes 32 points; higher-tier tasks take 64 or 96. Short is 3-5 characters, Medium 6-8, Long 8-15, and Extra Long 15-25. All lengths use normal words or word groups.</p>
         <p>Relays need no typing: select Relay and click the map to place its shadow. Other buildings need a full work bar first. Escape cancels placement. Builders construct and repair automatically.</p>
         <p>Gatherers strike resource nodes and carry yellow supply chunks to the nearest relay or castle. Relays forward supplies through links within 155 map units. Purple nodes yield twice as much. Broken connections stop relay deliveries.</p>
-        <p>In Unit Control, drag or click to select any friendly unit, then click to move. Shift adds units. Gatherers and builders resume nearest work after two idle seconds at their destination. Builders and walls cost no supplies, only typing work.</p>
+        <p>In Unit Control, left-click or drag to select friendly units, right-click to move, and left-click empty ground to deselect. Shift adds units. Right-click cancels placement or rally targeting; left-click places the building or rally point. A plus badge on the cursor shows targeting mode.</p>
+        <p>Gatherers and builders resume nearest work after two idle seconds at their destination. Builders and walls cost no supplies, only typing work.</p>
         <p>Keep typing to bank more construction bars. The ready counter shows completed bars, while three red shades loop without losing banked work. Placing a building spends one bar and preserves the rest. Other actions execute automatically when eligible.</p>
         <p>The Army teammate earns supplies at Tier 0, builds a barracks after Tier 1 unlocks, then trains troops. Unit Control can type for supplies while issuing orders.</p>
         <p>Each task keeps its completed work when you switch tasks or roles. Building tiers and upgrade types keep separate progress. Dev options sets the defaults for new matches.</p>
-        <p>Use Left/Down for shorter text, Right/Up for longer text, or click the faded length options. Shift+arrows still selects typed text. Alt+number chooses the matching option in your current role; Alt+0 is the tenth option.</p>
+        <p>Use Left/Down for shorter text, Right/Up for longer text, or click the faded length options. Shift+arrows still selects typed text. Alt+number chooses the matching displayed option in your current role.</p>
         <p>The map starts zoomed toward the home base. Use +/- and Fit map to zoom, and Alt-drag or middle-drag to pan. Shift-drag still adds troops to your selection.</p>
         <p>Stop computers pauses simulated teammates and their barracks, not the battlefield. Resume them to finish a shared tier challenge.</p>
         <p>World events begin at 1, 3, 5 and subsequent odd minutes of battle time, last 35 seconds, and leave normal typing between events.</p>
@@ -126,8 +127,8 @@ export function strongholdWorkspaceMarkup(): string {
         </section>
       </div>
       <section id="stronghold-army-orders" class="stronghold-army-orders is-hidden">
-        <button id="stronghold-select-army" type="button" data-shortcut="2" aria-keyshortcuts="Alt+2"><kbd class="stronghold-hotkey">Alt+2</kbd>Select all troops</button><button id="stronghold-defend" type="button" data-shortcut="3" aria-keyshortcuts="Alt+3"><kbd class="stronghold-hotkey">Alt+3</kbd>Defend</button><button id="stronghold-assault" type="button" data-shortcut="4" aria-keyshortcuts="Alt+4"><kbd class="stronghold-hotkey">Alt+4</kbd>Assault base</button>
-        <button id="stronghold-rally" type="button" data-shortcut="5" aria-keyshortcuts="Alt+5"><kbd class="stronghold-hotkey">Alt+5</kbd>Set rally on map</button><p id="stronghold-selection"></p>
+        <button id="stronghold-select-army" type="button" data-shortcut="1" aria-keyshortcuts="Alt+1"><kbd class="stronghold-hotkey">Alt+1</kbd>Select all troops</button><button id="stronghold-defend" type="button" data-shortcut="2" aria-keyshortcuts="Alt+2"><kbd class="stronghold-hotkey">Alt+2</kbd>Defend</button><button id="stronghold-assault" type="button" data-shortcut="3" aria-keyshortcuts="Alt+3"><kbd class="stronghold-hotkey">Alt+3</kbd>Assault base</button>
+        <button id="stronghold-rally" type="button" data-shortcut="4" aria-keyshortcuts="Alt+4"><kbd class="stronghold-hotkey">Alt+4</kbd>Set rally on map</button><p id="stronghold-selection"></p>
       </section>
       <div id="stronghold-placement" class="stronghold-placement is-hidden"><span>Click the map to place.</span><button id="stronghold-cancel-placement" type="button">Cancel</button></div>
     </div>

@@ -65,16 +65,12 @@ function text(id: string, value: string): void {
 }
 export function renderStronghold(
   elements: StrongholdElements, snapshot: StrongholdSnapshot, selected: ReadonlySet<number>, running: boolean, paused: boolean,
-  relayPlacement = false, placementCancelled = false
+  relayPlacement = false, placementCancelled = false, rallyPlacement = false
 ): void {
   const self = snapshot.players.find(player => player.id === snapshot.selfId);
   const ownCard = elements.playerCards.find(card => card.id === snapshot.selfId);
   if (!self || !ownCard) throw new Error('Stronghold snapshot has no local player.');
   applyPlayerTheme(elements.screen, self.color);
-  if (elements.screen.dataset.cursorColor !== self.color) {
-    elements.screen.style.setProperty('--stronghold-cursor', playerCursor(self.color));
-    elements.screen.dataset.cursorColor = self.color;
-  }
   elements.mapControls.theme(self.color);
   const castle = snapshot.buildings.find(building => building.kind === 'castle');
   const terminal = snapshot.phase === 'won' || snapshot.phase === 'lost';
@@ -110,7 +106,13 @@ export function renderStronghold(
   if (elements.orders.parentElement !== ownCard.actions) ownCard.actions.append(elements.orders);
   elements.orders.classList.toggle('is-hidden', !army || terminal);
   elements.privateTyping.classList.toggle('is-hidden', terminal);
-  const placing = !challenge && !placementCancelled && (relayPlacement || readyBuilding(snapshot) !== null);
+  const placing = running && !challenge && !placementCancelled && (relayPlacement || readyBuilding(snapshot) !== null);
+  const cursorMode = running && !terminal && !challenge && (placing || rallyPlacement) ? 'placement' : 'default';
+  if (elements.screen.dataset.cursorColor !== self.color || elements.screen.dataset.cursorMode !== cursorMode) {
+    elements.screen.style.setProperty('--stronghold-cursor', playerCursor(self.color, cursorMode === 'placement'));
+    elements.screen.dataset.cursorColor = self.color;
+    elements.screen.dataset.cursorMode = cursorMode;
+  }
   elements.placement.classList.toggle('is-hidden', !placing || terminal);
   const inputDisabled = !running || terminal;
   if (elements.input.disabled !== inputDisabled) elements.input.disabled = inputDisabled;
@@ -155,7 +157,7 @@ export function renderStronghold(
         const capped = button.upgrade ? snapshot.technology[button.upgrade] >= upgradeLimit(snapshot.tier, button.upgrade) : false;
         const disabled = !own || !running || challenge || terminal || snapshot.tier < button.minimumTier || capped;
         if (button.element.disabled !== disabled) button.element.disabled = disabled;
-        const selectedAction = own && button.action === 'relay' ? relayPlacement : button.action === player.action
+        const selectedAction = own && relayPlacement ? button.action === 'relay' : button.action === player.action
           && (!button.tier || button.tier === player.constructionTier) && (!button.upgrade || button.upgrade === player.upgradeTarget);
         button.element.classList.toggle('selected', selectedAction);
         setAttribute(button.element, 'aria-pressed', String(selectedAction));

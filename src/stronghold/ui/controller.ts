@@ -66,7 +66,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   }
   function display(): void {
     if (!snapshot) return;
-    renderStronghold(elements, snapshot, selected, running(), paused, relayPlacement, placementCancelled);
+    renderStronghold(elements, snapshot, selected, running(), paused, relayPlacement, placementCancelled, rallyPlacement);
     elements.mapControls.ghost(snapshot, placing(), cursor);
     const selecting = drag?.moved && self()?.role === 'army' && !placing() && !rallyPlacement;
     elements.mapControls.selection(selecting ? drag?.start ?? null : null, selecting ? drag?.end ?? null : null);
@@ -186,6 +186,14 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   }
   elements.map.addEventListener('pointerdown', event => {
     if (!running() || snapshot?.phase !== 'playing') return;
+    if (event.button === 2) {
+      event.preventDefault();
+      clearDrag();
+      if (placing() || rallyPlacement) { cancelPlacement(); return; }
+      const point = mapPoint(elements.map, event.clientX, event.clientY);
+      if (point && self()?.role === 'army') move(point);
+      return;
+    }
     if (event.button === 1 || (event.button === 0 && event.altKey)) {
       const matrix = elements.map.getScreenCTM();
       const point = mapPoint(elements.map, event.clientX, event.clientY);
@@ -245,11 +253,15 @@ export function createStrongholdController(connection: StrongholdConnection, dev
         if (!gesture.additive) selected.clear();
         if (selected.has(gesture.unitId)) selected.delete(gesture.unitId); else selected.add(gesture.unitId);
         display();
-      } else move(point);
+      } else {
+        selected.clear();
+        display();
+      }
     }
     focusTyping();
   });
   elements.map.addEventListener('pointercancel', () => { clearDrag(); focusTyping(); });
+  elements.screen.addEventListener('contextmenu', event => { event.preventDefault(); });
   requireElement('stronghold-ready', HTMLButtonElement).addEventListener('click', () => {
     const player = self();
     if (player) void send({ type: 'READY', ready: !player.ready });

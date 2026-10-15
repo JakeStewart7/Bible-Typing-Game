@@ -77,12 +77,16 @@ The length selector is a faded reel: **Left/Down** selects shorter entries,
 Clicking an option also works; endpoints do not wrap or discard current typing.
 Text length selections do not add entries to the event log.
 Shift+arrows still selects typed text. **Alt+1...9** selects the corresponding
-visible task in your current role; **Alt+0** selects Army's tenth option.
+visible task in your current role. Army now has nine tasks and no Supplies tile;
+Unit Control has no Supplies tile either.
 Each button displays its shortcut, and locked tasks remain locked. Unit Control
-also uses Alt+2 for selection, Alt+3 for Defend, Alt+4 for Assault and Alt+5
+also uses Alt+1 for selection, Alt+2 for Defend, Alt+3 for Assault and Alt+4
 for rally placement. Keyboard actions restore typing focus.
 
 **Relay** starts placement immediately, with no typing requirement or work spent.
+Only Relay is highlighted while it is selected, not the underlying typing task.
+A plus badge on your player-colored cursor indicates building placement or rally
+targeting; it clears when targeting is cancelled, gameplay pauses, or the match ends.
 A translucent building shadow follows the map cursor; its outline is red at
 illegal sites. Click to place, or use Alt+arrow keys and Alt+Enter. Escape or
 **Cancel** dismisses placement; selecting the same prepared building resumes it
@@ -143,10 +147,13 @@ and code-themed events, keeping normal-word typing in every event without discar
 a phrase already in progress at either transition. Enemy waves add ranged and siege formations as their
 base develops. Select troops with
 click/Shift-click, drag a selection rectangle (Shift adds to the selection), or
-**Select all troops**, then click the battlefield or use **Defend** / **Assault
+**Select all troops**, then **right-click** the battlefield or use **Defend** / **Assault
 base**. **Set rally on map** makes the next map click the production rally point.
 No coordinate fields are needed. Destroy the enemy
 stronghold before invading waves destroy yours.
+Left-clicking empty ground clears the selection without moving units.
+Left-click still places a building or rally point; right-click cancels targeting.
+The browser context menu is suppressed inside Stronghold, including while paused.
 
 The game pauses when you leave the mode, hide the tab, or select **Pause**.
 The complete simulation and UI refresh on animation frames at a 60 Hz target;

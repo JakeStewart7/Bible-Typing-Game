@@ -26,16 +26,17 @@ test('Stronghold role shortcuts use Alt+1 through Alt+0 without capturing bare n
   equal(actionShortcutKey({ ...key, key: 'ArrowUp', code: 'ArrowUp' }), null);
 });
 
-test('Stronghold every role option displays a unique matching numeric shortcut, including all ten Army tasks', () => {
+test('Stronghold military panels omit Supplies and every remaining task has a matching numeric shortcut', () => {
   const markup = strongholdWorkspaceMarkup();
   const player = /<section class="stronghold-player" data-player="you">([\s\S]*?)<\/section>/.exec(markup)?.[1];
   if (!player) throw new Error('Missing Player 1 markup.');
-  const counts = { economy: 4, production: 10, army: 1, defenses: 8 };
+  const counts = { economy: 4, production: 9, army: 0, defenses: 8 };
   for (const [index, role] of ROLES.entries()) {
     const start = player.indexOf(`data-role="${role}"`);
     const next = ROLES[index + 1];
     const end = next ? player.indexOf(`data-role="${next}"`, start) : player.length;
     const options = player.slice(start, end);
+    if (role === 'production' || role === 'army') equal(options.includes('data-action="resources"'), false);
     equal([...options.matchAll(/data-shortcut="([0-9])"/g)].map(match => match[1]), Array.from({ length: counts[role] }, (_, index) => taskShortcut(index)));
     for (let option = 0; option < counts[role]; option++) {
       const digit = taskShortcut(option);
@@ -46,6 +47,9 @@ test('Stronghold every role option displays a unique matching numeric shortcut, 
   equal(markup.includes('id="stronghold-length" class="stronghold-length-wheel" role="listbox"'), true);
   equal(markup.includes('id="stronghold-zoom-fit"'), true);
   equal(markup.includes('id="stronghold-next-wave" type="button">Next Wave</button>'), true);
+  const orders = /<section id="stronghold-army-orders"[\s\S]*?<\/section>/.exec(markup)?.[0];
+  if (!orders) throw new Error('Missing Unit Control orders.');
+  equal([...orders.matchAll(/data-shortcut="([0-9])"/g)].map(match => match[1]), ['1', '2', '3', '4']);
 });
 
 test('Stronghold zoom camera stays within the full battlefield and Fit restores all legal construction sites', () => {
