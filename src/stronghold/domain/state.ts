@@ -53,10 +53,10 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
     rally: { x: 500, y: 450 }, message: '', events: [{ id: 1, elapsed: 0, playerId: null, text: 'Stronghold started' }],
     computersPaused: options.computersPaused,
     roleTasks: {
-      economy: createRoleTasks({ action: 'resources', constructionTier: 1, upgradeTarget: 'economy' }, options.length),
-      production: createRoleTasks({ action: 'resources', constructionTier: 1, upgradeTarget: 'warrior' }, options.length),
-      army: createRoleTasks({ action: 'resources', constructionTier: 1, upgradeTarget: 'economy' }, options.length),
-      defenses: createRoleTasks({ action: 'builder', constructionTier: 1, upgradeTarget: 'tower-1' }, options.length)
+      economy: createRoleTasks({ action: 'resources', constructionTier: 1, upgradeTarget: 'economy' }),
+      production: createRoleTasks({ action: 'resources', constructionTier: 1, upgradeTarget: 'warrior' }),
+      army: createRoleTasks({ action: 'resources', constructionTier: 1, upgradeTarget: 'economy' }),
+      defenses: createRoleTasks({ action: 'builder', constructionTier: 1, upgradeTarget: 'tower-1' })
     }
   };
   addBuilding(state, 'castle', BASE, true);

@@ -297,23 +297,35 @@ test('Stronghold dropped cargo survives a gatherer death and routes without dupl
   equal(state.resources, 54);
 });
 
-test('Stronghold role members share typing, task phases and placement without duplicate costs', () => {
+test('Stronghold role members keep private text and share completed work and placement without duplicate costs', () => {
   const state = createStronghold();
   state.players.forEach(player => { player.simulated = false; });
   const [you, teammate] = state.players;
   if (!you || !teammate) throw new Error('Missing players.');
   executeCommand(state, you, { type: 'LENGTH', length: 'extra-long' });
   executeCommand(state, teammate, { type: 'ROLE', role: 'economy' });
+  executeCommand(state, teammate, { type: 'LENGTH', length: 'extra-long' });
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase.slice(0, 5) });
-  equal(teammate.typed, you.typed);
+  equal(teammate.typed, '');
+  equal(you.phrase !== teammate.phrase, true);
+  const partial = you.typed;
+  const phrase = you.phrase;
   const oldId = you.phraseId;
   executeCommand(state, teammate, { type: 'TYPE', phraseId: teammate.phraseId, text: teammate.phrase });
   equal(state.resources, 50);
   equal(you.work, 16);
+  equal(you.typed, partial);
+  equal(you.phrase, phrase);
+  equal(you.phraseId, oldId);
+  const teammatePhrase = teammate.phrase;
+  const teammateId = teammate.phraseId;
+  executeCommand(state, teammate, { type: 'TYPE', phraseId: teammateId, text: teammatePhrase.slice(0, 2) });
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
   equal(state.resources, 68);
   equal(you.typed, '');
-  equal(you.phrase, teammate.phrase);
+  equal(teammate.phrase, teammatePhrase);
+  equal(teammate.phraseId, teammateId);
+  equal(teammate.typed, teammatePhrase.slice(0, 2));
   equal(you.phraseId > oldId, true);
   let rejected = false;
   try { executeCommand(state, you, { type: 'TYPE', phraseId: oldId, text: you.phrase }); }
@@ -331,31 +343,46 @@ test('Stronghold role members share typing, task phases and placement without du
   executeCommand(state, teammate, { type: 'TYPE', phraseId: teammate.phraseId, text: teammate.phrase });
   equal(you.work, 64);
   equal(you.typed, '');
+  const constructionPhrase = you.phrase;
+  const constructionId = you.phraseId;
+  executeCommand(state, you, { type: 'TYPE', phraseId: constructionId, text: constructionPhrase.slice(0, 3) });
   executeCommand(state, teammate, { type: 'PLACE', kind: 'tower', point: { x: 300, y: 500 } });
   equal(state.resources, 450);
   equal(you.actionPhrases, 0);
-  equal(you.typed, '');
+  equal(you.typed, constructionPhrase.slice(0, 3));
+  equal(you.phraseId, constructionId);
   equal(state.buildings.filter(building => building.kind === 'tower' && !building.enemy).length, 1);
 });
 
-test('Stronghold simulated role mates help the chosen task without overriding errors or army orders', () => {
+test('Stronghold simulated role mates contribute work without editing human text or overriding army orders', () => {
   const state = createStronghold();
   const you = state.players[0];
   if (!you) throw new Error('Missing player.');
   executeCommand(state, you, { type: 'ROLE', role: 'defenses' });
   executeCommand(state, you, { type: 'ACTION', action: 'wall' });
+  const phrase = you.phrase;
+  const phraseId = you.phraseId;
   advanceStronghold(state, 1);
   equal(you.action, 'wall');
-  equal(you.typed.length, 5);
+  equal(you.typed, '');
+  equal(you.phrase, phrase);
+  equal(you.phraseId, phraseId);
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: '?' });
   advanceStronghold(state, 1);
   equal(you.typed, '?');
+  equal(you.work, 8);
+  equal(you.phraseId, phraseId);
   executeCommand(state, you, { type: 'ROLE', role: 'army' });
+  const armyPhrase = you.phrase;
+  const armyId = you.phraseId;
   const warrior = state.units.find(unit => unit.kind === 'warrior');
   if (!warrior) throw new Error('Missing warrior.');
   executeCommand(state, you, { type: 'MOVE', ids: [warrior.id], point: { x: 200, y: 400 } });
   advanceStronghold(state, .1);
   equal(warrior.destination, { x: 200, y: 400 });
+  equal(you.typed, '');
+  equal(you.phrase, armyPhrase);
+  equal(you.phraseId, armyId);
 });
 
 test('Stronghold square castle, T towers and basic animations preserve health and selection markup', () => {

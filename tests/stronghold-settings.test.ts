@@ -35,7 +35,6 @@ test('Stronghold developer defaults are validated, copied and reused by new matc
   equal(initial.resources, 175);
   equal(initial.computersPaused, true);
   equal(initial.players.every(player => player.length === 'short'), true);
-  equal(Object.values(initial.roleTasks).every(role => role.length === 'short'), true);
   engine.send('you', { type: 'COMPUTERS', paused: false });
   engine.restart();
   equal(engine.snapshot('you').resources, 175);
@@ -160,7 +159,7 @@ test('Stronghold restored task work remains shared when teammates select tasks a
   entry(state, teammate);
   send(state, { type: 'ROLE', role: 'economy' });
   equal(you.work, 16);
-  equal(you.phrase, teammate.phrase);
+  equal(you.phrase !== teammate.phrase, true);
   send(state, { type: 'ACTION', action: 'resources' });
   equal(you.work, 16);
   equal(teammate.work, 16);

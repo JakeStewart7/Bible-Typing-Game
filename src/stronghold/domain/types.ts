@@ -32,7 +32,7 @@ export type Participant = {
 };
 export type TaskSelection = Pick<Participant, 'action' | 'constructionTier' | 'upgradeTarget'>;
 export type TaskProgress = Pick<Participant, 'work' | 'actionPhrases'>;
-export type RoleTasks = { selection: TaskSelection; length: PhraseLength; progress: Record<string, TaskProgress> };
+export type RoleTasks = { selection: TaskSelection; progress: Record<string, TaskProgress> };
 export type StrongholdEvent = { id: number; elapsed: number; playerId: string | null; text: string };
 export type StrongholdState = {
   phase: Phase; tier: number; elapsed: number; wave: number; waveIn: number;

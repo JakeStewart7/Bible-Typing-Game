@@ -12,7 +12,7 @@
 .stronghold-screen, .stronghold-screen :is(button, select, input, summary, .stronghold-map-unit), .stronghold-screen #stronghold-map { cursor: var(--stronghold-cursor, auto); }
 .stronghold-screen button:focus-visible, .stronghold-screen select:focus-visible, .stronghold-screen input:focus-visible { outline: 2px solid #111; outline-offset: 1px; }
 .stronghold-tier:focus-visible::before { background: #ffe64c; }
-.stronghold-stage { position: relative; width: 100%; height: 100%; min-height: 0; overflow: hidden; background: linear-gradient(to bottom, #c6d8e5 0 var(--header-height), #1faf4c var(--header-height) calc(100% - var(--deck-height) - 140px), #7f7f7f calc(100% - var(--deck-height) - 140px) 100%); }
+.stronghold-stage { position: relative; width: 100%; height: 100%; min-height: 0; overflow: hidden; background: linear-gradient(to bottom, #c6d8e5 0 var(--header-height), #1faf4c var(--header-height) calc(100% - var(--deck-height) - 140px), #fff calc(100% - var(--deck-height) - 140px) calc(100% - var(--deck-height)), #7f7f7f calc(100% - var(--deck-height)) 100%); }
 .stronghold-battlefield { position: absolute; inset: 0; }
 #stronghold-map { position: absolute; top: var(--header-height); width: 100%; height: max(0px, calc(100% - var(--header-height) - var(--deck-height) - 140px)); cursor: crosshair; touch-action: none; user-select: none; }
 .stronghold-map-camera { position: absolute; top: 100px; right: 14px; z-index: 4; display: flex; align-items: center; gap: 5px; font-size: 14px; }
@@ -68,7 +68,7 @@
 .stronghold-event-log[data-overflowing="true"] { mask-image: linear-gradient(to bottom, transparent, #000 32px, #000 calc(100% - 8px), transparent); }
 .stronghold-event-log::-webkit-scrollbar { display: none; }
 .stronghold-event-log p { margin: 4px 0; font: var(--stronghold-font-weight) 17px/1.45 var(--stronghold-font); overflow-wrap: anywhere; paint-order: stroke fill; -webkit-text-stroke: 3px #111; text-shadow: 0 1px 3px #111, 1px 0 2px #111, -1px 0 2px #111; }
-.stronghold-private { position: absolute; bottom: calc(var(--deck-height) + 14px); left: var(--squad-inset); right: var(--squad-inset); z-index: 5; border: 0; background: #7f7f7f; box-shadow: none; padding: 6px; display: grid; justify-content: center; grid-template-columns: 100px minmax(0, 420px); grid-template-rows: auto 36px; gap: 2px 8px; }
+.stronghold-private { position: absolute; bottom: calc(var(--deck-height) + 14px); left: 0; right: 0; z-index: 5; border: 0; background: #fff; box-shadow: none; padding: 6px; display: grid; justify-content: center; grid-template-columns: 100px minmax(0, 420px); grid-template-rows: auto 36px; gap: 2px 8px; }
 .stronghold-length-panel { grid-column: 1; grid-row: 2; align-self: center; text-align: center; min-width: 0; font-size: 12px; }
 .stronghold-length-wheel { position: relative; height: 44px; overflow: hidden; mask-image: linear-gradient(transparent, #000 12px, #000 calc(100% - 12px), transparent); }
 .stronghold-length-wheel button { position: absolute; top: calc(50% - 12px); left: 0; width: 100%; height: 24px; min-height: 0; padding: 0; border: 0; border-radius: 0; font: var(--stronghold-font-weight) 16px var(--stronghold-font); background: transparent; color: #111; transform: translateY(calc(var(--length-offset, 0) * 22px)); opacity: var(--length-opacity, .4); transition: transform 140ms ease, opacity 140ms ease; box-shadow: none; }

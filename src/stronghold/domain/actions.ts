@@ -1,4 +1,4 @@
-import { assignPhrase, copyRoleTask, synchronizeRoleTask } from './phrases.ts';
+import { assignPhrase, copyRoleTask } from './phrases.ts';
 import { addBuilding, addUnit } from './state.ts';
 import { ACTION_LABELS, BASE, BUILDING_CAPS, distance, MIN_TIER, ROLE_ACTIONS, ROLE_LABELS, TIER_MAX, TIER_QUOTA, UNIT_CAPS, validPoint } from './rules.ts';
 import { applyUpgrade, taskCost, taskWork, upgradeLimit, UPGRADE_OPTIONS } from './technology.ts';
@@ -115,17 +115,14 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     player.role = command.role;
     player.ready = false;
     playerEvent(state, player, `joined ${ROLE_LABELS[player.role]}`);
-    if (partner) copyRoleTask(partner, player, true);
-    else {
-      restoreRoleTask(state, player);
-      assignPhrase(state, player);
-    }
+    if (partner) copyRoleTask(partner, player);
+    else restoreRoleTask(state, player);
+    assignPhrase(state, player);
     return;
   }
   if (command.type === 'LENGTH') {
     if (!PHRASE_LENGTHS.includes(command.length)) throw new Error('Unknown phrase length.');
     player.length = command.length;
-    state.roleTasks[player.role].length = command.length;
     assignPhrase(state, player);
     return;
   }
@@ -134,7 +131,6 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     if (typeof command.text !== 'string' || command.text.length > player.phrase.length) throw new Error('Invalid typing update.');
     player.typed = command.text;
     if (player.typed === player.phrase) completePhrase(state, player);
-    else synchronizeRoleTask(state, player);
     return;
   }
   if (command.type === 'READY') {

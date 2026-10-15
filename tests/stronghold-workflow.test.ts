@@ -34,7 +34,7 @@ test('Stronghold completed entries, not partial typing, fill the shared task bar
   }
 });
 
-test('Stronghold changing length preserves earned work and synchronizes role mates', () => {
+test('Stronghold role mates have private text lengths and contribute their own character counts to shared work', () => {
   const state = createStronghold();
   const [you, teammate] = state.players;
   if (!you || !teammate) throw new Error('Missing players.');
@@ -44,13 +44,21 @@ test('Stronghold changing length preserves earned work and synchronizes role mat
   equal(you.work, 4);
   equal(teammate.work, 4);
   const oldId = you.phraseId;
+  const phrase = you.phrase;
+  executeCommand(state, you, { type: 'TYPE', phraseId: oldId, text: phrase.slice(0, 2) });
   executeCommand(state, teammate, { type: 'LENGTH', length: 'extra-long' });
   equal(you.work, 4);
-  equal(you.length, 'extra-long');
-  equal(you.phraseId > oldId, true);
+  equal(you.length, 'short');
+  equal(teammate.length, 'extra-long');
+  equal(you.phraseId, oldId);
+  equal(you.phrase, phrase);
+  equal(you.typed, phrase.slice(0, 2));
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
-  equal(you.work, 20);
-  equal(teammate.work, 20);
+  equal(you.work, 8);
+  equal(teammate.work, 8);
+  executeCommand(state, teammate, { type: 'TYPE', phraseId: teammate.phraseId, text: teammate.phrase });
+  equal(you.work, 24);
+  equal(teammate.work, 24);
 });
 
 test('Stronghold text length selections never add event log entries', () => {
@@ -63,6 +71,54 @@ test('Stronghold text length selections never add event log entries', () => {
       equal(state.events, events);
     }
   }
+});
+
+test('Stronghold four players on one role keep unique phrases and private typing state for every length', () => {
+  for (const length of PHRASE_LENGTHS) {
+    const state = createStronghold({ resources: 50, length, computersPaused: true });
+    for (const player of state.players) {
+      executeCommand(state, player, { type: 'ROLE', role: 'economy' });
+      executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase.slice(0, 2) });
+      player.typingCredit = .4;
+    }
+    equal(new Set(state.players.map(player => player.phrase)).size, 4);
+    const privateState = state.players.map(player => [player.phrase, player.phraseId, player.typed, player.length, player.typingCredit]);
+    const first = state.players[0];
+    if (!first) throw new Error('Missing player.');
+    executeCommand(state, first, { type: 'TYPE', phraseId: first.phraseId, text: first.phrase });
+    equal(state.players.slice(1).map(player => [player.phrase, player.phraseId, player.typed, player.length, player.typingCredit]), privateState.slice(1));
+    equal(state.players.every(player => player.work === first.phrase.length), true);
+    for (const player of state.players.slice(1)) executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+    const points = first.phrase.length * 4;
+    equal(state.players.every(player => player.work === points % 32), true);
+    equal(state.resources, 50 + Math.floor(points / 32) * 18);
+  }
+});
+
+test('Stronghold private lengths survive role switches and world events refresh only each idle player', () => {
+  const state = createStronghold({ resources: 50, length: 'medium', computersPaused: true });
+  const [you, teammate] = state.players;
+  if (!you || !teammate) throw new Error('Missing players.');
+  executeCommand(state, you, { type: 'LENGTH', length: 'short' });
+  executeCommand(state, you, { type: 'ROLE', role: 'production' });
+  equal(you.length, 'short');
+  equal(teammate.length, 'medium');
+  executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase.slice(0, 2) });
+  const phrase = you.phrase;
+  const phraseId = you.phraseId;
+  const teammateId = teammate.phraseId;
+  state.elapsed = 59.9;
+  state.waveIn = 100;
+  advanceStronghold(state, .1);
+  equal(state.event !== 'peace', true);
+  equal(you.phrase, phrase);
+  equal(you.phraseId, phraseId);
+  equal(you.typed, phrase.slice(0, 2));
+  equal(teammate.phraseId, teammateId + 1);
+  equal(teammate.typed, '');
+  executeCommand(state, you, { type: 'ROLE', role: 'economy' });
+  equal(you.length, 'short');
+  equal(teammate.length, 'medium');
 });
 
 test('Stronghold work equals completed character count including spaces, with no length multiplier or truncation', () => {

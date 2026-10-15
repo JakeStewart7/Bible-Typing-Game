@@ -107,12 +107,8 @@ export function advanceStronghold(state: StrongholdState, seconds: number): void
   state.waveIn -= seconds;
   if (state.waveIn <= 0) spawnWave(state);
   if (updateWorldEvent(state)) {
-    const refreshedRoles = new Set<string>();
     state.players.forEach(player => {
-      if (player.typed.length === 0 && !refreshedRoles.has(player.role)) {
-        assignPhrase(state, player);
-        refreshedRoles.add(player.role);
-      }
+      if (player.typed.length === 0) assignPhrase(state, player);
     });
   }
   updateLogistics(state, seconds);

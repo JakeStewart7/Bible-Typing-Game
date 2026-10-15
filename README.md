@@ -9,9 +9,12 @@ follows the Paint design: borderless bright-green map, gray castle, colored shap
 units, upper-right population/resource HUD, central hexagonal **Tier Up** button,
 and four colored player panels along the bottom. Switch Player 1's role dropdown
 between Economy, Army, Unit Control, and Defenses to join that role.
-Players on the same role share the selected task, typed text and completed
-work; each finished task costs and rewards supplies only once. Simulated
-teammates help type your chosen task without changing it or placing your buildings.
+Players on the same role contribute completed entries to a shared task work bar;
+each finished task costs and rewards supplies only once. Each player keeps an
+independent phrase, text box, display, length setting and typing progress.
+Teammates completing entries, changing length or placing buildings never replace
+or clear your text. Simulated teammates contribute their own completed entries
+without typing into your box or placing your buildings.
 Roles can be left unoccupied. The prominent private typing area is centered above
 the bottom panels. Focus returns to its input after game buttons, role/length
 changes, map gestures and new entries, without interrupting an open dropdown.
@@ -74,8 +77,8 @@ The slim, stretched private typing strip leaves more height for the battlefield.
 Its input stays 420px wide (or fits the available space on smaller screens),
 centered beneath the displayed text, with the unlabeled length scroller directly
 to its left. The top controls have a blue-gray backdrop; feedback appears at their
-bottom left. The typing module and player deck have a continuous full-width gray
-background. The deck fits the viewport height, with scrolling inside action panels
+bottom left. The typing module has a full-width white background, while the player deck stays
+gray across the full width. The deck fits the viewport height, with scrolling inside action panels
 and the squad list on narrow screens rather than clipping the bottom.
 The map starts at **120% zoom**, focused toward the home base. Use **+/-**,
 **Fit map**, and **Alt-drag or middle-drag** to navigate without issuing orders.
