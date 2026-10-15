@@ -3,14 +3,14 @@ import type { Season } from '../domain/types.ts';
 
 export type MusicTrack = { title: string; url: string; isrc: string };
 export const MUSIC_TRACKS = {
-  springDay: { title: 'Brain Dance', url: new URL('../../../assets/music/stronghold/brain-dance.mp3', import.meta.url).href, isrc: 'USUAN2300006' },
-  springNight: { title: 'Late Night Radio', url: new URL('../../../assets/music/stronghold/late-night-radio.mp3', import.meta.url).href, isrc: 'USUAN2100003' },
+  springDay: { title: 'Flying Kerfuffle', url: new URL('../../../assets/music/stronghold/flying-kerfuffle.mp3', import.meta.url).href, isrc: 'USUAN1800020' },
+  springNight: { title: 'Ethernight Club', url: new URL('../../../assets/music/stronghold/ethernight-club.mp3', import.meta.url).href, isrc: 'USUAN2100002' },
   winterDay: { title: 'Voxel Revolution', url: new URL('../../../assets/music/stronghold/voxel-revolution.mp3', import.meta.url).href, isrc: 'USUAN2000025' },
-  winterNight: { title: 'Ethernight Club', url: new URL('../../../assets/music/stronghold/ethernight-club.mp3', import.meta.url).href, isrc: 'USUAN2100002' },
+  winterNight: { title: 'Envision', url: new URL('../../../assets/music/stronghold/envision.mp3', import.meta.url).href, isrc: 'USUAN1900000' },
   fallDay: { title: 'Newer Wave', url: new URL('../../../assets/music/stronghold/newer-wave.mp3', import.meta.url).href, isrc: 'USUAN2000024' },
   fallNight: { title: 'Ether Vox', url: new URL('../../../assets/music/stronghold/ether-vox.mp3', import.meta.url).href, isrc: 'USUAN2000022' },
   summerDay: { title: 'Realizer', url: new URL('../../../assets/music/stronghold/realizer.mp3', import.meta.url).href, isrc: 'USUAN1900024' },
-  summerNight: { title: 'Blippy Trance', url: new URL('../../../assets/music/stronghold/blippy-trance.mp3', import.meta.url).href, isrc: 'USUAN1900055' }
+  summerNight: { title: 'Sincerely', url: new URL('../../../assets/music/stronghold/sincerely.mp3', import.meta.url).href, isrc: 'USUAN1900016' }
 } satisfies Record<string, MusicTrack>;
 
 export const SEASON_MUSIC: Record<Season, { day: MusicTrack; night: MusicTrack }> = {

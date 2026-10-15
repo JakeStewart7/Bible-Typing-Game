@@ -111,19 +111,18 @@ loading failures display a retry message rather than failing silently.
 
 | Season | Day | Night |
 | --- | --- | --- |
-| Spring | Brain Dance | Late Night Radio |
-| Summer | Realizer | Blippy Trance |
+| Spring | Flying Kerfuffle | Ethernight Club |
+| Summer | Realizer | Sincerely |
 | Fall | Newer Wave | Ether Vox |
-| Winter | Voxel Revolution | Ethernight Club |
+| Winter | Voxel Revolution | Envision |
 
-The eight original MP3s in `assets/music/stronghold/` total 45,837,229 bytes
-(45.84 MB). They are bundled for local playback, not streamed from a third-party
+The eight original MP3s in `assets/music/stronghold/` total 57,194,887 bytes
+(57.19 MB). They are bundled for local playback, not streamed from a third-party
 site. **Credits** opens a dedicated in-game page with every title and official
 source link. All eight tracks are by **Kevin MacLeod (incompetech.com)**,
 licensed under [Creative Commons: By Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
 Recordings are unmodified and loop during playback; source details are also in
-`assets/music/stronghold/CREDITS.txt`. Incompetech's verified catalog title
-**Late Night Radio** is used for the requested spring-night "late night jazz."
+`assets/music/stronghold/CREDITS.txt`.
 
 The slim, stretched private typing strip leaves more height for the battlefield.
 Its input stays 420px wide (or fits the available space on smaller screens),

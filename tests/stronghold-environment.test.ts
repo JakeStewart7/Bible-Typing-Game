@@ -90,9 +90,9 @@ test('Stronghold dev day/night skips affect only the environment clock and sound
   state.environmentElapsed = 12.25;
   const player = state.players[0]!;
   for (const [period, expectedTime, title] of [
-    ['night', DAY_SECONDS, 'Ethernight Club'],
+    ['night', DAY_SECONDS, 'Envision'],
     ['day', DAY_SECONDS + NIGHT_SECONDS, 'Voxel Revolution'],
-    ['night', DAY_SECONDS * 2 + NIGHT_SECONDS, 'Ethernight Club']
+    ['night', DAY_SECONDS * 2 + NIGHT_SECONDS, 'Envision']
   ] as const) {
     const before = structuredClone(state);
     executeCommand(state, player, { type: 'TIME_OF_DAY', period });

@@ -23,10 +23,10 @@ class TestAudio extends EventTarget {
 }
 const settle = async (): Promise<void> => { for (let i = 0; i < 5; i++) await Promise.resolve(); };
 
-test('Stronghold uses exactly the eight requested local recordings, with Blippy Trance replacing Bleeping Demo', () => {
+test('Stronghold uses exactly the eight requested local recordings with the latest seasonal assignments', () => {
   const expected = {
-    spring: ['Brain Dance', 'Late Night Radio'], summer: ['Realizer', 'Blippy Trance'],
-    fall: ['Newer Wave', 'Ether Vox'], winter: ['Voxel Revolution', 'Ethernight Club']
+    spring: ['Flying Kerfuffle', 'Ethernight Club'], summer: ['Realizer', 'Sincerely'],
+    fall: ['Newer Wave', 'Ether Vox'], winter: ['Voxel Revolution', 'Envision']
   };
   for (const season of SEASONS) {
     equal(seasonalTrack(season, 0).title, expected[season][0]);
@@ -41,7 +41,10 @@ test('Stronghold uses exactly the eight requested local recordings, with Blippy 
     equal(data.length > 2_000_000, true);
     equal(data.subarray(0, 3).toString() === 'ID3' || (data[0] === 255 && (data[1]! & 224) === 224), true);
   }
-  equal(tracks.reduce((sum, track) => sum + readFileSync(new URL(track.url)).length, 0), 45837229);
+  equal(tracks.reduce((sum, track) => sum + readFileSync(new URL(track.url)).length, 0), 57194887);
+  equal(MUSIC_TRACKS.springDay.isrc, 'USUAN1800020');
+  equal(MUSIC_TRACKS.summerNight.isrc, 'USUAN1900016');
+  equal(MUSIC_TRACKS.winterNight.isrc, 'USUAN1900000');
   equal(tracks.some(track => track.title === 'Bleeping Demo'), false);
 });
 
