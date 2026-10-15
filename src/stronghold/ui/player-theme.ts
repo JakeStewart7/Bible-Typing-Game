@@ -1,8 +1,8 @@
 const THEMES = [
-  { color: '#ff1726', bold: '#b00020', light: '#ffb3c9' },
-  { color: '#00aeef', bold: '#006783', light: '#9ed7e6' },
-  { color: '#ead500', bold: '#665500', light: '#f0e3a7' },
-  { color: '#18b644', bold: '#0c6427', light: '#bdeb18' }
+  { color: '#ff1726', bold: '#b00020', light: '#ffb3c9', text: '#711e2b' },
+  { color: '#00aeef', bold: '#006783', light: '#9ed7e6', text: '#1d4c5a' },
+  { color: '#ead500', bold: '#665500', light: '#f0e3a7', text: '#514617' },
+  { color: '#18b644', bold: '#0c6427', light: '#bdeb18', text: '#245032' }
 ] as const;
 
 export function playerTheme(color: string) {
@@ -20,7 +20,9 @@ export function playerCursor(color: string, placing = false): string {
 
 export function applyPlayerTheme(element: HTMLElement, color: string): void {
   const theme = playerTheme(color);
-  for (const [name, value] of Object.entries({ '--player-color': theme.color, '--player-bold': theme.bold, '--player-fill': theme.light })) {
+  for (const [name, value] of Object.entries({
+    '--player-color': theme.color, '--player-bold': theme.bold, '--player-fill': theme.light, '--player-text': theme.text
+  })) {
     if (element.style.getPropertyValue(name) !== value) element.style.setProperty(name, value);
   }
 }

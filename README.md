@@ -61,6 +61,10 @@ Only paid actions show supplies-cost badges. Selections, buttons, the input's
 **Type here** prompt and basic arrow/text cursors share each player's dark and
 light palette. Your typed text appears both in the central input and in your
 small player display, just like your teammates' typed text.
+Every role panel uses the same shared styling and muted, readable player-colored
+text for its heading, role selector, task labels, costs, progress labels and typed
+text. Tier contribution cards use that same palette. Bright accents and
+white/gray panel backgrounds remain unchanged.
 The Stronghold typing cursor snaps directly to the current character without
 animated travel or a movement speed limit.
 

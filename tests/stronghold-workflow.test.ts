@@ -397,3 +397,25 @@ test('Stronghold player themes pair light highlights and dark basic cursors for 
     equal(placementCursor !== decodeURIComponent(playerCursor(player.color)), true);
   }
 });
+
+test('Stronghold every player has a distinct muted text shade readable on all shared panel backgrounds', () => {
+  function luminance(hex: string): number {
+    equal(/^#[a-f0-9]{6}$/.test(hex), true);
+    const channels = [1, 3, 5].map(offset => {
+      const value = Number.parseInt(hex.slice(offset, offset + 2), 16) / 255;
+      return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
+    });
+    return channels[0]! * .2126 + channels[1]! * .7152 + channels[2]! * .0722;
+  }
+  const themes = createStronghold(undefined, 'spring').players.map(player => playerTheme(player.color));
+  equal(new Set(themes.map(theme => theme.text)).size, 4);
+  for (const theme of themes) {
+    const accents: readonly string[] = [theme.color, theme.bold];
+    equal(accents.includes(theme.text), false);
+    const text = luminance(theme.text);
+    for (const background of ['#ffffff', '#c3c3c3', theme.light]) {
+      const surface = luminance(background);
+      equal((Math.max(text, surface) + .05) / (Math.min(text, surface) + .05) >= 4.5, true);
+    }
+  }
+});
