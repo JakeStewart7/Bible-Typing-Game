@@ -1,14 +1,6 @@
-import type { Participant, PhraseLength, StrongholdState } from './types.ts';
+import type { Participant, StrongholdState } from './types.ts';
 import { saveRoleTask } from './tasks.ts';
-
-const WORDS: Record<PhraseLength, readonly string[]> = {
-  short: ['tree', 'bird', 'hope', 'path', 'warm', 'kind'],
-  medium: ['sunshine', 'kindness', 'mountain', 'together', 'we stand', 'a garden'],
-  long: ['gentle river', 'quiet meadow', 'silver cloud', 'little robin', 'appreciation'],
-  'extra-long': ['a quiet morning beside the river', 'bright sunshine over the garden',
-    'little birds resting in the trees', 'a gentle breeze through the meadow',
-    'the soft light of a new beginning', 'walking together beneath the stars']
-};
+import { WORD_POOLS } from './word-pools.ts';
 
 export function copyRoleTask(source: Participant, target: Participant): void {
   target.action = source.action;
@@ -30,7 +22,7 @@ export function assignPhrase(state: StrongholdState, player: Participant): void 
   player.phraseId++;
   player.typed = '';
   player.typingCredit = 0;
-  const phrases = WORDS[player.length];
+  const phrases = WORD_POOLS[player.length];
   const start = (player.phraseId + state.players.indexOf(player)) % phrases.length;
   const candidates = [...phrases.slice(start), ...phrases.slice(0, start)];
   const phrase = candidates.find(phrase => state.players.every(other => other === player || other.phrase !== phrase));

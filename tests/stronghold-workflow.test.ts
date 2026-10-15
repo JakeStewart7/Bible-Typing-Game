@@ -83,7 +83,7 @@ test('Stronghold four players on one role keep unique phrases and private typing
     const state = createStronghold({ resources: 50, length, computersPaused: true });
     for (const player of state.players) {
       executeCommand(state, player, { type: 'ROLE', role: 'economy' });
-      executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase.slice(0, 2) });
+      executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase.slice(0, Math.min(2, player.phrase.length - 1)) });
       player.typingCredit = .4;
     }
     equal(new Set(state.players.map(player => player.phrase)).size, 4);
@@ -264,19 +264,30 @@ test('Stronghold free builders and walls retain only one full bar and placement 
   state.resources = 0;
   executeCommand(state, player, { type: 'ROLE', role: 'defenses' });
   executeCommand(state, player, { type: 'ACTION', action: 'builder' });
-  for (let entry = 0; entry < 20; entry++) executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+  let builderWork = 0, builders = 1;
+  for (let entry = 0; entry < 20; entry++) {
+    if (builderWork < 32) builderWork = Math.round((builderWork + phraseWork(player)) * 100) / 100;
+    if (builderWork >= 32 && builders < 4) { builderWork = Math.round((builderWork - 32) * 100) / 100; builders++; }
+    executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+    equal(player.work, builderWork);
+  }
   equal(state.units.filter(unit => unit.kind === 'builder').length, 4);
-  equal(player.work, 36);
+  equal(player.work, builderWork);
   equal(state.resources, 0);
   executeCommand(state, player, { type: 'ACTION', action: 'wall' });
-  for (let entry = 0; entry < 9; entry++) executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
-  equal(player.work, 35.2);
+  let wallWork = 0;
+  for (let entry = 0; entry < 9; entry++) {
+    if (wallWork < 32) wallWork = Math.round((wallWork + phraseWork(player)) * 100) / 100;
+    executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+    equal(player.work, wallWork);
+  }
+  equal(player.work, wallWork);
   executeCommand(state, player, { type: 'PLACE', kind: 'wall', point: { x: 350, y: 500 } });
-  equal(player.work, 3.2);
+  equal(player.work, Math.round((wallWork - 32) * 100) / 100);
   equal(placementProblem(state, player, 'wall', { x: 400, y: 500 }), 'Complete the construction work first.');
   equal(state.resources, 0);
   executeCommand(state, player, { type: 'ACTION', action: 'builder' });
-  equal(player.work, 36);
+  equal(player.work, builderWork);
 });
 
 test('Stronghold relays require only legal placement and do not spend typing work', () => {

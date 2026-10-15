@@ -11,10 +11,16 @@ function self(state: StrongholdState): Participant {
   if (!player) throw new Error('Missing local player.');
   return player;
 }
-function finish(state: StrongholdState): void {
+function finish(state: StrongholdState): number {
   const player = self(state);
-  const entries = Math.ceil((taskWork(player) - player.work) / phraseWork(player));
-  for (let entry = 0; entry < entries; entry++) executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+  let expected = player.work;
+  for (let entry = 0; entry < taskWork(player) && expected < taskWork(player); entry++) {
+    expected = Math.round((expected + phraseWork(player)) * 100) / 100;
+    executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+    equal(player.work, expected);
+  }
+  equal(player.work >= taskWork(player), true);
+  return expected;
 }
 function rejects(run: () => void): void {
   try { run(); } catch (error) { equal(error instanceof Error, true); return; }
@@ -32,8 +38,12 @@ test('Stronghold free barracks require proportional tier-specific typing and ret
   executeCommand(state, self(state), { type: 'PLACE', kind: 'barracks', point: { x: 620, y: 570 } });
   equal(state.resources, 500);
   executeCommand(state, self(state), { type: 'ACTION', action: 'barracks', tier: 3 });
-  for (let entry = 0; entry < 2; entry++) executeCommand(state, self(state), { type: 'TYPE', phraseId: self(state).phraseId, text: self(state).phrase });
-  equal(self(state).work, 17.6);
+  let expected = 0;
+  for (let entry = 0; entry < 2; entry++) {
+    expected = Math.round((expected + phraseWork(self(state))) * 100) / 100;
+    executeCommand(state, self(state), { type: 'TYPE', phraseId: self(state).phraseId, text: self(state).phrase });
+  }
+  equal(self(state).work, expected);
   rejects(() => executeCommand(state, self(state), { type: 'PLACE', kind: 'barracks', point: { x: 770, y: 570 } }));
   finish(state);
   executeCommand(state, self(state), { type: 'PLACE', kind: 'barracks', point: { x: 770, y: 570 } });
@@ -120,20 +130,20 @@ test('Stronghold completed construction holds one bar and requires refilling aft
   const state = createStronghold();
   executeCommand(state, self(state), { type: 'ROLE', role: 'defenses' });
   executeCommand(state, self(state), { type: 'ACTION', action: 'wall' });
-  finish(state);
+  const readyWork = finish(state);
   const phraseId = self(state).phraseId;
   finish(state);
-  equal(self(state).work, 35.2);
+  equal(self(state).work, readyWork);
   equal(self(state).phraseId, phraseId);
   equal(state.resources, 50);
   executeCommand(state, self(state), { type: 'TYPE', phraseId: self(state).phraseId, text: '' });
   equal(self(state).typed, '');
   executeCommand(state, self(state), { type: 'PLACE', kind: 'wall', point: { x: 360, y: 540 } });
   equal(state.resources, 50);
-  equal(self(state).work, 3.2);
+  equal(self(state).work, Math.round((readyWork - 32) * 100) / 100);
   rejects(() => executeCommand(state, self(state), { type: 'PLACE', kind: 'wall', point: { x: 410, y: 540 } }));
-  finish(state);
+  const secondReadyWork = finish(state);
   executeCommand(state, self(state), { type: 'PLACE', kind: 'wall', point: { x: 410, y: 540 } });
-  equal(self(state).work, 6.4);
+  equal(self(state).work, Math.round((secondReadyWork - 32) * 100) / 100);
   equal(state.resources, 50);
 });

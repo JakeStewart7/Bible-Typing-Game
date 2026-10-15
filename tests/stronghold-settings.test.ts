@@ -8,6 +8,7 @@ import { equal, test } from './harness.ts';
 import { AppStorage } from '../src/persistence/storage.ts';
 import { DEFAULT_DEVELOPER_OPTIONS, readDeveloperOptions, writeDeveloperOptions } from '../src/stronghold/infrastructure/developer-options.ts';
 import { isMatchOptions } from '../src/stronghold/domain/options.ts';
+import { phraseWork } from '../src/stronghold/domain/technology.ts';
 
 function human(state: StrongholdState): Participant {
   const player = state.players.find(player => player.id === 'you');
@@ -17,8 +18,10 @@ function human(state: StrongholdState): Participant {
 function send(state: StrongholdState, command: StrongholdCommand): void {
   executeCommand(state, human(state), command);
 }
-function entry(state: StrongholdState, player = human(state)): void {
+function entry(state: StrongholdState, player = human(state)): number {
+  const points = phraseWork(player);
   executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+  return points;
 }
 function quietMatch(): StrongholdState {
   const state = createStronghold();
@@ -103,40 +106,39 @@ test('Stronghold starts with 50 supplies, Medium text and running computers, and
 test('Stronghold each task retains completed work across task changes and a vacant role', () => {
   const state = quietMatch();
   const player = human(state);
-  entry(state);
+  const suppliesWork = entry(state);
   const oldId = player.phraseId;
   send(state, { type: 'ACTION', action: 'worker' });
   equal(player.work, 0);
-  entry(state);
-  entry(state);
-  equal(player.work, 17.6);
+  let workerWork = Math.round((entry(state) + entry(state)) * 100) / 100;
+  equal(player.work, workerWork);
   send(state, { type: 'ACTION', action: 'resources' });
-  equal(player.work, 8.8);
+  equal(player.work, suppliesWork);
   equal(player.actionPhrases, 1);
   send(state, { type: 'ROLE', role: 'army' });
   equal(state.players.some(other => other.role === 'economy'), false);
   equal(player.work, 0);
-  entry(state);
-  equal(player.work, 8.8);
+  const armyWork = entry(state);
+  equal(player.work, armyWork);
   send(state, { type: 'ROLE', role: 'economy' });
   equal(player.action, 'resources');
-  equal(player.work, 8.8);
+  equal(player.work, suppliesWork);
   send(state, { type: 'ACTION', action: 'worker' });
-  equal(player.work, 17.6);
+  equal(player.work, workerWork);
   equal(player.actionPhrases, 2);
   equal(player.phraseId > oldId, true);
   send(state, { type: 'ROLE', role: 'defenses' });
   send(state, { type: 'ROLE', role: 'economy' });
   equal(player.action, 'worker');
-  equal(player.work, 17.6);
-  entry(state);
-  entry(state);
-  equal(player.work, 3.2);
+  equal(player.work, workerWork);
+  while (workerWork < 32) workerWork = Math.round((workerWork + entry(state)) * 100) / 100;
+  workerWork = Math.round((workerWork - 32) * 100) / 100;
+  equal(player.work, workerWork);
   equal(state.units.filter(unit => unit.kind === 'worker').length, 3);
   send(state, { type: 'ACTION', action: 'resources' });
-  equal(player.work, 8.8);
+  equal(player.work, suppliesWork);
   send(state, { type: 'ACTION', action: 'worker' });
-  equal(player.work, 3.2);
+  equal(player.work, workerWork);
 });
 
 test('Stronghold restored task work remains shared when teammates select tasks and join or leave roles', () => {
@@ -145,24 +147,24 @@ test('Stronghold restored task work remains shared when teammates select tasks a
   const teammate = state.players.find(player => player.id === 'bot-1');
   if (!teammate) throw new Error('Missing teammate.');
   executeCommand(state, teammate, { type: 'ROLE', role: 'economy' });
-  entry(state);
+  let suppliesWork = entry(state);
   executeCommand(state, teammate, { type: 'ACTION', action: 'worker' });
-  entry(state, teammate);
-  equal(you.work, 8.8);
+  let workerWork = entry(state, teammate);
+  equal(you.work, workerWork);
   send(state, { type: 'ACTION', action: 'resources' });
-  equal(teammate.work, 8.8);
+  equal(teammate.work, suppliesWork);
   equal(teammate.action, 'resources');
-  entry(state, teammate);
-  equal(you.work, 17.6);
+  suppliesWork = Math.round((suppliesWork + entry(state, teammate)) * 100) / 100;
+  equal(you.work, suppliesWork);
   send(state, { type: 'ROLE', role: 'army' });
   executeCommand(state, teammate, { type: 'ACTION', action: 'worker' });
-  entry(state, teammate);
+  workerWork = Math.round((workerWork + entry(state, teammate)) * 100) / 100;
   send(state, { type: 'ROLE', role: 'economy' });
-  equal(you.work, 17.6);
+  equal(you.work, workerWork);
   equal(you.phrase !== teammate.phrase, true);
   send(state, { type: 'ACTION', action: 'resources' });
-  equal(you.work, 17.6);
-  equal(teammate.work, 17.6);
+  equal(you.work, suppliesWork);
+  equal(teammate.work, suppliesWork);
 });
 
 test('Stronghold construction tiers keep independent bars and instant upgrades leave typing progress untouched', () => {
@@ -173,10 +175,11 @@ test('Stronghold construction tiers keep independent bars and instant upgrades l
   send(state, { type: 'ROLE', role: 'defenses' });
   send(state, { type: 'ACTION', action: 'tower', tier: 1 });
   for (let index = 0; index < 4; index++) entry(state);
-  equal(player.work, 26.4);
+  const tower1Work = player.work;
+  equal(tower1Work >= 25, true);
   send(state, { type: 'ACTION', action: 'tower', tier: 2 });
-  entry(state);
-  equal(player.work, 8.8);
+  const tower2Work = entry(state);
+  equal(player.work, tower2Work);
   const phraseId = player.phraseId;
   const phrase = player.phrase;
   send(state, { type: 'TYPE', phraseId, text: phrase.slice(0, 2) });
@@ -185,33 +188,32 @@ test('Stronghold construction tiers keep independent bars and instant upgrades l
   equal(state.resources, 935);
   equal(player.phraseId, phraseId);
   equal(player.typed, phrase.slice(0, 2));
-  equal(player.work, 8.8);
+  equal(player.work, tower2Work);
   equal(state.technology['tower-1'], 1);
   equal(state.technology['tower-2'], 1);
   equal(state.roleTasks.defenses.progress['upgrade:tower-1'], undefined);
   send(state, { type: 'ACTION', action: 'tower', tier: 1 });
-  equal(player.work, 26.4);
+  equal(player.work, tower1Work);
   send(state, { type: 'PLACE', kind: 'tower', point: { x: 300, y: 500 } });
-  equal(player.work, 1.4);
+  equal(player.work, Math.round((tower1Work - 25) * 100) / 100);
   equal(state.resources, 935);
   send(state, { type: 'ACTION', action: 'tower', tier: 2 });
-  equal(player.work, 8.8);
+  equal(player.work, tower2Work);
   send(state, { type: 'ACTION', action: 'upgrade', upgrade: 'tower-1' });
-  equal(player.work, 8.8);
+  equal(player.work, tower2Work);
   send(state, { type: 'ACTION', action: 'upgrade', upgrade: 'tower-2' });
-  equal(player.work, 8.8);
+  equal(player.work, tower2Work);
   equal(state.resources, 870);
   equal(state.technology['tower-2'], 2);
   send(state, { type: 'ROLE', role: 'production' });
   send(state, { type: 'ACTION', action: 'barracks', tier: 1 });
-  entry(state);
+  const barracks1Work = entry(state);
   send(state, { type: 'ACTION', action: 'barracks', tier: 3 });
-  entry(state);
-  entry(state);
+  const barracks3Work = Math.round((entry(state) + entry(state)) * 100) / 100;
   send(state, { type: 'ACTION', action: 'barracks', tier: 1 });
-  equal(player.work, 8.8);
+  equal(player.work, barracks1Work);
   send(state, { type: 'ACTION', action: 'barracks', tier: 3 });
-  equal(player.work, 17.6);
+  equal(player.work, barracks3Work);
 });
 
 test('Stronghold shared tier challenges preserve normal task banks and the chosen text length', () => {

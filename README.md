@@ -34,7 +34,11 @@ Matches start with **50 supplies** and **Medium** text. Choose **Short** (1-5
 characters, 1x), **Medium** (6-11, 1.1x), **Long** (12-24, 1.25x), or
 **Extra Long** (25-40, 1.5x) in the
 length scroller. Entries are normal words or word groups, including during world
-events and tier challenges. A fully correct entry earns its character count,
+events and tier challenges. The four separately exported, frozen constants in
+`src/stronghold/domain/word-pools.ts` provide hundreds of curated entries per
+length class, including single words and natural phrases. Players cycle through
+their class's pool while avoiding phrases currently displayed by teammates.
+A fully correct entry earns its character count,
 including spaces, times its length bonus; partial or incorrect text earns nothing.
 **Supplies, Gatherer, Barracks, Builder, Wall and Tower** use typing without
 spending supplies. Each typing tile has a thick, player-colored mini progress bar,

@@ -4,6 +4,7 @@ import { updateLogistics } from '../src/stronghold/domain/logistics.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { addBuilding, addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
 import { distance, UNIT_RULES } from '../src/stronghold/domain/rules.ts';
+import { phraseWork } from '../src/stronghold/domain/technology.ts';
 import { buildingMarkup, unitMarkup, unitMotionTransform } from '../src/stronghold/ui/battlefield.ts';
 import { equal, test } from './harness.ts';
 
@@ -311,25 +312,33 @@ test('Stronghold role members keep private text and share completed work and pla
   const partial = you.typed;
   const phrase = you.phrase;
   const oldId = you.phraseId;
+  let sharedWork = phraseWork(teammate);
   executeCommand(state, teammate, { type: 'TYPE', phraseId: teammate.phraseId, text: teammate.phrase });
   equal(state.resources, 50);
-  equal(you.work, 8.8);
+  equal(you.work, sharedWork);
   equal(you.typed, partial);
   equal(you.phrase, phrase);
   equal(you.phraseId, oldId);
   const teammatePhrase = teammate.phrase;
   const teammateId = teammate.phraseId;
   executeCommand(state, teammate, { type: 'TYPE', phraseId: teammateId, text: teammatePhrase.slice(0, 2) });
+  sharedWork = Math.round((sharedWork + phraseWork(you)) * 100) / 100;
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
   equal(state.resources, 50);
   equal(you.typed, '');
   equal(teammate.phrase, teammatePhrase);
   equal(teammate.phraseId, teammateId);
   equal(teammate.typed, teammatePhrase.slice(0, 2));
-  executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
-  executeCommand(state, teammate, { type: 'TYPE', phraseId: teammate.phraseId, text: teammate.phrase });
+  for (const player of [you, teammate]) {
+    sharedWork = Math.round((sharedWork + phraseWork(player)) * 100) / 100;
+    executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+  }
+  while (sharedWork < 32) {
+    sharedWork = Math.round((sharedWork + phraseWork(you)) * 100) / 100;
+    executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
+  }
   equal(state.resources, 68);
-  equal(you.work, 3.2);
+  equal(you.work, Math.round((sharedWork - 32) * 100) / 100);
   equal(you.phraseId > oldId, true);
   let rejected = false;
   try { executeCommand(state, you, { type: 'TYPE', phraseId: oldId, text: you.phrase }); }
@@ -340,21 +349,25 @@ test('Stronghold role members keep private text and share completed work and pla
   executeCommand(state, teammate, { type: 'ROLE', role: 'defenses' });
   executeCommand(state, you, { type: 'LENGTH', length: 'medium' });
   executeCommand(state, you, { type: 'ACTION', action: 'tower', tier: 2 });
+  let towerWork = phraseWork(you);
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
   equal(teammate.actionPhrases, 1);
-  executeCommand(state, teammate, { type: 'TYPE', phraseId: teammate.phraseId, text: teammate.phrase });
-  executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
-  executeCommand(state, teammate, { type: 'TYPE', phraseId: teammate.phraseId, text: teammate.phrase });
-  executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
-  executeCommand(state, teammate, { type: 'TYPE', phraseId: teammate.phraseId, text: teammate.phrase });
-  equal(you.work, 52.8);
+  for (const player of [teammate, you, teammate, you, teammate]) {
+    if (towerWork < 50) towerWork = Math.round((towerWork + phraseWork(player)) * 100) / 100;
+    executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+  }
+  while (towerWork < 50) {
+    towerWork = Math.round((towerWork + phraseWork(you)) * 100) / 100;
+    executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
+  }
+  equal(you.work, towerWork);
   equal(you.typed, '');
   const constructionPhrase = you.phrase;
   const constructionId = you.phraseId;
   executeCommand(state, you, { type: 'TYPE', phraseId: constructionId, text: constructionPhrase.slice(0, 3) });
   executeCommand(state, teammate, { type: 'PLACE', kind: 'tower', point: { x: 300, y: 500 } });
   equal(state.resources, 500);
-  equal(you.work, 2.8);
+  equal(you.work, Math.round((towerWork - 50) * 100) / 100);
   equal(you.actionPhrases, 0);
   equal(you.typed, constructionPhrase.slice(0, 3));
   equal(you.phraseId, constructionId);

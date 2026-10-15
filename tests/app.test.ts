@@ -15,6 +15,7 @@ import './stronghold-settings.test.ts';
 import './stronghold-controls.test.ts';
 import './stronghold-environment.test.ts';
 import './stronghold-music.test.ts';
+import './stronghold-word-pools.test.ts';
 import { runTests } from './harness.ts';
 
 await runTests();
