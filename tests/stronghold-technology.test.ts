@@ -5,7 +5,6 @@ import { taskPhrases, unitUpgrade, upgradeLimit } from '../src/stronghold/domain
 import type { Participant, StrongholdState } from '../src/stronghold/domain/types.ts';
 import { equal, test } from './harness.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
-import { PHRASE_WORK } from '../src/stronghold/domain/rules.ts';
 
 function self(state: StrongholdState): Participant {
   const player = state.players.find(candidate => candidate.id === 'you');
@@ -14,7 +13,7 @@ function self(state: StrongholdState): Participant {
 }
 function finish(state: StrongholdState): void {
   const player = self(state);
-  for (let entry = 0; entry < Math.ceil(8 / PHRASE_WORK[player.length]); entry++) executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+  for (let entry = 0; entry < Math.ceil(32 / player.phrase.length); entry++) executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
 }
 function rejects(run: () => void): void {
   try { run(); } catch (error) { equal(error instanceof Error, true); return; }
@@ -33,7 +32,7 @@ test('Stronghold tier-specific barracks require their own typing work, cost and 
   equal(state.resources, 460);
   executeCommand(state, self(state), { type: 'ACTION', action: 'barracks', tier: 3 });
   finish(state); finish(state);
-  equal(self(state).work, 16);
+  equal(self(state).work, 64);
   rejects(() => executeCommand(state, self(state), { type: 'PLACE', kind: 'barracks', point: { x: 770, y: 570 } }));
   finish(state);
   executeCommand(state, self(state), { type: 'PLACE', kind: 'barracks', point: { x: 770, y: 570 } });
@@ -54,7 +53,7 @@ test('Stronghold towers retain selected tiers and advanced units require more ph
   executeCommand(state, self(state), { type: 'ROLE', role: 'defenses' });
   executeCommand(state, self(state), { type: 'ACTION', action: 'tower', tier: 2 });
   finish(state);
-  equal(self(state).work, 8);
+  equal(self(state).work, 32);
   finish(state);
   executeCommand(state, self(state), { type: 'PLACE', kind: 'tower', point: { x: 360, y: 425 } });
   equal(state.buildings.find(building => building.kind === 'tower' && !building.enemy)?.tier, 2);
@@ -120,19 +119,22 @@ test('Stronghold sketch controls do not collide with Arcade upgrade selectors', 
   equal(markup.includes('id="stronghold-role-you"'), true);
 });
 
-test('Stronghold completed construction keeps typing available without duplicate work or costs', () => {
+test('Stronghold completed construction banks additional bars and consumes just one per free wall', () => {
   const state = createStronghold();
   executeCommand(state, self(state), { type: 'ROLE', role: 'defenses' });
   executeCommand(state, self(state), { type: 'ACTION', action: 'wall' });
   finish(state);
   const phraseId = self(state).phraseId;
   finish(state);
-  equal(self(state).work, 8);
+  equal(self(state).work, 64);
   equal(self(state).phraseId > phraseId, true);
   equal(state.resources, 50);
   executeCommand(state, self(state), { type: 'TYPE', phraseId: self(state).phraseId, text: '' });
   equal(self(state).typed, '');
   executeCommand(state, self(state), { type: 'PLACE', kind: 'wall', point: { x: 360, y: 540 } });
-  equal(state.resources, 35);
+  equal(state.resources, 50);
+  equal(self(state).work, 32);
+  executeCommand(state, self(state), { type: 'PLACE', kind: 'wall', point: { x: 410, y: 540 } });
   equal(self(state).work, 0);
+  equal(state.resources, 50);
 });

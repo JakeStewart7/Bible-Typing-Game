@@ -33,7 +33,7 @@ function playerCard(id: string, index: number): string {
       <header><h3>Player ${index + 1}</h3><label class="sr-only" for="stronghold-role-${id}">Player ${index + 1} role</label>
       <select id="stronghold-role-${id}" class="stronghold-role-select" data-player="${id}">${ROLES.map(role => `<option value="${role}">${ROLE_LABELS[role]}</option>`).join('')}</select></header>
       <small id="stronghold-name-${id}" class="sr-only"></small>
-      <div class="stronghold-player-progress" role="progressbar" aria-label="Player ${index + 1} completed task work" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="stronghold-work-track"><div id="stronghold-progress-${id}"></div></div></div>
+      <div class="stronghold-player-progress" role="progressbar" aria-label="Player ${index + 1} completed task work" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="stronghold-work-track"><div id="stronghold-progress-${id}"></div></div><span id="stronghold-ready-count-${id}" class="stronghold-ready-count">0 ready</span></div>
       <div class="stronghold-player-actions" id="stronghold-player-actions-${id}">${ROLES.map(role => `<div class="stronghold-actions" data-role="${role}">${roleActions(role)}</div>`).join('')}</div>
       <div id="stronghold-typed-slot-${id}" class="stronghold-typed-slot"><p id="stronghold-typed-${id}" class="stronghold-peer-typed"></p></div>
     </div>
@@ -70,10 +70,11 @@ export function strongholdWorkspaceMarkup(): string {
       </aside>
       <details class="stronghold-guide"><summary>Help</summary>
         <div class="stronghold-legend"><span>Dark red: enemies</span><span>□ Warrior</span><span>◇ Archer</span><span>▲ Catapult</span><span>△ Builder</span><span>○ Gatherer</span></div>
-        <p>Each completed entry adds work to your shared role bar. Fill it for supplies, free gatherers, units, upgrades or construction. Short uses tiny words, Medium long words, Long short phrases, and Extra Long full sentences; longer entries add more work.</p>
+        <p>Each correctly completed character, including spaces, earns one point. A basic bar takes 32 points; higher-tier tasks take 64 or 96. Short is 3-5 characters, Medium 6-8, Long 8-15, and Extra Long 15-25. All lengths use normal words or word groups.</p>
         <p>Relays need no typing: select Relay and click the map to place its shadow. Other buildings need a full work bar first. Escape cancels placement. Builders construct and repair automatically.</p>
         <p>Gatherers strike resource nodes and carry yellow supply chunks to the nearest relay or castle. Relays forward supplies through links within 155 map units. Purple nodes yield twice as much. Broken connections stop relay deliveries.</p>
-        <p>In Unit Control, drag or click to select troops, then click to move. Shift adds troops. Join a role with Player 1's dropdown; everyone on that role shares the selected task and completed work.</p>
+        <p>In Unit Control, drag or click to select any friendly unit, then click to move. Shift adds units. Gatherers and builders resume nearest work after two idle seconds at their destination. Builders and walls cost no supplies, only typing work.</p>
+        <p>Keep typing to bank more construction bars. The ready counter shows completed bars, while three red shades loop without losing banked work. Placing a building spends one bar and preserves the rest. Other actions execute automatically when eligible.</p>
         <p>The Army teammate earns supplies at Tier 0, builds a barracks after Tier 1 unlocks, then trains troops. Unit Control can type for supplies while issuing orders.</p>
         <p>Each task keeps its completed work when you switch tasks or roles. Building tiers and upgrade types keep separate progress. Dev options sets the defaults for new matches.</p>
         <p>Use Left/Down for shorter text, Right/Up for longer text, or click the faded length options. Shift+arrows still selects typed text. Alt+number chooses the matching option in your current role; Alt+0 is the tenth option.</p>
@@ -109,7 +110,7 @@ export function strongholdWorkspaceMarkup(): string {
       <div class="stronghold-squad">${PLAYER_IDS.map(playerCard).join('')}</div>
       <div id="stronghold-private-slot">
         <section id="stronghold-private" class="stronghold-private" aria-label="Your private typing area">
-          <div class="stronghold-length-panel"><span id="stronghold-length-label">Length &#8593;/&#8595;</span>
+          <div class="stronghold-length-panel"><span id="stronghold-length-label" class="sr-only">Text length</span>
             <div id="stronghold-length" class="stronghold-length-wheel" role="listbox" aria-labelledby="stronghold-length-label" aria-activedescendant="stronghold-length-medium" tabindex="0">
               ${PHRASE_LENGTHS.map(length => `<button id="stronghold-length-${length}" type="button" role="option" data-length="${length}" value="${length}" aria-selected="${length === 'medium'}" tabindex="-1">${LENGTH_LABELS[length]}</button>`).join('')}
             </div>
@@ -128,7 +129,7 @@ export function strongholdWorkspaceMarkup(): string {
         <button id="stronghold-select-army" type="button" data-shortcut="2" aria-keyshortcuts="Alt+2"><kbd class="stronghold-hotkey">Alt+2</kbd>Select all troops</button><button id="stronghold-defend" type="button" data-shortcut="3" aria-keyshortcuts="Alt+3"><kbd class="stronghold-hotkey">Alt+3</kbd>Defend</button><button id="stronghold-assault" type="button" data-shortcut="4" aria-keyshortcuts="Alt+4"><kbd class="stronghold-hotkey">Alt+4</kbd>Assault base</button>
         <button id="stronghold-rally" type="button" data-shortcut="5" aria-keyshortcuts="Alt+5"><kbd class="stronghold-hotkey">Alt+5</kbd>Set rally on map</button><p id="stronghold-selection"></p>
       </section>
-      <div id="stronghold-placement" class="stronghold-placement is-hidden"><span>Click the map to place the shadow.</span><button id="stronghold-cancel-placement" type="button">Cancel</button></div>
+      <div id="stronghold-placement" class="stronghold-placement is-hidden"><span>Click the map to place.</span><button id="stronghold-cancel-placement" type="button">Cancel</button></div>
     </div>
     <dialog id="stronghold-tier-dialog" class="stronghold-tier-dialog">
       <div id="stronghold-tier-typing-slot"></div>

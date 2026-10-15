@@ -1,6 +1,6 @@
 import { assignPhrase, copyRoleTask, synchronizeRoleTask } from './phrases.ts';
 import { addBuilding, addUnit } from './state.ts';
-import { ACTION_LABELS, BASE, BUILDING_CAPS, distance, MIN_TIER, PHRASE_WORK, ROLE_ACTIONS, ROLE_LABELS, TIER_MAX, TIER_QUOTA, UNIT_CAPS, validPoint } from './rules.ts';
+import { ACTION_LABELS, BASE, BUILDING_CAPS, distance, MIN_TIER, ROLE_ACTIONS, ROLE_LABELS, TIER_MAX, TIER_QUOTA, UNIT_CAPS, validPoint } from './rules.ts';
 import { applyUpgrade, taskCost, taskWork, upgradeLimit, UPGRADE_OPTIONS } from './technology.ts';
 import { ENTITY_LABELS, playerEvent, recordEvent } from './events.ts';
 import { PHRASE_LENGTHS, type Action, type BuildingKind, type Participant, type Point, type StrongholdCommand, type StrongholdState } from './types.ts';
@@ -55,11 +55,8 @@ export function completePhrase(state: StrongholdState, player: Participant): voi
     }
   } else {
     const action = player.action === 'relay' ? 'resources' : player.action;
-    const problem = actionProblem(state, player, action);
-    if (problem) { assignPhrase(state, player); state.message = problem; return; }
-    if (player.work >= taskWork(player)) { assignPhrase(state, player); return; }
     player.actionPhrases++;
-    player.work = Math.min(taskWork(player), player.work + PHRASE_WORK[player.length]);
+    player.work += player.phrase.length;
     if (player.work < taskWork(player)) {
       assignPhrase(state, player);
       return;
@@ -69,22 +66,26 @@ export function completePhrase(state: StrongholdState, player: Participant): voi
       assignPhrase(state, player);
       return;
     }
-    state.resources -= taskCost({ ...player, action });
-    state.message = '';
-    if (action === 'resources') {
-      state.resources += 18 + state.upgrades.economy * 6;
-      playerEvent(state, player, 'gathered Supplies');
-    } else if (action === 'upgrade') {
-      applyUpgrade(state, player);
-      playerEvent(state, player, `upgraded ${UPGRADE_OPTIONS[player.upgradeTarget].label}`);
-    } else if (action === 'worker' || action === 'builder'
-      || action === 'warrior' || action === 'archer' || action === 'catapult') {
-      const unit = addUnit(state, action, { x: BASE.x + (state.nextId % 5 - 2) * 16, y: BASE.y - 40 });
-      if (player.role === 'production') unit.destination = { ...state.rally };
-      playerEvent(state, player, `created ${ENTITY_LABELS[action]}`);
+    while (player.work >= taskWork(player)) {
+      const problem = actionProblem(state, player, action);
+      if (problem) { state.message = problem; break; }
+      player.work -= taskWork(player);
+      player.actionPhrases = 0;
+      state.resources -= taskCost({ ...player, action });
+      state.message = '';
+      if (action === 'resources') {
+        state.resources += 18 + state.upgrades.economy * 6;
+        playerEvent(state, player, 'gathered Supplies');
+      } else if (action === 'upgrade') {
+        applyUpgrade(state, player);
+        playerEvent(state, player, `upgraded ${UPGRADE_OPTIONS[player.upgradeTarget].label}`);
+      } else if (action === 'worker' || action === 'builder'
+        || action === 'warrior' || action === 'archer' || action === 'catapult') {
+        const unit = addUnit(state, action, { x: BASE.x + (state.nextId % 5 - 2) * 16, y: BASE.y - 40 });
+        if (player.role === 'production') unit.destination = { ...state.rally };
+        playerEvent(state, player, `created ${ENTITY_LABELS[action]}`);
+      }
     }
-    player.actionPhrases = 0;
-    player.work = 0;
   }
   assignPhrase(state, player);
 }
@@ -173,7 +174,7 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     playerEvent(state, player, `placed ${ENTITY_LABELS[command.kind]}`);
     if (command.kind !== 'relay') {
       player.actionPhrases = 0;
-      player.work = 0;
+      player.work -= taskWork(player);
       assignPhrase(state, player);
     }
     return;

@@ -236,7 +236,7 @@ test('Stronghold role members share typing, task phases and placement without du
   const oldId = you.phraseId;
   executeCommand(state, teammate, { type: 'TYPE', phraseId: teammate.phraseId, text: teammate.phrase });
   equal(state.resources, 50);
-  equal(you.work, 4);
+  equal(you.work, 16);
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
   equal(state.resources, 68);
   equal(you.typed, '');
@@ -256,7 +256,7 @@ test('Stronghold role members share typing, task phases and placement without du
   executeCommand(state, teammate, { type: 'TYPE', phraseId: teammate.phraseId, text: teammate.phrase });
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
   executeCommand(state, teammate, { type: 'TYPE', phraseId: teammate.phraseId, text: teammate.phrase });
-  equal(you.work, 16);
+  equal(you.work, 64);
   equal(you.typed, '');
   executeCommand(state, teammate, { type: 'PLACE', kind: 'tower', point: { x: 300, y: 500 } });
   equal(state.resources, 450);

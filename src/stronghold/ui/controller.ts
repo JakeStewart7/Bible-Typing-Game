@@ -72,7 +72,8 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     elements.mapControls.selection(selecting ? drag?.start ?? null : null, selecting ? drag?.end ?? null : null);
     const feedback = errorMessage || (paused ? 'Paused' : rallyPlacement ? 'Click the map to set the rally point. Escape cancels.' : snapshot.message);
     setText(elements.feedback, feedback);
-    elements.feedback.classList.toggle('is-hidden', !feedback);
+    elements.feedback.classList.toggle('is-hidden', !feedback || Boolean(placing() && !errorMessage));
+    if (errorMessage) elements.placement.classList.add('is-hidden');
     const layout = `${snapshot.phase}/${running()}/${elements.privateTyping.parentElement?.id}`;
     if (typingDirty || layout !== typingLayout) {
       renderTypingExperience(typing, { text: elements.phrase, typedBar: elements.typedBar, progressFill: elements.progressFill },

@@ -10,6 +10,7 @@ import { renderTierChallenge } from './tier-view.ts';
 import { createEventLog } from './event-log.ts';
 import { createMapControls, readyBuilding } from './map-controls.ts';
 import { applyPlayerTheme, playerCursor } from './player-theme.ts';
+import { bankedWork } from './work-progress.ts';
 
 export function strongholdElements() {
   const map = document.getElementById('stronghold-map');
@@ -31,6 +32,7 @@ export function strongholdElements() {
     return { id, card, groups, roleSelect: requireElement(`stronghold-role-${id}`, HTMLSelectElement),
       name: requireElement(`stronghold-name-${id}`, HTMLElement),
       typed: requireElement(`stronghold-typed-${id}`, HTMLElement), progress: requireElement(`stronghold-progress-${id}`, HTMLElement),
+      readyCount: requireElement(`stronghold-ready-count-${id}`, HTMLElement),
       actions: requireElement(`stronghold-player-actions-${id}`, HTMLElement) };
   });
   return {
@@ -131,11 +133,19 @@ export function renderStronghold(
     setText(entry.name, `${own ? 'You' : `${player.name}, simulated teammate`}${player.ready && !challenge ? ', ready' : ''}`);
     setText(entry.typed, player.typed);
     entry.typed.classList.remove('is-hidden');
-    const percent = Math.min(100, challenge ? player.contribution / TIER_QUOTA * 100 : player.work / taskWork(player) * 100);
+    const bank = bankedWork(player.work, taskWork(player));
+    const percent = challenge ? player.contribution / TIER_QUOTA * 100 : bank.percent;
     const width = `${percent}%`;
     if (entry.progress.style.width !== width) entry.progress.style.width = width;
     const progressBar = entry.progress.closest('[role="progressbar"]');
-    if (progressBar) setAttribute(progressBar, 'aria-valuenow', String(Math.round(percent)));
+    if (progressBar) {
+      setAttribute(progressBar, 'aria-valuenow', String(Math.round(percent)));
+      setAttribute(progressBar, 'aria-valuetext', challenge ? `${player.contribution} of ${TIER_QUOTA} tier entries` : bank.description);
+    }
+    const track = entry.progress.parentElement;
+    if (track) track.style.backgroundColor = challenge ? '#fff' : bank.base;
+    entry.progress.style.backgroundColor = challenge ? '#ffa3b0' : bank.fill;
+    setText(entry.readyCount, challenge ? `${player.contribution}/${TIER_QUOTA}` : bank.label);
     if (entry.roleSelect.value !== player.role) entry.roleSelect.value = player.role;
     const roleDisabled = !own || challenge || terminal || !running;
     if (entry.roleSelect.disabled !== roleDisabled) entry.roleSelect.disabled = roleDisabled;

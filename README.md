@@ -23,16 +23,23 @@ After reaching a manual destination, gatherers and builders wait two seconds,
 then automatically resume the nearest resource, construction or repair job.
 Builders rock and show small pulsing sparks while building or repairing.
 
-Matches start with **50 supplies** and **Medium** text. Choose **Short** (tiny words), **Medium** (long words), **Long** (short phrases),
-or **Extra Long** (full sentences) in the Length selector. A fully correct entry
-adds 1, 2, 3 or 4 work respectively; partial or incorrect text never fills the
-player bar. A basic task needs 8 work, with higher-tier construction/training
-needing 16 or 24. Each role keeps independent completed work for every task,
+Matches start with **50 supplies** and **Medium** text. Choose **Short** (3-5
+characters), **Medium** (6-8), **Long** (8-15), or **Extra Long** (15-25) in the
+length scroller. Entries are normal words or word groups, including during world
+events and tier challenges. A fully correct entry earns exactly its character
+count, including spaces; partial or incorrect text earns nothing.
+A basic task needs **32 points**, with higher-tier construction/training
+needing 64 or 96. Each role keeps independent completed work for every task,
 building tier and upgrade type, even when that role becomes unoccupied.
 Switching tasks, roles or lengths and completing tier challenges preserves this
-work; only completing or placing that specific task resets its bar.
+work. Completed construction bars stack without a limit; the **ready** counter
+shows how many can be placed, and the bar layers cycle through three increasingly
+dark light-red shades without resetting the count. Placement spends just one
+bar and keeps all remaining points. Other eligible tasks execute automatically;
+blocked tasks retain their points until they can execute on a later completion.
 Filling the bar recruits a unit, earns supplies,
-upgrades technology, or makes construction ready. Gatherers are **free** to create.
+upgrades technology, or makes construction ready. Gatherers, builders and walls
+are **free** in supplies; each still needs its typing work.
 Costs appear in separate player-colored badges. Selections, buttons, the input's
 **Type here** prompt and basic arrow/text cursors share each player's dark and
 light palette. Your typed text appears both in the central input and in your
@@ -55,8 +62,11 @@ start at 78 seconds and gradually shorten to no less than 45 seconds.
 
 The slim, stretched private typing strip leaves more height for the battlefield.
 Its input stays 420px wide (or fits the available space on smaller screens),
-centered beneath the displayed text. The top controls have a blue-gray backdrop,
-and the bottom player deck has a continuous full-width gray background.
+centered beneath the displayed text, with the unlabeled length scroller directly
+to its left. The top controls have a blue-gray backdrop; feedback appears at their
+bottom left. The typing module and player deck have a continuous full-width gray
+background. The deck fits the viewport height, with scrolling inside action panels
+and the squad list on narrow screens rather than clipping the bottom.
 The map starts at **120% zoom**, focused toward the home base. Use **+/-**,
 **Fit map**, and **Alt-drag or middle-drag** to navigate without issuing orders.
 Fit shows the entire map; zoom and pan do not change world coordinates or speed.
@@ -113,7 +123,7 @@ three private phrases. Tier 1 unlocks warriors, barracks and towers, tier 2 adds
 archers, and tier 3 adds catapults. Barracks automatically train units at their
 selected construction tier and consume shared supplies. Separate tiles let you
 build tier 1, 2 or 3 barracks and towers. Higher-tier construction and manual
-training require 8, 16 or 24 completed-entry work respectively.
+training require 32, 64 or 96 character points respectively.
 The simulated Army teammate earns supplies at Tier 0 instead of waiting idle
 for locked training; after Tier 1 unlocks it builds a barracks and trains troops.
 **Stop computers** pauses simulated teammates' typing, readiness, construction
@@ -129,7 +139,7 @@ once-per-tier limit beginning at its unlock tier. Economy gets two upgrades at
 tier 0 and one additional upgrade per subsequent tier. World events begin at
 **1:00, 3:00, 5:00**, and subsequent odd minutes of active battle time, each
 lasting **35 seconds**. They rotate through left-hand, vowel, number, symbol
-and code drills, with normal scripture typing between events, without discarding
+and code-themed events, keeping normal-word typing in every event without discarding
 a phrase already in progress at either transition. Enemy waves add ranged and siege formations as their
 base develops. Select troops with
 click/Shift-click, drag a selection rectangle (Shift adds to the selection), or

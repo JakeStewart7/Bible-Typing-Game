@@ -88,10 +88,10 @@ test('Stronghold starts with 50 supplies, Medium text and running computers, and
   if (!player) throw new Error('Missing player.');
   engine.send('you', { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
   const snapshot = engine.snapshot('you');
-  equal(snapshot.roleTasks.economy.progress.resources?.work, 2);
+  equal(snapshot.roleTasks.economy.progress.resources?.work, 8);
   if (!snapshot.roleTasks.economy.progress.resources) throw new Error('Missing saved work.');
   snapshot.roleTasks.economy.progress.resources.work = 500;
-  equal(engine.snapshot('you').roleTasks.economy.progress.resources?.work, 2);
+  equal(engine.snapshot('you').roleTasks.economy.progress.resources?.work, 8);
   equal(JSON.stringify(snapshot.roleTasks).includes('phrase'), false);
   engine.send('you', { type: 'COMPUTERS', paused: true });
   engine.restart();
@@ -110,32 +110,32 @@ test('Stronghold each task retains completed work across task changes and a vaca
   equal(player.work, 0);
   entry(state);
   entry(state);
-  equal(player.work, 4);
+  equal(player.work, 16);
   send(state, { type: 'ACTION', action: 'resources' });
-  equal(player.work, 2);
+  equal(player.work, 8);
   equal(player.actionPhrases, 1);
   send(state, { type: 'ROLE', role: 'army' });
   equal(state.players.some(other => other.role === 'economy'), false);
   equal(player.work, 0);
   entry(state);
-  equal(player.work, 2);
+  equal(player.work, 8);
   send(state, { type: 'ROLE', role: 'economy' });
   equal(player.action, 'resources');
-  equal(player.work, 2);
+  equal(player.work, 8);
   send(state, { type: 'ACTION', action: 'worker' });
-  equal(player.work, 4);
+  equal(player.work, 16);
   equal(player.actionPhrases, 2);
   equal(player.phraseId > oldId, true);
   send(state, { type: 'ROLE', role: 'defenses' });
   send(state, { type: 'ROLE', role: 'economy' });
   equal(player.action, 'worker');
-  equal(player.work, 4);
+  equal(player.work, 16);
   entry(state);
   entry(state);
   equal(player.work, 0);
   equal(state.units.filter(unit => unit.kind === 'worker').length, 3);
   send(state, { type: 'ACTION', action: 'resources' });
-  equal(player.work, 2);
+  equal(player.work, 8);
   send(state, { type: 'ACTION', action: 'worker' });
   equal(player.work, 0);
 });
@@ -149,21 +149,21 @@ test('Stronghold restored task work remains shared when teammates select tasks a
   entry(state);
   executeCommand(state, teammate, { type: 'ACTION', action: 'worker' });
   entry(state, teammate);
-  equal(you.work, 2);
+  equal(you.work, 8);
   send(state, { type: 'ACTION', action: 'resources' });
-  equal(teammate.work, 2);
+  equal(teammate.work, 8);
   equal(teammate.action, 'resources');
   entry(state, teammate);
-  equal(you.work, 4);
+  equal(you.work, 16);
   send(state, { type: 'ROLE', role: 'army' });
   executeCommand(state, teammate, { type: 'ACTION', action: 'worker' });
   entry(state, teammate);
   send(state, { type: 'ROLE', role: 'economy' });
-  equal(you.work, 4);
+  equal(you.work, 16);
   equal(you.phrase, teammate.phrase);
   send(state, { type: 'ACTION', action: 'resources' });
-  equal(you.work, 4);
-  equal(teammate.work, 4);
+  equal(you.work, 16);
+  equal(teammate.work, 16);
 });
 
 test('Stronghold construction tiers and individual upgrade targets have independent saved progress', () => {
@@ -174,31 +174,31 @@ test('Stronghold construction tiers and individual upgrade targets have independ
   send(state, { type: 'ROLE', role: 'defenses' });
   send(state, { type: 'ACTION', action: 'tower', tier: 1 });
   for (let index = 0; index < 4; index++) entry(state);
-  equal(player.work, 8);
+  equal(player.work, 32);
   send(state, { type: 'ACTION', action: 'tower', tier: 2 });
   entry(state);
-  equal(player.work, 2);
+  equal(player.work, 8);
   send(state, { type: 'ACTION', action: 'upgrade', upgrade: 'tower-1' });
   entry(state);
   send(state, { type: 'ACTION', action: 'upgrade', upgrade: 'tower-2' });
   entry(state);
   entry(state);
   send(state, { type: 'ACTION', action: 'tower', tier: 1 });
-  equal(player.work, 8);
+  equal(player.work, 32);
   send(state, { type: 'PLACE', kind: 'tower', point: { x: 300, y: 500 } });
   equal(player.work, 0);
   send(state, { type: 'ACTION', action: 'tower', tier: 2 });
-  equal(player.work, 2);
+  equal(player.work, 8);
   send(state, { type: 'ACTION', action: 'upgrade', upgrade: 'tower-1' });
-  equal(player.work, 2);
+  equal(player.work, 8);
   send(state, { type: 'ACTION', action: 'upgrade', upgrade: 'tower-2' });
-  equal(player.work, 4);
+  equal(player.work, 16);
   entry(state);
   entry(state);
   equal(state.technology['tower-2'], 1);
   equal(player.work, 0);
   send(state, { type: 'ACTION', action: 'upgrade', upgrade: 'tower-1' });
-  equal(player.work, 2);
+  equal(player.work, 8);
   send(state, { type: 'ROLE', role: 'production' });
   send(state, { type: 'ACTION', action: 'barracks', tier: 1 });
   entry(state);
@@ -206,9 +206,9 @@ test('Stronghold construction tiers and individual upgrade targets have independ
   entry(state);
   entry(state);
   send(state, { type: 'ACTION', action: 'barracks', tier: 1 });
-  equal(player.work, 2);
+  equal(player.work, 8);
   send(state, { type: 'ACTION', action: 'barracks', tier: 3 });
-  equal(player.work, 4);
+  equal(player.work, 16);
 });
 
 test('Stronghold shared tier challenges preserve normal task banks and the chosen text length', () => {
@@ -225,10 +225,10 @@ test('Stronghold shared tier challenges preserve normal task banks and the chose
   equal(state.phase, 'playing');
   equal(state.tier, 1);
   equal(player.action, 'worker');
-  equal(player.work, 4);
+  equal(player.work, 16);
   equal(player.length, 'long');
   send(state, { type: 'ACTION', action: 'resources' });
-  equal(player.work, 2);
+  equal(player.work, 8);
   equal(player.length, 'long');
 });
 
@@ -255,7 +255,7 @@ test('Stronghold stopping computers freezes their decisions and barracks, but no
   equal(state.elapsed, time + .25);
   equal(state.events.at(-1)?.playerId, 'you');
   entry(state);
-  equal(human(state).work, 2);
+  equal(human(state).work, 8);
   send(state, { type: 'COMPUTERS', paused: false });
   advanceStronghold(state, .1);
   equal(computerBarracks.cooldown < cooldown, true);
@@ -317,7 +317,7 @@ test('Stronghold world events start exactly at odd minutes and end after 35 seco
   equal(frames.eventIn, 35);
 });
 
-test('Stronghold event end preserves in-progress typing and switches subsequent entries back to scripture', () => {
+test('Stronghold event end preserves in-progress typing and keeps subsequent entries as normal words', () => {
   const state = quietMatch();
   state.elapsed = 59.999;
   advanceStronghold(state, .001);
@@ -332,6 +332,6 @@ test('Stronghold event end preserves in-progress typing and switches subsequent 
   equal(player.typed, phrase.slice(0, 2));
   equal(state.message, '');
   entry(state);
-  equal(player.work, 2);
-  equal(['faithfulness', 'steadfastness', 'righteousness', 'understanding'].includes(player.phrase), true);
+  equal(player.work, 8);
+  equal(/^[a-z]+(?: [a-z]+)*$/.test(player.phrase), true);
 });

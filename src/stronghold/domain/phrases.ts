@@ -1,20 +1,12 @@
 import type { Participant, PhraseLength, StrongholdState } from './types.ts';
 import { saveRoleTask } from './tasks.ts';
 
-const SCRIPTURE: Record<PhraseLength, readonly string[]> = {
-  short: ['God', 'love', 'hope', 'pray', 'joy', 'walk'],
-  medium: ['faithfulness', 'steadfastness', 'righteousness', 'understanding'],
-  long: ['Walk by faith.', 'Love one another.', 'Stand in hope.', 'Rejoice in truth.'],
-  'extra-long': ['Be still and know that I am God.', 'Let all things be done with love.',
-    'Trust in the Lord with all your heart.', 'Be strong and courageous in all you do.']
+const WORDS: Record<PhraseLength, readonly string[]> = {
+  short: ['tree', 'bird', 'hope', 'path', 'warm', 'kind'],
+  medium: ['sunshine', 'kindness', 'mountain', 'together', 'we stand', 'a garden'],
+  long: ['gentle river', 'quiet meadow', 'silver cloud', 'little robin', 'appreciation'],
+  'extra-long': ['beautiful garden', 'morning sunlight', 'peaceful village', 'distant mountain', 'misunderstanding']
 };
-const DRILLS = {
-  'left-hand': ['We are steadfast.', 'We rest after great feats.', 'Steward a great reward.'],
-  vowels: ['aeiou aeiou', 'eaio uoae ieau', 'aeiouAEIOU'],
-  numbers: ['12 24 48 96', '144 233 377 610', '1024 2048 4096'],
-  symbols: ['[] {} () <>', '!@# $%& *+-', '=> :: && ||'],
-  code: ['const faith = true;', 'if (hope) { stand(); }', 'guard.keep("watch");']
-} as const;
 
 export function copyRoleTask(source: Participant, target: Participant, newPhrase: boolean): void {
   target.action = source.action;
@@ -40,12 +32,7 @@ export function assignPhrase(state: StrongholdState, player: Participant): void 
   player.phraseId++;
   player.typed = '';
   player.typingCredit = 0;
-  const phrases = state.phase === 'tier-up' || state.event === 'peace'
-    ? SCRIPTURE[player.length]
-    : DRILLS[state.event];
-  const phrase = phrases[(player.phraseId + state.players.indexOf(player)) % phrases.length] ?? '';
-  player.phrase = state.phase === 'tier-up' || state.event === 'peace' || player.length === 'extra-long' ? phrase
-    : player.length === 'short' ? phrase.split(' ')[0]?.slice(0, 4) ?? phrase
-    : player.length === 'medium' ? phrase.replace(/ /g, '') : phrase;
+  const phrases = WORDS[player.length];
+  player.phrase = phrases[(player.phraseId + state.players.indexOf(player)) % phrases.length] ?? '';
   synchronizeRoleTask(state, player, true);
 }

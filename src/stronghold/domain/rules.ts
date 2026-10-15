@@ -17,7 +17,7 @@ export const ACTION_LABELS: Record<Action, string> = {
 };
 export const COSTS: Record<Action, number> = {
   resources: 0, worker: 0, relay: 15, barracks: 40, warrior: 10,
-  archer: 20, catapult: 35, builder: 25, tower: 25, wall: 15, upgrade: 60
+  archer: 20,   catapult: 35, builder: 0, tower: 25, wall: 0, upgrade: 60
 };
 export const MIN_TIER: Record<Action, number> = {
   resources: 0, worker: 0, relay: 0, barracks: 1, warrior: 1, archer: 2,
@@ -38,7 +38,9 @@ export const UNIT_RULES: Record<UnitKind, { hp: number; speed: number; damage: n
   invader: { hp: 60, speed: 11.4, damage: 8, range: 25 }
 };
 export const UNIT_HEALTH_MULTIPLIER = 2;
-export const PHRASE_WORK: Record<PhraseLength, number> = { short: 1, medium: 2, long: 3, 'extra-long': 4 };
+export const TEXT_LENGTH_RANGES: Record<PhraseLength, readonly [number, number]> = {
+  short: [3, 5], medium: [6, 8], long: [8, 15], 'extra-long': [15, 25]
+};
 export const LENGTH_LABELS: Record<PhraseLength, string> = { short: 'Short', medium: 'Medium', long: 'Long', 'extra-long': 'Extra Long' };
 export const EVENT_LABELS: Record<WorldEvent, string> = {
   peace: 'Scripture watch', 'left-hand': 'Left-hand drill', vowels: 'Vowel storm',

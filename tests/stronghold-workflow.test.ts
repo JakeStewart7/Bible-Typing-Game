@@ -3,12 +3,12 @@ import { spawnWave, updateCombat } from '../src/stronghold/domain/combat.ts';
 import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
 import { addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
-import { PHRASE_WORK } from '../src/stronghold/domain/rules.ts';
 import { taskWork } from '../src/stronghold/domain/technology.ts';
 import { PHRASE_LENGTHS } from '../src/stronghold/domain/types.ts';
 import { selectionBounds, troopsInRectangle } from '../src/stronghold/ui/map-controls.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
 import { playerCursor, playerTheme } from '../src/stronghold/ui/player-theme.ts';
+import { bankedWork } from '../src/stronghold/ui/work-progress.ts';
 import { equal, test } from './harness.ts';
 
 test('Stronghold completed entries, not partial typing, fill the shared task bar for every length', () => {
@@ -21,12 +21,13 @@ test('Stronghold completed entries, not partial typing, fill the shared task bar
     state.resources = 0;
     executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase.slice(0, -1) });
     equal(player.work, 0);
-    const entries = Math.ceil(taskWork(player) / PHRASE_WORK[length]);
+    const points = player.phrase.length;
+    const entries = Math.ceil(taskWork(player) / points);
     for (let entry = 1; entry <= entries; entry++) {
       executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
       equal(state.resources, 0);
       equal(state.units.filter(unit => unit.kind === 'worker').length, entry === entries ? 3 : 2);
-      equal(player.work, entry === entries ? 0 : Math.min(8, entry * PHRASE_WORK[length]));
+      equal(player.work, entry * points % taskWork(player));
       equal(player.typed, '');
     }
     equal(state.events.at(-1)?.text, 'Player 1 created Gatherer');
@@ -40,16 +41,16 @@ test('Stronghold changing length preserves earned work and synchronizes role mat
   executeCommand(state, teammate, { type: 'ROLE', role: 'economy' });
   executeCommand(state, you, { type: 'LENGTH', length: 'short' });
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
-  equal(you.work, 1);
-  equal(teammate.work, 1);
+  equal(you.work, 4);
+  equal(teammate.work, 4);
   const oldId = you.phraseId;
   executeCommand(state, teammate, { type: 'LENGTH', length: 'extra-long' });
-  equal(you.work, 1);
+  equal(you.work, 4);
   equal(you.length, 'extra-long');
   equal(you.phraseId > oldId, true);
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
-  equal(you.work, 5);
-  equal(teammate.work, 5);
+  equal(you.work, 20);
+  equal(teammate.work, 20);
 });
 
 test('Stronghold text length selections never add event log entries', () => {
@@ -64,17 +65,75 @@ test('Stronghold text length selections never add event log entries', () => {
   }
 });
 
+test('Stronghold work equals completed character count including spaces, with no length multiplier or truncation', () => {
+  for (const [length, phrase] of [['short', 'sun'], ['short', 'light'], ['medium', 'garden'],
+    ['medium', 'a river'], ['long', 'sunshine'], ['long', 'a peaceful home'],
+    ['extra-long', 'a peaceful home'], ['extra-long', 'a quiet walk in the woods']] as const) {
+    const state = createStronghold();
+    const player = state.players[0];
+    if (!player) throw new Error('Missing player.');
+    executeCommand(state, player, { type: 'ROLE', role: 'defenses' });
+    executeCommand(state, player, { type: 'ACTION', action: 'wall' });
+    executeCommand(state, player, { type: 'LENGTH', length });
+    player.phrase = phrase;
+    const before = taskWork(player) * 5 + 3;
+    player.work = before;
+    executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: phrase.slice(0, -1) });
+    equal(player.work, before);
+    executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: phrase });
+    equal(player.work, before + phrase.length);
+  }
+});
+
+test('Stronghold bank colors loop through three light red shades without losing the ready count', () => {
+  const first = bankedWork(32, 32);
+  const second = bankedWork(64, 32);
+  const third = bankedWork(96, 32);
+  equal(new Set([first.base, second.base, third.base]).size, 3);
+  equal(bankedWork(128, 32).base, first.base);
+  equal(bankedWork(160, 32).base, second.base);
+  const bank = bankedWork(32 * 100 + 8, 32);
+  equal(bank.ready, 100);
+  equal(bank.percent, 25);
+  equal(bank.label, '100 ready');
+  equal(bank.base, first.base);
+  equal(bankedWork(0, 32).base, '#fff');
+});
+
+test('Stronghold builders and walls use character work without supplies, and capped builder work remains banked', () => {
+  const state = createStronghold();
+  const player = state.players[0];
+  if (!player) throw new Error('Missing player.');
+  state.resources = 0;
+  executeCommand(state, player, { type: 'ROLE', role: 'defenses' });
+  executeCommand(state, player, { type: 'ACTION', action: 'builder' });
+  for (let entry = 0; entry < 20; entry++) executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+  equal(state.units.filter(unit => unit.kind === 'builder').length, 4);
+  equal(player.work, 64);
+  equal(state.resources, 0);
+  executeCommand(state, player, { type: 'ACTION', action: 'wall' });
+  for (let entry = 0; entry < 9; entry++) executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+  equal(player.work, 72);
+  executeCommand(state, player, { type: 'PLACE', kind: 'wall', point: { x: 350, y: 500 } });
+  equal(player.work, 40);
+  executeCommand(state, player, { type: 'PLACE', kind: 'wall', point: { x: 400, y: 500 } });
+  equal(player.work, 8);
+  equal(state.resources, 0);
+  executeCommand(state, player, { type: 'ACTION', action: 'builder' });
+  equal(player.work, 64);
+});
+
 test('Stronghold relays require only legal placement and do not spend typing work', () => {
   const state = createStronghold();
   const player = state.players[0];
   if (!player) throw new Error('Missing player.');
   executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
-  equal(player.work, 2);
+  equal(player.work, 8);
   const phraseId = player.phraseId;
   equal(placementProblem(state, player, 'relay', { x: 500, y: 595 }), 'Leave space between buildings.');
   executeCommand(state, player, { type: 'PLACE', kind: 'relay', point: { x: 350, y: 540 } });
   equal(state.resources, 35);
-  equal(player.work, 2);
+  equal(player.work, 8);
   equal(player.phraseId, phraseId);
   equal(state.events.at(-1)?.text, 'Player 1 placed Relay');
   executeCommand(state, player, { type: 'ROLE', role: 'army' });
