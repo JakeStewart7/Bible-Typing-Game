@@ -16,9 +16,13 @@ export const ACTION_LABELS: Record<Action, string> = {
   wall: 'Place wall', upgrade: 'Upgrade role'
 };
 export const COSTS: Record<Action, number> = {
-  resources: 0, worker: 0, relay: 15, barracks: 40, warrior: 10,
-  archer: 20, catapult: 35, builder: 25, tower: 25, wall: 15, upgrade: 60
+  resources: 0, worker: 0, relay: 15, barracks: 0, warrior: 10,
+  archer: 20,   catapult: 35, builder: 0, tower: 0, wall: 0, upgrade: 60
 };
+export function isTypingAction(action: Action): boolean {
+  return action === 'resources' || action === 'worker' || action === 'barracks'
+    || action === 'builder' || action === 'wall' || action === 'tower';
+}
 export const MIN_TIER: Record<Action, number> = {
   resources: 0, worker: 0, relay: 0, barracks: 1, warrior: 1, archer: 2,
   catapult: 3, builder: 0, tower: 1, wall: 0, upgrade: 0
@@ -38,7 +42,11 @@ export const UNIT_RULES: Record<UnitKind, { hp: number; speed: number; damage: n
   invader: { hp: 60, speed: 11.4, damage: 8, range: 25 }
 };
 export const UNIT_HEALTH_MULTIPLIER = 2;
-export const PHRASE_WORK: Record<PhraseLength, number> = { short: 1, medium: 2, long: 3, 'extra-long': 4 };
+export const TOWER_STRENGTH_MULTIPLIER = 1.5;
+export const TEXT_LENGTH_RANGES: Record<PhraseLength, readonly [number, number]> = {
+  short: [1, 5], medium: [6, 11], long: [12, 24], 'extra-long': [25, 40]
+};
+export const TEXT_LENGTH_BONUSES: Record<PhraseLength, number> = { short: 1, medium: 1.1, long: 1.25, 'extra-long': 1.5 };
 export const LENGTH_LABELS: Record<PhraseLength, string> = { short: 'Short', medium: 'Medium', long: 'Long', 'extra-long': 'Extra Long' };
 export const EVENT_LABELS: Record<WorldEvent, string> = {
   peace: 'Scripture watch', 'left-hand': 'Left-hand drill', vowels: 'Vowel storm',

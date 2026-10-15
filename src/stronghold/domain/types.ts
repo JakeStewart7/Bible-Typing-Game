@@ -2,6 +2,8 @@ export const ROLES = ['economy', 'production', 'army', 'defenses'] as const;
 export type Role = typeof ROLES[number];
 export const PHRASE_LENGTHS = ['short', 'medium', 'long', 'extra-long'] as const;
 export type PhraseLength = typeof PHRASE_LENGTHS[number];
+export const SEASONS = ['spring', 'summer', 'fall', 'winter'] as const;
+export type Season = typeof SEASONS[number];
 export type StrongholdMatchOptions = { resources: number; length: PhraseLength; computersPaused: boolean };
 export type Point = { x: number; y: number };
 export type UnitKind = 'worker' | 'builder' | 'warrior' | 'archer' | 'catapult' | 'invader';
@@ -16,6 +18,7 @@ export type Unit = Point & {
   id: number; kind: UnitKind; hp: number; maxHp: number;
   destination: Point | null; cooldown: number; task: number | null;
   formation: ArmyUnitKind | null; attackTarget: Point | null;
+  idleTime: number | null;
 };
 export type Building = Point & {
   id: number; kind: BuildingKind; hp: number; maxHp: number;
@@ -31,9 +34,10 @@ export type Participant = {
 };
 export type TaskSelection = Pick<Participant, 'action' | 'constructionTier' | 'upgradeTarget'>;
 export type TaskProgress = Pick<Participant, 'work' | 'actionPhrases'>;
-export type RoleTasks = { selection: TaskSelection; length: PhraseLength; progress: Record<string, TaskProgress> };
+export type RoleTasks = { selection: TaskSelection; progress: Record<string, TaskProgress> };
 export type StrongholdEvent = { id: number; elapsed: number; playerId: string | null; text: string };
 export type StrongholdState = {
+  season: Season; environmentElapsed: number;
   phase: Phase; tier: number; elapsed: number; wave: number; waveIn: number;
   resources: number; event: WorldEvent; eventIn: number;
   players: Participant[]; units: Unit[]; buildings: Building[];
@@ -52,6 +56,9 @@ export type StrongholdCommand =
   | { type: 'ACTION'; action: Action; tier?: number; upgrade?: UpgradeTarget }
   | { type: 'LENGTH'; length: PhraseLength }
   | { type: 'COMPUTERS'; paused: boolean }
+  | { type: 'NEXT_WAVE' }
+  | { type: 'SET_SEASON'; season: Season }
+  | { type: 'TIME_OF_DAY'; period: 'day' | 'night' }
   | { type: 'TYPE'; phraseId: number; text: string }
   | { type: 'READY'; ready: boolean }
   | { type: 'PLACE'; kind: 'relay' | 'barracks' | 'tower' | 'wall'; point: Point }

@@ -3,6 +3,7 @@ import { TIER_QUOTA } from '../domain/rules.ts';
 import type { StrongholdSnapshot } from '../domain/types.ts';
 import { setText } from './dom-updates.ts';
 import type { StrongholdElements } from './view.ts';
+import { applyPlayerTheme } from './player-theme.ts';
 
 export function renderTierChallenge(elements: StrongholdElements, snapshot: StrongholdSnapshot, running: boolean): void {
   const tierList = requireElement('stronghold-tier-contributions', HTMLElement);
@@ -18,12 +19,12 @@ export function renderTierChallenge(elements: StrongholdElements, snapshot: Stro
       const name = document.createElement('strong');
       const progress = document.createElement('span');
       const typed = document.createElement('p');
-      card.style.setProperty('--player-color', player.color);
       card.append(name, progress, typed);
       tierList.append(card);
       entry = { card, name, progress, typed };
       elements.contributionCards.set(player.id, entry);
     }
+    applyPlayerTheme(entry.card, player.color);
     setText(entry.name, `Player ${index + 1}`);
     setText(entry.progress, `${player.contribution}/${TIER_QUOTA}`);
     setText(entry.typed, player.contribution >= TIER_QUOTA ? 'Done' : player.typed);

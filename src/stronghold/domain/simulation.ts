@@ -3,7 +3,7 @@ import { rallyArmy, spawnWave, updateCombat } from './combat.ts';
 import { updateLogistics } from './logistics.ts';
 import { assignPhrase } from './phrases.ts';
 import { addUnit } from './state.ts';
-import { distance, TIER_MAX, TIER_QUOTA, UNIT_CAPS } from './rules.ts';
+import { distance, isTypingAction, TIER_MAX, TIER_QUOTA, UNIT_CAPS } from './rules.ts';
 import { taskWork } from './technology.ts';
 import { ENTITY_LABELS, recordEvent } from './events.ts';
 import type { Action, Participant, Point, StrongholdState } from './types.ts';
@@ -52,10 +52,19 @@ function updateBot(state: StrongholdState, player: Participant, seconds: number)
       }
     }
     const action = humanOnRole ? player.action : botAction(state, player);
+    if (!isTypingAction(action) && action !== 'relay') {
+      if (actionProblem(state, { ...player, action }, action)) return;
+      player.typingCredit += seconds;
+      if (player.typingCredit < 1) return;
+      player.typingCredit = 0;
+      executeCommand(state, player, { type: 'ACTION', action });
+      return;
+    }
     if (action !== player.action) {
       executeCommand(state, player, { type: 'ACTION', action });
     }
-    if (actionProblem(state, player, action)) return;
+    const preparingConstruction = (action === 'barracks' || action === 'tower') && player.work < taskWork(player);
+    if (actionProblem(state, player, action) && !preparingConstruction) return;
     if (['relay', 'barracks', 'tower', 'wall'].includes(action) && (action === 'relay' || player.work >= taskWork(player))) {
       if (humanOnRole) return;
       const count = state.buildings.filter(building => building.kind === action && !building.enemy).length;
@@ -104,15 +113,12 @@ export function advanceStronghold(state: StrongholdState, seconds: number): void
   }
   if (state.phase !== 'playing') return;
   state.elapsed += seconds;
+  state.environmentElapsed += seconds;
   state.waveIn -= seconds;
   if (state.waveIn <= 0) spawnWave(state);
   if (updateWorldEvent(state)) {
-    const refreshedRoles = new Set<string>();
     state.players.forEach(player => {
-      if (player.typed.length === 0 && !refreshedRoles.has(player.role)) {
-        assignPhrase(state, player);
-        refreshedRoles.add(player.role);
-      }
+      if (player.typed.length === 0) assignPhrase(state, player);
     });
   }
   updateLogistics(state, seconds);

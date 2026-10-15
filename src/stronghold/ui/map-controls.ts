@@ -1,4 +1,4 @@
-import { placementProblem } from '../domain/actions.ts';
+import { actionProblem, placementProblem } from '../domain/actions.ts';
 import { taskWork } from '../domain/technology.ts';
 import type { BuildingKind, Point, StrongholdSnapshot, Unit } from '../domain/types.ts';
 import { buildingMarkup } from './battlefield.ts';
@@ -8,7 +8,7 @@ import { playerTheme } from './player-theme.ts';
 export type PlacementKind = Extract<BuildingKind, 'relay' | 'barracks' | 'tower' | 'wall'>;
 export function readyBuilding(snapshot: StrongholdSnapshot): PlacementKind | null {
   const self = snapshot.players.find(player => player.id === snapshot.selfId);
-  if (!self || snapshot.phase !== 'playing' || self.work < taskWork(self)) return null;
+  if (!self || snapshot.phase !== 'playing' || self.work < taskWork(self) || actionProblem(snapshot, self, self.action)) return null;
   return self.action === 'barracks' || self.action === 'tower' || self.action === 'wall' ? self.action : null;
 }
 export function selectionBounds(start: Point, end: Point) {
@@ -16,7 +16,7 @@ export function selectionBounds(start: Point, end: Point) {
 }
 export function troopsInRectangle(units: readonly Unit[], start: Point, end: Point): number[] {
   const bounds = selectionBounds(start, end);
-  return units.filter(unit => unit.hp > 0 && ['warrior', 'archer', 'catapult'].includes(unit.kind)
+  return units.filter(unit => unit.hp > 0 && unit.kind !== 'invader'
     && unit.x >= bounds.x && unit.x <= bounds.x + bounds.width && unit.y >= bounds.y && unit.y <= bounds.y + bounds.height)
     .map(unit => unit.id);
 }

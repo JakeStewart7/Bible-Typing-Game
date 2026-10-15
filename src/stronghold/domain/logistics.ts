@@ -18,9 +18,33 @@ export function connectedRelays(state: StrongholdState): Building[] {
   return connected;
 }
 
+function automaticWorkTime(unit: Unit, seconds: number): number {
+  if (unit.destination) {
+    const travelTime = distance(unit, unit.destination) / UNIT_RULES[unit.kind].speed;
+    moveToward(unit, unit.destination, seconds * UNIT_RULES[unit.kind].speed);
+    if (travelTime - seconds > 1e-9) return 0;
+    unit.destination = null;
+    unit.idleTime = 0;
+    seconds = Math.max(0, seconds - travelTime);
+  }
+  if (unit.idleTime === null) return seconds;
+  const remaining = Math.max(0, 2 - unit.idleTime);
+  unit.idleTime += seconds;
+  if (unit.idleTime <= 2) return 0;
+  unit.idleTime = null;
+  unit.task = null;
+  return seconds - remaining;
+}
+
 function updateWorker(state: StrongholdState, worker: Unit, seconds: number): void {
   worker.cooldown = Math.max(0, worker.cooldown - seconds);
+  if (worker.cooldown <= 2.72 || worker.idleTime !== null) worker.attackTarget = null;
+  seconds = automaticWorkTime(worker, seconds);
   const cargo = state.chunks.find(chunk => chunk.carrier === worker.id);
+  if (seconds === 0) {
+    if (cargo) { cargo.x = worker.x; cargo.y = worker.y; }
+    return;
+  }
   if (cargo) {
     const depot = state.buildings.filter(building => (building.kind === 'relay' || building.kind === 'castle')
       && building.hp > 0 && building.progress === 1).sort((a, b) => distance(worker, a) - distance(worker, b))[0];
@@ -52,15 +76,11 @@ function updateWorker(state: StrongholdState, worker: Unit, seconds: number): vo
   worker.cooldown = 3;
 }
 
-function updateBuilder(state: StrongholdState, builder: Unit, seconds: number, claimed: Set<number>): void {
-  const projects = state.buildings.filter(building => !building.enemy && building.hp > 0
-    && ((building.progress < 1 && !claimed.has(building.id)) || (building.progress === 1 && building.hp < building.maxHp)));
-  const project = projects.sort((a, b) =>
-    (a.progress === 1 ? 1 : 0) - (b.progress === 1 ? 1 : 0) || distance(builder, a) - distance(builder, b))[0];
-  if (!project) return;
-  if (project.progress < 1) claimed.add(project.id);
+function updateBuilder(state: StrongholdState, builder: Unit, seconds: number, project: Building): void {
   moveToward(builder, project, seconds * UNIT_RULES.builder.speed);
   if (distance(builder, project) > 22) return;
+  builder.attackTarget = { x: project.x, y: project.y };
+  builder.cooldown = 1;
   if (project.progress < 1) {
     project.progress = Math.min(1, project.progress + seconds / 8);
     if (project.progress === 1) recordEvent(state, `${ENTITY_LABELS[project.kind]} constructed`, project.ownerId);
@@ -68,13 +88,54 @@ function updateBuilder(state: StrongholdState, builder: Unit, seconds: number, c
   else project.hp = Math.min(project.maxHp, project.hp + seconds * (5 + state.upgrades.defenses));
 }
 
-export function updateLogistics(state: StrongholdState, seconds: number): void {
+function updateBuilders(state: StrongholdState, seconds: number): void {
+  type BuilderTime = { builder: Unit; seconds: number };
+  const available: BuilderTime[] = [];
+  const assigned: (BuilderTime & { project: Building })[] = [];
   const claimed = new Set<number>();
+  const projects = state.buildings.filter(building => !building.enemy && building.hp > 0
+    && (building.progress < 1 || building.hp < building.maxHp));
+  for (const builder of state.units) {
+    if (builder.kind !== 'builder' || builder.hp <= 0) continue;
+    builder.attackTarget = null;
+    builder.cooldown = 0;
+    const workTime = automaticWorkTime(builder, seconds);
+    if (workTime === 0) { builder.task = null; continue; }
+    const project = projects.find(project => project.id === builder.task
+      && (project.progress === 1 || !claimed.has(project.id)));
+    if (project) {
+      assigned.push({ builder, seconds: workTime, project });
+      if (project.progress < 1) claimed.add(project.id);
+    } else {
+      builder.task = null;
+      available.push({ builder, seconds: workTime });
+    }
+  }
+  for (const project of projects) {
+    if (project.progress === 1 || claimed.has(project.id)) continue;
+    available.sort((a, b) => distance(a.builder, project) - distance(b.builder, project) || a.builder.id - b.builder.id);
+    const next = available.shift();
+    if (!next) break;
+    next.builder.task = project.id;
+    claimed.add(project.id);
+    assigned.push({ ...next, project });
+  }
+  for (const next of available) {
+    const project = projects.filter(project => project.progress === 1)
+      .sort((a, b) => distance(next.builder, a) - distance(next.builder, b) || a.id - b.id)[0];
+    if (!project) continue;
+    next.builder.task = project.id;
+    assigned.push({ ...next, project });
+  }
+  for (const { builder, seconds: workTime, project } of assigned) updateBuilder(state, builder, workTime, project);
+}
+
+export function updateLogistics(state: StrongholdState, seconds: number): void {
   for (const unit of state.units) {
     if (unit.hp <= 0) continue;
     if (unit.kind === 'worker') updateWorker(state, unit, seconds);
-    if (unit.kind === 'builder') updateBuilder(state, unit, seconds, claimed);
   }
+  updateBuilders(state, seconds);
   const connected = connectedRelays(state);
   const routes = new Map<number, Building>();
   const castle = connected.find(building => building.kind === 'castle');

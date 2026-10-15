@@ -1,4 +1,4 @@
-import type { Participant, PhraseLength, RoleTasks, StrongholdState, TaskSelection } from './types.ts';
+import type { Participant, RoleTasks, StrongholdState, TaskSelection } from './types.ts';
 
 export function taskKey(task: TaskSelection): string {
   if (task.action === 'barracks' || task.action === 'tower') return `${task.action}:${task.constructionTier}`;
@@ -6,14 +6,13 @@ export function taskKey(task: TaskSelection): string {
   return task.action === 'relay' ? 'resources' : task.action;
 }
 
-export function createRoleTasks(selection: TaskSelection, length: PhraseLength = 'medium'): RoleTasks {
-  return { selection, length, progress: {} };
+export function createRoleTasks(selection: TaskSelection): RoleTasks {
+  return { selection, progress: {} };
 }
 
 export function saveRoleTask(state: StrongholdState, player: Participant): void {
   const role = state.roleTasks[player.role];
   role.selection = { action: player.action, constructionTier: player.constructionTier, upgradeTarget: player.upgradeTarget };
-  role.length = player.length;
   role.progress[taskKey(player)] = { work: player.work, actionPhrases: player.actionPhrases };
 }
 
@@ -25,5 +24,4 @@ export function restoreRoleTask(state: StrongholdState, player: Participant, sel
   player.upgradeTarget = selection.upgradeTarget;
   player.work = progress?.work ?? 0;
   player.actionPhrases = progress?.actionPhrases ?? 0;
-  player.length = role.length;
 }

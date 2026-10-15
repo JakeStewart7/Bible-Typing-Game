@@ -1,6 +1,8 @@
 import { requireElement } from '../../shared/dom.ts';
 import { BUILDING_CAPS, EVENT_LABELS, ROLE_ACTIONS, TIER_MAX, TIER_QUOTA, UNIT_CAPS } from '../domain/rules.ts';
 import { taskWork, upgradeLimit } from '../domain/technology.ts';
+import { actionProblem } from '../domain/actions.ts';
+import { taskKey } from '../domain/tasks.ts';
 import { PHRASE_LENGTHS, ROLES, UPGRADE_TARGETS, type StrongholdSnapshot } from '../domain/types.ts';
 import { createMapCamera } from './map-camera.ts';
 import { createBattlefieldRenderer } from './battlefield.ts';
@@ -10,6 +12,9 @@ import { renderTierChallenge } from './tier-view.ts';
 import { createEventLog } from './event-log.ts';
 import { createMapControls, readyBuilding } from './map-controls.ts';
 import { applyPlayerTheme, playerCursor } from './player-theme.ts';
+import { workProgress } from './work-progress.ts';
+import { renderEnvironment } from './environment.ts';
+import { daylight } from '../domain/environment.ts';
 
 export function strongholdElements() {
   const map = document.getElementById('stronghold-map');
@@ -23,7 +28,9 @@ export function strongholdElements() {
       const buttons = [...element.querySelectorAll<HTMLButtonElement>('[data-action]')].map(button => {
         const action = ROLE_ACTIONS[role].find(candidate => candidate === button.dataset.action);
         if (!action) throw new Error('Unknown Stronghold action button.');
-        return { element: button, action, tier: button.dataset.tier ? Number(button.dataset.tier) : undefined,
+        return { element: button, action, miniBar: button.querySelector<HTMLElement>('[data-task-progress]'),
+          miniFill: button.querySelector<HTMLElement>('[data-task-fill]'), lockLabel: button.querySelector<HTMLElement>('[data-task-lock]'),
+          tier: button.dataset.tier ? Number(button.dataset.tier) : undefined,
           upgrade: UPGRADE_TARGETS.find(target => target === button.dataset.strongholdUpgrade), minimumTier: Number(button.dataset.minTier) };
       });
       return { role, element, buttons };
@@ -31,10 +38,12 @@ export function strongholdElements() {
     return { id, card, groups, roleSelect: requireElement(`stronghold-role-${id}`, HTMLSelectElement),
       name: requireElement(`stronghold-name-${id}`, HTMLElement),
       typed: requireElement(`stronghold-typed-${id}`, HTMLElement), progress: requireElement(`stronghold-progress-${id}`, HTMLElement),
+      progressLabel: requireElement(`stronghold-progress-label-${id}`, HTMLElement),
       actions: requireElement(`stronghold-player-actions-${id}`, HTMLElement) };
   });
   return {
     screen: requireElement('stronghold-screen', HTMLElement), map, playerCards,
+    season: requireElement('stronghold-season', HTMLElement),
     renderBattlefield: createBattlefieldRenderer(map),
     mapControls: createMapControls(map),
     camera: createMapCamera(map),
@@ -48,6 +57,10 @@ export function strongholdElements() {
     lengthOptions: PHRASE_LENGTHS.map(length => ({ length, element: requireElement(`stronghold-length-${length}`, HTMLButtonElement) })),
     worldEvent: requireElement('stronghold-world-event', HTMLElement),
     computerButtons: ['stronghold-computers', 'stronghold-tier-computers'].map(id => requireElement(id, HTMLButtonElement)),
+    nextWave: requireElement('stronghold-next-wave', HTMLButtonElement),
+    devSeason: requireElement('stronghold-dev-season', HTMLSelectElement),
+    nextNight: requireElement('stronghold-next-night', HTMLButtonElement),
+    nextDay: requireElement('stronghold-next-day', HTMLButtonElement),
     orders: requireElement('stronghold-army-orders', HTMLElement), placement: requireElement('stronghold-placement', HTMLElement),
     dialog: requireElement('stronghold-tier-dialog', HTMLDialogElement), tierSlot: requireElement('stronghold-tier-typing-slot', HTMLElement),
     feedback: requireElement('stronghold-feedback', HTMLElement)
@@ -62,21 +75,25 @@ function text(id: string, value: string): void {
 }
 export function renderStronghold(
   elements: StrongholdElements, snapshot: StrongholdSnapshot, selected: ReadonlySet<number>, running: boolean, paused: boolean,
-  relayPlacement = false, placementCancelled = false
+  relayPlacement = false, placementCancelled = false, rallyPlacement = false
 ): void {
   const self = snapshot.players.find(player => player.id === snapshot.selfId);
   const ownCard = elements.playerCards.find(card => card.id === snapshot.selfId);
   if (!self || !ownCard) throw new Error('Stronghold snapshot has no local player.');
   applyPlayerTheme(elements.screen, self.color);
-  if (elements.screen.dataset.cursorColor !== self.color) {
-    elements.screen.style.setProperty('--stronghold-cursor', playerCursor(self.color));
-    elements.screen.dataset.cursorColor = self.color;
-  }
+  renderEnvironment(elements.screen, elements.season, snapshot, running);
   elements.mapControls.theme(self.color);
   const castle = snapshot.buildings.find(building => building.kind === 'castle');
   const terminal = snapshot.phase === 'won' || snapshot.phase === 'lost';
   const challenge = snapshot.phase === 'tier-up';
   const army = self.role === 'army' && !challenge;
+  elements.nextWave.disabled = !running || snapshot.phase !== 'playing';
+  const environmentDisabled = !running || snapshot.phase !== 'playing';
+  const period = daylight(snapshot.environmentElapsed).period;
+  elements.devSeason.disabled = environmentDisabled;
+  if (elements.devSeason.value !== snapshot.season) elements.devSeason.value = snapshot.season;
+  elements.nextNight.disabled = environmentDisabled || period === 'night';
+  elements.nextDay.disabled = environmentDisabled || period === 'day';
   text('stronghold-resources', String(Math.floor(snapshot.resources)));
   text('stronghold-castle', `${Math.max(0, Math.ceil(castle?.hp ?? 0))}/${castle?.maxHp ?? 10000}`);
   text('stronghold-enemy', String(Math.max(0, Math.ceil(snapshot.buildings.find(building => building.kind === 'enemy-base')?.hp ?? 0))));
@@ -106,7 +123,13 @@ export function renderStronghold(
   if (elements.orders.parentElement !== ownCard.actions) ownCard.actions.append(elements.orders);
   elements.orders.classList.toggle('is-hidden', !army || terminal);
   elements.privateTyping.classList.toggle('is-hidden', terminal);
-  const placing = !challenge && !placementCancelled && (relayPlacement || readyBuilding(snapshot) !== null);
+  const placing = running && !challenge && !placementCancelled && (relayPlacement || readyBuilding(snapshot) !== null);
+  const cursorMode = running && !terminal && !challenge && (placing || rallyPlacement) ? 'placement' : 'default';
+  if (elements.screen.dataset.cursorColor !== self.color || elements.screen.dataset.cursorMode !== cursorMode) {
+    elements.screen.style.setProperty('--stronghold-cursor', playerCursor(self.color, cursorMode === 'placement'));
+    elements.screen.dataset.cursorColor = self.color;
+    elements.screen.dataset.cursorMode = cursorMode;
+  }
   elements.placement.classList.toggle('is-hidden', !placing || terminal);
   const inputDisabled = !running || terminal;
   if (elements.input.disabled !== inputDisabled) elements.input.disabled = inputDisabled;
@@ -119,7 +142,7 @@ export function renderStronghold(
     setAttribute(option.element, 'aria-selected', String(option.length === self.length));
     option.element.disabled = !running || terminal;
   }
-  text('stronghold-selection', `${selected.size} selected / ${snapshot.units.filter(unit => ['warrior', 'archer', 'catapult'].includes(unit.kind)).length} army units`);
+  text('stronghold-selection', `${selected.size} selected / ${snapshot.units.filter(unit => unit.kind !== 'invader').length} friendly units`);
   for (const entry of elements.playerCards) {
     const player = snapshot.players.find(candidate => candidate.id === entry.id);
     if (!player) continue;
@@ -129,11 +152,16 @@ export function renderStronghold(
     setText(entry.name, `${own ? 'You' : `${player.name}, simulated teammate`}${player.ready && !challenge ? ', ready' : ''}`);
     setText(entry.typed, player.typed);
     entry.typed.classList.remove('is-hidden');
-    const percent = Math.min(100, challenge ? player.contribution / TIER_QUOTA * 100 : player.work / taskWork(player) * 100);
+    const bank = workProgress(player.work, taskWork(player));
+    const percent = challenge ? player.contribution / TIER_QUOTA * 100 : bank.percent;
     const width = `${percent}%`;
     if (entry.progress.style.width !== width) entry.progress.style.width = width;
     const progressBar = entry.progress.closest('[role="progressbar"]');
-    if (progressBar) setAttribute(progressBar, 'aria-valuenow', String(Math.round(percent)));
+    if (progressBar) {
+      setAttribute(progressBar, 'aria-valuenow', String(Math.round(percent)));
+      setAttribute(progressBar, 'aria-valuetext', challenge ? `${player.contribution} of ${TIER_QUOTA} tier entries` : bank.description);
+    }
+    setText(entry.progressLabel, challenge ? `${player.contribution}/${TIER_QUOTA}` : bank.label);
     if (entry.roleSelect.value !== player.role) entry.roleSelect.value = player.role;
     const roleDisabled = !own || challenge || terminal || !running;
     if (entry.roleSelect.disabled !== roleDisabled) entry.roleSelect.disabled = roleDisabled;
@@ -141,12 +169,28 @@ export function renderStronghold(
       group.element.classList.toggle('is-hidden', group.role !== player.role);
       for (const button of group.buttons) {
         const capped = button.upgrade ? snapshot.technology[button.upgrade] >= upgradeLimit(snapshot.tier, button.upgrade) : false;
-        const disabled = !own || !running || challenge || terminal || snapshot.tier < button.minimumTier || capped;
+        const selection = { action: button.action, constructionTier: button.tier ?? 1, upgradeTarget: button.upgrade ?? player.upgradeTarget };
+        const purchaseProblem = button.miniBar ? null : actionProblem(snapshot, { ...player, ...selection }, button.action);
+        const tierLocked = snapshot.tier < button.minimumTier;
+        const disabled = !own || !running || challenge || terminal || (!button.miniBar && tierLocked) || capped || Boolean(purchaseProblem);
         if (button.element.disabled !== disabled) button.element.disabled = disabled;
-        const selectedAction = own && button.action === 'relay' ? relayPlacement : button.action === player.action
+        const selectedAction = own && relayPlacement ? button.action === 'relay' : Boolean(button.miniBar) && button.action === player.action
           && (!button.tier || button.tier === player.constructionTier) && (!button.upgrade || button.upgrade === player.upgradeTarget);
         button.element.classList.toggle('selected', selectedAction);
         setAttribute(button.element, 'aria-pressed', String(selectedAction));
+        if (button.lockLabel) {
+          setText(button.lockLabel, `Place at Tier ${button.minimumTier}`);
+          button.lockLabel.classList.toggle('is-hidden', !tierLocked);
+          setAttribute(button.element, 'title', tierLocked ? `Prepare work now; placement requires Tier ${button.minimumTier}.` : '');
+        }
+        if (button.miniBar && button.miniFill) {
+          const saved = snapshot.roleTasks[group.role].progress[taskKey(selection)];
+          const progress = workProgress(saved?.work ?? 0, taskWork(selection));
+          const width = `${progress.percent}%`;
+          if (button.miniFill.style.width !== width) button.miniFill.style.width = width;
+          setAttribute(button.miniBar, 'aria-valuenow', String(Math.round(progress.percent)));
+          setAttribute(button.miniBar, 'aria-valuetext', progress.description);
+        }
         const level = button.element.querySelector('[data-upgrade-level]');
         if (level && button.upgrade) setText(level, `Level ${snapshot.technology[button.upgrade]}`);
       }

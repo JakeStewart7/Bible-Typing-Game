@@ -4,7 +4,7 @@ import { updateCombat, spawnWave } from '../src/stronghold/domain/combat.ts';
 import { connectedRelays, updateLogistics } from '../src/stronghold/domain/logistics.ts';
 import { addBuilding, addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
-import { PHRASE_WORK, TIER_QUOTA } from '../src/stronghold/domain/rules.ts';
+import { TEXT_LENGTH_RANGES, TIER_QUOTA } from '../src/stronghold/domain/rules.ts';
 import { LocalStrongholdConnection } from '../src/stronghold/infrastructure/local-connection.ts';
 import { themeForWorkspace } from '../src/ui/page-theme.ts';
 import type { Participant, StrongholdState } from '../src/stronghold/domain/types.ts';
@@ -16,7 +16,7 @@ function self(state: StrongholdState): Participant {
   return player;
 }
 function finish(state: StrongholdState, player = self(state)): void {
-  const entries = state.phase === 'tier-up' ? 1 : Math.ceil(8 / PHRASE_WORK[player.length]);
+  const entries = state.phase === 'tier-up' ? 1 : Math.ceil(32 / player.phrase.length);
   for (let entry = 0; entry < entries; entry++) executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
 }
 function rejects(run: () => void, message: string): void {
@@ -43,7 +43,7 @@ test('Stronghold typing requires exact phrase and rejects expired phrase IDs', (
   const state = createStronghold();
   const player = self(state);
   const phraseId = player.phraseId;
-  executeCommand(state, player, { type: 'TYPE', phraseId, text: player.phrase.toLowerCase() });
+  executeCommand(state, player, { type: 'TYPE', phraseId, text: player.phrase.toUpperCase() });
   equal(state.resources, 50);
   finish(state);
   equal(state.resources, 68);
@@ -123,9 +123,10 @@ test('Stronghold rejects illegal sites, insufficient resources and locked action
 
 test('Stronghold upgrades obey per-tier limits and population caps', () => {
   const state = createStronghold();
-  executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade' });
   state.resources = 1000;
-  finish(state); finish(state); finish(state);
+  executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade' });
+  executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade' });
+  rejects(() => executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade' }), 'Upgrade limit');
   equal(state.upgrades.economy, 2);
   equal(state.resources, 880);
   executeCommand(state, self(state), { type: 'ACTION', action: 'worker' });
@@ -134,7 +135,59 @@ test('Stronghold upgrades obey per-tier limits and population caps', () => {
   finish(state);
   equal(state.units.filter(unit => unit.kind === 'worker').length, 12);
   equal(state.resources, resources);
-  equal(self(state).typed, '');
+  equal(self(state).work >= 32, true);
+  const cappedWork = self(state).work;
+  finish(state);
+  equal(self(state).work, cappedWork);
+});
+
+test('Stronghold towers have 50 percent more health across tiers, sides and construction states', () => {
+  const state = createStronghold();
+  for (const enemy of [false, true]) {
+    for (const complete of [false, true]) {
+      for (const tier of [1, 2, 3]) {
+        const tower = addBuilding(state, 'tower', { x: 300, y: 400 }, complete, enemy, tier);
+        const expected = (160 + 60 * (tier - 1)) * 1.5;
+        equal(tower.hp, expected);
+        equal(tower.maxHp, expected);
+      }
+    }
+  }
+  equal(state.buildings.filter(building => building.enemy && building.kind === 'tower').slice(0, 2).map(tower => tower.maxHp), [240, 240]);
+  equal(addBuilding(state, 'barracks', { x: 300, y: 400 }, true, false, 3).maxHp, 240);
+  equal(addBuilding(state, 'wall', { x: 300, y: 400 }).maxHp, 260);
+  const waveState = createStronghold();
+  waveState.wave = 2;
+  spawnWave(waveState);
+  equal(waveState.buildings.filter(building => building.enemy && building.kind === 'tower').map(tower => tower.maxHp), [240, 240, 240]);
+});
+
+test('Stronghold tower damage scales by 1.5 including upgrades and waves without changing attack timing', () => {
+  for (const enemy of [false, true]) {
+    for (const tier of [1, 2, 3]) {
+      for (const upgrades of [0, 2]) {
+        const state = createStronghold();
+        state.units = [];
+        state.buildings = [];
+        state.wave = 4;
+        state.technology['tower-1'] = upgrades;
+        state.technology['tower-2'] = upgrades;
+        state.technology['tower-3'] = upgrades;
+        const tower = addBuilding(state, 'tower', { x: 500, y: 400 }, true, enemy, tier);
+        const target = addUnit(state, enemy ? 'worker' : 'invader', { x: 550, y: 400 });
+        const startingHp = target.hp;
+        const damage = (enemy ? 8 + state.wave : 18 + tier * 3 + upgrades * 5) * 1.5;
+        updateCombat(state, .1);
+        equal(startingHp - target.hp, damage);
+        equal(tower.cooldown, 1);
+        equal(tower.attackTarget, { x: target.x, y: target.y });
+        updateCombat(state, .5);
+        equal(startingHp - target.hp, damage);
+        updateCombat(state, .5);
+        equal(startingHp - target.hp, damage * 2);
+      }
+    }
+  }
 });
 
 test('Stronghold relay destruction disconnects upstream resources until a route is restored', () => {
@@ -221,7 +274,7 @@ test('Stronghold waves grow enemy defenses, world events change drills and termi
   state.elapsed = 59.9; state.eventIn = .1;
   advanceStronghold(state, .25);
   equal(state.event, 'left-hand');
-  equal(self(state).phrase.includes('We') || self(state).phrase.includes('Steward'), true);
+  equal(/^[a-z]+(?: [a-z]+)*$/.test(self(state).phrase), true);
   const enemyBase = state.buildings.find(building => building.kind === 'enemy-base');
   if (!enemyBase) throw new Error('Missing enemy base.');
   enemyBase.hp = 0;
@@ -238,19 +291,21 @@ test('Stronghold waves grow enemy defenses, world events change drills and termi
   equal(loss.phase, 'lost');
 });
 
-test('Stronghold length selection distinguishes tiny words, long words, phrases and sentences', () => {
+test('Stronghold length selection uses normal words within the requested character ranges', () => {
   const state = createStronghold();
   const player = self(state);
-  executeCommand(state, player, { type: 'LENGTH', length: 'short' });
-  equal(player.phrase.length <= 4, true);
-  executeCommand(state, player, { type: 'LENGTH', length: 'medium' });
-  equal(player.phrase.includes(' '), false);
-  equal(player.phrase.length >= 10, true);
-  executeCommand(state, player, { type: 'LENGTH', length: 'long' });
-  equal(player.phrase.split(' ').length >= 3, true);
-  equal(player.phrase.length < 25, true);
-  executeCommand(state, player, { type: 'LENGTH', length: 'extra-long' });
-  equal(player.phrase.split(' ').length >= 7, true);
+  for (const phase of ['playing', 'tier-up'] as const) for (const event of ['peace', 'left-hand', 'vowels', 'numbers', 'symbols', 'code'] as const) {
+    state.phase = phase;
+    state.event = event;
+    for (const length of ['short', 'medium', 'long', 'extra-long'] as const) {
+      for (let index = 0; index < 12; index++) {
+        executeCommand(state, player, { type: 'LENGTH', length });
+        const [min, max] = TEXT_LENGTH_RANGES[length];
+        equal(player.phrase.length >= min && player.phrase.length <= max, true);
+        equal(/^[a-z]+(?: [a-z]+)*$/.test(player.phrase), true);
+      }
+    }
+  }
 });
 
 test('Stronghold event changes preserve an in-progress typing phrase', () => {
@@ -265,7 +320,7 @@ test('Stronghold event changes preserve an in-progress typing phrase', () => {
   equal(player.typed, phrase.slice(0, 3));
   finish(state);
   equal(state.event, 'left-hand');
-  equal(player.phrase.includes('We') || player.phrase.includes('Steward'), true);
+  equal(/^[a-z]+(?: [a-z]+)*$/.test(player.phrase), true);
 });
 
 test('Stronghold simulated economy builds a connected relay network while the human commands the army', () => {

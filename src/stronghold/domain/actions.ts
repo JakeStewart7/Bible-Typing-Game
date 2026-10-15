@@ -1,10 +1,12 @@
-import { assignPhrase, copyRoleTask, synchronizeRoleTask } from './phrases.ts';
+import { assignPhrase, copyRoleTask } from './phrases.ts';
 import { addBuilding, addUnit } from './state.ts';
-import { ACTION_LABELS, BASE, BUILDING_CAPS, distance, LENGTH_LABELS, MIN_TIER, PHRASE_WORK, ROLE_ACTIONS, ROLE_LABELS, TIER_MAX, TIER_QUOTA, UNIT_CAPS, validPoint } from './rules.ts';
-import { applyUpgrade, taskCost, taskWork, upgradeLimit, UPGRADE_OPTIONS } from './technology.ts';
+import { ACTION_LABELS, BASE, BUILDING_CAPS, distance, isTypingAction, MIN_TIER, ROLE_ACTIONS, ROLE_LABELS, TIER_MAX, TIER_QUOTA, UNIT_CAPS, validPoint } from './rules.ts';
+import { applyUpgrade, phraseWork, taskCost, taskWork, upgradeLimit, UPGRADE_OPTIONS } from './technology.ts';
 import { ENTITY_LABELS, playerEvent, recordEvent } from './events.ts';
-import { PHRASE_LENGTHS, type Action, type BuildingKind, type Participant, type Point, type StrongholdCommand, type StrongholdState } from './types.ts';
+import { PHRASE_LENGTHS, SEASONS, type Action, type BuildingKind, type Participant, type Point, type StrongholdCommand, type StrongholdState } from './types.ts';
 import { restoreRoleTask, saveRoleTask, taskKey } from './tasks.ts';
+import { spawnWave } from './combat.ts';
+import { daylight, DAY_SECONDS, NIGHT_SECONDS, SEASON_LABELS, seasonalNodes } from './environment.ts';
 
 type ActionWorld = Pick<StrongholdState, 'tier' | 'resources' | 'units' | 'technology'>;
 type TaskPlayer = Pick<Participant, 'role' | 'action' | 'constructionTier' | 'upgradeTarget' | 'work'>;
@@ -39,6 +41,21 @@ export function placementProblem(
   return null;
 }
 
+function performAction(state: StrongholdState, player: Participant, action: Action, upgrade = player.upgradeTarget): void {
+  if (action === 'resources') {
+    state.resources += 18 + state.upgrades.economy * 6;
+    playerEvent(state, player, 'gathered Supplies');
+  } else if (action === 'upgrade') {
+    applyUpgrade(state, { ...player, upgradeTarget: upgrade });
+    playerEvent(state, player, `upgraded ${UPGRADE_OPTIONS[upgrade].label}`);
+  } else if (action === 'worker' || action === 'builder'
+    || action === 'warrior' || action === 'archer' || action === 'catapult') {
+    const unit = addUnit(state, action, { x: BASE.x + (state.nextId % 5 - 2) * 16, y: BASE.y - 40 });
+    if (player.role === 'production') unit.destination = { ...state.rally };
+    playerEvent(state, player, `created ${ENTITY_LABELS[action]}`);
+  }
+}
+
 export function completePhrase(state: StrongholdState, player: Participant): void {
   player.completed++;
   if (state.phase === 'tier-up') {
@@ -54,42 +71,62 @@ export function completePhrase(state: StrongholdState, player: Participant): voi
     }
   } else {
     const action = player.action === 'relay' ? 'resources' : player.action;
-    const problem = actionProblem(state, player, action);
-    if (problem) { assignPhrase(state, player); state.message = problem; return; }
-    if (player.work >= taskWork(player)) { assignPhrase(state, player); return; }
     player.actionPhrases++;
-    player.work = Math.min(taskWork(player), player.work + PHRASE_WORK[player.length]);
+    if (player.work < taskWork(player)) player.work = Math.round((player.work + phraseWork(player)) * 100) / 100;
     if (player.work < taskWork(player)) {
       assignPhrase(state, player);
       return;
     }
     if (action === 'barracks' || action === 'tower' || action === 'wall') {
-      state.message = 'Choose a location on the battlefield; builders will construct it.';
+      state.message = actionProblem(state, player, action) ?? 'Choose a location on the battlefield; builders will construct it.';
       assignPhrase(state, player);
       return;
     }
-    state.resources -= taskCost({ ...player, action });
-    state.message = '';
-    if (action === 'resources') {
-      state.resources += 18 + state.upgrades.economy * 6;
-      playerEvent(state, player, 'gathered Supplies');
-    } else if (action === 'upgrade') {
-      applyUpgrade(state, player);
-      playerEvent(state, player, `upgraded ${UPGRADE_OPTIONS[player.upgradeTarget].label}`);
-    } else if (action === 'worker' || action === 'builder'
-      || action === 'warrior' || action === 'archer' || action === 'catapult') {
-      const unit = addUnit(state, action, { x: BASE.x + (state.nextId % 5 - 2) * 16, y: BASE.y - 40 });
-      if (player.role === 'production') unit.destination = { ...state.rally };
-      playerEvent(state, player, `created ${ENTITY_LABELS[action]}`);
+    while (player.work >= taskWork(player)) {
+      const problem = actionProblem(state, player, action);
+      if (problem) { state.message = problem; break; }
+      player.work = Math.round((player.work - taskWork(player)) * 100) / 100;
+      player.actionPhrases = 0;
+      state.message = '';
+      performAction(state, player, action);
     }
-    player.actionPhrases = 0;
-    player.work = 0;
   }
   assignPhrase(state, player);
 }
 
 export function executeCommand(state: StrongholdState, player: Participant, command: StrongholdCommand): void {
   if (state.phase === 'won' || state.phase === 'lost') throw new Error('This match is over. Start a new stronghold.');
+  if (command.type === 'SET_SEASON' || command.type === 'TIME_OF_DAY') {
+    if (player.simulated) throw new Error('Only a human player can change the environment.');
+    if (state.phase !== 'playing') throw new Error('Finish the shared tier challenge before changing the environment.');
+    if (command.type === 'SET_SEASON') {
+      if (!SEASONS.includes(command.season)) throw new Error('Choose a valid season.');
+      if (state.season === command.season) return;
+      const layout = seasonalNodes(command.season);
+      if (layout.length !== state.nodes.length) throw new Error('This map does not support seasonal layout changes.');
+      state.nodes = state.nodes.map((node, index) => {
+        const point = layout[index];
+        if (!point) throw new Error('Missing seasonal resource position.');
+        return { ...node, x: point.x, y: point.y };
+      });
+      state.season = command.season;
+      recordEvent(state, `Season changed to ${SEASON_LABELS[command.season]}`);
+    } else {
+      if (command.period !== 'day' && command.period !== 'night') throw new Error('Choose day or night.');
+      const light = daylight(state.environmentElapsed);
+      if (light.period === command.period) return;
+      state.environmentElapsed = (light.cycle + (command.period === 'day' ? 1 : 0)) * (DAY_SECONDS + NIGHT_SECONDS)
+        + (command.period === 'night' ? DAY_SECONDS : 0);
+      recordEvent(state, `Skipped to ${command.period === 'day' ? 'Day' : 'Night'}`);
+    }
+    return;
+  }
+  if (command.type === 'NEXT_WAVE') {
+    if (player.simulated) throw new Error('Only a human player can advance waves.');
+    if (state.phase !== 'playing') throw new Error('Finish the shared tier challenge before advancing waves.');
+    spawnWave(state);
+    return;
+  }
   if (command.type === 'COMPUTERS') {
     if (player.simulated) throw new Error('Only a human player can control the computers.');
     if (typeof command.paused !== 'boolean') throw new Error('Invalid computer pause state.');
@@ -107,19 +144,18 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     player.role = command.role;
     player.ready = false;
     playerEvent(state, player, `joined ${ROLE_LABELS[player.role]}`);
-    if (partner) copyRoleTask(partner, player, true);
-    else {
-      restoreRoleTask(state, player);
-      assignPhrase(state, player);
+    if (partner) copyRoleTask(partner, player);
+    else restoreRoleTask(state, player);
+    if (!player.simulated && player.role === 'production' && player.action === 'resources') {
+      restoreRoleTask(state, player, { action: 'barracks', constructionTier: 1, upgradeTarget: player.upgradeTarget });
     }
+    assignPhrase(state, player);
     return;
   }
   if (command.type === 'LENGTH') {
     if (!PHRASE_LENGTHS.includes(command.length)) throw new Error('Unknown phrase length.');
     player.length = command.length;
-    state.roleTasks[player.role].length = command.length;
     assignPhrase(state, player);
-    playerEvent(state, player, `selected ${LENGTH_LABELS[player.length]} text`);
     return;
   }
   if (command.type === 'TYPE') {
@@ -127,7 +163,6 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     if (typeof command.text !== 'string' || command.text.length > player.phrase.length) throw new Error('Invalid typing update.');
     player.typed = command.text;
     if (player.typed === player.phrase) completePhrase(state, player);
-    else synchronizeRoleTask(state, player);
     return;
   }
   if (command.type === 'READY') {
@@ -151,6 +186,15 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     if (!Object.prototype.hasOwnProperty.call(UPGRADE_OPTIONS, upgrade)
       || ((command.action === 'upgrade' || command.upgrade !== undefined) && UPGRADE_OPTIONS[upgrade].role !== player.role)) throw new Error('This upgrade belongs to another role.');
     const selection = { action: command.action, constructionTier: tier, upgradeTarget: upgrade };
+    if (!isTypingAction(command.action) && command.action !== 'relay') {
+      const purchase = { ...player, ...selection };
+      const problem = actionProblem(state, purchase, command.action);
+      if (problem) throw new Error(problem);
+      state.resources -= taskCost(purchase);
+      state.message = '';
+      performAction(state, player, command.action, upgrade);
+      return;
+    }
     if (player.action === command.action && taskKey(player) === taskKey(selection)) return;
     saveRoleTask(state, player);
     restoreRoleTask(state, player, selection);
@@ -167,7 +211,7 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     playerEvent(state, player, `placed ${ENTITY_LABELS[command.kind]}`);
     if (command.kind !== 'relay') {
       player.actionPhrases = 0;
-      player.work = 0;
+      player.work = Math.round((player.work - taskWork(player)) * 100) / 100;
       assignPhrase(state, player);
     }
     return;
@@ -179,11 +223,18 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     playerEvent(state, player, 'set Rally point');
     return;
   }
-  if (command.ids.length > 36) throw new Error('Too many units selected.');
+  if (command.ids.length > 52) throw new Error('Too many units selected.');
   for (const id of command.ids) {
     const unit = state.units.find(candidate => candidate.id === id);
-    if (!unit || !['warrior', 'archer', 'catapult'].includes(unit.kind)) throw new Error('Select only friendly army units.');
+    if (!unit || unit.hp <= 0 || unit.kind === 'invader') throw new Error('Select only friendly units.');
   }
-  for (const unit of state.units) if (command.ids.includes(unit.id)) unit.destination = { ...command.point };
-  if (command.ids.length > 0) playerEvent(state, player, 'ordered Army');
+  for (const unit of state.units) if (command.ids.includes(unit.id)) {
+    unit.destination = { ...command.point };
+    if (unit.kind === 'worker' || unit.kind === 'builder') {
+      unit.task = null;
+      unit.idleTime = 0;
+      unit.attackTarget = null;
+    }
+  }
+  if (command.ids.length > 0) playerEvent(state, player, 'ordered units');
 }

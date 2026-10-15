@@ -80,7 +80,7 @@ gameController.setPlaylistHooks({
   passageChanged: playlistController.handlePassageChanged
 });
 
-setupMusic(document.getElementById('music-slot'));
+const backgroundMusic = setupMusic(document.getElementById('music-slot'));
 
 let startCampaignChunk: (chunk: CampaignChunk, verses: ChapterVerse[]) => void = () => undefined;
 const campaignController = createCampaignController({
@@ -127,6 +127,7 @@ function showWorkspace(workspace: string, selectedMode?: string): void {
   controls.campaignScreenEl.classList.toggle('is-hidden', workspace !== 'campaign');
   controls.multiplayerScreenEl.classList.toggle('is-hidden', workspace !== 'multiplayer');
   document.getElementById('stronghold-screen')?.classList.toggle('is-hidden', workspace !== 'stronghold');
+  if (workspace === 'stronghold') backgroundMusic?.pause();
   strongholdController.setActive(workspace === 'stronghold');
   gameScreen?.classList.toggle('is-hidden', workspace === 'campaign' || workspace === 'multiplayer' || workspace === 'stronghold' || workspace === 'home');
   gameScreen?.classList.toggle('campaign-play', workspace === 'campaign-play');
