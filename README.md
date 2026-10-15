@@ -33,6 +33,8 @@ Costs appear in separate player-colored badges. Selections, buttons, the input's
 **Type here** prompt and basic arrow/text cursors share each player's dark and
 light palette. Your typed text appears both in the central input and in your
 small player display, just like your teammates' typed text.
+The Stronghold typing cursor snaps directly to the current character without
+animated travel or a movement speed limit.
 
 **Dev options** sets the starting computer state, default text length, starting
 supplies (0-10,000), and starting map zoom (1.0-2.0). **Apply & new game** saves these defaults on this device and
@@ -48,6 +50,7 @@ Shift-drag retains additive army selection.
 The length selector is a faded reel: **Left/Down** selects shorter entries,
 **Right/Up** longer entries, from anywhere outside dropdowns and dev fields.
 Clicking an option also works; endpoints do not wrap or discard current typing.
+Text length selections do not add entries to the event log.
 Shift+arrows still selects typed text. **Alt+1...9** selects the corresponding
 visible task in your current role; **Alt+0** selects Army's tenth option.
 Each button displays its shortcut, and locked tasks remain locked. Unit Control

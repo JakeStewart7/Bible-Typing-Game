@@ -40,7 +40,6 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   let paused = false;
   let errorMessage = '';
   let typingDirty = true;
-  let newEntry = true;
   let typingLayout = '';
   let relayPlacement = false;
   let placementCancelled = false;
@@ -77,9 +76,8 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     const layout = `${snapshot.phase}/${running()}/${elements.privateTyping.parentElement?.id}`;
     if (typingDirty || layout !== typingLayout) {
       renderTypingExperience(typing, { text: elements.phrase, typedBar: elements.typedBar, progressFill: elements.progressFill },
-        newEntry || layout !== typingLayout ? 'teleport' : 'track');
+        'teleport');
       typingDirty = false;
-      newEntry = false;
       typingLayout = layout;
     }
   }
@@ -104,7 +102,6 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       phraseId = player.phraseId;
       typing = createGame(player.phrase);
       typingDirty = true;
-      newEntry = true;
       elements.input.value = player.typed;
       if (player.typed) updateTypingInput(typing, player.typed);
     } else if (elements.input.value !== player.typed) {

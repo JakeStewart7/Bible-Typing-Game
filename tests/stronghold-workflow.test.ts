@@ -52,6 +52,18 @@ test('Stronghold changing length preserves earned work and synchronizes role mat
   equal(teammate.work, 5);
 });
 
+test('Stronghold text length selections never add event log entries', () => {
+  const state = createStronghold();
+  const events = structuredClone(state.events);
+  for (const player of state.players) {
+    for (const length of PHRASE_LENGTHS) {
+      executeCommand(state, player, { type: 'LENGTH', length });
+      equal(player.length, length);
+      equal(state.events, events);
+    }
+  }
+});
+
 test('Stronghold relays require only legal placement and do not spend typing work', () => {
   const state = createStronghold();
   const player = state.players[0];

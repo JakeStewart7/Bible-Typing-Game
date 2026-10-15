@@ -1,6 +1,6 @@
 import { assignPhrase, copyRoleTask, synchronizeRoleTask } from './phrases.ts';
 import { addBuilding, addUnit } from './state.ts';
-import { ACTION_LABELS, BASE, BUILDING_CAPS, distance, LENGTH_LABELS, MIN_TIER, PHRASE_WORK, ROLE_ACTIONS, ROLE_LABELS, TIER_MAX, TIER_QUOTA, UNIT_CAPS, validPoint } from './rules.ts';
+import { ACTION_LABELS, BASE, BUILDING_CAPS, distance, MIN_TIER, PHRASE_WORK, ROLE_ACTIONS, ROLE_LABELS, TIER_MAX, TIER_QUOTA, UNIT_CAPS, validPoint } from './rules.ts';
 import { applyUpgrade, taskCost, taskWork, upgradeLimit, UPGRADE_OPTIONS } from './technology.ts';
 import { ENTITY_LABELS, playerEvent, recordEvent } from './events.ts';
 import { PHRASE_LENGTHS, type Action, type BuildingKind, type Participant, type Point, type StrongholdCommand, type StrongholdState } from './types.ts';
@@ -119,7 +119,6 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     player.length = command.length;
     state.roleTasks[player.role].length = command.length;
     assignPhrase(state, player);
-    playerEvent(state, player, `selected ${LENGTH_LABELS[player.length]} text`);
     return;
   }
   if (command.type === 'TYPE') {
