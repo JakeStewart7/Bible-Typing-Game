@@ -90,6 +90,12 @@ Days and nights each last three minutes of battle time, with fifteen-second
 dusk/dawn fades. Night adds a dark-blue overlay to the entire Stronghold view,
 including its UI and tier challenge. Pausing, tabbing away and tier challenges
 freeze the environment clock; new games start in daylight.
+Under **Dev options / Current match**, **Skip to Night** and **Skip to Day** jump
+the environment clock without advancing waves, world events or battle time.
+The **Season** selector immediately updates terrain, weather, music and resource
+positions without restarting. It preserves node identities, remaining supplies,
+gatherer assignments and existing deliveries. These controls require a running
+match outside a tier challenge; they do not change saved new-match defaults.
 
 Stronghold's **Music** button and volume slider control its local seasonal
 soundtrack. Only the current recording loads; day/night transitions choose the

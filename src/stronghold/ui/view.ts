@@ -14,6 +14,7 @@ import { createMapControls, readyBuilding } from './map-controls.ts';
 import { applyPlayerTheme, playerCursor } from './player-theme.ts';
 import { workProgress } from './work-progress.ts';
 import { renderEnvironment } from './environment.ts';
+import { daylight } from '../domain/environment.ts';
 
 export function strongholdElements() {
   const map = document.getElementById('stronghold-map');
@@ -56,6 +57,9 @@ export function strongholdElements() {
     worldEvent: requireElement('stronghold-world-event', HTMLElement),
     computerButtons: ['stronghold-computers', 'stronghold-tier-computers'].map(id => requireElement(id, HTMLButtonElement)),
     nextWave: requireElement('stronghold-next-wave', HTMLButtonElement),
+    devSeason: requireElement('stronghold-dev-season', HTMLSelectElement),
+    nextNight: requireElement('stronghold-next-night', HTMLButtonElement),
+    nextDay: requireElement('stronghold-next-day', HTMLButtonElement),
     orders: requireElement('stronghold-army-orders', HTMLElement), placement: requireElement('stronghold-placement', HTMLElement),
     dialog: requireElement('stronghold-tier-dialog', HTMLDialogElement), tierSlot: requireElement('stronghold-tier-typing-slot', HTMLElement),
     feedback: requireElement('stronghold-feedback', HTMLElement)
@@ -83,6 +87,12 @@ export function renderStronghold(
   const challenge = snapshot.phase === 'tier-up';
   const army = self.role === 'army' && !challenge;
   elements.nextWave.disabled = !running || snapshot.phase !== 'playing';
+  const environmentDisabled = !running || snapshot.phase !== 'playing';
+  const period = daylight(snapshot.environmentElapsed).period;
+  elements.devSeason.disabled = environmentDisabled;
+  if (elements.devSeason.value !== snapshot.season) elements.devSeason.value = snapshot.season;
+  elements.nextNight.disabled = environmentDisabled || period === 'night';
+  elements.nextDay.disabled = environmentDisabled || period === 'day';
   text('stronghold-resources', String(Math.floor(snapshot.resources)));
   text('stronghold-castle', `${Math.max(0, Math.ceil(castle?.hp ?? 0))}/${castle?.maxHp ?? 10000}`);
   text('stronghold-enemy', String(Math.max(0, Math.ceil(snapshot.buildings.find(building => building.kind === 'enemy-base')?.hp ?? 0))));

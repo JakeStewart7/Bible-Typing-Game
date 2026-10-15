@@ -7,8 +7,8 @@ export function weatherMarkup(): string {
     `<i class="stronghold-weather-particle" style="--weather-x:${(index * 37 + 3) % 100}%;--weather-delay:-${index * .43}s;--weather-duration:${2.5 + index % 4 * .35}s;--weather-drift:${index % 2 ? 16 : -12}px"></i>`).join('')}</div>`;
 }
 
-export function renderEnvironment(screen: HTMLElement, label: HTMLElement, snapshot: Pick<StrongholdSnapshot, 'season' | 'elapsed' | 'phase'>, running: boolean): void {
-  const light = daylight(snapshot.elapsed);
+export function renderEnvironment(screen: HTMLElement, label: HTMLElement, snapshot: Pick<StrongholdSnapshot, 'season' | 'environmentElapsed' | 'phase'>, running: boolean): void {
+  const light = daylight(snapshot.environmentElapsed);
   setAttribute(screen, 'data-season', snapshot.season);
   setAttribute(screen, 'data-period', light.period);
   setAttribute(screen, 'data-weather-running', String(running && snapshot.phase === 'playing'));

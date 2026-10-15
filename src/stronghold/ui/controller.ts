@@ -1,7 +1,7 @@
 import { createGame, type Game } from '../../game/state.ts';
 import { requireElement } from '../../shared/dom.ts';
 import { renderTypingExperience, updateTypingInput } from '../../typing/session.ts';
-import { PHRASE_LENGTHS, ROLES, type Point, type StrongholdCommand, type StrongholdConnection, type StrongholdSnapshot } from '../domain/types.ts';
+import { PHRASE_LENGTHS, ROLES, SEASONS, type Point, type StrongholdCommand, type StrongholdConnection, type StrongholdSnapshot } from '../domain/types.ts';
 import { distance } from '../domain/rules.ts';
 import { renderStronghold, strongholdElements } from './view.ts';
 import { mapPoint, readyBuilding, troopsInRectangle, type PlacementKind } from './map-controls.ts';
@@ -82,7 +82,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   function display(): void {
     if (!snapshot) return;
     renderStronghold(elements, snapshot, selected, running(), paused, relayPlacement, placementCancelled, rallyPlacement);
-    music.update(snapshot.season, snapshot.elapsed, running() && snapshot.phase !== 'won' && snapshot.phase !== 'lost');
+    music.update(snapshot.season, snapshot.environmentElapsed, running() && snapshot.phase !== 'won' && snapshot.phase !== 'lost');
     elements.mapControls.ghost(snapshot, placing(), cursor);
     const selecting = drag?.moved && self()?.role === 'army' && !placing() && !rallyPlacement;
     elements.mapControls.selection(selecting ? drag?.start ?? null : null, selecting ? drag?.end ?? null : null);
@@ -286,6 +286,14 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     if (snapshot) void send({ type: 'COMPUTERS', paused: !snapshot.computersPaused });
   });
   elements.nextWave.addEventListener('click', () => { void send({ type: 'NEXT_WAVE' }); });
+  for (const [button, period] of [[elements.nextNight, 'night'], [elements.nextDay, 'day']] as const) {
+    button.addEventListener('click', () => { void send({ type: 'TIME_OF_DAY', period }); });
+  }
+  elements.devSeason.addEventListener('change', () => {
+    const season = SEASONS.find(season => season === elements.devSeason.value);
+    if (!season) { errorMessage = 'Choose a valid season.'; display(); return; }
+    void send({ type: 'SET_SEASON', season });
+  });
   for (const id of ['stronghold-pause', 'stronghold-tier-pause']) requireElement(id, HTMLButtonElement).addEventListener('click', togglePause);
   for (const id of ['stronghold-restart', 'stronghold-play-again']) requireElement(id, HTMLButtonElement).addEventListener('click', restart);
   musicButton.addEventListener('click', () => music.toggle());

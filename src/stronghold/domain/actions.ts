@@ -3,9 +3,10 @@ import { addBuilding, addUnit } from './state.ts';
 import { ACTION_LABELS, BASE, BUILDING_CAPS, distance, isTypingAction, MIN_TIER, ROLE_ACTIONS, ROLE_LABELS, TIER_MAX, TIER_QUOTA, UNIT_CAPS, validPoint } from './rules.ts';
 import { applyUpgrade, phraseWork, taskCost, taskWork, upgradeLimit, UPGRADE_OPTIONS } from './technology.ts';
 import { ENTITY_LABELS, playerEvent, recordEvent } from './events.ts';
-import { PHRASE_LENGTHS, type Action, type BuildingKind, type Participant, type Point, type StrongholdCommand, type StrongholdState } from './types.ts';
+import { PHRASE_LENGTHS, SEASONS, type Action, type BuildingKind, type Participant, type Point, type StrongholdCommand, type StrongholdState } from './types.ts';
 import { restoreRoleTask, saveRoleTask, taskKey } from './tasks.ts';
 import { spawnWave } from './combat.ts';
+import { daylight, DAY_SECONDS, NIGHT_SECONDS, SEASON_LABELS, seasonalNodes } from './environment.ts';
 
 type ActionWorld = Pick<StrongholdState, 'tier' | 'resources' | 'units' | 'technology'>;
 type TaskPlayer = Pick<Participant, 'role' | 'action' | 'constructionTier' | 'upgradeTarget' | 'work'>;
@@ -95,6 +96,31 @@ export function completePhrase(state: StrongholdState, player: Participant): voi
 
 export function executeCommand(state: StrongholdState, player: Participant, command: StrongholdCommand): void {
   if (state.phase === 'won' || state.phase === 'lost') throw new Error('This match is over. Start a new stronghold.');
+  if (command.type === 'SET_SEASON' || command.type === 'TIME_OF_DAY') {
+    if (player.simulated) throw new Error('Only a human player can change the environment.');
+    if (state.phase !== 'playing') throw new Error('Finish the shared tier challenge before changing the environment.');
+    if (command.type === 'SET_SEASON') {
+      if (!SEASONS.includes(command.season)) throw new Error('Choose a valid season.');
+      if (state.season === command.season) return;
+      const layout = seasonalNodes(command.season);
+      if (layout.length !== state.nodes.length) throw new Error('This map does not support seasonal layout changes.');
+      state.nodes = state.nodes.map((node, index) => {
+        const point = layout[index];
+        if (!point) throw new Error('Missing seasonal resource position.');
+        return { ...node, x: point.x, y: point.y };
+      });
+      state.season = command.season;
+      recordEvent(state, `Season changed to ${SEASON_LABELS[command.season]}`);
+    } else {
+      if (command.period !== 'day' && command.period !== 'night') throw new Error('Choose day or night.');
+      const light = daylight(state.environmentElapsed);
+      if (light.period === command.period) return;
+      state.environmentElapsed = (light.cycle + (command.period === 'day' ? 1 : 0)) * (DAY_SECONDS + NIGHT_SECONDS)
+        + (command.period === 'night' ? DAY_SECONDS : 0);
+      recordEvent(state, `Skipped to ${command.period === 'day' ? 'Day' : 'Night'}`);
+    }
+    return;
+  }
   if (command.type === 'NEXT_WAVE') {
     if (player.simulated) throw new Error('Only a human player can advance waves.');
     if (state.phase !== 'playing') throw new Error('Finish the shared tier challenge before advancing waves.');

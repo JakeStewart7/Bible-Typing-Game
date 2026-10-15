@@ -4,6 +4,9 @@ import { createStronghold } from '../src/stronghold/domain/state.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
 import { weatherMarkup } from '../src/stronghold/ui/environment.ts';
+import { executeCommand } from '../src/stronghold/domain/actions.ts';
+import { seasonalTrack } from '../src/stronghold/audio/catalog.ts';
+import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
 import { distance, validPoint } from '../src/stronghold/domain/rules.ts';
 import { equal, test } from './harness.ts';
 
@@ -17,9 +20,11 @@ test('Stronghold randomly chooses each of four seasons with equal probability', 
   const season = engine.snapshot('you').season;
   engine.advance(.25);
   equal(engine.snapshot('you').season, season);
+  equal(engine.snapshot('you').environmentElapsed, .25);
   engine.restart();
   equal(SEASONS.includes(engine.snapshot('you').season), true);
   equal(engine.snapshot('you').elapsed, 0);
+  equal(engine.snapshot('you').environmentElapsed, 0);
 });
 
 test('Stronghold seasonal layouts only move resource nodes and keep their counts, richness, supplies, and starting armies', () => {
@@ -71,10 +76,101 @@ test('Stronghold tier challenges and completed matches freeze the day/night cloc
     const state = createStronghold({ resources: 50, length: 'medium', computersPaused: true });
     state.phase = phase;
     state.elapsed = DAY_SECONDS - .5;
+    state.environmentElapsed = DAY_SECONDS - .5;
     advanceStronghold(state, 1);
     equal(state.elapsed, DAY_SECONDS - .5);
+    equal(state.environmentElapsed, DAY_SECONDS - .5);
     equal(daylight(state.elapsed).period, 'day');
   }
+});
+
+test('Stronghold dev day/night skips affect only the environment clock and soundtrack, not battle simulation', () => {
+  const state = createStronghold({ resources: 50, length: 'medium', computersPaused: true }, 'winter');
+  state.elapsed = 12.25;
+  state.environmentElapsed = 12.25;
+  const player = state.players[0]!;
+  for (const [period, expectedTime, title] of [
+    ['night', DAY_SECONDS, 'Ethernight Club'],
+    ['day', DAY_SECONDS + NIGHT_SECONDS, 'Voxel Revolution'],
+    ['night', DAY_SECONDS * 2 + NIGHT_SECONDS, 'Ethernight Club']
+  ] as const) {
+    const before = structuredClone(state);
+    executeCommand(state, player, { type: 'TIME_OF_DAY', period });
+    equal(state.environmentElapsed, expectedTime);
+    equal(daylight(state.environmentElapsed).period, period);
+    equal(seasonalTrack(state.season, state.environmentElapsed).title, title);
+    equal({ ...state, environmentElapsed: before.environmentElapsed, events: before.events }, before);
+    const after = structuredClone(state);
+    executeCommand(state, player, { type: 'TIME_OF_DAY', period });
+    equal(state, after);
+  }
+  advanceStronghold(state, .5);
+  equal(state.elapsed, 12.75);
+  equal(state.environmentElapsed, DAY_SECONDS * 2 + NIGHT_SECONDS + .5);
+});
+
+test('Stronghold live season changes relocate nodes without refilling them or invalidating jobs and deliveries', () => {
+  const state = createStronghold(undefined, 'summer');
+  state.environmentElapsed = DAY_SECONDS;
+  state.nodes[0]!.remaining = 0;
+  state.nodes[5]!.remaining = 77;
+  const worker = state.units.find(unit => unit.kind === 'worker')!;
+  worker.task = state.nodes[5]!.id;
+  state.chunks.push({ id: 999, x: worker.x, y: worker.y, amount: 4, target: state.buildings[0]!.id, carrier: worker.id });
+  const player = state.players[0]!;
+  for (const season of SEASONS) {
+    const before = structuredClone(state);
+    executeCommand(state, player, { type: 'SET_SEASON', season });
+    equal(state.season, season);
+    equal(state.nodes.map(({ x, y }) => [x, y]), seasonalNodes(season).map(({ x, y }) => [x, y]));
+    equal(state.nodes.map(({ id, rich, remaining }) => [id, rich, remaining]),
+      before.nodes.map(({ id, rich, remaining }) => [id, rich, remaining]));
+    equal({ ...state, season: before.season, nodes: before.nodes, events: before.events }, before);
+    equal(daylight(state.environmentElapsed).period, 'night');
+    const after = structuredClone(state);
+    executeCommand(state, player, { type: 'SET_SEASON', season });
+    equal(state, after);
+  }
+});
+
+test('Stronghold environment dev commands reject computers, invalid values and unavailable phases atomically', () => {
+  const commands = [{ type: 'TIME_OF_DAY', period: 'night' }, { type: 'SET_SEASON', season: 'winter' }] as const;
+  for (const command of commands) {
+    for (const phase of ['playing', 'tier-up', 'won', 'lost'] as const) {
+      const state = createStronghold(undefined, 'summer');
+      state.phase = phase;
+      const before = structuredClone(state);
+      let rejected = false;
+      try { executeCommand(state, state.players[phase === 'playing' ? 1 : 0]!, command); }
+      catch (error) { rejected = error instanceof Error && error.message.length > 0; }
+      equal(rejected, true);
+      equal(state, before);
+    }
+  }
+  for (const command of [
+    { type: 'SET_SEASON', season: 'invalid' }, { type: 'TIME_OF_DAY', period: 'midnight' }
+  ]) {
+    const state = createStronghold();
+    const before = structuredClone(state);
+    let rejected = false;
+    try { executeCommand(state, state.players[0]!, JSON.parse(JSON.stringify(command))); }
+    catch (error) { rejected = error instanceof Error && error.message.length > 0; }
+    equal(rejected, true);
+    equal(state, before);
+  }
+  const engine = new StrongholdEngine();
+  engine.send('you', { type: 'TIME_OF_DAY', period: 'night' });
+  engine.restart();
+  equal(engine.snapshot('you').environmentElapsed, 0);
+});
+
+test('Stronghold dev markup provides live season, day and night controls separate from saved match defaults', () => {
+  const markup = strongholdWorkspaceMarkup();
+  for (const id of ['stronghold-dev-season', 'stronghold-next-night', 'stronghold-next-day']) {
+    equal(markup.includes(`id="${id}"`), true);
+  }
+  equal(markup.includes('Skip to Night'), true);
+  equal(markup.includes('Skip to Day'), true);
 });
 
 test('Stronghold weather uses a fixed small decorative particle pool instead of growing the DOM', () => {

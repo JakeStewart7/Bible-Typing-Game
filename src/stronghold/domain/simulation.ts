@@ -112,6 +112,7 @@ export function advanceStronghold(state: StrongholdState, seconds: number): void
   }
   if (state.phase !== 'playing') return;
   state.elapsed += seconds;
+  state.environmentElapsed += seconds;
   state.waveIn -= seconds;
   if (state.waveIn <= 0) spawnWave(state);
   if (updateWorldEvent(state)) {

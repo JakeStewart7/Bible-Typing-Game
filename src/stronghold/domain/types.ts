@@ -37,7 +37,7 @@ export type TaskProgress = Pick<Participant, 'work' | 'actionPhrases'>;
 export type RoleTasks = { selection: TaskSelection; progress: Record<string, TaskProgress> };
 export type StrongholdEvent = { id: number; elapsed: number; playerId: string | null; text: string };
 export type StrongholdState = {
-  season: Season;
+  season: Season; environmentElapsed: number;
   phase: Phase; tier: number; elapsed: number; wave: number; waveIn: number;
   resources: number; event: WorldEvent; eventIn: number;
   players: Participant[]; units: Unit[]; buildings: Building[];
@@ -57,6 +57,8 @@ export type StrongholdCommand =
   | { type: 'LENGTH'; length: PhraseLength }
   | { type: 'COMPUTERS'; paused: boolean }
   | { type: 'NEXT_WAVE' }
+  | { type: 'SET_SEASON'; season: Season }
+  | { type: 'TIME_OF_DAY'; period: 'day' | 'night' }
   | { type: 'TYPE'; phraseId: number; text: string }
   | { type: 'READY'; ready: boolean }
   | { type: 'PLACE'; kind: 'relay' | 'barracks' | 'tower' | 'wall'; point: Point }

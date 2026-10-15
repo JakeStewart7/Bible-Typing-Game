@@ -1,7 +1,8 @@
 import { menuNavigationMarkup } from '../../ui/menu-navigation.ts';
 import { ACTION_LABELS, COSTS, isTypingAction, LENGTH_LABELS, MIN_TIER, ROLE_LABELS, TEXT_LENGTH_BONUSES } from '../domain/rules.ts';
 import { UPGRADE_OPTIONS } from '../domain/technology.ts';
-import { PHRASE_LENGTHS, ROLES, type Action, type Role, type UpgradeTarget } from '../domain/types.ts';
+import { PHRASE_LENGTHS, ROLES, SEASONS, type Action, type Role, type UpgradeTarget } from '../domain/types.ts';
+import { SEASON_LABELS } from '../domain/environment.ts';
 import { taskShortcut } from './keyboard.ts';
 import { weatherMarkup } from './environment.ts';
 import { creditsMarkup } from './credits.ts';
@@ -109,6 +110,9 @@ export function strongholdWorkspaceMarkup(): string {
           <p>Saved on this device. Applying starts a new match; New game uses these defaults.</p>
           <button type="submit">Apply &amp; new game</button>
           <h3>Current match</h3>
+          <label>Season <select id="stronghold-dev-season">${SEASONS.map(season => `<option value="${season}">${SEASON_LABELS[season]}</option>`).join('')}</select></label>
+          <div class="stronghold-dev-time"><button id="stronghold-next-night" type="button">Skip to Night</button><button id="stronghold-next-day" type="button">Skip to Day</button></div>
+          <p>Preview the season or time of day without restarting or advancing battle time. Existing resource supplies are preserved.</p>
           <button id="stronghold-next-wave" type="button">Next Wave</button>
           <p>Spawn the next wave now and reset its countdown without restarting the match.</p>
         </form>

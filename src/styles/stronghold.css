@@ -117,7 +117,8 @@
 .stronghold-guide p { line-height: 1.4; margin: 8px 0; }
 .stronghold-dev-options { position: absolute; top: 60px; left: 95px; z-index: 7; font-size: 16px; }
 .stronghold-dev-options summary { cursor: pointer; }
-.stronghold-dev-panel { position: absolute; top: 28px; left: 0; width: min(340px, calc(100vw - 16px)); padding: 12px; background: #eee; border: 2px solid #111; display: grid; gap: 10px; }
+.stronghold-dev-panel { position: absolute; top: 28px; left: 0; width: min(340px, calc(100vw - 16px)); max-height: max(160px, calc(100dvh - var(--header-height) - 16px)); overflow-y: auto; overscroll-behavior: contain; padding: 12px; background: #eee; border: 2px solid #111; display: grid; gap: 10px; }
+.stronghold-dev-time { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .stronghold-dev-panel h3, .stronghold-dev-panel p { margin: 0; }
 .stronghold-dev-panel p { font-size: 14px; }
 .stronghold-dev-panel label { display: grid; gap: 4px; }
