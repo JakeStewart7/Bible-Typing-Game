@@ -7,7 +7,7 @@
   --player-color: #ff1726; --player-bold: #b00020; --player-fill: #ffb3c9;
   --page-accent: #16b544; --page-accent-soft: #9ed7e6; --page-glow: transparent;
   padding: 0; margin: 0; max-width: none; color: #111; background: #1faf4c;
-  font: var(--stronghold-font-weight) 17px/1.45 var(--stronghold-font); overflow: hidden;
+  font: var(--stronghold-font-weight) 17px/1.45 var(--stronghold-font); overflow: hidden; isolation: isolate;
 }
 .stronghold-screen :is(button, select, input, summary, small, p, label, h2, h3, strong, span, text) { font-family: var(--stronghold-font); font-weight: var(--stronghold-font-weight); }
 .stronghold-screen, .stronghold-screen :is(button, select, input, summary, .stronghold-map-unit), .stronghold-screen #stronghold-map { cursor: var(--stronghold-cursor, auto); }
@@ -18,19 +18,18 @@
 .stronghold-screen[data-season="summer"] { --battlefield-color: #16883d; }
 .stronghold-screen[data-season="fall"] { --battlefield-color: #cbb08b; }
 .stronghold-screen[data-season="winter"] { --battlefield-color: #dcecf2; }
+.stronghold-tier-dialog, .stronghold-credits-dialog { isolation: isolate; }
 .stronghold-screen::after, .stronghold-tier-dialog::after, .stronghold-credits-dialog::after {
   content: ''; position: fixed; inset: 0; z-index: 1000; pointer-events: none;
-  background: #101b39; opacity: var(--night-opacity);
+  background: linear-gradient(150deg, #597ddc, #3258ae); mix-blend-mode: multiply; opacity: var(--night-opacity);
 }
-.stronghold-weather { position: absolute; inset: 0 0 auto; height: min(280px, 36%); overflow: hidden; pointer-events: none; z-index: 2; }
+.stronghold-weather { position: absolute; inset: var(--header-height) 0 auto; height: max(0px, min(240px, calc(100% - var(--header-height) - var(--deck-height) - 140px))); overflow: hidden; pointer-events: none; z-index: 2; }
 .stronghold-weather-particle {
   position: absolute; top: -16px; left: var(--weather-x); width: 7px; height: 7px; border-radius: 50%; background: white; opacity: 0;
   animation: stronghold-weather-drift var(--weather-duration) var(--weather-delay) linear infinite;
 }
 [data-weather-running="false"] .stronghold-weather-particle { animation-play-state: paused; }
-[data-season="fall"] .stronghold-weather-particle { width: 12px; height: 13px; border-radius: 0; background: #bd633d; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-[data-season="fall"] .stronghold-weather-particle:nth-child(3n) { background: #e1a443; }
-[data-season="fall"] .stronghold-weather-particle:nth-child(3n + 1) { background: #a84739; }
+[data-season="fall"] .stronghold-weather-particle { width: 12px; height: 13px; border-radius: 0; background: var(--leaf-color); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
 [data-season="summer"] .stronghold-weather-particle { width: 4px; height: 48px; background: #fff4af; box-shadow: 0 0 12px #fff7c8; border-radius: 50%; }
 [data-season="spring"] .stronghold-weather-particle {
   --petal: #f4a9ce; width: 17px; height: 17px; border-radius: 0;

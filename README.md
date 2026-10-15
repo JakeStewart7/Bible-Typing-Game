@@ -88,11 +88,13 @@ node positions change: every layout keeps six standard nodes, two rich nodes,
 and 7,200 total supplies, with the same bases, troops and rules. Spring uses light
 green grass and pastel flowers, summer deep green grass and faint light rays,
 fall light brown ground and autumn-colored triangles, and winter blue-white
-ground and softly fading snow circles. The small decorative particle pool stays
-near the top, never intercepts clicks, and is hidden for reduced-motion preferences.
+ground and softly fading snow circles. Leaves randomly use red, orange, yellow
+or brown. The small decorative particle pool starts beneath the top UI and stays
+inside the battlefield, never intercepts clicks, and is hidden for reduced-motion preferences.
 Days and nights each last three minutes of battle time, with fifteen-second
-dusk/dawn fades. Night adds a dark-blue overlay to the entire Stronghold view,
-including its UI and tier challenge. Pausing, tabbing away and tier challenges
+dusk/dawn fades. Night blends a moonlit blue overlay into the entire Stronghold
+view, including its UI and tier challenge, preserving vibrant colors rather than
+uniformly dimming the screen. Pausing, tabbing away and tier challenges
 freeze the environment clock; new games start in daylight.
 Under **Dev options / Current match**, **Skip to Night** and **Skip to Day** jump
 the environment clock without advancing waves, world events or battle time.

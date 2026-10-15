@@ -3,7 +3,7 @@ import { SEASONS } from '../src/stronghold/domain/types.ts';
 import { createStronghold } from '../src/stronghold/domain/state.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
-import { weatherMarkup } from '../src/stronghold/ui/environment.ts';
+import { AUTUMN_LEAF_COLORS, weatherMarkup } from '../src/stronghold/ui/environment.ts';
 import { executeCommand } from '../src/stronghold/domain/actions.ts';
 import { seasonalTrack } from '../src/stronghold/audio/catalog.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
@@ -178,4 +178,20 @@ test('Stronghold weather uses a fixed small decorative particle pool instead of 
   equal((markup.match(/class="stronghold-weather-particle"/g) ?? []).length, 14);
   equal(markup.includes('aria-hidden="true"'), true);
   equal(markup.includes('<button'), false);
+});
+
+test('Stronghold autumn leaves randomly choose red, orange, yellow or brown for each particle', () => {
+  equal(Object.isFrozen(AUTUMN_LEAF_COLORS), true);
+  equal(AUTUMN_LEAF_COLORS, ['#c84b3d', '#e78b32', '#e4bc4c', '#8b5d3d']);
+  for (let index = 0; index < AUTUMN_LEAF_COLORS.length; index++) {
+    for (const offset of [0, .99999]) {
+      const markup = weatherMarkup(() => (index + offset) / AUTUMN_LEAF_COLORS.length);
+      equal((markup.match(new RegExp(`--leaf-color:${AUTUMN_LEAF_COLORS[index]}`, 'g')) ?? []).length, 14);
+    }
+  }
+  let samples = 0;
+  const markup = weatherMarkup(() => samples++ % AUTUMN_LEAF_COLORS.length / AUTUMN_LEAF_COLORS.length);
+  equal(samples, 14);
+  equal([...markup.matchAll(/--leaf-color:(#[a-f0-9]+)/g)].map(match => match[1]),
+    Array.from({ length: 14 }, (_, index) => AUTUMN_LEAF_COLORS[index % AUTUMN_LEAF_COLORS.length]));
 });
