@@ -4,6 +4,7 @@ import { UPGRADE_OPTIONS } from '../domain/technology.ts';
 import { PHRASE_LENGTHS, ROLES, type Action, type Role, type UpgradeTarget } from '../domain/types.ts';
 import { taskShortcut } from './keyboard.ts';
 import { weatherMarkup } from './environment.ts';
+import { creditsMarkup } from './credits.ts';
 
 export const PLAYER_IDS = ['you', 'bot-1', 'bot-2', 'bot-3'] as const;
 function tile(action: Action, label: string, tier: number | undefined, shortcut: string): string {
@@ -52,6 +53,13 @@ export function strongholdWorkspaceMarkup(): string {
         <button id="stronghold-pause" type="button">Pause</button><button id="stronghold-restart" type="button">New game</button>
         <button id="stronghold-computers" type="button" aria-pressed="false">Stop computers</button>
       </nav>
+      <div class="stronghold-atmosphere-controls" role="group" aria-label="Soundtrack and credits">
+        <button id="stronghold-music" type="button" aria-pressed="true">Music on</button>
+        <label class="sr-only" for="stronghold-volume">Stronghold music volume</label>
+        <input id="stronghold-volume" type="range" min="0" max="0.5" step="0.01" value="0.18">
+        <button id="stronghold-open-credits" type="button">Credits</button>
+        <output id="stronghold-music-status" class="stronghold-music-status is-hidden" role="status"></output>
+      </div>
       <div class="stronghold-map-camera" role="group" aria-label="Map zoom and navigation">
         <button id="stronghold-zoom-out" type="button" aria-label="Zoom out">-</button>
         <output id="stronghold-zoom">120%</output>
@@ -134,6 +142,7 @@ export function strongholdWorkspaceMarkup(): string {
       </section>
       <div id="stronghold-placement" class="stronghold-placement is-hidden"><span>Click the map to place.</span><button id="stronghold-cancel-placement" type="button">Cancel</button></div>
     </div>
+    ${creditsMarkup()}
     <dialog id="stronghold-tier-dialog" class="stronghold-tier-dialog">
       <div id="stronghold-tier-typing-slot"></div>
       <div class="stronghold-tier-status"><h2 id="stronghold-tier-title">Tier Up</h2><p id="stronghold-tier-description"></p><button id="stronghold-tier-pause" type="button">Pause challenge</button><button id="stronghold-tier-computers" type="button" aria-pressed="false">Stop computers</button></div>

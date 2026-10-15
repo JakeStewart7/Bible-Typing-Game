@@ -91,6 +91,28 @@ dusk/dawn fades. Night adds a dark-blue overlay to the entire Stronghold view,
 including its UI and tier challenge. Pausing, tabbing away and tier challenges
 freeze the environment clock; new games start in daylight.
 
+Stronghold's **Music** button and volume slider control its local seasonal
+soundtrack. Only the current recording loads; day/night transitions choose the
+matching track, and pausing, opening Credits, hiding the tab or leaving Stronghold
+stops playback. Muting or pausing preserves the current position. Autoplay or
+loading failures display a retry message rather than failing silently.
+
+| Season | Day | Night |
+| --- | --- | --- |
+| Spring | Brain Dance | Late Night Radio |
+| Summer | Realizer | Blippy Trance |
+| Fall | Newer Wave | Ether Vox |
+| Winter | Voxel Revolution | Ethernight Club |
+
+The eight original MP3s in `assets/music/stronghold/` total 45,837,229 bytes
+(45.84 MB). They are bundled for local playback, not streamed from a third-party
+site. **Credits** opens a dedicated in-game page with every title and official
+source link. All eight tracks are by **Kevin MacLeod (incompetech.com)**,
+licensed under [Creative Commons: By Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
+Recordings are unmodified and loop during playback; source details are also in
+`assets/music/stronghold/CREDITS.txt`. Incompetech's verified catalog title
+**Late Night Radio** is used for the requested spring-night "late night jazz."
+
 The slim, stretched private typing strip leaves more height for the battlefield.
 Its input stays 420px wide (or fits the available space on smaller screens),
 centered beneath the displayed text, with the unlabeled length scroller directly

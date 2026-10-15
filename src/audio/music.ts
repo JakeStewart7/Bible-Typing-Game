@@ -20,15 +20,14 @@ export function setupMusic(container?: HTMLElement | null) {
     event.stopPropagation();
     if (audio.paused) {
       await audio.play();
-      button.textContent = '❚❚ Music';
     } else {
       audio.pause();
-      button.textContent = '♫ Music';
     }
   });
   volume.addEventListener('input', () => { audio.volume = Number(volume.value); });
 
   audio.addEventListener('play', () => {
+    button.textContent = '❚❚ Music';
     const target = Number(volume.value);
     audio.volume = 0;
     const start = performance.now();
@@ -38,5 +37,6 @@ export function setupMusic(container?: HTMLElement | null) {
     };
     requestAnimationFrame(fade);
   });
+  audio.addEventListener('pause', () => { button.textContent = '♫ Music'; });
   return audio;
 }

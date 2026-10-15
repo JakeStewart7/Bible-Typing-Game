@@ -9,11 +9,25 @@ import { setText } from './dom-updates.ts';
 import { validateDeveloperOptions, type DeveloperOptions } from '../infrastructure/developer-options.ts';
 import { MIN_MAP_ZOOM, MAX_MAP_ZOOM } from './map-camera.ts';
 import { actionShortcutKey, arrowLength } from './keyboard.ts';
+import { createSeasonalMusic } from '../audio/music.ts';
 
 export function createStrongholdController(connection: StrongholdConnection, developer: {
   defaults: DeveloperOptions; save(options: DeveloperOptions): void;
 }) {
   const elements = strongholdElements();
+  const credits = requireElement('stronghold-credits', HTMLDialogElement);
+  const musicButton = requireElement('stronghold-music', HTMLButtonElement);
+  const musicVolume = requireElement('stronghold-volume', HTMLInputElement);
+  const musicStatus = requireElement('stronghold-music-status', HTMLElement);
+  const currentTrack = requireElement('stronghold-current-track', HTMLElement);
+  const music = createSeasonalMusic(new Audio(), status => {
+    setText(musicButton, status.enabled ? 'Music on' : 'Music off');
+    musicButton.setAttribute('aria-pressed', String(status.enabled));
+    musicButton.title = status.track ? `${status.track.title} - Kevin MacLeod` : 'Seasonal soundtrack';
+    setText(currentTrack, status.track?.title ?? '');
+    setText(musicStatus, status.message);
+    musicStatus.classList.toggle('is-hidden', !status.message);
+  });
   let defaults = { ...developer.defaults };
   const developerPanel = requireElement('stronghold-dev-options', HTMLDetailsElement);
   const developerForm = requireElement('stronghold-dev-form', HTMLFormElement);
@@ -47,11 +61,12 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   let cursor: Point | null = null;
   let drag: { start: Point; end: Point; pointer: number; additive: boolean; unitId: number | null; moved: boolean } | null = null;
   let pan: { pointer: number; start: Point; center: Point; matrix: DOMMatrix } | null = null;
-  const running = (): boolean => shown && !paused && !document.hidden;
+  const running = (): boolean => shown && !paused && !credits.open && !document.hidden;
   const self = () => snapshot?.players.find(player => player.id === snapshot?.selfId);
   const placing = (): PlacementKind | null => snapshot && running() && snapshot.phase === 'playing' && !placementCancelled
     ? relayPlacement ? 'relay' : readyBuilding(snapshot) : null;
   function focusTyping(): void {
+    if (document.activeElement === musicVolume) return;
     if (developerPanel.open && document.activeElement instanceof Element && developerPanel.contains(document.activeElement)) return;
     if (running() && !elements.input.disabled && !(document.activeElement instanceof HTMLSelectElement)) {
       elements.input.focus({ preventScroll: true });
@@ -67,6 +82,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   function display(): void {
     if (!snapshot) return;
     renderStronghold(elements, snapshot, selected, running(), paused, relayPlacement, placementCancelled, rallyPlacement);
+    music.update(snapshot.season, snapshot.elapsed, running() && snapshot.phase !== 'won' && snapshot.phase !== 'lost');
     elements.mapControls.ghost(snapshot, placing(), cursor);
     const selecting = drag?.moved && self()?.role === 'army' && !placing() && !rallyPlacement;
     elements.mapControls.selection(selecting ? drag?.start ?? null : null, selecting ? drag?.end ?? null : null);
@@ -272,6 +288,14 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   elements.nextWave.addEventListener('click', () => { void send({ type: 'NEXT_WAVE' }); });
   for (const id of ['stronghold-pause', 'stronghold-tier-pause']) requireElement(id, HTMLButtonElement).addEventListener('click', togglePause);
   for (const id of ['stronghold-restart', 'stronghold-play-again']) requireElement(id, HTMLButtonElement).addEventListener('click', restart);
+  musicButton.addEventListener('click', () => music.toggle());
+  musicVolume.addEventListener('input', () => music.setVolume(musicVolume.valueAsNumber));
+  requireElement('stronghold-open-credits', HTMLButtonElement).addEventListener('click', () => {
+    credits.showModal(); clearDrag(); connection.setActive(running()); display();
+  });
+  requireElement('stronghold-close-credits', HTMLButtonElement).addEventListener('click', () => credits.close());
+  const creditsClosed = (): void => { connection.setActive(running()); display(); focusTyping(); };
+  credits.addEventListener('close', creditsClosed);
   developerForm.addEventListener('submit', event => {
     event.preventDefault();
     if (!developerForm.reportValidity()) return;
@@ -305,11 +329,12 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   elements.dialog.addEventListener('cancel', event => { event.preventDefault(); togglePause(); });
   const clicked = (event: MouseEvent): void => {
     if (event.target instanceof Node && !developerPanel.contains(event.target)) developerPanel.open = false;
-    if (!(event.target instanceof HTMLSelectElement)) queueMicrotask(focusTyping);
+    if (!(event.target instanceof HTMLSelectElement) && event.target !== musicVolume) queueMicrotask(focusTyping);
   };
   elements.screen.addEventListener('click', clicked);
   const keyboard = (event: KeyboardEvent): void => {
     if (!running() || !snapshot || event.isComposing) return;
+    if (document.activeElement === musicVolume) return;
     if (developerPanel.open && document.activeElement instanceof Element && developerPanel.contains(document.activeElement)) {
       if (event.key === 'Escape') { event.preventDefault(); developerPanel.open = false; focusTyping(); }
       return;
@@ -371,13 +396,15 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       display(); focusTyping();
     },
     dispose(): void {
-      unsubscribe(); clearDrag();
+      unsubscribe(); clearDrag(); music.dispose();
       elements.screen.removeEventListener('click', clicked);
       document.removeEventListener('keydown', keyboard);
       document.removeEventListener('visibilitychange', visibility);
       window.removeEventListener('focus', focusTyping);
       window.removeEventListener('resize', resize);
+      credits.removeEventListener('close', creditsClosed);
       if (elements.dialog.open) elements.dialog.close();
+      if (credits.open) credits.close();
       connection.dispose();
     }
   };
