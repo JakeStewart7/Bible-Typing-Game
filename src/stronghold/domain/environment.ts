@@ -14,7 +14,13 @@ const LAYOUTS: Record<Season, readonly (readonly [number, number])[]> = {
   winter: [[300, 535], [720, 535], [175, 395], [825, 395], [355, 305], [665, 305], [190, 205], [800, 205]]
 };
 
-export function randomSeason(random: () => number = Math.random): Season {
+function seasonSample(): number {
+  const sample = new Uint32Array(1);
+  globalThis.crypto.getRandomValues(sample);
+  return sample[0]! / 0x100000000;
+}
+
+export function randomSeason(random: () => number = seasonSample): Season {
   const season = SEASONS[Math.floor(random() * SEASONS.length)];
   if (!season) throw new Error('Season selection requires a random value from zero up to, but not including, one.');
   return season;

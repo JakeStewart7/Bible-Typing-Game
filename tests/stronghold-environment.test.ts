@@ -10,6 +10,55 @@ import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
 import { distance, validPoint } from '../src/stronghold/domain/rules.ts';
 import { equal, test } from './harness.ts';
 
+function withSeasonSamples(samples: number[], run: () => void): void {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis.crypto, 'getRandomValues');
+  const originalRandom = Math.random;
+  let draws = 0;
+  Object.defineProperty(globalThis.crypto, 'getRandomValues', {
+    configurable: true,
+    value: (values: Uint32Array): Uint32Array => {
+      equal(values instanceof Uint32Array, true);
+      equal(values.length, 1);
+      const sample = samples[draws++];
+      if (sample === undefined) throw new Error('Unexpected season random draw.');
+      values[0] = sample;
+      return values;
+    }
+  });
+  Math.random = () => .99999;
+  try { run(); equal(draws, samples.length); }
+  finally {
+    Math.random = originalRandom;
+    if (descriptor) Object.defineProperty(globalThis.crypto, 'getRandomValues', descriptor);
+    else equal(Reflect.deleteProperty(globalThis.crypto, 'getRandomValues'), true);
+  }
+}
+
+test('Stronghold default season draws use independent system randomness with equal quarter-range boundaries', () => {
+  withSeasonSamples([0, 0x3fffffff, 0x40000000, 0x7fffffff, 0x80000000, 0xbfffffff, 0xc0000000, 0xffffffff], () => {
+    equal(Array.from({ length: 8 }, () => randomSeason()),
+      ['spring', 'spring', 'summer', 'summer', 'fall', 'fall', 'winter', 'winter']);
+  });
+});
+
+test('Stronghold every new match draws a fresh season even after a developer override or a repeated draw', () => {
+  withSeasonSamples([0, 0x40000000, 0x80000000, 0xc0000000, 0xc0000000, 0], () => {
+    const engine = new StrongholdEngine({ resources: 75, length: 'long', computersPaused: true });
+    equal(engine.snapshot('you').season, 'spring');
+    engine.send('you', { type: 'SET_SEASON', season: 'winter' });
+    equal(engine.snapshot('you').season, 'winter');
+    for (const season of ['summer', 'fall', 'winter', 'winter', 'spring']) {
+      engine.restart();
+      const snapshot = engine.snapshot('you');
+      equal(snapshot.season, season);
+      equal(snapshot.environmentElapsed, 0);
+      equal(snapshot.resources, 75);
+      equal(snapshot.computersPaused, true);
+      equal(snapshot.players.every(player => player.length === 'long'), true);
+    }
+  });
+});
+
 test('Stronghold randomly chooses each of four seasons with equal probability', () => {
   for (let index = 0; index < SEASONS.length; index++) {
     equal(randomSeason(() => index / 4), SEASONS[index]);

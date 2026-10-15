@@ -90,7 +90,9 @@ Switching to another browser tab automatically pauses Stronghold, including
 the battlefield and computer typing. Returning resumes without catching up
 the time spent away; switching screens or using Pause also stops the simulation.
 
-Each new Stronghold match randomly picks one of four seasonal maps. Only resource
+Each new Stronghold match uses system-generated randomness to pick one of four
+seasonal maps, with an independent **25% chance per season**. Consecutive repeats
+are possible; a Dev options season override does not pin future matches. Only resource
 node positions change: every layout keeps six standard nodes, two rich nodes,
 and 7,200 total supplies, with the same bases, troops and rules. Spring uses light
 green grass and pastel flowers, summer deep green grass and faint light rays,
