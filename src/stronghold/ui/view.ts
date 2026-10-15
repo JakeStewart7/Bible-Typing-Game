@@ -13,6 +13,7 @@ import { createEventLog } from './event-log.ts';
 import { createMapControls, readyBuilding } from './map-controls.ts';
 import { applyPlayerTheme, playerCursor } from './player-theme.ts';
 import { workProgress } from './work-progress.ts';
+import { renderEnvironment } from './environment.ts';
 
 export function strongholdElements() {
   const map = document.getElementById('stronghold-map');
@@ -40,6 +41,7 @@ export function strongholdElements() {
   });
   return {
     screen: requireElement('stronghold-screen', HTMLElement), map, playerCards,
+    season: requireElement('stronghold-season', HTMLElement),
     renderBattlefield: createBattlefieldRenderer(map),
     mapControls: createMapControls(map),
     camera: createMapCamera(map),
@@ -74,6 +76,7 @@ export function renderStronghold(
   const ownCard = elements.playerCards.find(card => card.id === snapshot.selfId);
   if (!self || !ownCard) throw new Error('Stronghold snapshot has no local player.');
   applyPlayerTheme(elements.screen, self.color);
+  renderEnvironment(elements.screen, elements.season, snapshot, running);
   elements.mapControls.theme(self.color);
   const castle = snapshot.buildings.find(building => building.kind === 'castle');
   const terminal = snapshot.phase === 'won' || snapshot.phase === 'lost';

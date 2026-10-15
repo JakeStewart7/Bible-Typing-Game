@@ -3,7 +3,8 @@ import { assignPhrase } from './phrases.ts';
 import { unitUpgrade } from './technology.ts';
 import { createRoleTasks } from './tasks.ts';
 import { DEFAULT_MATCH_OPTIONS, validateMatchOptions } from './options.ts';
-import type { ArmyUnitKind, Building, BuildingKind, Participant, Point, StrongholdMatchOptions, StrongholdState, Unit, UnitKind } from './types.ts';
+import type { ArmyUnitKind, Building, BuildingKind, Participant, Point, Season, StrongholdMatchOptions, StrongholdState, Unit, UnitKind } from './types.ts';
+import { randomSeason, seasonalNodes } from './environment.ts';
 
 export function addUnit(state: StrongholdState, kind: UnitKind, point: Point, formation: ArmyUnitKind | null = null): Unit {
   const hp = ((formation ? UNIT_RULES[formation].hp : UNIT_RULES[kind].hp)
@@ -25,7 +26,7 @@ export function addBuilding(
   state.buildings.push(building);
   return building;
 }
-export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH_OPTIONS): StrongholdState {
+export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH_OPTIONS, season: Season = randomSeason()): StrongholdState {
   validateMatchOptions(options);
   const roster: Pick<Participant, 'id' | 'name' | 'color' | 'role' | 'simulated'>[] = [
     { id: 'you', name: 'You', color: '#ff1726', role: 'economy', simulated: false },
@@ -34,6 +35,7 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
     { id: 'bot-3', name: 'Esther', color: '#18b644', role: 'defenses', simulated: true }
   ];
   const state: StrongholdState = {
+    season,
     phase: 'playing', tier: 0, elapsed: 0, wave: 0, waveIn: 60, resources: options.resources,
     event: 'peace', eventIn: 60, nextId: 1, units: [], buildings: [], chunks: [],
     players: roster.map(player => ({
@@ -42,12 +44,7 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
       constructionTier: 1, upgradeTarget: player.role === 'production' ? 'warrior' : player.role === 'defenses' ? 'tower-1' : 'economy',
       actionPhrases: 0, work: 0, length: options.length
     })),
-    nodes: [
-      { x: 290, y: 530, rich: false }, { x: 730, y: 520, rich: false },
-      { x: 200, y: 370, rich: false }, { x: 840, y: 345, rich: false },
-      { x: 370, y: 390, rich: false }, { x: 680, y: 325, rich: true },
-      { x: 145, y: 235, rich: true }, { x: 805, y: 170, rich: false }
-    ].map(node => ({ ...node, id: 100 + node.x, remaining: node.rich ? 1200 : 800 })),
+    nodes: seasonalNodes(season),
     upgrades: { economy: 0, production: 0, defenses: 0 },
     technology: { economy: 0, warrior: 0, archer: 0, catapult: 0, 'tower-1': 0, 'tower-2': 0, 'tower-3': 0 },
     rally: { x: 500, y: 450 }, message: '', events: [{ id: 1, elapsed: 0, playerId: null, text: 'Stronghold started' }],

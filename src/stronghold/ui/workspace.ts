@@ -3,6 +3,7 @@ import { ACTION_LABELS, COSTS, isTypingAction, LENGTH_LABELS, MIN_TIER, ROLE_LAB
 import { UPGRADE_OPTIONS } from '../domain/technology.ts';
 import { PHRASE_LENGTHS, ROLES, type Action, type Role, type UpgradeTarget } from '../domain/types.ts';
 import { taskShortcut } from './keyboard.ts';
+import { weatherMarkup } from './environment.ts';
 
 export const PLAYER_IDS = ['you', 'bot-1', 'bot-2', 'bot-3'] as const;
 function tile(action: Action, label: string, tier: number | undefined, shortcut: string): string {
@@ -42,6 +43,7 @@ function playerCard(id: string, index: number): string {
 export function strongholdWorkspaceMarkup(): string {
   return `<section id="stronghold-screen" class="app-page stronghold-screen is-hidden">
     <div class="stronghold-stage">
+      ${weatherMarkup()}
       <div class="stronghold-battlefield">
         <svg id="stronghold-map" viewBox="0 0 1000 650" role="img" aria-label="Stronghold battlefield: left-click or drag to select friendly units, right-click to move, or left-click to place a prepared building." tabindex="0"></svg>
         <div id="stronghold-outcome" class="stronghold-outcome is-hidden"><h3 id="stronghold-outcome-title"></h3><p id="stronghold-outcome-copy"></p><button id="stronghold-play-again" class="primary-btn" type="button">Build again</button></div>
@@ -66,7 +68,7 @@ export function strongholdWorkspaceMarkup(): string {
           <span title="Gatherers"><span class="sr-only">Gatherers: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--worker"></i><b id="stronghold-worker-count">2/12</b></span>
           <span title="Shared supplies"><span class="sr-only">Supplies: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--resource"></i><b id="stronghold-resources">50</b></span>
         </div>
-        <div class="stronghold-watch"><span>Castle <b id="stronghold-castle"></b></span><span>Enemy <b id="stronghold-enemy"></b></span><span id="stronghold-wave"></span></div>
+        <div class="stronghold-watch"><span>Castle <b id="stronghold-castle"></b></span><span>Enemy <b id="stronghold-enemy"></b></span><span id="stronghold-wave"></span><span id="stronghold-season"></span></div>
       </aside>
       <details class="stronghold-guide"><summary>Help</summary>
         <div class="stronghold-legend"><span>Dark red: enemies</span><span>□ Warrior</span><span>◇ Archer</span><span>▲ Catapult</span><span>△ Builder</span><span>○ Gatherer</span></div>

@@ -1,6 +1,7 @@
 .app-shell[data-theme="stronghold"] { grid-template-rows: minmax(0, 1fr); min-height: 0; }
 .app-shell[data-theme="stronghold"] > .topbar { display: none; }
 .stronghold-screen {
+  --battlefield-color: #1c9e45; --night-opacity: 0;
   --deck-height: clamp(180px, 33dvh, 320px); --header-height: 140px; --ink: #111; --muted: #444; --border: #333;
   --stronghold-font: Arial, Helvetica, sans-serif; --stronghold-font-weight: 700; --squad-inset: 2%;
   --player-color: #ff1726; --player-bold: #b00020; --player-fill: #ffb3c9;
@@ -12,7 +13,44 @@
 .stronghold-screen, .stronghold-screen :is(button, select, input, summary, .stronghold-map-unit), .stronghold-screen #stronghold-map { cursor: var(--stronghold-cursor, auto); }
 .stronghold-screen button:focus-visible, .stronghold-screen select:focus-visible, .stronghold-screen input:focus-visible { outline: 2px solid #111; outline-offset: 1px; }
 .stronghold-tier:focus-visible::before { background: #ffe64c; }
-.stronghold-stage { position: relative; width: 100%; height: 100%; min-height: 0; overflow: hidden; background: linear-gradient(to bottom, #c6d8e5 0 var(--header-height), #1faf4c var(--header-height) calc(100% - var(--deck-height) - 140px), #fff calc(100% - var(--deck-height) - 140px) calc(100% - var(--deck-height)), #7f7f7f calc(100% - var(--deck-height)) 100%); }
+.stronghold-stage { position: relative; width: 100%; height: 100%; min-height: 0; overflow: hidden; background: linear-gradient(to bottom, #c6d8e5 0 var(--header-height), var(--battlefield-color) var(--header-height) calc(100% - var(--deck-height) - 140px), #fff calc(100% - var(--deck-height) - 140px) calc(100% - var(--deck-height)), #7f7f7f calc(100% - var(--deck-height)) 100%); }
+.stronghold-screen[data-season="spring"] { --battlefield-color: #a4d78a; }
+.stronghold-screen[data-season="summer"] { --battlefield-color: #16883d; }
+.stronghold-screen[data-season="fall"] { --battlefield-color: #cbb08b; }
+.stronghold-screen[data-season="winter"] { --battlefield-color: #dcecf2; }
+.stronghold-screen::after, .stronghold-tier-dialog::after {
+  content: ''; position: fixed; inset: 0; z-index: 1000; pointer-events: none;
+  background: #101b39; opacity: var(--night-opacity);
+}
+.stronghold-weather { position: absolute; inset: 0 0 auto; height: min(280px, 36%); overflow: hidden; pointer-events: none; z-index: 2; }
+.stronghold-weather-particle {
+  position: absolute; top: -16px; left: var(--weather-x); width: 7px; height: 7px; border-radius: 50%; background: white; opacity: 0;
+  animation: stronghold-weather-drift var(--weather-duration) var(--weather-delay) linear infinite;
+}
+[data-weather-running="false"] .stronghold-weather-particle { animation-play-state: paused; }
+[data-season="fall"] .stronghold-weather-particle { width: 12px; height: 13px; border-radius: 0; background: #bd633d; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+[data-season="fall"] .stronghold-weather-particle:nth-child(3n) { background: #e1a443; }
+[data-season="fall"] .stronghold-weather-particle:nth-child(3n + 1) { background: #a84739; }
+[data-season="summer"] .stronghold-weather-particle { width: 4px; height: 48px; background: #fff4af; box-shadow: 0 0 12px #fff7c8; border-radius: 50%; }
+[data-season="spring"] .stronghold-weather-particle {
+  --petal: #f4a9ce; width: 17px; height: 17px; border-radius: 0;
+  background: radial-gradient(circle at center, #fff0a9 0 16%, transparent 18%),
+    radial-gradient(circle at 50% 25%, var(--petal) 0 24%, transparent 26%),
+    radial-gradient(circle at 75% 50%, var(--petal) 0 24%, transparent 26%),
+    radial-gradient(circle at 50% 75%, var(--petal) 0 24%, transparent 26%),
+    radial-gradient(circle at 25% 50%, var(--petal) 0 24%, transparent 26%);
+}
+[data-season="spring"] .stronghold-weather-particle:nth-child(3n) { --petal: #cab4ef; }
+[data-season="spring"] .stronghold-weather-particle:nth-child(3n + 1) { --petal: #fff2b1; }
+@keyframes stronghold-weather-drift {
+  0% { opacity: 0; transform: translate(0, 0) rotate(-12deg); }
+  20% { opacity: .4; }
+  65% { opacity: .25; }
+  100% { opacity: 0; transform: translate(var(--weather-drift), 165px) rotate(24deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stronghold-weather { display: none; }
+}
 .stronghold-stage::before, .stronghold-stage::after {
   content: ''; position: absolute; left: 0; right: 0; z-index: 0; pointer-events: none; box-sizing: border-box;
   background-size: 32px 32px, 32px 32px, 100% 100%;

@@ -79,6 +79,18 @@ Switching to another browser tab automatically pauses Stronghold, including
 the battlefield and computer typing. Returning resumes without catching up
 the time spent away; switching screens or using Pause also stops the simulation.
 
+Each new Stronghold match randomly picks one of four seasonal maps. Only resource
+node positions change: every layout keeps six standard nodes, two rich nodes,
+and 7,200 total supplies, with the same bases, troops and rules. Spring uses light
+green grass and pastel flowers, summer deep green grass and faint light rays,
+fall light brown ground and autumn-colored triangles, and winter blue-white
+ground and softly fading snow circles. The small decorative particle pool stays
+near the top, never intercepts clicks, and is hidden for reduced-motion preferences.
+Days and nights each last three minutes of battle time, with fifteen-second
+dusk/dawn fades. Night adds a dark-blue overlay to the entire Stronghold view,
+including its UI and tier challenge. Pausing, tabbing away and tier challenges
+freeze the environment clock; new games start in daylight.
+
 The slim, stretched private typing strip leaves more height for the battlefield.
 Its input stays 420px wide (or fits the available space on smaller screens),
 centered beneath the displayed text, with the unlabeled length scroller directly

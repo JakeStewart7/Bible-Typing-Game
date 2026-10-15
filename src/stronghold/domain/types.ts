@@ -2,6 +2,8 @@ export const ROLES = ['economy', 'production', 'army', 'defenses'] as const;
 export type Role = typeof ROLES[number];
 export const PHRASE_LENGTHS = ['short', 'medium', 'long', 'extra-long'] as const;
 export type PhraseLength = typeof PHRASE_LENGTHS[number];
+export const SEASONS = ['spring', 'summer', 'fall', 'winter'] as const;
+export type Season = typeof SEASONS[number];
 export type StrongholdMatchOptions = { resources: number; length: PhraseLength; computersPaused: boolean };
 export type Point = { x: number; y: number };
 export type UnitKind = 'worker' | 'builder' | 'warrior' | 'archer' | 'catapult' | 'invader';
@@ -35,6 +37,7 @@ export type TaskProgress = Pick<Participant, 'work' | 'actionPhrases'>;
 export type RoleTasks = { selection: TaskSelection; progress: Record<string, TaskProgress> };
 export type StrongholdEvent = { id: number; elapsed: number; playerId: string | null; text: string };
 export type StrongholdState = {
+  season: Season;
   phase: Phase; tier: number; elapsed: number; wave: number; waveIn: number;
   resources: number; event: WorldEvent; eventIn: number;
   players: Participant[]; units: Unit[]; buildings: Building[];
