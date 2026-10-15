@@ -63,7 +63,8 @@ function updateBot(state: StrongholdState, player: Participant, seconds: number)
     if (action !== player.action) {
       executeCommand(state, player, { type: 'ACTION', action });
     }
-    if (actionProblem(state, player, action)) return;
+    const preparingConstruction = (action === 'barracks' || action === 'tower') && player.work < taskWork(player);
+    if (actionProblem(state, player, action) && !preparingConstruction) return;
     if (['relay', 'barracks', 'tower', 'wall'].includes(action) && (action === 'relay' || player.work >= taskWork(player))) {
       if (humanOnRole) return;
       const count = state.buildings.filter(building => building.kind === action && !building.enemy).length;

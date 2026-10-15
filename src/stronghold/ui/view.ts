@@ -29,7 +29,8 @@ export function strongholdElements() {
         const action = ROLE_ACTIONS[role].find(candidate => candidate === button.dataset.action);
         if (!action) throw new Error('Unknown Stronghold action button.');
         return { element: button, action, miniBar: button.querySelector<HTMLElement>('[data-task-progress]'),
-          miniFill: button.querySelector<HTMLElement>('[data-task-fill]'), tier: button.dataset.tier ? Number(button.dataset.tier) : undefined,
+          miniFill: button.querySelector<HTMLElement>('[data-task-fill]'), lockLabel: button.querySelector<HTMLElement>('[data-task-lock]'),
+          tier: button.dataset.tier ? Number(button.dataset.tier) : undefined,
           upgrade: UPGRADE_TARGETS.find(target => target === button.dataset.strongholdUpgrade), minimumTier: Number(button.dataset.minTier) };
       });
       return { role, element, buttons };
@@ -170,12 +171,18 @@ export function renderStronghold(
         const capped = button.upgrade ? snapshot.technology[button.upgrade] >= upgradeLimit(snapshot.tier, button.upgrade) : false;
         const selection = { action: button.action, constructionTier: button.tier ?? 1, upgradeTarget: button.upgrade ?? player.upgradeTarget };
         const purchaseProblem = button.miniBar ? null : actionProblem(snapshot, { ...player, ...selection }, button.action);
-        const disabled = !own || !running || challenge || terminal || snapshot.tier < button.minimumTier || capped || Boolean(purchaseProblem);
+        const tierLocked = snapshot.tier < button.minimumTier;
+        const disabled = !own || !running || challenge || terminal || (!button.miniBar && tierLocked) || capped || Boolean(purchaseProblem);
         if (button.element.disabled !== disabled) button.element.disabled = disabled;
         const selectedAction = own && relayPlacement ? button.action === 'relay' : Boolean(button.miniBar) && button.action === player.action
           && (!button.tier || button.tier === player.constructionTier) && (!button.upgrade || button.upgrade === player.upgradeTarget);
         button.element.classList.toggle('selected', selectedAction);
         setAttribute(button.element, 'aria-pressed', String(selectedAction));
+        if (button.lockLabel) {
+          setText(button.lockLabel, `Place at Tier ${button.minimumTier}`);
+          button.lockLabel.classList.toggle('is-hidden', !tierLocked);
+          setAttribute(button.element, 'title', tierLocked ? `Prepare work now; placement requires Tier ${button.minimumTier}.` : '');
+        }
         if (button.miniBar && button.miniFill) {
           const saved = snapshot.roleTasks[group.role].progress[taskKey(selection)];
           const progress = workProgress(saved?.work ?? 0, taskWork(selection));

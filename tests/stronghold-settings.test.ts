@@ -8,7 +8,8 @@ import { equal, test } from './harness.ts';
 import { AppStorage } from '../src/persistence/storage.ts';
 import { DEFAULT_DEVELOPER_OPTIONS, readDeveloperOptions, writeDeveloperOptions } from '../src/stronghold/infrastructure/developer-options.ts';
 import { isMatchOptions } from '../src/stronghold/domain/options.ts';
-import { phraseWork } from '../src/stronghold/domain/technology.ts';
+import { phraseWork, taskWork } from '../src/stronghold/domain/technology.ts';
+import { readyBuilding } from '../src/stronghold/ui/map-controls.ts';
 
 function human(state: StrongholdState): Participant {
   const player = state.players.find(player => player.id === 'you');
@@ -214,6 +215,118 @@ test('Stronghold construction tiers keep independent bars and instant upgrades l
   equal(player.work, barracks1Work);
   send(state, { type: 'ACTION', action: 'barracks', tier: 3 });
   equal(player.work, barracks3Work);
+});
+
+test('Stronghold joining Army selects visible Barracks work at Tier 0 and teammates help without bypassing placement unlocks', () => {
+  const engine = new StrongholdEngine({ resources: 50, length: 'medium', computersPaused: false });
+  const self = () => engine.snapshot('you').players.find(player => player.id === 'you')!;
+  engine.send('you', { type: 'ROLE', role: 'production' });
+  equal(self().action, 'barracks');
+  equal(self().constructionTier, 1);
+  const phrase = self().phrase;
+  engine.send('you', { type: 'TYPE', phraseId: self().phraseId, text: phrase.slice(0, 2) });
+  for (let second = 0; second < 15; second++) engine.advance(1);
+  equal(self().work >= 40, true);
+  equal(self().phrase, phrase);
+  equal(self().typed, phrase.slice(0, 2));
+  equal(engine.snapshot('you').events.some(event => event.playerId === 'bot-1' && event.text.includes('gathered Supplies')), false);
+  equal(readyBuilding(engine.snapshot('you')), null);
+  const before = engine.snapshot('you');
+  let rejected = false;
+  try { engine.send('you', { type: 'PLACE', kind: 'barracks', point: { x: 620, y: 570 } }); }
+  catch (error) { rejected = error instanceof Error && error.message.includes('tier 1'); }
+  equal(rejected, true);
+  equal(engine.snapshot('you'), before);
+  for (const player of before.players) engine.send(player.id, { type: 'READY', ready: true });
+  for (const player of before.players) {
+    for (let entry = 0; entry < TIER_QUOTA; entry++) {
+      const current = engine.snapshot(player.id).players.find(other => other.id === player.id)!;
+      engine.send(player.id, { type: 'TYPE', phraseId: current.phraseId, text: current.phrase });
+    }
+  }
+  equal(engine.snapshot('you').tier, 1);
+  equal(self().work, before.players.find(player => player.id === 'you')!.work);
+  equal(readyBuilding(engine.snapshot('you')), 'barracks');
+  const supplies = engine.snapshot('you').resources;
+  const work = self().work;
+  engine.send('you', { type: 'PLACE', kind: 'barracks', point: { x: 620, y: 570 } });
+  equal(self().work, Math.round((work - 40) * 100) / 100);
+  equal(engine.snapshot('you').resources, supplies);
+  equal(engine.snapshot('you').buildings.some(building => building.kind === 'barracks' && building.tier === 1), true);
+});
+
+test('Stronghold running computers contribute to each selected Barracks tier without replacing human selection or input', () => {
+  const state = quietMatch();
+  state.tier = 3;
+  send(state, { type: 'ROLE', role: 'production' });
+  send(state, { type: 'COMPUTERS', paused: false });
+  const player = human(state);
+  const partner = state.players.find(other => other.simulated && other.role === 'production')!;
+  for (const tier of [1, 2, 3]) {
+    send(state, { type: 'ACTION', action: 'barracks', tier });
+    send(state, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase.slice(0, 2) });
+    const privateInput = { phraseId: player.phraseId, phrase: player.phrase, typed: player.typed };
+    const work = player.work, reward = phraseWork(partner), completed = partner.completed;
+    for (let step = 0; step < 20 && partner.completed === completed; step++) advanceStronghold(state, .25);
+    equal(partner.completed, completed + 1);
+    equal([player.action, player.constructionTier, partner.action, partner.constructionTier], ['barracks', tier, 'barracks', tier]);
+    equal([player.work, partner.work], [Math.round((work + reward) * 100) / 100, Math.round((work + reward) * 100) / 100]);
+    equal({ phraseId: player.phraseId, phrase: player.phrase, typed: player.typed }, privateInput);
+  }
+});
+
+test('Stronghold all three Barracks selections preserve independent shared progress and exact placement overflow', () => {
+  const state = quietMatch();
+  state.tier = 3;
+  state.resources = 1000;
+  send(state, { type: 'ROLE', role: 'production' });
+  const player = human(state);
+  const partner = state.players.find(other => other.id !== player.id && other.role === 'production');
+  if (!partner) throw new Error('Missing production teammate.');
+  const banks = new Map<number, number>();
+  for (const tier of [1, 2, 3]) {
+    send(state, { type: 'ACTION', action: 'barracks', tier });
+    equal([player.action, partner.action], ['barracks', 'barracks']);
+    equal([player.constructionTier, partner.constructionTier], [tier, tier]);
+    equal([player.work, partner.work], [0, 0]);
+    equal(taskWork(player), 40 * tier);
+    send(state, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase.slice(0, 2) });
+    const privateInput = { phrase: player.phrase, phraseId: player.phraseId, typed: player.typed };
+    let work = entry(state, partner);
+    equal({ phrase: player.phrase, phraseId: player.phraseId, typed: player.typed }, privateInput);
+    equal([player.work, partner.work], [work, work]);
+    work = Math.round((work + entry(state)) * 100) / 100;
+    equal(state.roleTasks.production.progress[`barracks:${tier}`], { work, actionPhrases: 2 });
+    banks.set(tier, work);
+  }
+  send(state, { type: 'ROLE', role: 'economy' });
+  executeCommand(state, partner, { type: 'ACTION', action: 'barracks', tier: 2 });
+  send(state, { type: 'ROLE', role: 'production' });
+  equal(player.constructionTier, 2);
+  equal(player.work, banks.get(2));
+  for (const tier of [1, 2, 3]) {
+    send(state, { type: 'ACTION', action: 'barracks', tier });
+    let expected = banks.get(tier)!;
+    equal([player.work, partner.work], [expected, expected]);
+    for (let entries = 0; expected < 40 * tier && entries < 40 * tier; entries++) {
+      expected = Math.round((expected + entry(state)) * 100) / 100;
+      equal([player.work, partner.work], [expected, expected]);
+    }
+    equal(expected >= 40 * tier, true);
+    entry(state, partner);
+    equal([player.work, partner.work], [expected, expected]);
+    send(state, { type: 'PLACE', kind: 'barracks', point: { x: 620 + (tier - 1) * 70, y: 570 } });
+    expected = Math.round((expected - 40 * tier) * 100) / 100;
+    equal([player.work, partner.work], [expected, expected]);
+    equal(state.roleTasks.production.progress[`barracks:${tier}`], { work: expected, actionPhrases: 0 });
+    equal(state.resources, 1000);
+    banks.set(tier, expected);
+  }
+  equal(state.buildings.filter(building => building.kind === 'barracks').map(building => building.tier), [1, 2, 3]);
+  for (const tier of [3, 1, 2]) {
+    send(state, { type: 'ACTION', action: 'barracks', tier });
+    equal([player.work, partner.work], [banks.get(tier), banks.get(tier)]);
+  }
 });
 
 test('Stronghold shared tier challenges preserve normal task banks and the chosen text length', () => {

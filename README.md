@@ -64,6 +64,13 @@ small player display, just like your teammates' typed text.
 The Stronghold typing cursor snaps directly to the current character without
 animated travel or a movement speed limit.
 
+Joining **Army** selects its saved Barracks work rather than an invisible Supplies
+task. Building tiles can be selected and filled before their tier unlocks; a
+**Place at Tier N** hint distinguishes preparing work from permission to place.
+Simulated teammates help with that selected work without switching your task.
+Ready work is preserved through tier challenges, and placement unlocks only at
+the building's required tier.
+
 **Dev options** sets the starting computer state, default text length, starting
 supplies (0-10,000), and starting map zoom (1.0-2.0). **Apply & new game** saves these defaults on this device and
 starts a fresh match. Subsequent **New game** actions and page reloads use the

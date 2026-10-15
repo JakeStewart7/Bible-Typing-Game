@@ -78,7 +78,7 @@ export function completePhrase(state: StrongholdState, player: Participant): voi
       return;
     }
     if (action === 'barracks' || action === 'tower' || action === 'wall') {
-      state.message = 'Choose a location on the battlefield; builders will construct it.';
+      state.message = actionProblem(state, player, action) ?? 'Choose a location on the battlefield; builders will construct it.';
       assignPhrase(state, player);
       return;
     }
@@ -146,6 +146,9 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     playerEvent(state, player, `joined ${ROLE_LABELS[player.role]}`);
     if (partner) copyRoleTask(partner, player);
     else restoreRoleTask(state, player);
+    if (!player.simulated && player.role === 'production' && player.action === 'resources') {
+      restoreRoleTask(state, player, { action: 'barracks', constructionTier: 1, upgradeTarget: player.upgradeTarget });
+    }
     assignPhrase(state, player);
     return;
   }

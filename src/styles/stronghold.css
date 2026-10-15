@@ -159,6 +159,7 @@
   color: #111; border: 2px solid #555; border-radius: 0; font: var(--stronghold-font-weight) 16px/1.15 var(--stronghold-font); text-align: center;
 }
 .stronghold-build-tile small, .stronghold-upgrade-tile small { display: block; font-size: 14px; margin-top: 2px; }
+.stronghold-build-tile .stronghold-task-lock { font-size: 12px; }
 .stronghold-action-label { display: block; }
 .stronghold-hotkey { display: block; font: var(--stronghold-font-weight) 12px/1.1 var(--stronghold-font); opacity: .85; padding-bottom: 2px; }
 .stronghold-cost { display: inline-block; margin-top: 4px; padding: 2px 7px; border: 1px solid #111; background: var(--player-fill); color: #111; font: var(--stronghold-font-weight) 14px/1.1 var(--stronghold-font); }
