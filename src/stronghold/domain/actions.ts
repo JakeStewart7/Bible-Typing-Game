@@ -5,6 +5,7 @@ import { applyUpgrade, taskCost, taskWork, upgradeLimit, UPGRADE_OPTIONS } from 
 import { ENTITY_LABELS, playerEvent, recordEvent } from './events.ts';
 import { PHRASE_LENGTHS, type Action, type BuildingKind, type Participant, type Point, type StrongholdCommand, type StrongholdState } from './types.ts';
 import { restoreRoleTask, saveRoleTask, taskKey } from './tasks.ts';
+import { spawnWave } from './combat.ts';
 
 type ActionWorld = Pick<StrongholdState, 'tier' | 'resources' | 'units' | 'technology'>;
 type TaskPlayer = Pick<Participant, 'role' | 'action' | 'constructionTier' | 'upgradeTarget' | 'work'>;
@@ -90,6 +91,12 @@ export function completePhrase(state: StrongholdState, player: Participant): voi
 
 export function executeCommand(state: StrongholdState, player: Participant, command: StrongholdCommand): void {
   if (state.phase === 'won' || state.phase === 'lost') throw new Error('This match is over. Start a new stronghold.');
+  if (command.type === 'NEXT_WAVE') {
+    if (player.simulated) throw new Error('Only a human player can advance waves.');
+    if (state.phase !== 'playing') throw new Error('Finish the shared tier challenge before advancing waves.');
+    spawnWave(state);
+    return;
+  }
   if (command.type === 'COMPUTERS') {
     if (player.simulated) throw new Error('Only a human player can control the computers.');
     if (typeof command.paused !== 'boolean') throw new Error('Invalid computer pause state.');

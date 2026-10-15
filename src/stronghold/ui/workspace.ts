@@ -96,6 +96,9 @@ export function strongholdWorkspaceMarkup(): string {
           <label>Starting map zoom <input id="stronghold-dev-zoom" type="number" min="1" max="2" step="0.1" required></label>
           <p>Saved on this device. Applying starts a new match; New game uses these defaults.</p>
           <button type="submit">Apply &amp; new game</button>
+          <h3>Current match</h3>
+          <button id="stronghold-next-wave" type="button">Next Wave</button>
+          <p>Spawn the next wave now and reset its countdown without restarting the match.</p>
         </form>
       </details>
       <p id="stronghold-feedback" class="stronghold-feedback" role="status" aria-live="polite"></p>

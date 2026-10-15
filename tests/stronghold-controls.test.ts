@@ -45,6 +45,7 @@ test('Stronghold every role option displays a unique matching numeric shortcut, 
   }
   equal(markup.includes('id="stronghold-length" class="stronghold-length-wheel" role="listbox"'), true);
   equal(markup.includes('id="stronghold-zoom-fit"'), true);
+  equal(markup.includes('id="stronghold-next-wave" type="button">Next Wave</button>'), true);
 });
 
 test('Stronghold zoom camera stays within the full battlefield and Fit restores all legal construction sites', () => {

@@ -256,6 +256,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   for (const button of elements.computerButtons) button.addEventListener('click', () => {
     if (snapshot) void send({ type: 'COMPUTERS', paused: !snapshot.computersPaused });
   });
+  elements.nextWave.addEventListener('click', () => { void send({ type: 'NEXT_WAVE' }); });
   for (const id of ['stronghold-pause', 'stronghold-tier-pause']) requireElement(id, HTMLButtonElement).addEventListener('click', togglePause);
   for (const id of ['stronghold-restart', 'stronghold-play-again']) requireElement(id, HTMLButtonElement).addEventListener('click', restart);
   developerForm.addEventListener('submit', event => {

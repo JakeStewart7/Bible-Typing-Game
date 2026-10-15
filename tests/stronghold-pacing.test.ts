@@ -1,11 +1,83 @@
 import { executeCommand } from '../src/stronghold/domain/actions.ts';
-import { updateCombat } from '../src/stronghold/domain/combat.ts';
+import { spawnWave, updateCombat } from '../src/stronghold/domain/combat.ts';
 import { updateLogistics } from '../src/stronghold/domain/logistics.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { addBuilding, addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
 import { distance, UNIT_RULES } from '../src/stronghold/domain/rules.ts';
 import { buildingMarkup, unitMarkup, unitMotionTransform } from '../src/stronghold/ui/battlefield.ts';
 import { equal, test } from './harness.ts';
+
+test('Stronghold opening waves give a full minute to prepare, fewer invaders and longer recovery', () => {
+  const state = createStronghold();
+  equal(state.waveIn, 60);
+  for (let wave = 1; wave <= 25; wave++) {
+    state.units = state.units.filter(unit => unit.kind !== 'invader');
+    spawnWave(state);
+    equal(state.wave, wave);
+    equal(state.units.filter(unit => unit.kind === 'invader').length, Math.min(18, Math.max(1, wave - 1)));
+    equal(state.waveIn, Math.max(45, 80 - wave * 2));
+  }
+  for (let index = 0; index < 5; index++) spawnWave(state);
+  equal(state.units.filter(unit => unit.kind === 'invader').length, 40);
+});
+
+test('Stronghold starting warriors hold off both opening waves without reinforcements or computer help', () => {
+  const state = createStronghold({ resources: 50, length: 'medium', computersPaused: true });
+  const original = state.units.map(unit => unit.id);
+  const warriors = state.units.filter(unit => unit.kind === 'warrior');
+  for (let step = 0; step < 2000; step++) advanceStronghold(state, .1);
+  equal(state.wave, 2);
+  equal(state.phase, 'playing');
+  equal(state.units.filter(unit => unit.kind === 'invader').length, 0);
+  equal(state.units.map(unit => unit.id), original);
+  equal(warriors.length, 2);
+  equal(warriors.every(unit => unit.hp > unit.maxHp / 2), true);
+  const castle = state.buildings.find(building => building.kind === 'castle');
+  equal(castle?.hp, castle?.maxHp);
+});
+
+test('Stronghold Next Wave spawns immediately without advancing battle time or resetting player work', () => {
+  const state = createStronghold();
+  const player = state.players[0];
+  if (!player) throw new Error('Missing player.');
+  executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase.slice(0, 2) });
+  const before = structuredClone(state);
+  executeCommand(state, player, { type: 'NEXT_WAVE' });
+  equal(state.wave, 1);
+  equal(state.waveIn, 78);
+  equal(state.units.filter(unit => unit.kind === 'invader').length, 1);
+  equal(state.events.at(-1)?.text, 'Wave 1 approaching');
+  for (const key of ['elapsed', 'event', 'eventIn', 'resources', 'players', 'roleTasks', 'computersPaused'] as const) {
+    equal(state[key], before[key]);
+  }
+  advanceStronghold(state, .25);
+  equal(state.wave, 1);
+  equal(state.waveIn, 77.75);
+  executeCommand(state, player, { type: 'NEXT_WAVE' });
+  executeCommand(state, player, { type: 'NEXT_WAVE' });
+  equal(state.wave, 3);
+  equal(state.buildings.find(building => building.kind === 'enemy-base')?.tier, 1);
+});
+
+test('Stronghold Next Wave rejects computers, tier challenges and finished matches without mutation', () => {
+  for (const phase of ['playing', 'tier-up', 'won', 'lost'] as const) {
+    const state = createStronghold();
+    state.phase = phase;
+    const player = state.players[phase === 'playing' ? 1 : 0];
+    if (!player) throw new Error('Missing player.');
+    const before = structuredClone(state);
+    let message = '';
+    try { executeCommand(state, player, { type: 'NEXT_WAVE' }); }
+    catch (error) {
+      if (!(error instanceof Error)) throw error;
+      message = error.message;
+    }
+    equal(message, phase === 'playing' ? 'Only a human player can advance waves.'
+      : phase === 'tier-up' ? 'Finish the shared tier challenge before advancing waves.'
+      : 'This match is over. Start a new stronghold.');
+    equal(state, before);
+  }
+});
 
 test('Stronghold every unit moves 70 percent slower and has double health, including wave bonuses', () => {
   const original = { worker: [42, 35], builder: [50, 55], warrior: [62, 100],

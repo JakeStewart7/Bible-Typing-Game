@@ -43,7 +43,7 @@ function updateUnit(state: StrongholdState, unit: Unit, seconds: number): void {
 
 export function spawnWave(state: StrongholdState): void {
   state.wave++;
-  const amount = Math.min(18, 3 + state.wave * 2);
+  const amount = Math.min(18, Math.max(1, state.wave - 1));
   const remaining = UNIT_CAPS.invader - state.units.filter(unit => unit.kind === 'invader').length;
   for (let index = 0; index < Math.min(amount, remaining); index++) {
     const side = index % 3;
@@ -53,7 +53,7 @@ export function spawnWave(state: StrongholdState): void {
       y: side === 2 ? 35 : 100 + (index * 57) % 280
     }, formation);
   }
-  state.waveIn = Math.max(18, 35 - state.wave);
+  state.waveIn = Math.max(45, 80 - state.wave * 2);
   state.message = `Wave ${state.wave}: invaders are approaching. Protect the gatherers!`;
   recordEvent(state, `Wave ${state.wave} approaching`);
   if (state.wave % 3 === 0) {

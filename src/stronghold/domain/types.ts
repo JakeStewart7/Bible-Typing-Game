@@ -52,6 +52,7 @@ export type StrongholdCommand =
   | { type: 'ACTION'; action: Action; tier?: number; upgrade?: UpgradeTarget }
   | { type: 'LENGTH'; length: PhraseLength }
   | { type: 'COMPUTERS'; paused: boolean }
+  | { type: 'NEXT_WAVE' }
   | { type: 'TYPE'; phraseId: number; text: string }
   | { type: 'READY'; ready: boolean }
   | { type: 'PLACE'; kind: 'relay' | 'barracks' | 'tower' | 'wall'; point: Point }

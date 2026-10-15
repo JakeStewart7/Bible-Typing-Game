@@ -1,7 +1,7 @@
 .app-shell[data-theme="stronghold"] { grid-template-rows: minmax(0, 1fr); min-height: 0; }
 .app-shell[data-theme="stronghold"] > .topbar { display: none; }
 .stronghold-screen {
-  --deck-height: 320px; --ink: #111; --muted: #444; --border: #333;
+  --deck-height: 320px; --header-height: 140px; --ink: #111; --muted: #444; --border: #333;
   --stronghold-font: Arial, Helvetica, sans-serif; --stronghold-font-weight: 700; --squad-inset: 2%;
   --player-color: #ff1726; --player-bold: #b00020; --player-fill: #ffb3c9;
   --page-accent: #16b544; --page-accent-soft: #9ed7e6; --page-glow: transparent;
@@ -12,7 +12,7 @@
 .stronghold-screen, .stronghold-screen :is(button, select, input, summary, .stronghold-map-unit), .stronghold-screen #stronghold-map { cursor: var(--stronghold-cursor, auto); }
 .stronghold-screen button:focus-visible, .stronghold-screen select:focus-visible, .stronghold-screen input:focus-visible { outline: 2px solid #111; outline-offset: 1px; }
 .stronghold-tier:focus-visible::before { background: #ffe64c; }
-.stronghold-stage { position: relative; width: 100%; height: 100%; min-height: 920px; overflow: hidden; background: #1faf4c; }
+.stronghold-stage { position: relative; width: 100%; height: 100%; min-height: 920px; overflow: hidden; background: linear-gradient(to bottom, #c6d8e5 0 var(--header-height), #1faf4c var(--header-height) calc(100% - var(--deck-height) - 36px), #7f7f7f calc(100% - var(--deck-height) - 36px) 100%); }
 .stronghold-battlefield { position: absolute; inset: 0; }
 #stronghold-map { position: absolute; top: 110px; width: 100%; height: calc(100% - var(--deck-height) - 250px); cursor: crosshair; touch-action: none; user-select: none; }
 .stronghold-map-camera { position: absolute; top: 100px; right: 14px; z-index: 4; display: flex; align-items: center; gap: 5px; font-size: 14px; }
@@ -74,10 +74,6 @@
 .stronghold-length-wheel button { position: absolute; top: calc(50% - 12px); left: 0; width: 100%; height: 24px; min-height: 0; padding: 0; border: 0; border-radius: 0; font: var(--stronghold-font-weight) 16px var(--stronghold-font); background: transparent; color: #111; transform: translateY(calc(var(--length-offset, 0) * 22px)); opacity: var(--length-opacity, .4); transition: transform 140ms ease, opacity 140ms ease; box-shadow: none; }
 .stronghold-length-wheel button[aria-selected="true"] { color: var(--player-bold); background: var(--player-fill); }
 .stronghold-squad { position: absolute; left: var(--squad-inset); right: var(--squad-inset); bottom: 7px; height: var(--deck-height); z-index: 3; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-.stronghold-squad::before {
-  content: ''; position: absolute; z-index: -1; inset: -28px -16px -7px; background: #7f7f7f;
-  clip-path: polygon(0 0, 10% 0, 10% 16px, 20% 16px, 20% 0, 30% 0, 30% 16px, 40% 16px, 40% 0, 50% 0, 50% 16px, 60% 16px, 60% 0, 70% 0, 70% 16px, 80% 16px, 80% 0, 90% 0, 90% 16px, 100% 16px, 100% 100%, 0 100%);
-}
 .stronghold-player { --player-color: #ff1726; --player-fill: #ffb3c9; min-width: 0; height: 100%; display: flex; flex-direction: column; }
 .stronghold-player-frame { flex: 1; min-height: 0; display: flex; flex-direction: column; border: 3px solid var(--player-color); padding: 6px; background: white; }
 .stronghold-player header { display: flex; justify-content: space-between; gap: 4px; align-items: center; }
@@ -110,7 +106,7 @@
 .stronghold-typing .progress-track > div { background: #111; transition: none; }
 .stronghold-typing .char.correct { color: var(--player-bold); background: transparent; }
 .stronghold-typing .char.error-highlight { color: #870018; background: #ffb3c9; }
-.stronghold-typed-area { grid-column: 2; margin: 0; position: relative; width: 100%; }
+.stronghold-typed-area { grid-column: 2; justify-self: center; margin: 0; position: relative; width: 420px; max-width: 100%; }
 .stronghold-typed-area .typing-input { min-height: 36px; height: 36px; border: 2px solid #111; border-radius: 0; padding: 3px 8px; background: var(--player-fill); color: #111; caret-color: var(--player-bold); font: var(--stronghold-font-weight) 20px var(--stronghold-font); box-shadow: none; }
 .stronghold-typed-area .typing-input::placeholder { color: var(--player-bold); opacity: 1; }
 .stronghold-typing .floating-caret { width: 3px; background: var(--player-bold); border-radius: 0; box-shadow: none; animation: none; }
@@ -141,7 +137,7 @@
   .stronghold-player { height: 320px; }
 }
 @media (max-width: 700px) {
-  .stronghold-screen { --deck-height: max(300px, 46vh); --squad-inset: 8px; }
+  .stronghold-screen { --deck-height: max(300px, 46vh); --header-height: 210px; --squad-inset: 8px; }
   .stronghold-stage { min-height: max(920px, calc(var(--deck-height) + 650px)); }
   .stronghold-map-toolbar { top: 6px; left: 6px; max-width: calc(100% - 12px); }
   .stronghold-screen .stronghold-map-toolbar button { padding: 6px; }

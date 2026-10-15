@@ -33,7 +33,7 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
     { id: 'bot-3', name: 'Esther', color: '#18b644', role: 'defenses', simulated: true }
   ];
   const state: StrongholdState = {
-    phase: 'playing', tier: 0, elapsed: 0, wave: 0, waveIn: 30, resources: options.resources,
+    phase: 'playing', tier: 0, elapsed: 0, wave: 0, waveIn: 60, resources: options.resources,
     event: 'peace', eventIn: 60, nextId: 1, units: [], buildings: [], chunks: [],
     players: roster.map(player => ({
       ...player, action: player.role === 'defenses' ? 'builder' : 'resources',

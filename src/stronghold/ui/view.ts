@@ -48,6 +48,7 @@ export function strongholdElements() {
     lengthOptions: PHRASE_LENGTHS.map(length => ({ length, element: requireElement(`stronghold-length-${length}`, HTMLButtonElement) })),
     worldEvent: requireElement('stronghold-world-event', HTMLElement),
     computerButtons: ['stronghold-computers', 'stronghold-tier-computers'].map(id => requireElement(id, HTMLButtonElement)),
+    nextWave: requireElement('stronghold-next-wave', HTMLButtonElement),
     orders: requireElement('stronghold-army-orders', HTMLElement), placement: requireElement('stronghold-placement', HTMLElement),
     dialog: requireElement('stronghold-tier-dialog', HTMLDialogElement), tierSlot: requireElement('stronghold-tier-typing-slot', HTMLElement),
     feedback: requireElement('stronghold-feedback', HTMLElement)
@@ -77,6 +78,7 @@ export function renderStronghold(
   const terminal = snapshot.phase === 'won' || snapshot.phase === 'lost';
   const challenge = snapshot.phase === 'tier-up';
   const army = self.role === 'army' && !challenge;
+  elements.nextWave.disabled = !running || snapshot.phase !== 'playing';
   text('stronghold-resources', String(Math.floor(snapshot.resources)));
   text('stronghold-castle', `${Math.max(0, Math.ceil(castle?.hp ?? 0))}/${castle?.maxHp ?? 10000}`);
   text('stronghold-enemy', String(Math.max(0, Math.ceil(snapshot.buildings.find(building => building.kind === 'enemy-base')?.hp ?? 0))));

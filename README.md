@@ -40,8 +40,19 @@ animated travel or a movement speed limit.
 supplies (0-10,000), and starting map zoom (1.0-2.0). **Apply & new game** saves these defaults on this device and
 starts a fresh match. Subsequent **New game** actions and page reloads use the
 saved defaults; changing them does not save an ongoing match.
+**Next Wave** in Dev options immediately spawns the next wave and resets the
+countdown without advancing battle time or restarting. It is unavailable while
+paused, during a tier challenge, or after the match ends.
+
+The first wave arrives after **60 seconds**. The first two waves have **one
+invader each**, giving the two starting warriors time to defend without new
+troops. Later waves grow by one invader at a time, up to 18; their intervals
+start at 78 seconds and gradually shorten to no less than 45 seconds.
 
 The slim, stretched private typing strip leaves more height for the battlefield.
+Its input stays 420px wide (or fits the available space on smaller screens),
+centered beneath the displayed text. The top controls have a blue-gray backdrop,
+and the bottom player deck has a continuous full-width gray background.
 The map starts at **120% zoom**, focused toward the home base. Use **+/-**,
 **Fit map**, and **Alt-drag or middle-drag** to navigate without issuing orders.
 Fit shows the entire map; zoom and pan do not change world coordinates or speed.
