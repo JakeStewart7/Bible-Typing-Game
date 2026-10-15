@@ -76,9 +76,12 @@ the time spent away; switching screens or using Pause also stops the simulation.
 The slim, stretched private typing strip leaves more height for the battlefield.
 Its input stays 420px wide (or fits the available space on smaller screens),
 centered beneath the displayed text, with the unlabeled length scroller directly
-to its left. The top controls have a blue-gray backdrop; feedback appears at their
-bottom left. The typing module has a full-width white background, while the player deck stays
-gray across the full width. The deck fits the viewport height, with scrolling inside action panels
+to its left. The top controls have a softly shaded blue-gray backdrop; feedback
+appears at their bottom left. The typing module has a full-width white background,
+while the player deck stays neutral gray across the full width. The header and
+footer have subtle square-grid textures and crisp edge highlights to match the
+shape-based battlefield. These backgrounds do not intercept map or control clicks.
+The deck fits the viewport height, with scrolling inside action panels
 and the squad list on narrow screens rather than clipping the bottom.
 The map starts at **120% zoom**, focused toward the home base. Use **+/-**,
 **Fit map**, and **Alt-drag or middle-drag** to navigate without issuing orders.

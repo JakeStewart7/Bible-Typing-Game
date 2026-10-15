@@ -13,6 +13,20 @@
 .stronghold-screen button:focus-visible, .stronghold-screen select:focus-visible, .stronghold-screen input:focus-visible { outline: 2px solid #111; outline-offset: 1px; }
 .stronghold-tier:focus-visible::before { background: #ffe64c; }
 .stronghold-stage { position: relative; width: 100%; height: 100%; min-height: 0; overflow: hidden; background: linear-gradient(to bottom, #c6d8e5 0 var(--header-height), #1faf4c var(--header-height) calc(100% - var(--deck-height) - 140px), #fff calc(100% - var(--deck-height) - 140px) calc(100% - var(--deck-height)), #7f7f7f calc(100% - var(--deck-height)) 100%); }
+.stronghold-stage::before, .stronghold-stage::after {
+  content: ''; position: absolute; left: 0; right: 0; z-index: 0; pointer-events: none; box-sizing: border-box;
+  background-size: 32px 32px, 32px 32px, 100% 100%;
+}
+.stronghold-stage::before {
+  top: 0; height: var(--header-height); border-bottom: 2px solid #8195a4;
+  background-image: linear-gradient(90deg, #ffffff24 1px, transparent 1px), linear-gradient(#ffffff24 1px, transparent 1px), linear-gradient(to bottom, #e0eaf1, #bdcedb);
+  box-shadow: inset 0 1px 0 #ffffffa6, inset 0 -1px 0 #ffffff66;
+}
+.stronghold-stage::after {
+  bottom: 0; height: calc(var(--deck-height) + 7px); border-top: 2px solid #686868;
+  background-image: linear-gradient(90deg, #ffffff14 1px, transparent 1px), linear-gradient(#ffffff14 1px, transparent 1px), linear-gradient(to bottom, #b8b8b8, #898989);
+  box-shadow: inset 0 1px 0 #dedede;
+}
 .stronghold-battlefield { position: absolute; inset: 0; }
 #stronghold-map { position: absolute; top: var(--header-height); width: 100%; height: max(0px, calc(100% - var(--header-height) - var(--deck-height) - 140px)); cursor: crosshair; touch-action: none; user-select: none; }
 .stronghold-map-camera { position: absolute; top: 100px; right: 14px; z-index: 4; display: flex; align-items: center; gap: 5px; font-size: 14px; }
