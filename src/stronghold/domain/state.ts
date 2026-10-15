@@ -1,4 +1,4 @@
-import { BASE, ENEMY_BASE, UNIT_HEALTH_MULTIPLIER, UNIT_RULES } from './rules.ts';
+import { BASE, ENEMY_BASE, TOWER_STRENGTH_MULTIPLIER, UNIT_HEALTH_MULTIPLIER, UNIT_RULES } from './rules.ts';
 import { assignPhrase } from './phrases.ts';
 import { unitUpgrade } from './technology.ts';
 import { createRoleTasks } from './tasks.ts';
@@ -15,8 +15,9 @@ export function addUnit(state: StrongholdState, kind: UnitKind, point: Point, fo
 export function addBuilding(
   state: StrongholdState, kind: BuildingKind, point: Point, complete = false, enemy = false, tier = state.tier
 ): Building {
-  const hp = kind === 'castle' ? 10000 : kind === 'enemy-base' ? 1200 : kind === 'wall' ? 260
+  const baseHp = kind === 'castle' ? 10000 : kind === 'enemy-base' ? 1200 : kind === 'wall' ? 260
     : 160 + (kind === 'tower' ? 60 : kind === 'barracks' ? 40 : 0) * Math.max(0, tier - 1);
+  const hp = baseHp * (kind === 'tower' ? TOWER_STRENGTH_MULTIPLIER : 1);
   const building: Building = {
     ...point, id: state.nextId++, kind, hp, maxHp: hp, tier,
     progress: complete ? 1 : 0, cooldown: 0, enemy, attackTarget: null, ownerId: null

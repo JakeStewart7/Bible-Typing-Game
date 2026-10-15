@@ -57,7 +57,7 @@ test('Stronghold towers retain selected tiers and advanced units require more ph
   finish(state);
   executeCommand(state, self(state), { type: 'PLACE', kind: 'tower', point: { x: 360, y: 425 } });
   equal(state.buildings.find(building => building.kind === 'tower' && !building.enemy)?.tier, 2);
-  equal(state.buildings.find(building => building.kind === 'tower' && !building.enemy)?.maxHp, 220);
+  equal(state.buildings.find(building => building.kind === 'tower' && !building.enemy)?.maxHp, 330);
   equal(state.resources, 450);
   executeCommand(state, self(state), { type: 'ROLE', role: 'production' });
   executeCommand(state, self(state), { type: 'ACTION', action: 'catapult' });

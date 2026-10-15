@@ -137,6 +137,55 @@ test('Stronghold upgrades obey per-tier limits and population caps', () => {
   equal(self(state).typed, '');
 });
 
+test('Stronghold towers have 50 percent more health across tiers, sides and construction states', () => {
+  const state = createStronghold();
+  for (const enemy of [false, true]) {
+    for (const complete of [false, true]) {
+      for (const tier of [1, 2, 3]) {
+        const tower = addBuilding(state, 'tower', { x: 300, y: 400 }, complete, enemy, tier);
+        const expected = (160 + 60 * (tier - 1)) * 1.5;
+        equal(tower.hp, expected);
+        equal(tower.maxHp, expected);
+      }
+    }
+  }
+  equal(state.buildings.filter(building => building.enemy && building.kind === 'tower').slice(0, 2).map(tower => tower.maxHp), [240, 240]);
+  equal(addBuilding(state, 'barracks', { x: 300, y: 400 }, true, false, 3).maxHp, 240);
+  equal(addBuilding(state, 'wall', { x: 300, y: 400 }).maxHp, 260);
+  const waveState = createStronghold();
+  waveState.wave = 2;
+  spawnWave(waveState);
+  equal(waveState.buildings.filter(building => building.enemy && building.kind === 'tower').map(tower => tower.maxHp), [240, 240, 240]);
+});
+
+test('Stronghold tower damage scales by 1.5 including upgrades and waves without changing attack timing', () => {
+  for (const enemy of [false, true]) {
+    for (const tier of [1, 2, 3]) {
+      for (const upgrades of [0, 2]) {
+        const state = createStronghold();
+        state.units = [];
+        state.buildings = [];
+        state.wave = 4;
+        state.technology['tower-1'] = upgrades;
+        state.technology['tower-2'] = upgrades;
+        state.technology['tower-3'] = upgrades;
+        const tower = addBuilding(state, 'tower', { x: 500, y: 400 }, true, enemy, tier);
+        const target = addUnit(state, enemy ? 'worker' : 'invader', { x: 550, y: 400 });
+        const startingHp = target.hp;
+        const damage = (enemy ? 8 + state.wave : 18 + tier * 3 + upgrades * 5) * 1.5;
+        updateCombat(state, .1);
+        equal(startingHp - target.hp, damage);
+        equal(tower.cooldown, 1);
+        equal(tower.attackTarget, { x: target.x, y: target.y });
+        updateCombat(state, .5);
+        equal(startingHp - target.hp, damage);
+        updateCombat(state, .5);
+        equal(startingHp - target.hp, damage * 2);
+      }
+    }
+  }
+});
+
 test('Stronghold relay destruction disconnects upstream resources until a route is restored', () => {
   const state = createStronghold();
   state.units = [];

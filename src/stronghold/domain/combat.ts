@@ -1,4 +1,4 @@
-import { distance, ENEMY_BASE, moveToward, UNIT_CAPS, UNIT_RULES } from './rules.ts';
+import { distance, ENEMY_BASE, moveToward, TOWER_STRENGTH_MULTIPLIER, UNIT_CAPS, UNIT_RULES } from './rules.ts';
 import { addBuilding, addUnit } from './state.ts';
 import { towerUpgrade, unitUpgrade } from './technology.ts';
 import { ENTITY_LABELS, recordEvent } from './events.ts';
@@ -74,7 +74,8 @@ export function updateCombat(state: StrongholdState, seconds: number): void {
     tower.cooldown = Math.max(0, tower.cooldown - seconds);
     const target = closest(tower, state.units.filter(unit => (unit.kind === 'invader') !== tower.enemy
       && distance(unit, tower) <= 150 + tower.tier * 15));
-    if (target) attack(tower, target, tower.enemy ? 8 + state.wave : 18 + tower.tier * 3 + towerUpgrade(state, tower.tier) * 5);
+    const damage = tower.enemy ? 8 + state.wave : 18 + tower.tier * 3 + towerUpgrade(state, tower.tier) * 5;
+    if (target) attack(tower, target, damage * TOWER_STRENGTH_MULTIPLIER);
   }
   const enemyBase = state.buildings.find(building => building.kind === 'enemy-base');
   const castle = state.buildings.find(building => building.kind === 'castle');

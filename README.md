@@ -63,6 +63,12 @@ The first wave arrives after **60 seconds**. The first two waves have **one
 invader each**, giving the two starting warriors time to defend without new
 troops. Later waves grow by one invader at a time, up to 18; their intervals
 start at 78 seconds and gradually shorten to no less than 45 seconds.
+Friendly and enemy towers have **50% more health and damage**. Tier 1/2/3 towers
+have 240/330/420 health; damage scaling includes tower upgrades and enemy waves.
+Tower attack range, firing interval, construction work and supplies costs are unchanged.
+Switching to another browser tab automatically pauses Stronghold, including
+the battlefield and computer typing. Returning resumes without catching up
+the time spent away; switching screens or using Pause also stops the simulation.
 
 The slim, stretched private typing strip leaves more height for the battlefield.
 Its input stays 420px wide (or fits the available space on smaller screens),

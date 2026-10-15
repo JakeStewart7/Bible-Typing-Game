@@ -38,6 +38,7 @@ export const UNIT_RULES: Record<UnitKind, { hp: number; speed: number; damage: n
   invader: { hp: 60, speed: 11.4, damage: 8, range: 25 }
 };
 export const UNIT_HEALTH_MULTIPLIER = 2;
+export const TOWER_STRENGTH_MULTIPLIER = 1.5;
 export const TEXT_LENGTH_RANGES: Record<PhraseLength, readonly [number, number]> = {
   short: [3, 5], medium: [6, 8], long: [8, 15], 'extra-long': [15, 25]
 };
