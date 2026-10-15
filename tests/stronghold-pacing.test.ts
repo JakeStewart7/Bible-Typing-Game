@@ -106,6 +106,65 @@ test('Stronghold every unit moves 70 percent slower and has double health, inclu
   equal(state.buildings.find(building => building.kind === 'enemy-base')?.maxHp, 1200);
 });
 
+test('Stronghold gatherers and builders follow move orders then resume nearest work after two idle seconds', () => {
+  for (const kind of ['worker', 'builder'] as const) {
+    const state = createStronghold();
+    const player = state.players[0];
+    if (!player) throw new Error('Missing player.');
+    executeCommand(state, player, { type: 'ROLE', role: 'army' });
+    state.units = [];
+    const unit = addUnit(state, kind, { x: 500, y: 300 });
+    state.nodes = [{ id: 100, x: 530, y: 300, rich: false, remaining: 100 }];
+    const project = addBuilding(state, 'wall', { x: 530, y: 300 });
+    const point = { x: 500, y: 300 + UNIT_RULES[kind].speed };
+    executeCommand(state, player, { type: 'MOVE', ids: [unit.id], point });
+    updateLogistics(state, .5);
+    equal(unit.y > 300 && unit.y < point.y, true);
+    equal(unit.destination, point);
+    updateLogistics(state, .5);
+    equal(unit.destination, null);
+    equal(unit.y, point.y);
+    for (let step = 0; step < 4; step++) updateLogistics(state, .5);
+    equal(unit.x, 500);
+    equal(unit.y, point.y);
+    equal(project.progress, 0);
+    equal(state.nodes[0]?.remaining, 100);
+    updateLogistics(state, .1);
+    equal(unit.x > 500, true);
+    equal(unit.idleTime, null);
+    if (kind === 'worker') equal(unit.task, 100);
+    for (let step = 0; step < 40; step++) updateLogistics(state, .1);
+    if (kind === 'builder') {
+      equal(project.progress > 0, true);
+      equal(unit.attackTarget, { x: project.x, y: project.y });
+      equal(unitMotionTransform(unit, unit, .1).startsWith('rotate('), true);
+      equal(unitMotionTransform(unit, unit, .1, true), '');
+      equal(unitMotionTransform(unit, unit, .1) !== unitMotionTransform(unit, unit, .2), true);
+    } else equal(state.nodes[0]?.remaining < 100, true);
+  }
+});
+
+test('Stronghold manual gatherer movement keeps carried supplies attached and reorders restart the idle timer', () => {
+  const state = createStronghold();
+  const player = state.players[0];
+  if (!player) throw new Error('Missing player.');
+  state.units = [];
+  const worker = addUnit(state, 'worker', { x: 500, y: 500 });
+  state.nodes = [{ id: 100, x: 500, y: 500, rich: false, remaining: 100 }];
+  updateLogistics(state, .1);
+  executeCommand(state, player, { type: 'ROLE', role: 'army' });
+  executeCommand(state, player, { type: 'MOVE', ids: [worker.id], point: { x: 450, y: 500 } });
+  updateLogistics(state, 1);
+  equal(state.chunks[0]?.x, worker.x);
+  equal(state.chunks[0]?.y, worker.y);
+  executeCommand(state, player, { type: 'MOVE', ids: [worker.id], point: { x: worker.x, y: worker.y } });
+  updateLogistics(state, 1);
+  equal(worker.idleTime, 1);
+  executeCommand(state, player, { type: 'MOVE', ids: [worker.id], point: { x: worker.x, y: worker.y } });
+  updateLogistics(state, 1);
+  equal(worker.idleTime, 1);
+});
+
 test('Stronghold gatherers carry a single harvested chunk before returning to a resource node', () => {
   const state = createStronghold();
   state.units = [];

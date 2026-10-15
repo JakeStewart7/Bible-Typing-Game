@@ -18,9 +18,33 @@ export function connectedRelays(state: StrongholdState): Building[] {
   return connected;
 }
 
+function automaticWorkTime(unit: Unit, seconds: number): number {
+  if (unit.destination) {
+    const travelTime = distance(unit, unit.destination) / UNIT_RULES[unit.kind].speed;
+    moveToward(unit, unit.destination, seconds * UNIT_RULES[unit.kind].speed);
+    if (travelTime - seconds > 1e-9) return 0;
+    unit.destination = null;
+    unit.idleTime = 0;
+    seconds = Math.max(0, seconds - travelTime);
+  }
+  if (unit.idleTime === null) return seconds;
+  const remaining = Math.max(0, 2 - unit.idleTime);
+  unit.idleTime += seconds;
+  if (unit.idleTime <= 2) return 0;
+  unit.idleTime = null;
+  unit.task = null;
+  return seconds - remaining;
+}
+
 function updateWorker(state: StrongholdState, worker: Unit, seconds: number): void {
   worker.cooldown = Math.max(0, worker.cooldown - seconds);
+  if (worker.cooldown <= 2.72 || worker.idleTime !== null) worker.attackTarget = null;
+  seconds = automaticWorkTime(worker, seconds);
   const cargo = state.chunks.find(chunk => chunk.carrier === worker.id);
+  if (seconds === 0) {
+    if (cargo) { cargo.x = worker.x; cargo.y = worker.y; }
+    return;
+  }
   if (cargo) {
     const depot = state.buildings.filter(building => (building.kind === 'relay' || building.kind === 'castle')
       && building.hp > 0 && building.progress === 1).sort((a, b) => distance(worker, a) - distance(worker, b))[0];
@@ -53,14 +77,19 @@ function updateWorker(state: StrongholdState, worker: Unit, seconds: number): vo
 }
 
 function updateBuilder(state: StrongholdState, builder: Unit, seconds: number, claimed: Set<number>): void {
+  builder.attackTarget = null;
+  builder.cooldown = 0;
+  seconds = automaticWorkTime(builder, seconds);
+  if (seconds === 0) return;
   const projects = state.buildings.filter(building => !building.enemy && building.hp > 0
     && ((building.progress < 1 && !claimed.has(building.id)) || (building.progress === 1 && building.hp < building.maxHp)));
-  const project = projects.sort((a, b) =>
-    (a.progress === 1 ? 1 : 0) - (b.progress === 1 ? 1 : 0) || distance(builder, a) - distance(builder, b))[0];
+  const project = projects.sort((a, b) => distance(builder, a) - distance(builder, b))[0];
   if (!project) return;
   if (project.progress < 1) claimed.add(project.id);
   moveToward(builder, project, seconds * UNIT_RULES.builder.speed);
   if (distance(builder, project) > 22) return;
+  builder.attackTarget = { x: project.x, y: project.y };
+  builder.cooldown = 1;
   if (project.progress < 1) {
     project.progress = Math.min(1, project.progress + seconds / 8);
     if (project.progress === 1) recordEvent(state, `${ENTITY_LABELS[project.kind]} constructed`, project.ownerId);

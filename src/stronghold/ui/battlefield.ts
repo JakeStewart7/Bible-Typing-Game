@@ -14,6 +14,7 @@ function attackMarkup(): string {
 export function unitMotionTransform(unit: Unit, previous: Point | undefined, elapsed: number, reducedMotion = false): string {
   if (reducedMotion) return '';
   const attacking = unit.attackTarget !== null && unit.cooldown > (unit.kind === 'worker' ? 2.72 : .72);
+  if (attacking && unit.kind === 'builder') return `rotate(${Math.sin(elapsed * 12) * 10}) scale(1.05)`;
   if (attacking) return 'scale(1.15)';
   if (!previous || distance(unit, previous) < .001) return '';
   const stride = Math.sin(elapsed * 16 + unit.id);
@@ -66,7 +67,7 @@ function child(element: Element, selector: string): Element {
 function position(element: Element, point: { x: number; y: number }, scale = 1): void {
   setAttribute(element, 'transform', `translate(${point.x} ${point.y}) scale(${scale})`);
 }
-function renderAttack(element: Element, entity: Unit | Building, scale: number): void {
+function renderAttack(element: Element, entity: Unit | Building, scale: number, elapsed = 0, reducedMotion = false): void {
   const effect = child(element, '[data-attack]');
   const active = entity.attackTarget !== null && entity.cooldown > (entity.kind === 'worker' ? 2.72 : .72);
   setAttribute(effect, 'visibility', active ? 'visible' : 'hidden');
@@ -77,6 +78,7 @@ function renderAttack(element: Element, entity: Unit | Building, scale: number):
   setAttribute(child(effect, 'line'), 'y2', String(y));
   setAttribute(child(effect, 'circle'), 'cx', String(x));
   setAttribute(child(effect, 'circle'), 'cy', String(y));
+  setAttribute(child(effect, 'circle'), 'r', String(entity.kind === 'builder' && !reducedMotion ? 4 + Math.sin(elapsed * 12) * 2 : 6));
 }
 export function createBattlefieldRenderer(map: SVGSVGElement) {
   map.innerHTML = `<g data-layer="links"></g><g data-layer="nodes"></g><g data-layer="chunks"></g><g data-layer="buildings"></g><g data-layer="units"></g>
@@ -99,7 +101,7 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     position(element, unit, scale);
     setAttribute(child(element, '[data-visual]'), 'transform', unitMotionTransform(unit, previousUnits.get(unit.id), elapsed, motionPreference.matches));
     previousUnits.set(unit.id, { x: unit.x, y: unit.y });
-    renderAttack(element, unit, scale);
+    renderAttack(element, unit, scale, elapsed, motionPreference.matches);
     setAttribute(element, 'data-unit', String(unit.id));
     setAttribute(element, 'class', 'stronghold-map-unit');
     setAttribute(child(element, '[data-selected]'), 'visibility', selection.has(unit.id) ? 'visible' : 'hidden');

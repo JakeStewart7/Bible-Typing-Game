@@ -16,6 +16,7 @@ export type Unit = Point & {
   id: number; kind: UnitKind; hp: number; maxHp: number;
   destination: Point | null; cooldown: number; task: number | null;
   formation: ArmyUnitKind | null; attackTarget: Point | null;
+  idleTime: number | null;
 };
 export type Building = Point & {
   id: number; kind: BuildingKind; hp: number; maxHp: number;

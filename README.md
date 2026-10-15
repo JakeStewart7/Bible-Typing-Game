@@ -18,6 +18,10 @@ changes, map gestures and new entries, without interrupting an open dropdown.
 Unit Control can also type for supplies, and typing stays available while a
 building is ready for placement or your tier contribution is finished.
 Only pause, hidden/inactive gameplay and a finished match disable the input.
+Unit Control can select and move gatherers and builders as well as troops.
+After reaching a manual destination, gatherers and builders wait two seconds,
+then automatically resume the nearest resource, construction or repair job.
+Builders rock and show small pulsing sparks while building or repairing.
 
 Matches start with **50 supplies** and **Medium** text. Choose **Short** (tiny words), **Medium** (long words), **Long** (short phrases),
 or **Extra Long** (full sentences) in the Length selector. A fully correct entry

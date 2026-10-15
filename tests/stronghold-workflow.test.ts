@@ -113,17 +113,18 @@ test('Stronghold event history retains player attribution, world waves and termi
   equal(state.events.some(event => event.text === 'Home base destroyed: defeat'), true);
 });
 
-test('Stronghold drag selection works in both directions and excludes enemies and workers', () => {
+test('Stronghold drag selection includes builders and gatherers in both directions but excludes enemies', () => {
   const state = createStronghold();
   state.units = [];
   const warrior = addUnit(state, 'warrior', { x: 100, y: 100 });
   const archer = addUnit(state, 'archer', { x: 150, y: 150 });
   addUnit(state, 'invader', { x: 120, y: 120 });
-  addUnit(state, 'worker', { x: 130, y: 130 });
+  const worker = addUnit(state, 'worker', { x: 130, y: 130 });
+  const builder = addUnit(state, 'builder', { x: 140, y: 140 });
   addUnit(state, 'catapult', { x: 300, y: 300 });
   const start = { x: 90, y: 90 }, end = { x: 170, y: 170 };
-  equal(troopsInRectangle(state.units, start, end), [warrior.id, archer.id]);
-  equal(troopsInRectangle(state.units, end, start), [warrior.id, archer.id]);
+  equal(troopsInRectangle(state.units, start, end), [warrior.id, archer.id, worker.id, builder.id]);
+  equal(troopsInRectangle(state.units, end, start), [warrior.id, archer.id, worker.id, builder.id]);
   equal(selectionBounds(end, start), { x: 90, y: 90, width: 80, height: 80 });
 });
 

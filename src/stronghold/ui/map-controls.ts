@@ -16,7 +16,7 @@ export function selectionBounds(start: Point, end: Point) {
 }
 export function troopsInRectangle(units: readonly Unit[], start: Point, end: Point): number[] {
   const bounds = selectionBounds(start, end);
-  return units.filter(unit => unit.hp > 0 && ['warrior', 'archer', 'catapult'].includes(unit.kind)
+  return units.filter(unit => unit.hp > 0 && unit.kind !== 'invader'
     && unit.x >= bounds.x && unit.x <= bounds.x + bounds.width && unit.y >= bounds.y && unit.y <= bounds.y + bounds.height)
     .map(unit => unit.id);
 }

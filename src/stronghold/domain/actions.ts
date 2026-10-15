@@ -185,11 +185,18 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     playerEvent(state, player, 'set Rally point');
     return;
   }
-  if (command.ids.length > 36) throw new Error('Too many units selected.');
+  if (command.ids.length > 52) throw new Error('Too many units selected.');
   for (const id of command.ids) {
     const unit = state.units.find(candidate => candidate.id === id);
-    if (!unit || !['warrior', 'archer', 'catapult'].includes(unit.kind)) throw new Error('Select only friendly army units.');
+    if (!unit || unit.hp <= 0 || unit.kind === 'invader') throw new Error('Select only friendly units.');
   }
-  for (const unit of state.units) if (command.ids.includes(unit.id)) unit.destination = { ...command.point };
-  if (command.ids.length > 0) playerEvent(state, player, 'ordered Army');
+  for (const unit of state.units) if (command.ids.includes(unit.id)) {
+    unit.destination = { ...command.point };
+    if (unit.kind === 'worker' || unit.kind === 'builder') {
+      unit.task = null;
+      unit.idleTime = 0;
+      unit.attackTarget = null;
+    }
+  }
+  if (command.ids.length > 0) playerEvent(state, player, 'ordered units');
 }

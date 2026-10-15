@@ -143,7 +143,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   }
   function move(point: Point, all = false): void {
     const ids = all ? armyIds() : [...selected];
-    if (ids.length === 0) { errorMessage = 'Select troops first, or use Select all troops.'; display(); focusTyping(); return; }
+    if (ids.length === 0) { errorMessage = 'Select friendly units first, or use Select all troops.'; display(); focusTyping(); return; }
     void send({ type: 'MOVE', ids, point });
   }
   elements.input.addEventListener('input', () => {
@@ -199,7 +199,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     const target = event.target instanceof Element ? event.target.closest('[data-unit]') : null;
     const id = Number(target?.getAttribute('data-unit'));
     drag = { start: point, end: point, pointer: event.pointerId, additive: event.shiftKey,
-      unitId: armyIds().includes(id) ? id : null, moved: false };
+      unitId: snapshot.units.some(unit => unit.id === id && unit.kind !== 'invader' && unit.hp > 0) ? id : null, moved: false };
     elements.map.setPointerCapture(event.pointerId);
     event.preventDefault();
   });
