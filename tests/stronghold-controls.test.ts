@@ -1,8 +1,8 @@
 import { arrowPan, typingLengthKey, nextTaskIndex, actionShortcutKey, taskShortcut } from '../src/stronghold/ui/keyboard.ts';
 import { cameraBounds } from '../src/stronghold/ui/map-camera.ts';
-import { unitMotionTransform } from '../src/stronghold/ui/battlefield.ts';
+import { buildingMarkup, unitMarkup, unitMotionTransform } from '../src/stronghold/ui/battlefield.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
-import { addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
+import { addBuilding, addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
 import { PHRASE_LENGTHS, PLAYER_COLORS, ROLES } from '../src/stronghold/domain/types.ts';
 import { validateDeveloperOptions } from '../src/stronghold/infrastructure/developer-options.ts';
 import { equal, test } from './harness.ts';
@@ -34,6 +34,52 @@ test('Stronghold task cycling wraps forwards and backwards without treating paid
   equal(markup.includes('Command desk'), false);
   equal(markup.includes('Tab: switch task / Arrows: pan'), false);
   equal(markup.indexOf('class="stronghold-length-keys"') < markup.indexOf('id="stronghold-length"'), true);
+});
+
+test('Stronghold friendly and enemy archers bob slowly even when standing or attacking', () => {
+  const state = createStronghold();
+  for (const [kind, formation] of [['archer', null], ['invader', 'archer']] as const) {
+    const unit = addUnit(state, kind, { x: 100, y: 100 }, formation);
+    unit.id = 0;
+    equal(unitMotionTransform(unit, unit, 0), 'translate(0 0)');
+    equal(unitMotionTransform(unit, unit, Math.PI / 4.4), 'translate(0 2.5)');
+    equal(unitMotionTransform(unit, unit, 3 * Math.PI / 4.4), 'translate(0 -2.5)');
+    unit.attackTarget = { x: 120, y: 100 }; unit.cooldown = 1;
+    equal(unitMotionTransform(unit, unit, Math.PI / 4.4), 'translate(0 2.5) scale(1.15)');
+    equal(unitMotionTransform(unit, unit, Math.PI / 4.4, true), '');
+  }
+});
+
+test('Stronghold builders bob quickly only while actively building or repairing', () => {
+  const state = createStronghold(), builder = addUnit(state, 'builder', { x: 100, y: 100 });
+  builder.id = 0;
+  equal(unitMotionTransform(builder, builder, Math.PI / 48), '');
+  builder.attackTarget = { x: 110, y: 100 }; builder.cooldown = 1;
+  equal(unitMotionTransform(builder, builder, Math.PI / 48), 'translate(0 2.5)');
+  equal(unitMotionTransform(builder, builder, 3 * Math.PI / 48), 'translate(0 -2.5)');
+  equal(unitMotionTransform(builder, builder, Math.PI / 48, true), '');
+  builder.attackTarget = null;
+  equal(unitMotionTransform(builder, builder, Math.PI / 48), '');
+});
+
+test('Stronghold work effects use silver sparks instead of the dark crimson combat strike', () => {
+  const state = createStronghold();
+  for (const kind of ['worker', 'builder'] as const) {
+    const markup = unitMarkup(addUnit(state, kind, { x: 100, y: 100 }), false);
+    equal(markup.includes('data-work'), true);
+    equal(markup.includes('data-attack'), false);
+    equal(markup.includes('#dce7f0'), true);
+    equal(markup.includes('stronghold-work-glow'), true);
+  }
+  for (const kind of ['warrior', 'archer', 'catapult', 'invader'] as const) {
+    const markup = unitMarkup(addUnit(state, kind, { x: 100, y: 100 }), false);
+    equal(markup.includes('data-attack'), true);
+    equal(markup.includes('data-work'), false);
+    equal(markup.includes('#3d0b1b'), true);
+    equal(markup.includes('#ff5662'), true);
+  }
+  equal(buildingMarkup(addBuilding(state, 'tower', { x: 200, y: 100 })).includes('data-attack'), true);
+  equal(buildingMarkup(addBuilding(state, 'barracks', { x: 300, y: 100 })).includes('height="6"'), true);
 });
 
 test('Stronghold arrow panning combines simultaneous keys and opposite directions cancel', () => {

@@ -9,14 +9,31 @@ import { TRAINING_SECONDS } from '../domain/training.ts';
 function health(hp: number, max: number, y: number, width = 26): string {
   return `<rect x="${-width / 2}" y="${y}" width="${width}" height="3" fill="#1d3029"/><rect data-health x="${-width / 2}" y="${y}" width="${width * Math.max(0, hp / max)}" height="3" fill="#a6ed89"/>`;
 }
-function attackMarkup(): string {
-  return '<g data-attack visibility="hidden" pointer-events="none"><line stroke="#fff4a3" stroke-width="3"/><circle r="6" fill="none" stroke="#fff4a3" stroke-width="3"/></g>';
+function actionActive(entity: Unit | Building): boolean {
+  return entity.attackTarget !== null && entity.cooldown > (entity.kind === 'worker' ? 2.72 : .72);
+}
+function actionEffectMarkup(working = false): string {
+  if (working) return `<g data-work visibility="hidden" pointer-events="none" filter="url(#stronghold-work-glow)">
+    <path data-beam fill="none" stroke="#dce7f0" stroke-width="1.5" stroke-dasharray="3 5"/>
+    <g data-impact><circle r="7" fill="#eef5ff" fill-opacity=".18" stroke="#c5d2dc" stroke-width="1.5"/>
+      <path d="M-11 0H-7 M7 0H11 M0 -11V-7 M0 7V11" stroke="#fff" stroke-width="2"/>
+      <rect x="-2" y="-2" width="4" height="4" fill="#fff"/></g></g>`;
+  return `<g data-attack visibility="hidden" pointer-events="none">
+    <path data-trail fill="none" stroke="#3d0b1b" stroke-width="5" stroke-linejoin="bevel"/>
+    <path data-beam fill="none" stroke="#ff5662" stroke-width="2" stroke-linejoin="bevel" filter="url(#stronghold-attack-glow)"/>
+    <g data-impact filter="url(#stronghold-attack-glow)">
+      <path d="M0 -11L3 -4L10 -7L6 0L11 4L4 5L0 12L-3 5L-11 7L-6 0L-11 -4L-4 -5Z" fill="#9b183d" fill-opacity=".55" stroke="#ff6a73" stroke-width="1.5"/>
+      <path d="M-7 5L6 -6 M-1 8L7 0" stroke="#ffe7dc" stroke-width="2"/></g></g>`;
 }
 export function unitMotionTransform(unit: Unit, previous: Point | undefined, elapsed: number, reducedMotion = false): string {
   if (reducedMotion) return '';
-  const attacking = unit.attackTarget !== null && unit.cooldown > (unit.kind === 'worker' ? 2.72 : .72);
-  if (attacking && unit.kind === 'builder') return `rotate(${Math.sin(elapsed * 12) * 10}) scale(1.05)`;
-  if (attacking) return 'scale(1.15)';
+  const active = actionActive(unit);
+  const archer = unit.kind === 'archer' || (unit.kind === 'invader' && unit.formation === 'archer');
+  const bob = archer ? `translate(0 ${Math.sin(elapsed * 2.2 + unit.id) * 2.5})` : '';
+  if (active && unit.kind === 'builder') return `translate(0 ${Math.sin(elapsed * 24 + unit.id) * 2.5})`;
+  if (active && unit.kind === 'worker') return 'scale(1.04)';
+  if (active) return `${bob ? bob + ' ' : ''}scale(1.15)`;
+  if (archer) return bob;
   if (!previous || distance(unit, previous) < .001) return '';
   const stride = Math.sin(elapsed * 16 + unit.id);
   if (unit.kind === 'warrior' || (unit.kind === 'invader' && (unit.formation === null || unit.formation === 'warrior'))) {
@@ -34,7 +51,7 @@ export function unitMarkup(unit: Unit, selected: boolean): string {
     : unit.formation === 'archer' ? '<path d="M0 -10 L8 0 L0 10 L-8 0 Z" fill="#870018" stroke="#ff1726" stroke-width="2"/>'
     : unit.formation === 'catapult' ? '<path d="M0 -12 L10 9 L-10 9 Z" fill="#870018" stroke="#ff1726" stroke-width="2"/>'
     : '<rect x="-8" y="-8" width="16" height="16" fill="#870018" stroke="#ff1726" stroke-width="2"/>';
-  return `${attackMarkup()}<circle data-selected r="16" fill="none" stroke="#fff" stroke-width="2" visibility="${selected ? 'visible' : 'hidden'}"/><g data-visual>${shape}</g>${health(unit.hp, unit.maxHp, 13, 20)}<title>${unit.kind}${unit.formation ? ' ' + unit.formation : ''}: ${Math.ceil(unit.hp)} HP</title>`;
+  return `${actionEffectMarkup(unit.kind === 'worker' || unit.kind === 'builder')}<circle data-selected r="16" fill="none" stroke="#fff" stroke-width="2" visibility="${selected ? 'visible' : 'hidden'}"/><g data-visual>${shape}</g>${health(unit.hp, unit.maxHp, 13, 20)}<title>${unit.kind}${unit.formation ? ' ' + unit.formation : ''}: ${Math.ceil(unit.hp)} HP</title>`;
 }
 export function buildingMarkup(building: Building): string {
   const color = building.enemy ? '#870018' : building.kind === 'relay' ? '#b0b0b0' : '#c3c3c3';
@@ -43,7 +60,7 @@ export function buildingMarkup(building: Building): string {
     : building.kind === 'relay' ? `<path d="M-4 16 L-4 -7 L-9 -12 L0 -18 L9 -12 L4 -7 L4 16 Z" fill="${color}" stroke="#7f7f7f" stroke-width="2"/>`
     : building.kind === 'wall' ? `<rect data-wall-shape transform="rotate(${building.rotation ?? 0})" x="-23" y="-4" width="46" height="8" fill="${building.enemy ? color : '#ffdb58'}" stroke="${building.enemy ? '#ff1726' : '#e8ad23'}" stroke-width="3"/>`
     : `<rect x="${-size}" y="${-size}" width="${size * 2}" height="${size * 2}" fill="${color}" stroke="${building.enemy ? '#ff1726' : '#7f7f7f'}" stroke-width="4"/>`;
-  return `${attackMarkup()}${shape}${health(building.hp, building.maxHp, building.kind === 'tower' ? 26 : size + 6, size * 2)}<title></title>${building.kind === 'barracks' ? `<text data-tier y="5" text-anchor="middle" fill="#111" font-size="16">T${building.tier}</text><g data-training><rect x="-16" y="26" width="32" height="4" fill="#333"/><rect data-training-fill x="-16" y="26" width="0" height="4" fill="#a6ed89"/><text data-training-count y="43" text-anchor="middle" fill="#111" stroke="white" stroke-width="2" paint-order="stroke" font-size="12"></text></g>` : ''}`;
+  return `${actionEffectMarkup()}${shape}${health(building.hp, building.maxHp, building.kind === 'tower' ? 26 : size + 6, size * 2)}<title></title>${building.kind === 'barracks' ? `<text data-tier y="5" text-anchor="middle" fill="#111" font-size="16">T${building.tier}</text><g data-training><rect x="-17" y="26" width="34" height="8" fill="#23372e"/><rect x="-16" y="27" width="32" height="6" fill="#333"/><rect data-training-fill x="-16" y="27" width="0" height="6" fill="#a6ed89"/><text data-training-count y="43" text-anchor="middle" fill="#111" stroke="white" stroke-width="2" paint-order="stroke" font-size="12"></text></g>` : ''}`;
 }
 export function relayPreviewMarkup(snapshot: Pick<StrongholdSnapshot, 'buildings'>, point: Point, sourceId?: number): string {
   const connected = connectedRelays(snapshot);
@@ -80,21 +97,34 @@ function child(element: Element, selector: string): Element {
 function position(element: Element, point: { x: number; y: number }, scale = 1): void {
   setAttribute(element, 'transform', `translate(${point.x} ${point.y}) scale(${scale})`);
 }
-function renderAttack(element: Element, entity: Unit | Building, scale: number, elapsed = 0, reducedMotion = false): void {
-  const effect = child(element, '[data-attack]');
-  const active = entity.attackTarget !== null && entity.cooldown > (entity.kind === 'worker' ? 2.72 : .72);
+function renderActionEffect(element: Element, entity: Unit | Building, scale: number, elapsed: number, reducedMotion: boolean): void {
+  const working = entity.kind === 'worker' || entity.kind === 'builder';
+  const effect = child(element, working ? '[data-work]' : '[data-attack]');
+  const active = actionActive(entity);
   setAttribute(effect, 'visibility', active ? 'visible' : 'hidden');
   if (!active || !entity.attackTarget) return;
   const x = (entity.attackTarget.x - entity.x) / scale;
   const y = (entity.attackTarget.y - entity.y) / scale;
-  setAttribute(child(effect, 'line'), 'x2', String(x));
-  setAttribute(child(effect, 'line'), 'y2', String(y));
-  setAttribute(child(effect, 'circle'), 'cx', String(x));
-  setAttribute(child(effect, 'circle'), 'cy', String(y));
-  setAttribute(child(effect, 'circle'), 'r', String(entity.kind === 'builder' && !reducedMotion ? 4 + Math.sin(elapsed * 12) * 2 : 6));
+  const beam = child(effect, '[data-beam]');
+  if (working) {
+    setAttribute(beam, 'd', `M0 0L${x} ${y}`);
+    setAttribute(beam, 'stroke-dashoffset', String(reducedMotion ? 0 : -elapsed * 24 % 8));
+  } else {
+    const reach = Math.max(1, Math.hypot(x, y));
+    const offsetX = -y / reach * 3, offsetY = x / reach * 3;
+    const path = `M0 0L${x * .6 + offsetX} ${y * .6 + offsetY}L${x * .8 - offsetX} ${y * .8 - offsetY}L${x} ${y}`;
+    setAttribute(beam, 'd', path);
+    setAttribute(child(effect, '[data-trail]'), 'd', path);
+  }
+  const pulse = reducedMotion ? 0 : working ? Math.sin(elapsed * 22) : Math.min(1, (1 - entity.cooldown) / .28);
+  setAttribute(effect, 'opacity', String(reducedMotion ? 1 : working ? .8 + pulse * .2 : 1 - pulse * .7));
+  setAttribute(child(effect, '[data-impact]'), 'transform', `translate(${x} ${y}) rotate(${working ? reducedMotion ? 0 : elapsed * 100 % 360 : Math.atan2(y, x) * 180 / Math.PI}) scale(${1 + pulse * (working ? .15 : .6)})`);
 }
 export function createBattlefieldRenderer(map: SVGSVGElement) {
-  map.innerHTML = `<defs><filter id="stronghold-resource-glow" x="-100%" y="-100%" width="300%" height="300%"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#effff2" flood-opacity=".95"/></filter></defs>
+  map.innerHTML = `<defs>
+    <filter id="stronghold-resource-glow" x="-100%" y="-100%" width="300%" height="300%"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#effff2" flood-opacity=".95"/></filter>
+    <filter id="stronghold-work-glow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="1.5" flood-color="#f0f5ff" flood-opacity=".7"/></filter>
+    <filter id="stronghold-attack-glow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="1.8" flood-color="#f12b49" flood-opacity=".8"/></filter></defs>
     <g data-layer="coverage" pointer-events="none"></g><g data-layer="links" pointer-events="none"></g><g data-layer="nodes"></g><g data-layer="chunks" pointer-events="none"></g><g data-layer="buildings"></g><g data-layer="units"></g>
     <g data-layer="rally"><path d="M0 14V-15l20 7-20 7" fill="#e7d98b" stroke="#e7d98b" opacity=".6"/><title>Production rally point</title></g>`;
   function layer(name: string): SVGGElement {
@@ -119,7 +149,7 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     position(element, unit, scale);
     setAttribute(child(element, '[data-visual]'), 'transform', unitMotionTransform(unit, previousUnits.get(unit.id), elapsed, motionPreference.matches));
     previousUnits.set(unit.id, { x: unit.x, y: unit.y });
-    renderAttack(element, unit, scale, elapsed, motionPreference.matches);
+    renderActionEffect(element, unit, scale, elapsed, motionPreference.matches);
     setAttribute(element, 'data-unit', String(unit.id));
     setAttribute(element, 'class', 'stronghold-map-unit');
     setAttribute(child(element, '[data-selected]'), 'visibility', selection.has(unit.id) ? 'visible' : 'hidden');
@@ -137,7 +167,7 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     setAttribute(element, 'data-building', String(building.id));
     const wallShape = element.querySelector('[data-wall-shape]');
     if (wallShape) setAttribute(wallShape, 'transform', `rotate(${building.rotation ?? 0})`);
-    renderAttack(element, building, scale);
+    renderActionEffect(element, building, scale, elapsed, motionPreference.matches);
     setAttribute(element, 'opacity', building.progress < 1 ? String(.3 + building.progress * .7) : '1');
     const width = building.kind === 'castle' || building.kind === 'enemy-base' ? 68 : 28;
     setAttribute(child(element, '[data-health]'), 'width', String(width * Math.max(0, building.hp / building.maxHp)));

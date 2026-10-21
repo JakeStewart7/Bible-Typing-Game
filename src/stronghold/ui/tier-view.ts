@@ -9,7 +9,7 @@ export function renderTierChallenge(elements: StrongholdElements, snapshot: Stro
   const tierList = requireElement('stronghold-tier-contributions', HTMLElement);
   const sharedBar = requireElement('stronghold-tier-progress', HTMLElement);
   const { completed, goal } = tierProgress(snapshot.players);
-  const percent = Math.round(completed / goal * 100);
+  const percent = Math.round(completed / goal * 1000) / 10;
   setAttribute(sharedBar, 'aria-valuemax', '100');
   setAttribute(sharedBar, 'aria-valuenow', String(percent));
   setAttribute(sharedBar, 'aria-valuetext', `${percent}% complete`);
@@ -19,6 +19,7 @@ export function renderTierChallenge(elements: StrongholdElements, snapshot: Stro
     if (!snapshot.players.some(player => player.id === id)) { entry.card.remove(); entry.segment.remove(); elements.contributionCards.delete(id); }
   }
   snapshot.players.forEach((player, index) => {
+    const contribution = Math.round(player.contribution / goal * 1000) / 10;
     let entry = elements.contributionCards.get(player.id);
     if (!entry) {
       const card = document.createElement('div');
@@ -35,9 +36,9 @@ export function renderTierChallenge(elements: StrongholdElements, snapshot: Stro
     applyPlayerTheme(entry.card, player.color);
     entry.segment.style.backgroundColor = playerTheme(player.color).light;
     entry.segment.style.width = `${player.contribution / goal * 100}%`;
-    entry.segment.title = `Player ${index + 1}: ${Math.round(player.contribution / goal * 100)}%`;
+    entry.segment.title = `Player ${index + 1}: ${contribution}%`;
     setText(entry.name, `Player ${index + 1}`);
-    setText(entry.progress, `${Math.round(player.contribution / goal * 100)}%`);
+    setText(entry.progress, `${contribution}%`);
   });
   const characters = snapshot.tier === 0 ? 'Letters' : snapshot.tier === 1 ? 'Letters and numbers' : 'Letters, numbers and punctuation';
   setText(requireElement('stronghold-tier-description', HTMLElement), `${paused ? 'Paused. ' : ''}${percent}% complete. ${characters}. Complete phrases to fill the shared bar.`);

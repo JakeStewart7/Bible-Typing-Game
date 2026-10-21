@@ -148,7 +148,7 @@ test('Stronghold gatherers and builders follow move orders then resume nearest w
     if (kind === 'builder') {
       equal(project.progress > 0, true);
       equal(unit.attackTarget, { x: project.x, y: project.y });
-      equal(unitMotionTransform(unit, unit, .1).startsWith('rotate('), true);
+      equal(unitMotionTransform(unit, unit, .1).startsWith('translate(0 '), true);
       equal(unitMotionTransform(unit, unit, .1, true), '');
       equal(unitMotionTransform(unit, unit, .1) !== unitMotionTransform(unit, unit, .2), true);
     } else equal(state.nodes[0]?.remaining < 100, true);
@@ -430,9 +430,10 @@ test('Stronghold square castle, T towers and basic animations preserve health an
   equal(unitMotionTransform(worker, { x: worker.x - 1, y: worker.y }, 1).includes('rotate'), true);
   equal(unitMotionTransform(worker, worker, 1), '');
   worker.attackTarget = { x: 100, y: 100 }; worker.cooldown = 3;
-  equal(unitMotionTransform(worker, worker, 1), 'scale(1.15)');
+  equal(unitMotionTransform(worker, worker, 1), 'scale(1.04)');
   equal(unitMotionTransform(worker, worker, 1, true), '');
-  equal(unitMarkup(worker, true).includes('data-attack'), true);
+  equal(unitMarkup(worker, true).includes('data-work'), true);
+  equal(unitMarkup(worker, true).includes('data-attack'), false);
   equal(unitMarkup(worker, true).includes('data-selected'), true);
   equal(unitMarkup(worker, true).includes('data-health'), true);
 });

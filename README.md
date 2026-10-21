@@ -24,7 +24,7 @@ Only pause, hidden/inactive gameplay and a finished match disable the input.
 Unit Control can select and move gatherers and builders as well as troops.
 After reaching a manual destination, gatherers and builders wait two seconds,
 then automatically resume the nearest resource, construction or repair job.
-Builders rock and show small pulsing sparks while building or repairing.
+Builders bob quickly and show silver-white pulsing sparks while building or repairing.
 Each new construction job takes the nearest available living builder, not the
 first builder in the unit list. Busy builders keep their current job; manually
 moving builders and those in their two-second idle wait are unavailable.
@@ -114,8 +114,10 @@ and 7,200 total supplies, with the same bases, troops and rules. Spring uses lig
 green grass and pastel flowers, summer deep green grass and softly drifting light motes,
 fall light brown ground and autumn-colored triangles, and winter blue-white
 ground and softly fading snow circles. Leaves randomly use red, orange, yellow
-or brown. The small decorative particle pool starts beneath the top UI and stays
-inside the battlefield, never intercepts clicks, and is hidden for reduced-motion preferences.
+or brown. A fixed pool of 36 decorative particles spans the entire battlefield,
+with staggered falling phases and summer motes spread across both axes. Weather
+is clipped to the map and layered underneath UI, never intercepts clicks, and
+is hidden for reduced-motion preferences.
 Days and nights each last three minutes of battle time, with fifteen-second
 dusk/dawn fades. Night blends a moonlit blue overlay into the entire Stronghold
 view, including its UI and tier challenge, preserving vibrant colors rather than
@@ -164,10 +166,10 @@ Expanded length choices use a darker gray background.
 The deck fits the viewport height, with scrolling inside action panels
 and the squad list on narrow screens rather than clipping the bottom.
 The map starts at **120% zoom**, focused toward the home base. Use the mouse wheel
-to zoom, and **right-drag, Alt-drag or middle-drag** to pan without issuing orders.
+to zoom, and **Alt-drag or middle-drag** to pan without issuing orders.
 Hovering near a map edge does not scroll.
 Hold the **arrow keys** to pan; diagonal combinations work and opposite keys cancel.
-Right-click without dragging still issues movement orders or cancels placement.
+Right-click issues movement orders or cancels placement; it never pans.
 Successful movement orders briefly mark their destination with a player-colored
 click pulse; reduced-motion mode uses only a fade.
 Minimum zoom shows the entire map; zoom and pan do not change world coordinates or speed.
@@ -237,13 +239,16 @@ Friendly and opposing units of the same formation share base health, damage,
 range and speed; enemy waves no longer add hidden health or damage bonuses.
 Movement remains slow, and troop upgrades still improve your units.
 Both bases have **4,000 HP**; enemy tier upgrades do not increase that maximum
-or heal damage. Moving units bob gently; attacks and harvesting
-briefly flash a strike toward their target. Reduced-motion preferences disable
-the bob and attack-size pulse. Square warriors and square enemies instead rock
-back and forth on alternating lower corners; triangle motion is unchanged.
-Full-width player progress bars are three times
-thicker for visibility and show the same progress for everyone sharing a role.
-Their outer borders are thick black around an inner player-colored rim. The event
+or heal damage. Archers on both sides bob slowly, even while standing or firing.
+Builders bob quickly only while building or repairing. Building and gathering
+use silver-white sparks and a soft shimmer; combat uses a dark crimson jagged
+strike and expanding slash burst. Reduced-motion preferences disable bobbing,
+pulsing and rotating effects. Square warriors and square enemies rock back and
+forth on alternating lower corners while walking.
+Player progress bars are 20 pixels tall with 2-pixel colored borders and stay
+inside their padded 3-pixel panel frames, including Player 1 at full progress.
+Task bars, barracks training bars and the shared tier bar are also thicker.
+Players sharing a role show the same selected-task progress. The event
 history aligns with Player 1's left edge above the bottom panels, starts at the
 top of a stable-height window and fills downward, with a mostly transparent background,
 player-colored action text and gray world events. Dark text outlines keep entries

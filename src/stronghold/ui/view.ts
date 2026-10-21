@@ -153,14 +153,15 @@ export function renderStronghold(
     const bank = workProgress(player.work, taskWork(player));
     const goal = tierProgress(snapshot.players).goal;
     const percent = challenge ? player.contribution / goal * 100 : bank.percent;
+    const displayPercent = challenge ? Math.round(percent * 10) / 10 : Math.round(percent);
     const width = `${percent}%`;
     if (entry.progress.style.width !== width) entry.progress.style.width = width;
     const progressBar = entry.progress.closest('[role="progressbar"]');
     if (progressBar) {
-      setAttribute(progressBar, 'aria-valuenow', String(Math.round(percent)));
-      setAttribute(progressBar, 'aria-valuetext', challenge ? `${Math.round(percent)}% of shared tier progress` : bank.description);
+      setAttribute(progressBar, 'aria-valuenow', String(displayPercent));
+      setAttribute(progressBar, 'aria-valuetext', challenge ? `${displayPercent}% of shared tier progress` : bank.description);
     }
-    setText(entry.progressLabel, challenge ? `${Math.round(percent)}%` : bank.label);
+    setText(entry.progressLabel, challenge ? `${displayPercent}%` : bank.label);
     if (entry.roleSelect.value !== player.role) entry.roleSelect.value = player.role;
     const roleDisabled = !own || challenge || terminal || !running;
     if (entry.roleSelect.disabled !== roleDisabled) entry.roleSelect.disabled = roleDisabled;
