@@ -15,7 +15,7 @@ export function addUnit(state: StrongholdState, kind: UnitKind, point: Point, fo
   return unit;
 }
 export function addBuilding(
-  state: StrongholdState, kind: BuildingKind, point: Point, complete = false, enemy = false, tier = state.tier
+  state: StrongholdState, kind: BuildingKind, point: Point, complete = false, enemy = false, tier = Math.max(1, state.tier)
 ): Building {
   const baseHp = kind === 'castle' ? 10000 : kind === 'enemy-base' ? 1200 : kind === 'wall' ? 260
     : 160 + (kind === 'tower' ? 60 : kind === 'barracks' ? 40 : 0) * Math.max(0, tier - 1);
@@ -39,7 +39,7 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
   if (matchingTeammate) matchingTeammate.color = PLAYER_COLORS.Red;
   const state: StrongholdState = {
     season, environmentElapsed: 0,
-    phase: 'playing', tier: 1, elapsed: 0, wave: 0, waveIn: 60, resources: options.resources,
+    phase: 'playing', tier: 0, elapsed: 0, wave: 0, waveIn: 60, resources: options.resources,
     event: 'peace', eventIn: 60, nextId: 1, units: [], buildings: [], chunks: [],
     players: roster.map(player => ({
       ...player, action: player.role === 'defenses' ? 'builder' : 'resources',

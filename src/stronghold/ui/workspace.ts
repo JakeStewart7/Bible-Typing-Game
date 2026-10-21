@@ -69,7 +69,7 @@ export function strongholdWorkspaceMarkup(): string {
         <button id="stronghold-zoom-fit" type="button">Fit map</button>
         <span>Scroll to zoom. Arrows, right-drag or map edges to pan.</span>
       </div>
-      <button id="stronghold-ready" class="stronghold-tier" type="button"><span id="stronghold-tier-label">Tier 1</span><strong id="stronghold-tier-action">Tier Up</strong></button>
+      <button id="stronghold-ready" class="stronghold-tier" type="button"><span id="stronghold-tier-label">Tier 0</span><strong id="stronghold-tier-action">Tier Up</strong></button>
       <aside class="stronghold-hud" aria-label="Kingdom status">
         <div class="stronghold-populations">
           <span title="Towers"><span class="sr-only">Towers: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--tower"></i><b id="stronghold-tower-count">0/8</b></span>
@@ -89,7 +89,7 @@ export function strongholdWorkspaceMarkup(): string {
         <p>In Unit Control, left-click or drag to select friendly units, right-click to move, and left-click empty ground to deselect. Shift adds units. Right-click cancels placement or rally targeting; left-click places the building or rally point. A plus badge on the cursor shows targeting mode.</p>
         <p>Gatherers and builders resume nearest work after two idle seconds at their destination. Builders and walls cost no supplies, only typing work.</p>
         <p>Supplies, Gatherers, Barracks, Builders, Walls and Towers need typing, not supplies. Each typing option has a small progress bar; select it to show its progress in the main player-colored bar. More expensive buildings fill more slowly. Excess progress from a completed entry carries into the next bar. Once construction is ready, further entries do not bank more completions. Troops, upgrades and relays cost supplies without typing.</p>
-        <p>Every match starts at Tier 1. Army selects Barracks work when you join. Fill the work bar, then click the map to place Tier 1 Barracks. You can prepare higher tiers before they unlock. Teammates help with the same selected work; placement still requires the matching tier. Unit Control can type for supplies while issuing orders.</p>
+        <p>Every match starts at Tier 0, with T1 starting units and buildings. Complete the first shared tier challenge to unlock T1 Barracks and towers. Army selects Barracks work when you join. Fill the work bar, then click the map to place once its tier is unlocked. Teammates help with the same selected work, and prepared work survives tier challenges. Unit Control can type for supplies while issuing orders.</p>
         <p>Each typing task keeps its progress when you switch tasks or roles. Building tiers keep separate progress. Dev options sets the defaults for new matches.</p>
         <p>Tab selects the next typing or placement task; Shift+Tab selects the previous one, wrapping through your role's tasks without buying troops or upgrades. In menus and dropdowns, Tab keeps its normal focus behavior.</p>
         <p>Arrow keys pan the map. Page Up selects longer text and Page Down shorter text, or click a length option. Shift+arrows still selects typed text. Alt+number chooses the matching displayed option in your current role.</p>

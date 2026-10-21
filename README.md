@@ -230,7 +230,9 @@ scrollbar, fades smoothly at its edges, and can still be scrolled. The current
 world event and its countdown sit slightly above it in a soft purple panel,
 hidden between events.
 
-Matches start at **Tier 1**, with warriors, barracks and towers available.
+Matches start at **Tier 0**, with T1 starting units and buildings.
+The first challenge advances to Tier 1, unlocking T1 barracks, warrior training
+and tower construction; prepared construction work is preserved.
 The gold **Tier Up** button pauses the battle for one shared challenge:
 12 completed private phrases for a four-player squad. Anyone can contribute any
 number; segments in the shared progress bar show each player's color and share.

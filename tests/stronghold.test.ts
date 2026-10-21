@@ -82,9 +82,9 @@ test('Stronghold tier-up waits for readiness, pauses battle and accepts unequal 
   const first = self(state);
   for (let index = 0; index < TIER_QUOTA + 2; index++) finish(state, first);
   equal(first.contribution, TIER_QUOTA + 2);
-  equal(state.tier, 1);
+  equal(state.tier, 0);
   for (let index = first.contribution; index < state.players.length * TIER_QUOTA; index++) finish(state, state.players[1]);
-  equal(state.tier, 2);
+  equal(state.tier, 1);
   equal(state.phase, 'playing');
   equal(state.players.every(player => !player.ready), true);
 });
@@ -96,8 +96,37 @@ test('Stronghold simulated teammates ready up and finish their own tier phrases'
   equal(state.phase, 'tier-up');
   for (let index = 0; index < TIER_QUOTA; index++) finish(state);
   for (let index = 0; index < 120; index++) advanceStronghold(state, .25);
-  equal(state.tier, 2);
+  equal(state.tier, 1);
   equal(state.phase, 'playing');
+});
+
+test('Stronghold each shared challenge advances exactly one tier without chaining or accepting the final phrase twice', () => {
+  const state = createStronghold({ resources: 50, length: 'medium', computersPaused: true });
+  state.waveIn = 10000;
+  const player = self(state);
+  equal(state.tier, 0);
+  for (const tier of [1, 2, 3]) {
+    executeCommand(state, player, { type: 'READY', ready: true });
+    equal(state.phase, 'tier-up');
+    equal(state.players.every(other => other.contribution === 0), true);
+    for (let entry = 0; entry < state.players.length * TIER_QUOTA - 1; entry++) finish(state);
+    equal(state.phase, 'tier-up');
+    equal(state.tier, tier - 1);
+    const finalPhrase = { type: 'TYPE' as const, phraseId: player.phraseId, text: player.phrase };
+    executeCommand(state, player, finalPhrase);
+    equal(state.phase, 'playing');
+    equal(state.tier, tier);
+    equal(state.players.every(other => !other.ready), true);
+    rejects(() => executeCommand(state, player, finalPhrase), 'expired');
+    executeCommand(state, player, { type: 'COMPUTERS', paused: false });
+    for (let step = 0; step < 120; step++) advanceStronghold(state, .25);
+    equal(state.phase, 'playing');
+    equal(state.tier, tier);
+    equal(state.players.every(other => !other.ready), true);
+    equal(state.events.filter(event => /^Tier \d unlocked$/.test(event.text)).length, tier);
+    executeCommand(state, player, { type: 'COMPUTERS', paused: true });
+  }
+  rejects(() => executeCommand(state, player, { type: 'READY', ready: true }), 'not available');
 });
 
 test('Stronghold building placement costs once and waits for a nearby builder', () => {
@@ -133,10 +162,9 @@ test('Stronghold upgrades obey per-tier limits and population caps', () => {
   state.resources = 1000;
   executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade' });
   executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade' });
-  executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade' });
   rejects(() => executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade' }), 'Upgrade limit');
-  equal(state.upgrades.economy, 3);
-  equal(state.resources, 820);
+  equal(state.upgrades.economy, 2);
+  equal(state.resources, 880);
   executeCommand(state, self(state), { type: 'ACTION', action: 'worker' });
   while (state.units.filter(unit => unit.kind === 'worker').length < 12) finish(state);
   const resources = state.resources;

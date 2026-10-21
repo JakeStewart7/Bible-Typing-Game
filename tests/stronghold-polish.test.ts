@@ -185,6 +185,7 @@ test('Stronghold paid queues train FIFO at matching barracks, pay only once and 
 
 test('Stronghold troop queues balance matching barracks, count against caps and stop when destroyed', () => {
   const state = createStronghold({ resources: 1000, length: 'medium', computersPaused: true });
+  state.tier = 1;
   const player = state.players[0]!;
   executeCommand(state, player, { type: 'ROLE', role: 'production' });
   const first = addBuilding(state, 'barracks', { x: 600, y: 550 }, true);

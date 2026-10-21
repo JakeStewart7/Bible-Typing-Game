@@ -41,9 +41,9 @@ export function renderTierChallenge(elements: StrongholdElements, snapshot: Stro
     setText(entry.typed, player.typed);
     entry.typed.classList.remove('is-hidden');
   });
-  setText(requireElement('stronghold-tier-title', HTMLElement), `Tier ${snapshot.tier + 1}`);
   setText(requireElement('stronghold-tier-description', HTMLElement), `${paused ? 'Paused. ' : ''}${completed}/${goal} shared phrases. Everyone can help fill the bar.`);
   if (snapshot.phase === 'tier-up' && shown) {
+    setText(requireElement('stronghold-tier-title', HTMLElement), `Tier ${snapshot.tier} to Tier ${snapshot.tier + 1}`);
     if (elements.privateTyping.parentElement !== elements.tierSlot) elements.tierSlot.append(elements.privateTyping);
     if (!elements.dialog.open) {
       elements.dialog.showModal();

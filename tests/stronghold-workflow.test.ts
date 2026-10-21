@@ -4,7 +4,7 @@ import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
 import { addBuilding, addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { phraseWork, taskWork } from '../src/stronghold/domain/technology.ts';
-import { COSTS, isTypingAction, TEXT_LENGTH_BONUSES, TEXT_LENGTH_RANGES } from '../src/stronghold/domain/rules.ts';
+import { COSTS, isTypingAction, TEXT_LENGTH_BONUSES, TEXT_LENGTH_RANGES, TIER_QUOTA } from '../src/stronghold/domain/rules.ts';
 import { PHRASE_LENGTHS, type Action, type Role, type UpgradeTarget, type UnitKind } from '../src/stronghold/domain/types.ts';
 import { selectionBounds, troopsInRectangle } from '../src/stronghold/ui/map-controls.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
@@ -385,13 +385,19 @@ test('Stronghold central private typing, length controls and distinct costs repl
   equal(markup.includes('class="stronghold-work-track"'), true);
 });
 
-test('Stronghold Army bot constructs Tier 1 barracks and trains units from the start', () => {
+test('Stronghold Army bot prepares Tier 1 barracks before unlocking and trains units after the first challenge', () => {
   const state = createStronghold();
   state.resources = 1000;
   state.waveIn = 10000;
   for (let step = 0; step < 100; step++) advanceStronghold(state, .25);
+  equal(state.tier, 0);
+  equal(state.buildings.some(building => building.kind === 'barracks'), false);
+  const player = state.players[0]!;
+  executeCommand(state, player, { type: 'READY', ready: true });
+  for (let entry = 0; entry < state.players.length * TIER_QUOTA; entry++) {
+    executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+  }
   equal(state.tier, 1);
-  equal(state.buildings.some(building => building.kind === 'barracks'), true);
   for (let step = 0; step < 480; step++) advanceStronghold(state, .25);
   equal(state.buildings.some(building => building.kind === 'barracks' && building.progress === 1), true);
   equal(state.events.some(event => event.playerId === 'bot-1' && event.text === 'Player 2 created Warrior'), true);
