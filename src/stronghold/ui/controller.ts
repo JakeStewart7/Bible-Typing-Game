@@ -11,11 +11,13 @@ import { wheelZoom } from './map-camera.ts';
 import { actionShortcutKey, arrowPan, nextTaskIndex, typingLengthKey } from './keyboard.ts';
 import { createSeasonalMusic } from '../audio/music.ts';
 import { isPlayerColor } from '../domain/options.ts';
+import { createPlayerCursor } from './player-cursor.ts';
 
 export function createStrongholdController(connection: StrongholdConnection, developer: {
   defaults: DeveloperOptions; save(options: DeveloperOptions): void;
 }) {
   const elements = strongholdElements();
+  const playerCursor = createPlayerCursor();
   const credits = requireElement('stronghold-credits', HTMLDialogElement);
   const musicButton = requireElement('stronghold-music', HTMLButtonElement);
   const musicVolume = requireElement('stronghold-volume', HTMLInputElement);
@@ -106,6 +108,8 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   function display(): void {
     if (!snapshot) return;
     renderStronghold(elements, snapshot, selected, running(), paused, relayPlacement, placementCancelled, rallyPlacement, shown);
+    const player = self();
+    if (player) playerCursor.update(player.color, running() && snapshot.phase === 'playing' && Boolean(placing() || rallyPlacement), shown);
     music.update(snapshot.season, snapshot.environmentElapsed, running() && snapshot.phase !== 'won' && snapshot.phase !== 'lost');
     const wall = selectedWall();
     if (!wall) editingWall = null;
@@ -528,7 +532,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       display(); focusTyping();
     },
     dispose(): void {
-      unsubscribe(); clearDrag(); music.dispose();
+      unsubscribe(); clearDrag(); music.dispose(); playerCursor.dispose();
       elements.screen.removeEventListener('click', clicked);
       document.removeEventListener('keydown', keyboard);
       document.removeEventListener('keyup', keyup);

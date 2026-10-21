@@ -163,14 +163,19 @@ Each fade in or out lasts half a second. The volume slider preserves its target
 across fades. Official source details are in
 `assets/music/stronghold/CREDITS.txt`.
 
-The thin typing window leaves room for the battlefield, with the phrase and input
-side by side on wider screens and stacked on small screens. Flat gray panels,
+The thin typing window leaves room for the battlefield, with input before the
+phrase on wider screens and above it on small screens and in Tier Up. Flat gray panels,
 square controls and player-colored highlights keep the bottom dock simple.
 The top controls use a shaded forest-green backdrop; the player deck sits on a
 dark command board. Subdued map texture and a soft battlefield vignette add depth
 without obscuring text or intercepting clicks. The faded length reel sits to the
-left of typing, with its **PgUp / PgDn** indicator on the reel's left.
-Expanded length choices use a darker gray background.
+left of typing, with its **PgUp / PgDn** indicator on the reel's left and a thin
+dark player-colored divider between the keys.
+Expanded length choices use a darker gray background. Typing mistakes use the
+same neutral silver-gray highlight in every game mode, independent of player color.
+Hover descriptions appear immediately in dark styled tooltips, including disabled
+controls and map entities. The custom player cursor remains visible while typing,
+over controls and dialogs, with the native custom cursor as a fallback.
 The deck fits the viewport height, with scrolling inside action panels
 and the squad list on narrow screens rather than clipping the bottom.
 The map starts at **120% zoom**, focused toward the home base. Use the mouse wheel
@@ -199,7 +204,8 @@ screens use a two-by-two layout, with scrolling inside action lists when needed.
 Troop purchases and upgrades are excluded, so cycling never spends supplies.
 Unit Control explicitly reminds players that typing produces shared supplies.
 Tab retains normal focus navigation in menus, dropdowns, Dev options and tier challenges.
-Each button displays its shortcut, and locked tasks remain locked. Unit Control
+Button shortcuts appear instantly on hover rather than taking up tile space.
+Tier-locked actions use gray styling and a lock icon. Unit Control
 also uses Alt+1 for selection, Alt+2 for Defend, Alt+3 for Assault and Alt+4
 for rally placement. Keyboard actions restore typing focus.
 
@@ -249,7 +255,7 @@ Movement remains slow, and troop upgrades still improve your units.
 Both bases have **4,000 HP**; enemy tier upgrades do not increase that maximum
 or heal damage. Archers on both sides bob slowly, even while standing or firing.
 Builders bob quickly only while building or repairing. Building and gathering
-use silver-white sparks and a soft shimmer; combat uses a dark crimson jagged
+use silver-white sparks and a soft shimmer; warriors use copper colors, and combat uses an ember-colored jagged
 strike and expanding slash burst. Reduced-motion preferences disable bobbing,
 pulsing and rotating effects. Square warriors and square enemies rock back and
 forth on alternating lower corners while walking.
@@ -278,15 +284,17 @@ is completed correctly. Partial and incorrect input add no progress, and length
 bonuses do not apply. The first challenge uses letters, the next adds numbers, and the last
 adds symbols and punctuation. Anyone can contribute any number; segments in the
 shared progress bar use each player's light color. The challenge displays
-progress percentages rather than character counts or teammates' typed text.
+shared progress rather than character counts. Player cards show each player's
+current typed text without individual percentage labels.
 **Pause challenge** freezes typing without dismissing the dialog; **Resume
 challenge** continues with all work intact. Stopped computers do not prevent
 readiness or solo completion. Tier 2 adds archers, and Tier 3 adds catapults.
 
 Paid options use higher prices, while typing-only recruits and construction
-remain free of supply costs. Unaffordable buttons turn gray, show an exclamation
-mark and a crossed-out gray price, and report the available amount and shortage
-in their tooltip. The state updates as supplies arrive.
+remain free of supply costs. Unaffordable buttons and prices turn gray without
+price boxes or strikethroughs; affordable prices stand out at the top-left.
+Upgrade levels are centered. Instant styled tooltips report the available amount
+and shortage. The state updates as supplies arrive.
 
 | Purchase | Supplies |
 | --- | ---: |

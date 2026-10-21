@@ -43,3 +43,10 @@
   color: var(--muted);
   background: var(--page-surface-strong);
 }
+.game-tooltip {
+  position: fixed; inset: auto; margin: 0; max-width: min(340px, calc(100vw - 16px));
+  padding: 8px 11px; border: 1px solid #9eaf9f; border-radius: 3px;
+  background: #20362ff5; color: #f1f4ee; box-shadow: 0 3px 0 #10251b55, 0 6px 16px #10251b44;
+  font: 600 12px/1.45 Arial, Helvetica, sans-serif; white-space: pre-line; overflow-wrap: anywhere;
+  pointer-events: none;
+}

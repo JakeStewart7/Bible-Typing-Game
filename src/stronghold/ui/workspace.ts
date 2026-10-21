@@ -9,14 +9,15 @@ import { creditsMarkup } from './credits.ts';
 import { isArmyUnit } from '../domain/training.ts';
 
 export const PLAYER_IDS = ['you', 'bot-1', 'bot-2', 'bot-3'] as const;
+const LOCK_ICON = '<svg class="stronghold-lock is-hidden" data-tier-lock viewBox="0 0 16 18" aria-hidden="true"><path d="M4 8V5a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2"/><rect x="2" y="7" width="12" height="10" rx="1" fill="currentColor"/></svg>';
 function tile(action: Action, label: string, tier: number | undefined, shortcut: string): string {
-  return `<button type="button" class="stronghold-build-tile" data-action="${action}"${tier ? ` data-tier="${tier}"` : ''} data-min-tier="${tier ?? MIN_TIER[action]}" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}">
-    <kbd class="stronghold-hotkey">Alt+${shortcut}</kbd><span class="stronghold-action-label">${label}</span>${COSTS[action] > 0 ? `<span class="stronghold-cost">${COSTS[action] * (tier ?? 1)}<span class="sr-only"> supplies</span></span>` : ''}${isArmyUnit(action) ? '<small data-training-queued>0 queued</small>' : ''}${isTypingAction(action) ? `<span class="stronghold-task-progress" data-task-progress role="progressbar" aria-label="${ACTION_LABELS[action]}${tier ? ` tier ${tier}` : ''} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span data-task-fill></span></span>${tier ? '<small class="stronghold-task-lock is-hidden" data-task-lock></small>' : ''}` : ''}</button>`;
+  return `<button type="button" class="stronghold-build-tile${COSTS[action] > 0 ? ' has-cost' : ''}" data-action="${action}"${tier ? ` data-tier="${tier}"` : ''} data-min-tier="${tier ?? MIN_TIER[action]}" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}">
+    ${LOCK_ICON}<span class="stronghold-action-label">${label}</span>${COSTS[action] > 0 ? `<span class="stronghold-cost">${COSTS[action] * (tier ?? 1)}<span class="sr-only"> supplies</span></span>` : ''}${isArmyUnit(action) ? '<small data-training-queued>0 queued</small>' : ''}${isTypingAction(action) ? `<span class="stronghold-task-progress" data-task-progress role="progressbar" aria-label="${ACTION_LABELS[action]}${tier ? ` tier ${tier}` : ''} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span data-task-fill></span></span>` : ''}</button>`;
 }
 function upgrade(target: UpgradeTarget, shortcut: string): string {
   const option = UPGRADE_OPTIONS[target];
-  return `<button type="button" class="stronghold-upgrade-tile" data-action="upgrade" data-stronghold-upgrade="${target}" data-min-tier="${option.tier}" title="Upgrade ${option.label}" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}">
-    <kbd class="stronghold-hotkey">Alt+${shortcut}</kbd><span class="stronghold-action-label">Upgrade<span class="sr-only"> ${option.label}</span></span><span class="stronghold-cost">${option.cost}<span class="sr-only"> supplies</span></span><small data-upgrade-level="${target}">Level 0</small></button>`;
+  return `<button type="button" class="stronghold-upgrade-tile has-cost" data-action="upgrade" data-stronghold-upgrade="${target}" data-min-tier="${option.tier}" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}">
+    ${LOCK_ICON}<span class="stronghold-action-label">Upgrade <span class="stronghold-upgrade-kind">${option.label}</span></span><span class="stronghold-cost">${option.cost}<span class="sr-only"> supplies</span></span><small data-upgrade-level="${target}">Level 0</small></button>`;
 }
 function roleActions(role: Role): string {
   let index = 0;
@@ -84,7 +85,8 @@ export function strongholdWorkspaceMarkup(): string {
         <p>The map starts zoomed toward the home base. Scroll to zoom; Alt-drag, middle-drag or arrow keys pan. Moving the pointer to a map edge does not scroll. Right-click moves units or cancels placement, never pans. Shift-drag still adds troops to your selection.</p>
         <p>Stop computers pauses simulated teammates and their barracks, not the battlefield. Resume them to finish a shared tier challenge.</p>
         <p>World events begin at 1, 3, 5 and subsequent odd minutes of battle time, last 35 seconds, and leave normal typing between events.</p>
-        <p>Tier Up fills one shared bar by completing phrases. Only fully correct phrases add progress; partial or incorrect entries do not count. The first challenge uses letters, the next letters and numbers, and the last adds symbols and punctuation. Anyone can contribute, even with computers stopped. Light player colors show each contribution as progress, not character counts. Pause challenge keeps your progress; Resume challenge continues it.</p>
+        <p>Tier Up fills one shared bar by completing phrases. Only fully correct phrases add progress; partial or incorrect entries do not count. The first challenge uses letters, the next letters and numbers, and the last adds symbols and punctuation. Anyone can contribute, even with computers stopped. Light player colors show contributions in the shared bar; player boxes show their current text. Pause challenge keeps your progress; Resume challenge continues it.</p>
+        <p>Summer makes all friendly and enemy units 15% faster. Winter makes all units 15% slower and both gathered and typed supplies worth 20% less. Spring makes both resource sources worth 20% more. Fall adds 15% to every completed typing task, including world events and Tier Up. Bonuses apply immediately; partial phrases still add no work.</p>
         <p>Queue Warriors at completed T1 Barracks, Archers at T2 and Catapults at T3. Supplies are paid when queued; each unit trains for 12 seconds at its barracks before heading to the rally point. Empty barracks do not train automatically. Queues count toward population caps. Destroy the enemy base to win.</p>
         </div>
       </details>
@@ -131,24 +133,24 @@ export function strongholdWorkspaceMarkup(): string {
       <div id="stronghold-private-slot">
         <section id="stronghold-private" class="stronghold-private" aria-label="Your private typing area">
           <div class="stronghold-length-panel"><span id="stronghold-length-label" class="sr-only">Text length</span>
-            <small class="stronghold-length-keys">PgUp<br>PgDn</small>
+            <small class="stronghold-length-keys"><span>PgUp</span><span>PgDn</span></small>
             <div id="stronghold-length" class="stronghold-length-wheel" role="listbox" aria-labelledby="stronghold-length-label" aria-activedescendant="stronghold-length-medium" aria-keyshortcuts="PageUp PageDown" tabindex="0">
               ${PHRASE_LENGTHS.map(length => `<button id="stronghold-length-${length}" type="button" role="option" data-length="${length}" value="${length}" aria-selected="${length === 'medium'}" tabindex="-1">${LENGTH_LABELS[length]} <small class="stronghold-length-bonus">${TEXT_LENGTH_BONUSES[length]}x</small></button>`).join('')}
             </div>
+          </div>
+          <div id="stronghold-typed-area" class="typed-area stronghold-typed-area">
+            <label class="sr-only" for="stronghold-input">Type your Stronghold text exactly</label>
+            <div id="stronghold-typed-bar" class="typed-bar" aria-hidden="true"></div><input id="stronghold-input" class="typing-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type here">
           </div>
           <section id="stronghold-typing" class="stronghold-typing">
             <div id="stronghold-phrase" class="text-display" tabindex="0" aria-label="Your private text to type"></div>
             <div class="progress-track is-hidden" aria-hidden="true"><div id="stronghold-typing-progress"></div></div>
           </section>
-          <div id="stronghold-typed-area" class="typed-area stronghold-typed-area">
-            <label class="sr-only" for="stronghold-input">Type your Stronghold text exactly</label>
-            <div id="stronghold-typed-bar" class="typed-bar" aria-hidden="true"></div><input id="stronghold-input" class="typing-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type here">
-          </div>
         </section>
       </div>
       <section id="stronghold-army-orders" class="stronghold-army-orders is-hidden">
-        <button id="stronghold-select-army" type="button" data-shortcut="1" aria-keyshortcuts="Alt+1"><kbd class="stronghold-hotkey">Alt+1</kbd>Select all troops</button><button id="stronghold-defend" type="button" data-shortcut="2" aria-keyshortcuts="Alt+2"><kbd class="stronghold-hotkey">Alt+2</kbd>Defend</button><button id="stronghold-assault" type="button" data-shortcut="3" aria-keyshortcuts="Alt+3"><kbd class="stronghold-hotkey">Alt+3</kbd>Assault base</button>
-        <button id="stronghold-rally" type="button" data-shortcut="4" aria-keyshortcuts="Alt+4"><kbd class="stronghold-hotkey">Alt+4</kbd>Set rally on map</button><p id="stronghold-selection"></p>
+        <button id="stronghold-select-army" type="button" data-shortcut="1" aria-keyshortcuts="Alt+1" data-tooltip="Select all troops (Alt+1)">Select all troops</button><button id="stronghold-defend" type="button" data-shortcut="2" aria-keyshortcuts="Alt+2" data-tooltip="Defend (Alt+2)">Defend</button><button id="stronghold-assault" type="button" data-shortcut="3" aria-keyshortcuts="Alt+3" data-tooltip="Assault base (Alt+3)">Assault base</button>
+        <button id="stronghold-rally" type="button" data-shortcut="4" aria-keyshortcuts="Alt+4" data-tooltip="Set rally on map (Alt+4)">Set rally on map</button><p id="stronghold-selection"></p>
       </section>
       <div id="stronghold-placement" class="stronghold-placement is-hidden"><span id="stronghold-placement-label">Click the map to place.</span><button id="stronghold-rotate-wall" type="button" class="is-hidden" aria-keyshortcuts="Alt+R">Rotate +45 deg (Alt+R)</button><button id="stronghold-cancel-placement" type="button">Cancel</button></div>
     </div>

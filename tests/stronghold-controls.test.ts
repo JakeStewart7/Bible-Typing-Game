@@ -36,6 +36,25 @@ test('Stronghold task cycling wraps forwards and backwards without treating paid
   equal(markup.indexOf('class="stronghold-length-keys"') < markup.indexOf('id="stronghold-length"'), true);
 });
 
+test('Stronghold places input before the prompt and replaces tier labels with accessible lock icons', () => {
+  const markup = strongholdWorkspaceMarkup();
+  equal(markup.indexOf('id="stronghold-input"') < markup.indexOf('id="stronghold-phrase"'), true);
+  equal(markup.includes('Place at T1'), false);
+  equal(markup.includes('data-tier-lock'), true);
+  equal(markup.includes('<span>PgUp</span><span>PgDn</span>'), true);
+  equal(markup.includes('data-tooltip="Defend (Alt+2)"'), true);
+});
+
+test('Stronghold map entities retain accessible descriptions without delayed native SVG tooltips', () => {
+  const state = createStronghold();
+  const unit = unitMarkup(addUnit(state, 'warrior', { x: 500, y: 500 }), false);
+  const building = buildingMarkup(addBuilding(state, 'relay', { x: 400, y: 400 }));
+  for (const markup of [unit, building]) {
+    equal(markup.includes('<desc>'), true);
+    equal(markup.includes('<title>'), false);
+  }
+});
+
 test('Stronghold friendly and enemy archers bob slowly even when standing or attacking', () => {
   const state = createStronghold();
   for (const [kind, formation] of [['archer', null], ['invader', 'archer']] as const) {
@@ -55,14 +74,14 @@ test('Stronghold builders bob quickly only while actively building or repairing'
   builder.id = 0;
   equal(unitMotionTransform(builder, builder, Math.PI / 48), '');
   builder.attackTarget = { x: 110, y: 100 }; builder.cooldown = 1;
-  equal(unitMotionTransform(builder, builder, Math.PI / 48), 'translate(0 2.5)');
-  equal(unitMotionTransform(builder, builder, 3 * Math.PI / 48), 'translate(0 -2.5)');
+  equal(unitMotionTransform(builder, builder, Math.PI / 48), 'translate(0 1.25)');
+  equal(unitMotionTransform(builder, builder, 3 * Math.PI / 48), 'translate(0 -1.25)');
   equal(unitMotionTransform(builder, builder, Math.PI / 48, true), '');
   builder.attackTarget = null;
   equal(unitMotionTransform(builder, builder, Math.PI / 48), '');
 });
 
-test('Stronghold work effects use silver sparks instead of the dark crimson combat strike', () => {
+test('Stronghold work effects use silver sparks instead of the copper and ember combat strike', () => {
   const state = createStronghold();
   for (const kind of ['worker', 'builder'] as const) {
     const markup = unitMarkup(addUnit(state, kind, { x: 100, y: 100 }), false);
@@ -75,8 +94,8 @@ test('Stronghold work effects use silver sparks instead of the dark crimson comb
     const markup = unitMarkup(addUnit(state, kind, { x: 100, y: 100 }), false);
     equal(markup.includes('data-attack'), true);
     equal(markup.includes('data-work'), false);
-    equal(markup.includes('#3d0b1b'), true);
-    equal(markup.includes('#ff5662'), true);
+    equal(markup.includes('#483526'), true);
+    equal(markup.includes('#ed914c'), true);
   }
   equal(buildingMarkup(addBuilding(state, 'tower', { x: 200, y: 100 })).includes('data-attack'), true);
   equal(buildingMarkup(addBuilding(state, 'barracks', { x: 300, y: 100 })).includes('height="6"'), true);
@@ -115,7 +134,7 @@ test('Stronghold military panels omit Supplies and every remaining task has a ma
     for (let option = 0; option < counts[role]; option++) {
       const digit = taskShortcut(option);
       equal(options.includes(`aria-keyshortcuts="Alt+${digit}"`), true);
-      equal(options.includes(`<kbd class="stronghold-hotkey">Alt+${digit}</kbd>`), true);
+      equal(options.includes('<kbd'), false);
     }
   }
   equal(markup.includes('id="stronghold-length" class="stronghold-length-wheel" role="listbox"'), true);

@@ -19,18 +19,18 @@ function actionEffectMarkup(working = false): string {
       <path d="M-11 0H-7 M7 0H11 M0 -11V-7 M0 7V11" stroke="#fff" stroke-width="2"/>
       <rect x="-2" y="-2" width="4" height="4" fill="#fff"/></g></g>`;
   return `<g data-attack visibility="hidden" pointer-events="none">
-    <path data-trail fill="none" stroke="#3d0b1b" stroke-width="5" stroke-linejoin="bevel"/>
-    <path data-beam fill="none" stroke="#ff5662" stroke-width="2" stroke-linejoin="bevel" filter="url(#stronghold-attack-glow)"/>
+    <path data-trail fill="none" stroke="#483526" stroke-width="5" stroke-linejoin="bevel"/>
+    <path data-beam fill="none" stroke="#ed914c" stroke-width="2" stroke-linejoin="bevel" filter="url(#stronghold-attack-glow)"/>
     <g data-impact filter="url(#stronghold-attack-glow)">
-      <path d="M0 -11L3 -4L10 -7L6 0L11 4L4 5L0 12L-3 5L-11 7L-6 0L-11 -4L-4 -5Z" fill="#9b183d" fill-opacity=".55" stroke="#ff6a73" stroke-width="1.5"/>
-      <path d="M-7 5L6 -6 M-1 8L7 0" stroke="#ffe7dc" stroke-width="2"/></g></g>`;
+      <path d="M0 -11L3 -4L10 -7L6 0L11 4L4 5L0 12L-3 5L-11 7L-6 0L-11 -4L-4 -5Z" fill="#9c572d" fill-opacity=".55" stroke="#ed914c" stroke-width="1.5"/>
+      <path d="M-7 5L6 -6 M-1 8L7 0" stroke="#fff1d2" stroke-width="2"/></g></g>`;
 }
 export function unitMotionTransform(unit: Unit, previous: Point | undefined, elapsed: number, reducedMotion = false): string {
   if (reducedMotion) return '';
   const active = actionActive(unit);
   const archer = unit.kind === 'archer' || (unit.kind === 'invader' && unit.formation === 'archer');
   const bob = archer ? `translate(0 ${Math.sin(elapsed * 2.2 + unit.id) * 2.5})` : '';
-  if (active && unit.kind === 'builder') return `translate(0 ${Math.sin(elapsed * 24 + unit.id) * 2.5})`;
+  if (active && unit.kind === 'builder') return `translate(0 ${Math.sin(elapsed * 24 + unit.id) * 1.25})`;
   if (active && unit.kind === 'worker') return 'scale(1.04)';
   if (active) return `${bob ? bob + ' ' : ''}scale(1.15)`;
   if (archer) return bob;
@@ -45,13 +45,13 @@ export function unitMotionTransform(unit: Unit, previous: Point | undefined, ela
 export function unitMarkup(unit: Unit, selected: boolean): string {
   const shape = unit.kind === 'worker' ? '<circle r="8" fill="#fff" stroke="#b88051" stroke-width="2"/>'
     : unit.kind === 'builder' ? '<path d="M0 -11 L10 8 L-10 8 Z" fill="#cec0df" stroke="#a64caf" stroke-width="2"/>'
-    : unit.kind === 'warrior' ? '<rect x="-8" y="-8" width="16" height="16" fill="#ffb3c9" stroke="#ff1726" stroke-width="2"/>'
+    : unit.kind === 'warrior' ? '<rect x="-8" y="-8" width="16" height="16" fill="#e5c2a0" stroke="#9a5b2e" stroke-width="2"/>'
     : unit.kind === 'archer' ? '<path d="M0 -10 L8 0 L0 10 L-8 0 Z" fill="#9ed7e6" stroke="#00aeef" stroke-width="2"/>'
     : unit.kind === 'catapult' ? '<path d="M0 -12 L10 9 L-10 9 Z" fill="#f0e3a7" stroke="#cfb000" stroke-width="2"/>'
     : unit.formation === 'archer' ? '<path d="M0 -10 L8 0 L0 10 L-8 0 Z" fill="#870018" stroke="#ff1726" stroke-width="2"/>'
     : unit.formation === 'catapult' ? '<path d="M0 -12 L10 9 L-10 9 Z" fill="#870018" stroke="#ff1726" stroke-width="2"/>'
     : '<rect x="-8" y="-8" width="16" height="16" fill="#870018" stroke="#ff1726" stroke-width="2"/>';
-  return `${actionEffectMarkup(unit.kind === 'worker' || unit.kind === 'builder')}<circle data-selected r="16" fill="none" stroke="#fff" stroke-width="2" visibility="${selected ? 'visible' : 'hidden'}"/><g data-visual>${shape}</g>${health(unit.hp, unit.maxHp, 13, 20)}<title>${unit.kind}${unit.formation ? ' ' + unit.formation : ''}: ${Math.ceil(unit.hp)} HP</title>`;
+  return `${actionEffectMarkup(unit.kind === 'worker' || unit.kind === 'builder')}<circle data-selected r="16" fill="none" stroke="#fff" stroke-width="2" visibility="${selected ? 'visible' : 'hidden'}"/><g data-visual>${shape}</g>${health(unit.hp, unit.maxHp, 13, 20)}<desc>${unit.kind}${unit.formation ? ' ' + unit.formation : ''}: ${Math.ceil(unit.hp)} HP</desc>`;
 }
 export function buildingMarkup(building: Building): string {
   const color = building.enemy ? '#870018' : building.kind === 'relay' ? '#b0b0b0' : '#c3c3c3';
@@ -60,7 +60,7 @@ export function buildingMarkup(building: Building): string {
     : building.kind === 'relay' ? `<path d="M-4 16 L-4 -7 L-9 -12 L0 -18 L9 -12 L4 -7 L4 16 Z" fill="${color}" stroke="#7f7f7f" stroke-width="2"/>`
     : building.kind === 'wall' ? `<rect data-wall-shape transform="rotate(${building.rotation ?? 0})" x="-23" y="-4" width="46" height="8" fill="${building.enemy ? color : '#ffdb58'}" stroke="${building.enemy ? '#ff1726' : '#e8ad23'}" stroke-width="3"/>`
     : `<rect x="${-size}" y="${-size}" width="${size * 2}" height="${size * 2}" fill="${color}" stroke="${building.enemy ? '#ff1726' : '#7f7f7f'}" stroke-width="4"/>`;
-  return `${actionEffectMarkup()}${shape}${health(building.hp, building.maxHp, building.kind === 'tower' ? 26 : size + 6, size * 2)}<title></title>${building.kind === 'barracks' ? `<text data-tier y="5" text-anchor="middle" fill="#111" font-size="16">T${building.tier}</text><g data-training><rect x="-17" y="26" width="34" height="8" fill="#23372e"/><rect x="-16" y="27" width="32" height="6" fill="#333"/><rect data-training-fill x="-16" y="27" width="0" height="6" fill="#a6ed89"/><text data-training-count y="43" text-anchor="middle" fill="#111" stroke="white" stroke-width="2" paint-order="stroke" font-size="12"></text></g>` : ''}`;
+  return `${actionEffectMarkup()}${shape}${health(building.hp, building.maxHp, building.kind === 'tower' ? 26 : size + 6, size * 2)}<desc></desc>${building.kind === 'barracks' ? `<text data-tier y="5" text-anchor="middle" fill="#111" font-size="16">T${building.tier}</text><g data-training><rect x="-17" y="26" width="34" height="8" fill="#23372e"/><rect x="-16" y="27" width="32" height="6" fill="#333"/><rect data-training-fill x="-16" y="27" width="0" height="6" fill="#a6ed89"/><text data-training-count y="43" text-anchor="middle" fill="#111" stroke="white" stroke-width="2" paint-order="stroke" font-size="12"></text></g>` : ''}`;
 }
 export function relayPreviewMarkup(snapshot: Pick<StrongholdSnapshot, 'buildings'>, point: Point, sourceId?: number): string {
   const connected = connectedRelays(snapshot);
@@ -74,7 +74,7 @@ export function relayPreviewMarkup(snapshot: Pick<StrongholdSnapshot, 'buildings
     </g>`).join('');
 }
 export function resourceChunkMarkup(chunk: Pick<ResourceChunk, 'rich'>, transporting: boolean): string {
-  return `<rect x="-4" y="-4" width="8" height="8" fill="${transporting ? '#bdc9c2' : chunk.rich ? '#a64caf' : '#00aeef'}" stroke="#263c33" stroke-width="1"${transporting ? ' filter="url(#stronghold-resource-glow)"' : ''}/><title></title>`;
+  return `<rect x="-4" y="-4" width="8" height="8" fill="${transporting ? '#bdc9c2' : chunk.rich ? '#a64caf' : '#00aeef'}" stroke="#263c33" stroke-width="1"${transporting ? ' filter="url(#stronghold-resource-glow)"' : ''}/><desc></desc>`;
 }
 function relayLinks(snapshot: StrongholdSnapshot): string {
   const connected = connectedRelays(snapshot);
@@ -93,6 +93,10 @@ function child(element: Element, selector: string): Element {
   const found = element.querySelector(selector);
   if (!found) throw new Error(`Missing Stronghold SVG element: ${selector}`);
   return found;
+}
+function describe(element: Element, description: string): void {
+  setText(child(element, 'desc'), description);
+  setAttribute(element, 'data-tooltip', description);
 }
 function position(element: Element, point: { x: number; y: number }, scale = 1): void {
   setAttribute(element, 'transform', `translate(${point.x} ${point.y}) scale(${scale})`);
@@ -124,9 +128,9 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
   map.innerHTML = `<defs>
     <filter id="stronghold-resource-glow" x="-100%" y="-100%" width="300%" height="300%"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#effff2" flood-opacity=".95"/></filter>
     <filter id="stronghold-work-glow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="1.5" flood-color="#f0f5ff" flood-opacity=".7"/></filter>
-    <filter id="stronghold-attack-glow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="1.8" flood-color="#f12b49" flood-opacity=".8"/></filter></defs>
+    <filter id="stronghold-attack-glow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="1.8" flood-color="#ed914c" flood-opacity=".8"/></filter></defs>
     <g data-layer="coverage" pointer-events="none"></g><g data-layer="links" pointer-events="none"></g><g data-layer="nodes"></g><g data-layer="chunks" pointer-events="none"></g><g data-layer="buildings"></g><g data-layer="units"></g>
-    <g data-layer="rally"><path d="M0 14V-15l20 7-20 7" fill="#e7d98b" stroke="#e7d98b" opacity=".6"/><title>Production rally point</title></g>`;
+    <g data-layer="rally" data-tooltip="Production rally point"><path d="M0 14V-15l20 7-20 7" fill="#e7d98b" stroke="#e7d98b" opacity=".6"/><desc>Production rally point</desc></g>`;
   function layer(name: string): SVGGElement {
     const found = map.querySelector(`[data-layer="${name}"]`);
     if (!(found instanceof SVGGElement)) throw new Error(`Missing Stronghold SVG layer: ${name}`);
@@ -157,7 +161,7 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     setAttribute(child(element, '[data-selected]'), 'fill', selectionColor);
     setAttribute(child(element, '[data-selected]'), 'fill-opacity', '.2');
     setAttribute(child(element, '[data-health]'), 'width', String(20 * Math.max(0, unit.hp / unit.maxHp)));
-    setText(child(element, 'title'), `${unit.kind}${unit.formation ? ' ' + unit.formation : ''}: ${Math.ceil(unit.hp)} HP / upgrade ${level}`);
+    describe(element, `${unit.kind}${unit.formation ? ' ' + unit.formation : ''}: ${Math.ceil(unit.hp)} HP / upgrade ${level}`);
   }, unit => `${unit.kind}/${unit.formation}`);
   const renderBuildings = createSvgLayer<Building>(layer('buildings'), buildingMarkup, (element, building) => {
     if (!technology) throw new Error('Missing Stronghold technology snapshot.');
@@ -171,7 +175,7 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     setAttribute(element, 'opacity', building.progress < 1 ? String(.3 + building.progress * .7) : '1');
     const width = building.kind === 'castle' || building.kind === 'enemy-base' ? 68 : 28;
     setAttribute(child(element, '[data-health]'), 'width', String(width * Math.max(0, building.hp / building.maxHp)));
-    setText(child(element, 'title'), `${building.kind} / T${building.tier}: ${Math.ceil(building.hp)} HP, ${Math.round(building.progress * 100)}% built${building.kind === 'wall' && !building.enemy ? '. Defenses: click to select; Rotate or Alt+R turns the wall. Shift-click rotates immediately.' : ''}`);
+    describe(element, `${building.kind} / T${building.tier}: ${Math.ceil(building.hp)} HP, ${Math.round(building.progress * 100)}% built${building.kind === 'wall' && !building.enemy ? '. Defenses: click to select; Rotate or Alt+R turns the wall. Shift-click rotates immediately.' : ''}`);
     const tier = element.querySelector('[data-tier]');
     if (tier) setText(tier, `T${building.tier}`);
     const training = element.querySelector('[data-training]');
@@ -180,21 +184,21 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
       setAttribute(training, 'visibility', order ? 'visible' : 'hidden');
       setAttribute(child(training, '[data-training-fill]'), 'width', String(order ? 32 * Math.max(0, 1 - building.cooldown / TRAINING_SECONDS) : 0));
       setText(child(training, '[data-training-count]'), order ? `${order.kind}: ${building.trainingQueue.length} queued` : '');
-      if (order) setText(child(element, 'title'), `T${building.tier} Barracks: ${order.kind}, ${Math.ceil(building.cooldown)}s remaining; ${building.trainingQueue.length} queued`);
+      if (order) describe(element, `T${building.tier} Barracks: ${order.kind}, ${Math.ceil(building.cooldown)}s remaining; ${building.trainingQueue.length} queued`);
     }
   }, building => `${building.kind}/${building.enemy}`);
   const renderNodes = createSvgLayer<ResourceNode>(layer('nodes'), node =>
-    `<circle r="${node.rich ? 27 : 24}" stroke="${node.rich ? '#a64caf' : '#00aeef'}" stroke-width="3"/><title></title>`, (element, node) => {
+    `<circle r="${node.rich ? 27 : 24}" stroke="${node.rich ? '#a64caf' : '#00aeef'}" stroke-width="3"/><desc></desc>`, (element, node) => {
     position(element, node);
     setAttribute(child(element, 'circle'), 'fill', node.remaining <= 0 ? '#aaa' : node.rich ? '#ccc0e0' : '#9ed7e6');
-    setText(child(element, 'title'), `${node.rich ? 'Rich' : 'Standard'} resource node: ${Math.ceil(node.remaining)} remaining`);
+    describe(element, `${node.rich ? 'Rich' : 'Standard'} resource node: ${Math.ceil(node.remaining)} remaining`);
   }, node => String(node.rich));
   const transporting = (chunk: ResourceChunk) => chunk.carrier === null && chunk.target !== null && connectedRelayIds.has(chunk.target);
   const renderChunks = createSvgLayer<ResourceChunk>(layer('chunks'), chunk => resourceChunkMarkup(chunk, transporting(chunk)), (element, chunk) => {
     position(element, { x: chunk.x + (chunk.carrier === null ? 0 : 12), y: chunk.y });
     setAttribute(element, 'data-resource-chunk', String(chunk.id));
     setAttribute(element, 'data-transporting', String(transporting(chunk)));
-    setText(child(element, 'title'), `${chunk.amount} ${chunk.rich ? 'rich' : 'standard'} supplies${chunk.carrier !== null ? ', carried by gatherer' : transporting(chunk) ? ', relay delivery' : ', waiting for a relay connection'}`);
+    describe(element, `${chunk.amount} ${chunk.rich ? 'rich' : 'standard'} supplies${chunk.carrier !== null ? ', carried by gatherer' : transporting(chunk) ? ', relay delivery' : ', waiting for a relay connection'}`);
   }, chunk => `${chunk.rich}/${transporting(chunk)}`);
   let linkSignature = '';
   const links = layer('links');

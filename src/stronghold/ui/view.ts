@@ -31,7 +31,7 @@ export function strongholdElements() {
         const action = ROLE_ACTIONS[role].find(candidate => candidate === button.dataset.action);
         if (!action) throw new Error('Unknown Stronghold action button.');
         return { element: button, action, miniBar: button.querySelector<HTMLElement>('[data-task-progress]'),
-          miniFill: button.querySelector<HTMLElement>('[data-task-fill]'), lockLabel: button.querySelector<HTMLElement>('[data-task-lock]'),
+          miniFill: button.querySelector<HTMLElement>('[data-task-fill]'), lockIcon: button.querySelector<SVGElement>('[data-tier-lock]'),
           tier: button.dataset.tier ? Number(button.dataset.tier) : undefined,
           upgrade: UPGRADE_TARGETS.find(target => target === button.dataset.strongholdUpgrade), minimumTier: Number(button.dataset.minTier) };
       });
@@ -49,7 +49,7 @@ export function strongholdElements() {
     mapControls: createMapControls(map),
     camera: createMapCamera(map),
     renderEventLog: createEventLog(requireElement('stronghold-event-log', HTMLElement)),
-    contributionCards: new Map<string, { card: HTMLElement; name: HTMLElement; progress: HTMLElement; segment: HTMLElement }>(),
+    contributionCards: new Map<string, { card: HTMLElement; name: HTMLElement; typed: HTMLElement; segment: HTMLElement }>(),
     input: requireElement('stronghold-input', HTMLInputElement), phrase: requireElement('stronghold-phrase', HTMLElement),
     typedBar: requireElement('stronghold-typed-bar', HTMLElement), progressFill: requireElement('stronghold-typing-progress', HTMLElement),
     typing: requireElement('stronghold-typing', HTMLElement), typedArea: requireElement('stronghold-typed-area', HTMLElement),
@@ -173,31 +173,27 @@ export function renderStronghold(
         const cost = taskCost(selection);
         const unaffordable = snapshot.resources < cost;
         button.element.classList.toggle('is-unaffordable', unaffordable);
-        setAttribute(button.element, 'aria-description', unaffordable ? `Need ${cost} shared supplies; ${Math.floor(snapshot.resources)} available.` : '');
         const purchaseProblem = button.miniBar ? null : actionProblem(snapshot, { ...player, ...selection }, button.action);
         if (isArmyUnit(button.action)) {
           const queued = button.element.querySelector('[data-training-queued]');
           if (queued) setText(queued, `${queuedUnits(snapshot, button.action)} queued`);
-          setAttribute(button.element, 'title', purchaseProblem ?? `Queue a ${button.action} at completed Tier ${button.minimumTier} Barracks. Supplies are paid now.`);
         }
         const tierLocked = snapshot.tier < button.minimumTier;
+        button.element.classList.toggle('is-unavailable', tierLocked || capped || Boolean(purchaseProblem));
+        button.element.classList.toggle('is-tier-locked', tierLocked);
+        button.lockIcon?.classList.toggle('is-hidden', !tierLocked);
         const disabled = !own || !running || challenge || terminal || (!button.miniBar && tierLocked) || capped || Boolean(purchaseProblem);
         if (button.element.disabled !== disabled) button.element.disabled = disabled;
         const selectedAction = own && relayPlacement ? button.action === 'relay' : Boolean(button.miniBar) && button.action === player.action
           && (!button.tier || button.tier === player.constructionTier) && (!button.upgrade || button.upgrade === player.upgradeTarget);
         button.element.classList.toggle('selected', selectedAction);
         setAttribute(button.element, 'aria-pressed', String(selectedAction));
-        if (button.lockLabel) {
-          setText(button.lockLabel, `Place at T${button.minimumTier}`);
-          button.lockLabel.classList.toggle('is-hidden', !tierLocked);
-          setAttribute(button.element, 'title', tierLocked ? `Prepare work now; placement requires Tier ${button.minimumTier}.` : '');
-        }
-        if (cost > 0) {
-          setAttribute(button.element, 'title', unaffordable
-            ? `Need ${cost} shared supplies; ${Math.floor(snapshot.resources)} available (${Math.ceil(cost - snapshot.resources)} short).`
-            : purchaseProblem ?? (isArmyUnit(button.action)
-              ? `Queue a ${button.action} at completed Tier ${button.minimumTier} Barracks. ${cost} supplies are paid now.` : `Costs ${cost} shared supplies.`));
-        }
+        const label = button.element.querySelector('.stronghold-action-label')?.textContent ?? button.action;
+        const description = unaffordable ? `Need ${cost} shared supplies; ${Math.floor(snapshot.resources)} available (${Math.ceil(cost - snapshot.resources)} short).`
+          : tierLocked ? `${button.miniBar ? 'Prepare work now; placement requires' : 'Requires'} Tier ${button.minimumTier}.`
+          : purchaseProblem ?? (cost > 0 ? `Costs ${cost} shared supplies.` : 'Complete phrases to prepare this task.');
+        setAttribute(button.element, 'aria-description', description);
+        setAttribute(button.element, 'data-tooltip', `${label}. ${description} (Alt+${button.element.dataset.shortcut})`);
         if (button.miniBar && button.miniFill) {
           const saved = snapshot.roleTasks[group.role].progress[taskKey(selection)];
           const progress = workProgress(saved?.work ?? 0, taskWork(selection));

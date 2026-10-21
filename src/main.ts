@@ -25,6 +25,7 @@ import { BiblePassageProvider } from './multiplayer/infrastructure/bible-passage
 import { createStrongholdController } from './stronghold/ui/controller.ts';
 import { LocalStrongholdConnection } from './stronghold/infrastructure/local-connection.ts';
 import { readDeveloperOptions, writeDeveloperOptions } from './stronghold/infrastructure/developer-options.ts';
+import { initTooltips } from './ui/tooltips.ts';
 
 import trackDetermination from '../assets/music/determination.mp3';
 import trackApple from '../assets/music/apple_cider.ogg';
@@ -33,6 +34,8 @@ import trackApple from '../assets/music/apple_cider.ogg';
 (window as Window & { __bundledMusic?: string[] }).__bundledMusic = [trackDetermination, trackApple];
 
 const controls = initControls(appConfig);
+const tooltips = initTooltips();
+window.addEventListener('beforeunload', () => tooltips.dispose(), { once: true });
 const storage = new AppStorage(window.localStorage);
 const stateRepository = new AppStateRepository(storage);
 const profileRepository = new ProfileRepository(storage);

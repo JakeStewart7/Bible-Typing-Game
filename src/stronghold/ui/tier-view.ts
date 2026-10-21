@@ -24,21 +24,21 @@ export function renderTierChallenge(elements: StrongholdElements, snapshot: Stro
     if (!entry) {
       const card = document.createElement('div');
       const name = document.createElement('strong');
-      const progress = document.createElement('span');
+      const typed = document.createElement('p');
       const segment = document.createElement('span');
       segment.setAttribute('aria-hidden', 'true');
       sharedBar.append(segment);
-      card.append(name, progress);
+      card.append(name, typed);
       tierList.append(card);
-      entry = { card, name, progress, segment };
+      entry = { card, name, typed, segment };
       elements.contributionCards.set(player.id, entry);
     }
     applyPlayerTheme(entry.card, player.color);
     entry.segment.style.backgroundColor = playerTheme(player.color).light;
     entry.segment.style.width = `${player.contribution / goal * 100}%`;
-    entry.segment.title = `Player ${index + 1}: ${contribution}%`;
+    setAttribute(entry.segment, 'data-tooltip', `Player ${index + 1}: ${contribution}%`);
     setText(entry.name, `Player ${index + 1}`);
-    setText(entry.progress, `${contribution}%`);
+    setText(entry.typed, player.typed);
   });
   const characters = snapshot.tier === 0 ? 'Letters' : snapshot.tier === 1 ? 'Letters and numbers' : 'Letters, numbers and punctuation';
   setText(requireElement('stronghold-tier-description', HTMLElement), `${paused ? 'Paused. ' : ''}${percent}% complete. ${characters}. Complete phrases to fill the shared bar.`);
