@@ -78,7 +78,7 @@ function updateWorker(state: StrongholdState, worker: Unit, seconds: number): vo
   const amount = Math.min(node.remaining, (node.rich ? 8 : 4) + state.upgrades.economy * 2);
   node.remaining -= amount;
   if (node.remaining === 0) recordEvent(state, 'Resource node depleted');
-  state.chunks.push({ id: state.nextId++, x: worker.x, y: worker.y, amount, target: null, carrier: worker.id });
+  state.chunks.push({ id: state.nextId++, x: worker.x, y: worker.y, amount, rich: node.rich, target: null, carrier: worker.id });
   worker.attackTarget = { x: node.x, y: node.y };
   worker.cooldown = 3;
 }

@@ -16,8 +16,8 @@ export const ACTION_LABELS: Record<Action, string> = {
   wall: 'Place wall', upgrade: 'Upgrade role'
 };
 export const COSTS: Record<Action, number> = {
-  resources: 0, worker: 0, relay: 15, barracks: 0, warrior: 10,
-  archer: 20,   catapult: 35, builder: 0, tower: 0, wall: 0, upgrade: 60
+  resources: 0, worker: 0, relay: 30, barracks: 0, warrior: 25,
+  archer: 45,   catapult: 80, builder: 0, tower: 0, wall: 0, upgrade: 120
 };
 export function isTypingAction(action: Action): boolean {
   return action === 'resources' || action === 'worker' || action === 'barracks'

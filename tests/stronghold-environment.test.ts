@@ -165,7 +165,7 @@ test('Stronghold live season changes relocate nodes without refilling them or in
   state.nodes[5]!.remaining = 77;
   const worker = state.units.find(unit => unit.kind === 'worker')!;
   worker.task = state.nodes[5]!.id;
-  state.chunks.push({ id: 999, x: worker.x, y: worker.y, amount: 4, target: state.buildings[0]!.id, carrier: worker.id });
+  state.chunks.push({ id: 999, x: worker.x, y: worker.y, amount: 4, rich: false, target: state.buildings[0]!.id, carrier: worker.id });
   const player = state.players[0]!;
   for (const season of SEASONS) {
     const before = structuredClone(state);

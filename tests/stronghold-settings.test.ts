@@ -206,7 +206,7 @@ test('Stronghold construction tiers keep independent bars and instant upgrades l
   send(state, { type: 'TYPE', phraseId, text: phrase.slice(0, 2) });
   send(state, { type: 'ACTION', action: 'upgrade', upgrade: 'tower-1' });
   send(state, { type: 'ACTION', action: 'upgrade', upgrade: 'tower-2' });
-  equal(state.resources, 935);
+  equal(state.resources, 800);
   equal(player.phraseId, phraseId);
   equal(player.typed, phrase.slice(0, 2));
   equal(player.work, tower2Work);
@@ -217,14 +217,14 @@ test('Stronghold construction tiers keep independent bars and instant upgrades l
   equal(player.work, tower1Work);
   send(state, { type: 'PLACE', kind: 'tower', point: { x: 300, y: 500 } });
   equal(player.work, Math.round((tower1Work - 25) * 100) / 100);
-  equal(state.resources, 935);
+  equal(state.resources, 800);
   send(state, { type: 'ACTION', action: 'tower', tier: 2 });
   equal(player.work, tower2Work);
   send(state, { type: 'ACTION', action: 'upgrade', upgrade: 'tower-1' });
   equal(player.work, tower2Work);
   send(state, { type: 'ACTION', action: 'upgrade', upgrade: 'tower-2' });
   equal(player.work, tower2Work);
-  equal(state.resources, 870);
+  equal(state.resources, 600);
   equal(state.technology['tower-2'], 2);
   send(state, { type: 'ROLE', role: 'production' });
   send(state, { type: 'ACTION', action: 'barracks', tier: 1 });

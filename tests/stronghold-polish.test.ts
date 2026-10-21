@@ -11,7 +11,7 @@ import { addBuilding, addUnit, createStronghold } from '../src/stronghold/domain
 import { queuedUnits, TRAINING_SECONDS } from '../src/stronghold/domain/training.ts';
 import { PHRASE_LENGTHS } from '../src/stronghold/domain/types.ts';
 import { wheelZoom } from '../src/stronghold/ui/map-camera.ts';
-import { relayPreviewMarkup } from '../src/stronghold/ui/battlefield.ts';
+import { relayPreviewMarkup, resourceChunkMarkup } from '../src/stronghold/ui/battlefield.ts';
 import { equal, test } from './harness.ts';
 
 function rejects(run: () => void, text: string): void {
@@ -264,6 +264,10 @@ test('Stronghold relay previews include the base at exactly 155 units and exclud
   for (const building of [castle, neighbor]) equal(markup.includes(`data-relay-connection="${building.id}"`), true);
   equal(markup.includes(`data-relay-connection="${source.id}"`), false);
   equal(markup.includes('stroke="#65eb98"'), true);
+  const pending = relayPreviewMarkup(state, incomplete, incomplete.id);
+  equal(pending.includes('r="155"'), true);
+  equal(pending.includes(`data-relay-connection="${castle.id}"`), true);
+  equal(pending.includes(`data-relay-connection="${incomplete.id}"`), false);
 });
 
 test('Stronghold relay previews distinguish castle-connected extensions from disconnected relay groups', () => {
@@ -280,4 +284,30 @@ test('Stronghold relay previews distinguish castle-connected extensions from dis
   equal(disconnected.includes(`data-relay-connection="${isolated.id}" data-powered="false"`), true);
   equal(disconnected.includes('stroke="#ffd76a"'), true);
   equal(relayPreviewMarkup(state, { x: 900, y: 100 }).includes('data-relay-connection='), false);
+});
+
+test('Stronghold cargo retains its blue or purple origin independently of yield and glows only during relay transport', () => {
+  for (const rich of [false, true]) {
+    const state = createStronghold();
+    state.units = [];
+    state.nodes = [{ id: 500, x: 500, y: 540, rich, remaining: 100 }];
+    state.upgrades.economy = rich ? 0 : 2;
+    const worker = addUnit(state, 'worker', { x: 500, y: 540 });
+    updateLogistics(state, .1);
+    const chunk = state.chunks[0];
+    if (!chunk) throw new Error('Missing harvested cargo.');
+    equal(chunk.amount, 8);
+    equal(chunk.rich, rich);
+    equal(chunk.carrier, worker.id);
+    const carried = resourceChunkMarkup(chunk, false);
+    equal(carried.includes(`fill="${rich ? '#a64caf' : '#00aeef'}"`), true);
+    equal(carried.includes('filter='), false);
+    const transported = resourceChunkMarkup(chunk, true);
+    equal(transported.includes('fill="#bdc9c2"'), true);
+    equal(transported.includes('filter="url(#stronghold-resource-glow)"'), true);
+    worker.hp = 0;
+    updateLogistics(state, .1);
+    equal(chunk.carrier, null);
+    equal(chunk.rich, rich);
+  }
 });

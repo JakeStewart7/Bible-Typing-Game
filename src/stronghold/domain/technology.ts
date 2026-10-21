@@ -2,13 +2,13 @@ import { COSTS, TEXT_LENGTH_BONUSES, UNIT_HEALTH_MULTIPLIER } from './rules.ts';
 import type { Participant, Role, StrongholdState, UpgradeTarget, Unit } from './types.ts';
 
 export const UPGRADE_OPTIONS: Record<UpgradeTarget, { label: string; role: Role; tier: number; cost: number }> = {
-  economy: { label: 'Economy', role: 'economy', tier: 0, cost: 60 },
-  warrior: { label: 'Warrior', role: 'production', tier: 1, cost: 10 },
-  archer: { label: 'Archer', role: 'production', tier: 2, cost: 20 },
-  catapult: { label: 'Catapult', role: 'production', tier: 3, cost: 35 },
-  'tower-1': { label: 'T1 tower', role: 'defenses', tier: 1, cost: 25 },
-  'tower-2': { label: 'T2 tower', role: 'defenses', tier: 2, cost: 40 },
-  'tower-3': { label: 'T3 tower', role: 'defenses', tier: 3, cost: 60 }
+  economy: { label: 'Economy', role: 'economy', tier: 0, cost: 120 },
+  warrior: { label: 'Warrior', role: 'production', tier: 1, cost: 60 },
+  archer: { label: 'Archer', role: 'production', tier: 2, cost: 100 },
+  catapult: { label: 'Catapult', role: 'production', tier: 3, cost: 160 },
+  'tower-1': { label: 'T1 tower', role: 'defenses', tier: 1, cost: 75 },
+  'tower-2': { label: 'T2 tower', role: 'defenses', tier: 2, cost: 125 },
+  'tower-3': { label: 'T3 tower', role: 'defenses', tier: 3, cost: 180 }
 };
 export function upgradeLimit(tier: number, target: UpgradeTarget): number {
   return target === 'economy' ? tier + 2 : Math.max(0, tier - UPGRADE_OPTIONS[target].tier + 1);

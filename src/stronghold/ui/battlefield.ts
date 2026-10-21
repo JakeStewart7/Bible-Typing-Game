@@ -56,6 +56,9 @@ export function relayPreviewMarkup(snapshot: Pick<StrongholdSnapshot, 'buildings
       <circle cx="${building.x}" cy="${building.y}" r="${building.kind === 'castle' ? 43 : 25}" fill="${color}" fill-opacity=".16" stroke="${color}" stroke-width="3"/>
     </g>`).join('');
 }
+export function resourceChunkMarkup(chunk: Pick<ResourceChunk, 'rich'>, transporting: boolean): string {
+  return `<rect x="-4" y="-4" width="8" height="8" fill="${transporting ? '#bdc9c2' : chunk.rich ? '#a64caf' : '#00aeef'}" stroke="#263c33" stroke-width="1"${transporting ? ' filter="url(#stronghold-resource-glow)"' : ''}/><title></title>`;
+}
 function relayLinks(snapshot: StrongholdSnapshot): string {
   const connected = connectedRelays(snapshot);
   const relays = snapshot.buildings.filter(building => (building.kind === 'relay' || building.kind === 'castle') && !building.enemy && building.hp > 0);
@@ -64,7 +67,7 @@ function relayLinks(snapshot: StrongholdSnapshot): string {
     const a = relays[index];
     if (!a || a.progress < 1) continue;
     for (const b of relays.slice(index + 1)) {
-      if (b.progress === 1 && distance(a, b) <= RELAY_RANGE) links.push(`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${connected.includes(a) && connected.includes(b) ? '#3344da' : '#8e6060'}" stroke-width="3"/>`);
+      if (b.progress === 1 && distance(a, b) <= RELAY_RANGE) links.push(`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${connected.includes(a) && connected.includes(b) ? '#526d65' : '#8e7770'}" stroke-width="3"/>`);
     }
   }
   return links.join('');
@@ -91,7 +94,8 @@ function renderAttack(element: Element, entity: Unit | Building, scale: number, 
   setAttribute(child(effect, 'circle'), 'r', String(entity.kind === 'builder' && !reducedMotion ? 4 + Math.sin(elapsed * 12) * 2 : 6));
 }
 export function createBattlefieldRenderer(map: SVGSVGElement) {
-  map.innerHTML = `<g data-layer="coverage" pointer-events="none"></g><g data-layer="links" pointer-events="none"></g><g data-layer="nodes"></g><g data-layer="chunks"></g><g data-layer="buildings"></g><g data-layer="units"></g>
+  map.innerHTML = `<defs><filter id="stronghold-resource-glow" x="-100%" y="-100%" width="300%" height="300%"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#effff2" flood-opacity=".95"/></filter></defs>
+    <g data-layer="coverage" pointer-events="none"></g><g data-layer="links" pointer-events="none"></g><g data-layer="nodes"></g><g data-layer="chunks" pointer-events="none"></g><g data-layer="buildings"></g><g data-layer="units"></g>
     <g data-layer="rally"><path d="M0 14V-15l20 7-20 7" fill="#e7d98b" stroke="#e7d98b" opacity=".6"/><title>Production rally point</title></g>`;
   function layer(name: string): SVGGElement {
     const found = map.querySelector(`[data-layer="${name}"]`);
@@ -103,6 +107,7 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
   let elapsed = 0;
   let selectionColor = '#ffb3c9';
   const previousUnits = new Map<number, Point>();
+  let connectedRelayIds = new Set<number>();
   const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
   const renderCoverage = createSvgLayer<Building>(layer('coverage'), () =>
     `<circle data-relay-radius r="${RELAY_RANGE}" fill="#8ce4db" fill-opacity=".035" stroke="#b4ede2" stroke-opacity=".3" stroke-width="1" stroke-dasharray="4 5"/>`,
@@ -154,11 +159,13 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     setAttribute(child(element, 'circle'), 'fill', node.remaining <= 0 ? '#aaa' : node.rich ? '#ccc0e0' : '#9ed7e6');
     setText(child(element, 'title'), `${node.rich ? 'Rich' : 'Standard'} resource node: ${Math.ceil(node.remaining)} remaining`);
   }, node => String(node.rich));
-  const renderChunks = createSvgLayer<ResourceChunk>(layer('chunks'), () => '<rect x="-4" y="-4" width="8" height="8" stroke="#111" stroke-width="1"/><title></title>', (element, chunk) => {
+  const transporting = (chunk: ResourceChunk) => chunk.carrier === null && chunk.target !== null && connectedRelayIds.has(chunk.target);
+  const renderChunks = createSvgLayer<ResourceChunk>(layer('chunks'), chunk => resourceChunkMarkup(chunk, transporting(chunk)), (element, chunk) => {
     position(element, { x: chunk.x + (chunk.carrier === null ? 0 : 12), y: chunk.y });
-    setAttribute(child(element, 'rect'), 'fill', chunk.carrier !== null ? '#ffe64c' : chunk.target === null ? '#ddd' : '#00aeef');
-    setText(child(element, 'title'), `${chunk.amount} supplies${chunk.carrier !== null ? ', carried by gatherer' : ', relay delivery'}`);
-  });
+    setAttribute(element, 'data-resource-chunk', String(chunk.id));
+    setAttribute(element, 'data-transporting', String(transporting(chunk)));
+    setText(child(element, 'title'), `${chunk.amount} ${chunk.rich ? 'rich' : 'standard'} supplies${chunk.carrier !== null ? ', carried by gatherer' : transporting(chunk) ? ', relay delivery' : ', waiting for a relay connection'}`);
+  }, chunk => `${chunk.rich}/${transporting(chunk)}`);
   let linkSignature = '';
   const links = layer('links');
   const rally = layer('rally');
@@ -172,9 +179,12 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     for (const id of previousUnits.keys()) if (!livingUnits.has(id)) previousUnits.delete(id);
     const signature = snapshot.buildings.filter(building => building.kind === 'castle' || building.kind === 'relay')
       .map(building => `${building.id}:${building.x}:${building.y}:${building.hp > 0}:${building.progress === 1}`).join('|');
-    if (signature !== linkSignature) { links.innerHTML = relayLinks(snapshot); linkSignature = signature; }
+    if (signature !== linkSignature) {
+      links.innerHTML = relayLinks(snapshot); linkSignature = signature;
+      connectedRelayIds = new Set(connectedRelays(snapshot).map(building => building.id));
+    }
     renderCoverage(snapshot.buildings.filter(building => (building.kind === 'relay' || building.kind === 'castle')
-      && !building.enemy && building.hp > 0 && building.progress === 1));
+      && !building.enemy && building.hp > 0));
     renderNodes(snapshot.nodes); renderChunks(snapshot.chunks);
     renderBuildings(snapshot.buildings); renderUnits(snapshot.units);
     position(rally, snapshot.rally);

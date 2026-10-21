@@ -133,17 +133,17 @@ test('Stronghold each shared challenge advances exactly one tier without chainin
 });
 
 test('Stronghold building placement costs once and waits for a nearby builder', () => {
-  const state = createStronghold();
+  const state = createStronghold({ resources: 100, length: 'medium', computersPaused: true });
   executeCommand(state, self(state), { type: 'ACTION', action: 'relay' });
-  equal(state.resources, 50);
+  equal(state.resources, 100);
   executeCommand(state, self(state), { type: 'PLACE', kind: 'relay', point: { x: 380, y: 540 } });
-  equal(state.resources, 35);
+  equal(state.resources, 70);
   const relay = state.buildings.find(building => building.kind === 'relay');
   equal(relay?.progress, 0);
   for (let index = 0; index < 60; index++) updateLogistics(state, .25);
   equal(relay?.progress, 1);
   executeCommand(state, self(state), { type: 'PLACE', kind: 'relay', point: { x: 650, y: 540 } });
-  equal(state.resources, 20);
+  equal(state.resources, 40);
 });
 
 test('Stronghold rejects illegal sites, insufficient resources and locked actions without spending', () => {
@@ -167,7 +167,7 @@ test('Stronghold upgrades obey per-tier limits and population caps', () => {
   executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade' });
   rejects(() => executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade' }), 'Upgrade limit');
   equal(state.upgrades.economy, 2);
-  equal(state.resources, 880);
+  equal(state.resources, 760);
   executeCommand(state, self(state), { type: 'ACTION', action: 'worker' });
   while (state.units.filter(unit => unit.kind === 'worker').length < 12) finish(state);
   const resources = state.resources;
@@ -235,7 +235,7 @@ test('Stronghold relay destruction disconnects upstream resources until a route 
   const first = addBuilding(state, 'relay', { x: 500, y: 450 }, true);
   const upstream = addBuilding(state, 'relay', { x: 500, y: 305 }, true);
   equal(connectedRelays(state).length, 3);
-  state.chunks = [{ id: 99, x: 500, y: 305, amount: 8, target: upstream.id, carrier: null }];
+  state.chunks = [{ id: 99, x: 500, y: 305, amount: 8, rich: true, target: upstream.id, carrier: null }];
   first.hp = 0;
   updateLogistics(state, .5);
   equal(state.chunks[0]?.y, 305);
@@ -304,7 +304,7 @@ test('Stronghold barracks require explicit paid queues and completed matching co
   equal(state.units.length, 0);
   for (let second = 0; second < 12; second++) advanceStronghold(state, 1);
   equal(state.units[0]?.kind, 'archer');
-  equal(state.resources, 30);
+  equal(state.resources, 5);
   equal(state.units[0]?.destination, state.rally);
 });
 

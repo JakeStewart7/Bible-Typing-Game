@@ -22,7 +22,9 @@ test('Stronghold concise controls retain accessible labels and essential costs',
   equal(markup.includes('Waiting to type...'), false);
   equal(markup.includes('(T1 unit)'), false);
   equal(markup.includes('class="stronghold-tier-help"'), false);
-  equal(markup.includes('<span>Supplies</span>'), true);
+  equal(markup.includes('<span>Supplies</span>'), false);
+  equal(markup.includes('<span class="sr-only">Shared supplies: </span>'), true);
+  equal(markup.includes('Typing produces shared supplies.'), true);
   equal(markup.indexOf('id="stronghold-resources"') < markup.indexOf('id="stronghold-tower-count"'), true);
   equal(markup.includes('<span class="sr-only"> supplies</span>'), true);
   equal(markup.includes('for="stronghold-input"'), true);

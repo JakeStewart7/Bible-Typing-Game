@@ -28,7 +28,7 @@ export type Building = Point & {
   trainingQueue: { kind: ArmyUnitKind; playerId: string }[];
 };
 export type ResourceNode = Point & { id: number; rich: boolean; remaining: number };
-export type ResourceChunk = Point & { id: number; amount: number; target: number | null; carrier: number | null };
+export type ResourceChunk = Point & { id: number; amount: number; rich: boolean; target: number | null; carrier: number | null };
 export type Participant = {
   id: string; name: string; color: string; role: Role; simulated: boolean;
   action: Action; phrase: string; typed: string; phraseId: number;

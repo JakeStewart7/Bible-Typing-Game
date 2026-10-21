@@ -206,16 +206,16 @@ test('Stronghold free construction has proportional requirements, preserves word
 
 test('Stronghold paid troop queues and upgrades never spend or change typing progress', () => {
   const cases: { role: Role; action: Action; cost: number; kind?: UnitKind; upgrade?: UpgradeTarget }[] = [
-    { role: 'production', action: 'warrior', cost: 10, kind: 'warrior' },
-    { role: 'production', action: 'archer', cost: 20, kind: 'archer' },
-    { role: 'production', action: 'catapult', cost: 35, kind: 'catapult' },
-    { role: 'economy', action: 'upgrade', cost: 60, upgrade: 'economy' },
-    { role: 'production', action: 'upgrade', cost: 10, upgrade: 'warrior' },
-    { role: 'production', action: 'upgrade', cost: 20, upgrade: 'archer' },
-    { role: 'production', action: 'upgrade', cost: 35, upgrade: 'catapult' },
-    { role: 'defenses', action: 'upgrade', cost: 25, upgrade: 'tower-1' },
-    { role: 'defenses', action: 'upgrade', cost: 40, upgrade: 'tower-2' },
-    { role: 'defenses', action: 'upgrade', cost: 60, upgrade: 'tower-3' }
+    { role: 'production', action: 'warrior', cost: 25, kind: 'warrior' },
+    { role: 'production', action: 'archer', cost: 45, kind: 'archer' },
+    { role: 'production', action: 'catapult', cost: 80, kind: 'catapult' },
+    { role: 'economy', action: 'upgrade', cost: 120, upgrade: 'economy' },
+    { role: 'production', action: 'upgrade', cost: 60, upgrade: 'warrior' },
+    { role: 'production', action: 'upgrade', cost: 100, upgrade: 'archer' },
+    { role: 'production', action: 'upgrade', cost: 160, upgrade: 'catapult' },
+    { role: 'defenses', action: 'upgrade', cost: 75, upgrade: 'tower-1' },
+    { role: 'defenses', action: 'upgrade', cost: 125, upgrade: 'tower-2' },
+    { role: 'defenses', action: 'upgrade', cost: 180, upgrade: 'tower-3' }
   ];
   for (const purchase of cases) {
     const state = createStronghold();
@@ -229,6 +229,14 @@ test('Stronghold paid troop queues and upgrades never spend or change typing pro
     executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase.slice(0, 2) });
     const beforePlayer = structuredClone(player);
     const beforeTasks = structuredClone(state.roleTasks);
+    state.resources = purchase.cost - 1;
+    const unaffordable = structuredClone(state);
+    let insufficient = false;
+    try { executeCommand(state, player, { type: 'ACTION', action: purchase.action, upgrade: purchase.upgrade }); }
+    catch (error) { insufficient = error instanceof Error && error.message.includes(`Need ${purchase.cost}`); }
+    equal(insufficient, true);
+    equal(state, unaffordable);
+    state.resources = 1000;
     const count = state.units.filter(unit => unit.kind === purchase.kind).length;
     executeCommand(state, player, { type: 'ACTION', action: purchase.action, upgrade: purchase.upgrade });
     equal(state.resources, 1000 - purchase.cost);
@@ -310,7 +318,7 @@ test('Stronghold relays require only legal placement and do not spend typing wor
   const phraseId = player.phraseId;
   equal(placementProblem(state, player, 'relay', { x: 500, y: 595 }), 'Leave space between buildings.');
   executeCommand(state, player, { type: 'PLACE', kind: 'relay', point: { x: 350, y: 540 } });
-  equal(state.resources, 35);
+  equal(state.resources, 20);
   equal(player.work, points);
   equal(player.phraseId, phraseId);
   equal(state.events.at(-1)?.text, 'Player 1 placed Relay');

@@ -79,8 +79,9 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     const kind = placing();
     elements.mapControls.ghost(snapshot, kind, cursor, wallRotation);
     elements.mapControls.wallSelection(running() ? selectedWall() ?? null : null);
+    if (!running() || snapshot.phase !== 'playing' || self()?.role !== 'army') elements.mapControls.moveIndicator(null);
     const relay = snapshot.buildings.find(building => building.id === hoveredRelay
-      && (building.kind === 'relay' || building.kind === 'castle') && !building.enemy && building.hp > 0 && building.progress === 1);
+      && (building.kind === 'relay' || building.kind === 'castle') && !building.enemy && building.hp > 0);
     elements.mapControls.relayPreview(snapshot, running() ? kind === 'relay' ? cursor : relay ?? null : null, kind === 'relay' ? undefined : relay?.id);
   }
   function focusTyping(): void {
@@ -129,12 +130,13 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       typingLayout = layout;
     }
   }
-  async function send(command: StrongholdCommand): Promise<void> {
-    if (!running()) { errorMessage = 'Resume Stronghold before issuing orders.'; display(); return; }
-    try { errorMessage = ''; await connection.send(command); }
+  async function send(command: StrongholdCommand): Promise<boolean> {
+    if (!running()) { errorMessage = 'Resume Stronghold before issuing orders.'; display(); return false; }
+    try { errorMessage = ''; await connection.send(command); return true; }
     catch (error) {
       errorMessage = error instanceof Error ? error.message : String(error);
       display();
+      return false;
     } finally { focusTyping(); }
   }
   const unsubscribe = connection.subscribe(next => {
@@ -178,6 +180,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     relayPlacement = false; placementCancelled = false; rallyPlacement = false; editingWall = null;
     errorMessage = ''; phraseId = -1;
     clearDrag();
+    elements.mapControls.moveIndicator(null);
     elements.camera.reset(defaults.mapZoom);
     connection.restart(defaults);
     connection.setActive(running());
@@ -193,7 +196,9 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   function move(point: Point, all = false): void {
     const ids = all ? armyIds() : [...selected];
     if (ids.length === 0) { errorMessage = 'Select friendly units first, or use Select all troops.'; display(); focusTyping(); return; }
-    void send({ type: 'MOVE', ids, point });
+    void send({ type: 'MOVE', ids, point }).then(sent => {
+      if (sent && running() && snapshot?.phase === 'playing' && self()?.role === 'army') elements.mapControls.moveIndicator(point);
+    });
   }
   elements.input.addEventListener('input', () => {
     if (!snapshot) return;

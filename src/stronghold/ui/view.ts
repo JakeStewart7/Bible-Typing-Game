@@ -1,7 +1,7 @@
 import { requireElement } from '../../shared/dom.ts';
 import { BUILDING_CAPS, EVENT_LABELS, ROLE_ACTIONS, TIER_MAX, UNIT_CAPS } from '../domain/rules.ts';
 import { tierProgress } from '../domain/tier-progress.ts';
-import { taskWork, upgradeLimit } from '../domain/technology.ts';
+import { taskCost, taskWork, upgradeLimit } from '../domain/technology.ts';
 import { actionProblem } from '../domain/actions.ts';
 import { taskKey } from '../domain/tasks.ts';
 import { PHRASE_LENGTHS, ROLES, UPGRADE_TARGETS, type StrongholdSnapshot } from '../domain/types.ts';
@@ -169,6 +169,10 @@ export function renderStronghold(
       for (const button of group.buttons) {
         const capped = button.upgrade ? snapshot.technology[button.upgrade] >= upgradeLimit(snapshot.tier, button.upgrade) : false;
         const selection = { action: button.action, constructionTier: button.tier ?? 1, upgradeTarget: button.upgrade ?? player.upgradeTarget };
+        const cost = taskCost(selection);
+        const unaffordable = snapshot.resources < cost;
+        button.element.classList.toggle('is-unaffordable', unaffordable);
+        setAttribute(button.element, 'aria-description', unaffordable ? `Need ${cost} shared supplies; ${Math.floor(snapshot.resources)} available.` : '');
         const purchaseProblem = button.miniBar ? null : actionProblem(snapshot, { ...player, ...selection }, button.action);
         if (isArmyUnit(button.action)) {
           const queued = button.element.querySelector('[data-training-queued]');
@@ -186,6 +190,12 @@ export function renderStronghold(
           setText(button.lockLabel, `Place at T${button.minimumTier}`);
           button.lockLabel.classList.toggle('is-hidden', !tierLocked);
           setAttribute(button.element, 'title', tierLocked ? `Prepare work now; placement requires Tier ${button.minimumTier}.` : '');
+        }
+        if (cost > 0) {
+          setAttribute(button.element, 'title', unaffordable
+            ? `Need ${cost} shared supplies; ${Math.floor(snapshot.resources)} available (${Math.ceil(cost - snapshot.resources)} short).`
+            : purchaseProblem ?? (isArmyUnit(button.action)
+              ? `Queue a ${button.action} at completed Tier ${button.minimumTier} Barracks. ${cost} supplies are paid now.` : `Costs ${cost} shared supplies.`));
         }
         if (button.miniBar && button.miniFill) {
           const saved = snapshot.roleTasks[group.role].progress[taskKey(selection)];

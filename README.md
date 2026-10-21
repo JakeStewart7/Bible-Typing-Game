@@ -159,6 +159,7 @@ The top controls use a shaded forest-green backdrop; the player deck sits on a
 dark command board. Subdued map texture and a soft battlefield vignette add depth
 without obscuring text or intercepting clicks. The faded length reel sits to the
 left of typing, with its **PgUp / PgDn** indicator on the reel's left.
+Expanded length choices use a darker gray background.
 The deck fits the viewport height, with scrolling inside action panels
 and the squad list on narrow screens rather than clipping the bottom.
 The map starts at **120% zoom**, focused toward the home base. Use the mouse wheel
@@ -166,6 +167,8 @@ to zoom, and **right-drag, Alt-drag or middle-drag** to pan without issuing orde
 Hovering near a map edge does not scroll.
 Hold the **arrow keys** to pan; diagonal combinations work and opposite keys cancel.
 Right-click without dragging still issues movement orders or cancels placement.
+Successful movement orders briefly mark their destination with a player-colored
+click pulse; reduced-motion mode uses only a fade.
 Minimum zoom shows the entire map; zoom and pan do not change world coordinates or speed.
 Shift-drag retains additive army selection.
 
@@ -183,6 +186,7 @@ screens use a two-by-two layout, with scrolling inside action lists when needed.
 **Tab** cycles forward through the current role's typing and placement tasks;
 **Shift+Tab** cycles backward, wrapping at either end and returning focus to typing.
 Troop purchases and upgrades are excluded, so cycling never spends supplies.
+Unit Control explicitly reminds players that typing produces shared supplies.
 Tab retains normal focus navigation in menus, dropdowns, Dev options and tier challenges.
 Each button displays its shortcut, and locked tasks remain locked. Unit Control
 also uses Alt+1 for selection, Alt+2 for Defend, Alt+3 for Assault and Alt+4
@@ -195,30 +199,35 @@ targeting; it clears when targeting is cancelled, gameplay pauses, or the match 
 A translucent building shadow follows the map cursor; its outline is red at
 illegal sites. Click to place, or use Alt+arrow keys and Alt+Enter. Escape or
 **Cancel** dismisses placement; selecting the same prepared building resumes it
-without losing work. Relays still cost 15 supplies. Other buildings need their
+without losing work. Relays cost 30 supplies. Other buildings need their
 work bar filled first. Builders construct and repair automatically. Gatherers strike
-resource nodes, collect a visible yellow chunk, then physically carry it to the
-nearest completed relay or castle before harvesting again. Relays forward deposited
+resource nodes, collect a blue chunk (standard) or purple chunk (rich), then carry
+it to the nearest completed relay or castle before harvesting again. Relays forward deposited
 chunks to the castle through links no more than 155 map units apart; destroying a
-relay interrupts deliveries until the route is restored.
-Faint radius rings mark completed friendly relays and the castle. Hover a relay
-or the castle, or preview a new relay, to highlight completed living connections
+relay interrupts deliveries until the route is restored. Cargo keeps its origin
+color while carried, regardless of mining upgrades. Active relay deliveries use
+neutral-colored glowing chunks and muted links; disconnected cargo does not glow.
+Faint radius rings mark friendly relays, including unfinished ones, and the castle.
+Hover a relay or the castle, or preview a new relay, to highlight completed living connections
 within 155 map units, including the castle itself. A green preview reaches the
 castle network; an amber preview is disconnected. Radius rings use world units
-and remain accurate while zooming.
+and remain accurate while zooming. Unfinished relays can preview potential
+connections but do not deliver resources until construction finishes.
+
 Walls block travel for friendly and enemy units, including while being built.
 **Rotate +45 deg** or **Alt+R** turns the placement preview in 45-degree steps.
 In Defenses, click a friendly wall to highlight it and show its current angle
 and Rotate button. **Done**, Escape or clicking empty ground finishes editing;
-Shift-click still rotates a wall immediately.
-Rotation and placement cannot overlap units or leave the construction area.
+Shift-click still rotates a wall immediately. Rotation and placement cannot
+overlap units or leave the construction area.
 Units route around wall ends; enemies attack a blocking wall if no route exists.
 
 Controls, typing and logs use consistent bold Arial-family typography and larger,
 high-contrast text; repeated captions stay out of
 the battlefield. Enemy troops are dark-red squares (melee), diamonds (archers),
-and triangles (siege), with red outlines. Shared supplies lead the HUD, followed
-by population counts; castle health, wave countdown and season/day labels are
+and triangles (siege), with red outlines. The emphasized resource icon and count
+lead the HUD without a visible Supplies caption, followed by population counts;
+castle health, wave countdown and season/day labels are
 omitted. Weather, day/night lighting and Dev previews still work.
 **Help** contains the map key and instructions. On narrow screens the
 player panels scroll instead of shrinking their text.
@@ -238,15 +247,17 @@ history aligns with Player 1's left edge above the bottom panels, starts at the
 top of a stable-height window and fills downward, with a mostly transparent background,
 player-colored action text and gray world events. Dark text outlines keep entries
 readable over different battlefield colors. History is retained for the whole
-match, begins with **Game started**, and resets with **New game**. The history window has no visible
-scrollbar, fades smoothly at its edges, and can still be scrolled. The current
+match, begins with **Game started**, and resets with **New game**. The history panel
+is 25% narrower with half its previous inner left padding; entries wrap as needed.
+The history window has no visible scrollbar, fades smoothly at its edges, and
+can still be scrolled. The current
 world event and its countdown sit slightly above it in a soft purple panel,
 hidden between events.
 
 Matches start at **Tier 0**, with T1 starting units and buildings.
 The first challenge advances to Tier 1, unlocking T1 barracks, warrior training
 and tower construction; prepared construction work is preserved.
-The gold **Tier Up** hexagon hangs halfway below the header with a subtle depth
+The gold **Tier Up** hexagon hangs 40% below the header with a subtle depth
 shadow. It pauses the battle for one shared challenge:
 500 correct characters shared by the squad. Correct partial input counts
 immediately, without length bonuses or duplicate credit for backspacing and
@@ -256,6 +267,19 @@ shared progress bar use each player's light color and show their character share
 **Pause challenge** freezes typing without dismissing the dialog; **Resume
 challenge** continues with all work intact. Stopped computers do not prevent
 readiness or solo completion. Tier 2 adds archers, and Tier 3 adds catapults.
+
+Paid options use higher prices, while typing-only recruits and construction
+remain free of supply costs. Unaffordable buttons turn gray, show an exclamation
+mark and a crossed-out gray price, and report the available amount and shortage
+in their tooltip. The state updates as supplies arrive.
+
+| Purchase | Supplies |
+| --- | ---: |
+| Relay | 30 |
+| Warrior / Archer / Catapult | 25 / 45 / 80 |
+| Economy upgrade | 120 |
+| Warrior / Archer / Catapult upgrade | 60 / 100 / 160 |
+| T1 / T2 / T3 tower upgrade | 75 / 125 / 180 |
 Separate tiles let you
 build tier 1, 2 or 3 barracks and towers. Higher-tier construction fills more
 slowly; queued troop purchases require only supplies, not typing.

@@ -29,7 +29,7 @@ function roleActions(role: Role): string {
   if (role === 'defenses') return `<div class="stronghold-build-row">${task('builder', 'Builder')}${task('wall', 'Wall')}</div>
     <div class="stronghold-build-row">${[1, 2, 3].map(tier => task('tower', `Tower T${tier}`, tier)).join('')}</div>
     <div class="stronghold-build-row">${improvement('tower-1')}${improvement('tower-2')}${improvement('tower-3')}</div>`;
-  return '<p class="stronghold-army-help">Click or drag to select. Right-click to move. Shift adds units.</p>';
+  return '<p class="stronghold-army-help"><strong>Typing produces shared supplies.</strong><br>Click or drag to select. Right-click to move. Shift adds units.</p>';
 }
 function playerCard(id: string, index: number): string {
   return `<section class="stronghold-player" data-player="${id}">
@@ -59,7 +59,7 @@ export function strongholdWorkspaceMarkup(): string {
       <div class="stronghold-tier-mount"><button id="stronghold-ready" class="stronghold-tier" type="button"><span id="stronghold-tier-label">Tier 0</span><strong id="stronghold-tier-action">Tier Up</strong></button></div>
       <aside class="stronghold-hud" aria-label="Kingdom status">
         <div class="stronghold-populations">
-          <span class="stronghold-supplies" title="Shared supplies"><span>Supplies</span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--resource"></i><b id="stronghold-resources">50</b></span>
+          <span class="stronghold-supplies" title="Shared supplies"><span class="sr-only">Shared supplies: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--resource"></i><b id="stronghold-resources">50</b></span>
           <span title="Towers"><span class="sr-only">Towers: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--tower"></i><b id="stronghold-tower-count">0/8</b></span>
           <span title="Warriors"><span class="sr-only">Warriors: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--warrior"></i><b id="stronghold-warrior-count">2/18</b></span>
           <span title="Builders"><span class="sr-only">Builders: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--builder"></i><b id="stronghold-builder-count">1/4</b></span>
@@ -73,7 +73,7 @@ export function strongholdWorkspaceMarkup(): string {
         <p>Completed characters, including spaces, advance your selected free task. Short is 1-5 characters at 1x, Medium 6-11 at 1.1x, Long 12-24 at 1.25x, and Extra Long 25-40 at 1.5x. All lengths use normal words or word groups.</p>
         <p>Relays need no typing: select Relay and click the map to place its shadow. Other buildings need a full work bar first. Escape cancels placement. Builders construct and repair automatically.</p>
         <p>Use Rotate or Alt+R before placing a wall to turn it 45 degrees. In Defenses, click an existing friendly wall to show its angle and Rotate button; Done or Escape finishes editing. Shift-click also rotates immediately. Walls block all units; enemies go around them or attack a wall if there is no route.</p>
-        <p>Gatherers strike resource nodes and carry yellow supply chunks to the nearest relay or castle. Faint rings show relay and castle range. Hover either, or place a relay, to highlight nearby completed connections within 155 map units, including the castle. Green previews reach the castle network; amber previews are disconnected. Purple nodes yield twice as much. Broken connections stop relay deliveries.</p>
+        <p>Gatherers carry blue or purple chunks matching their resource node to the nearest relay or castle. Neutral glowing chunks travel through completed relay links. Faint rings show relay and castle range, including relays still under construction. Hover either, or place a relay, to highlight nearby completed connections within 155 map units, including the castle. Green previews reach the castle network; amber previews are disconnected. Purple nodes yield twice as much. Broken connections stop relay deliveries.</p>
         <p>In Unit Control, left-click or drag to select friendly units, right-click to move, and left-click empty ground to deselect. Shift adds units. Right-click cancels placement or rally targeting; left-click places the building or rally point. A plus badge on the cursor shows targeting mode.</p>
         <p>Gatherers and builders resume nearest work after two idle seconds at their destination. Builders and walls cost no supplies, only typing work.</p>
         <p>Supplies, Gatherers, Barracks, Builders, Walls and Towers need typing, not supplies. Each typing option has a small progress bar; select it to show its progress in the main player-colored bar. More expensive buildings fill more slowly. Excess progress from a completed entry carries into the next bar. Once construction is ready, further entries do not bank more completions. Troops, upgrades and relays cost supplies without typing.</p>
