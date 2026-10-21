@@ -1,7 +1,7 @@
 import { menuNavigationMarkup } from '../../ui/menu-navigation.ts';
 import { ACTION_LABELS, COSTS, isTypingAction, LENGTH_LABELS, MIN_TIER, ROLE_LABELS, TEXT_LENGTH_BONUSES } from '../domain/rules.ts';
 import { UPGRADE_OPTIONS } from '../domain/technology.ts';
-import { PHRASE_LENGTHS, ROLES, SEASONS, type Action, type Role, type UpgradeTarget } from '../domain/types.ts';
+import { PHRASE_LENGTHS, PLAYER_COLORS, ROLES, SEASONS, type Action, type Role, type UpgradeTarget } from '../domain/types.ts';
 import { SEASON_LABELS } from '../domain/environment.ts';
 import { taskShortcut } from './keyboard.ts';
 import { weatherMarkup } from './environment.ts';
@@ -104,6 +104,9 @@ export function strongholdWorkspaceMarkup(): string {
           </label>
           <label>Default text length
             <select id="stronghold-dev-length">${PHRASE_LENGTHS.map(length => `<option value="${length}">${LENGTH_LABELS[length]}</option>`).join('')}</select>
+          </label>
+          <label>Default player color
+            <select id="stronghold-dev-color">${Object.entries(PLAYER_COLORS).map(([name, color]) => `<option value="${color}">${name}</option>`).join('')}</select>
           </label>
           <label>Starting supplies <input id="stronghold-dev-resources" type="number" min="0" max="10000" step="1" required></label>
           <label>Starting map zoom <input id="stronghold-dev-zoom" type="number" min="1" max="2" step="0.1" required></label>

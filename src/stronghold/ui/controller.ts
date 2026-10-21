@@ -10,6 +10,7 @@ import { validateDeveloperOptions, type DeveloperOptions } from '../infrastructu
 import { MIN_MAP_ZOOM, MAX_MAP_ZOOM } from './map-camera.ts';
 import { actionShortcutKey, arrowLength } from './keyboard.ts';
 import { createSeasonalMusic } from '../audio/music.ts';
+import { isPlayerColor } from '../domain/options.ts';
 
 export function createStrongholdController(connection: StrongholdConnection, developer: {
   defaults: DeveloperOptions; save(options: DeveloperOptions): void;
@@ -33,10 +34,12 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   const developerForm = requireElement('stronghold-dev-form', HTMLFormElement);
   const startingComputers = requireElement('stronghold-dev-computers', HTMLSelectElement);
   const startingLength = requireElement('stronghold-dev-length', HTMLSelectElement);
+  const startingColor = requireElement('stronghold-dev-color', HTMLSelectElement);
   const startingResources = requireElement('stronghold-dev-resources', HTMLInputElement);
   const startingZoom = requireElement('stronghold-dev-zoom', HTMLInputElement);
   startingComputers.value = defaults.computersPaused ? 'stopped' : 'started';
   startingLength.value = defaults.length;
+  startingColor.value = defaults.playerColor;
   startingResources.value = String(defaults.resources);
   startingZoom.value = String(defaults.mapZoom);
   elements.camera.reset(defaults.mapZoom);
@@ -310,10 +313,12 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     try {
       const length = PHRASE_LENGTHS.find(length => length === startingLength.value);
       if (!length) throw new Error('Choose a valid default text length.');
+      const playerColor = startingColor.value;
+      if (!isPlayerColor(playerColor)) throw new Error('Choose a valid default player color.');
       if (!['started', 'stopped'].includes(startingComputers.value)) throw new Error('Choose whether computers start or stop.');
       const options: DeveloperOptions = {
         resources: startingResources.valueAsNumber, length, computersPaused: startingComputers.value === 'stopped',
-        mapZoom: startingZoom.valueAsNumber
+        mapZoom: startingZoom.valueAsNumber, playerColor
       };
       validateDeveloperOptions(options);
       developer.save(options);

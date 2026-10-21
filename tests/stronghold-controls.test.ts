@@ -3,7 +3,7 @@ import { cameraBounds } from '../src/stronghold/ui/map-camera.ts';
 import { unitMotionTransform } from '../src/stronghold/ui/battlefield.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
 import { addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
-import { PHRASE_LENGTHS, ROLES } from '../src/stronghold/domain/types.ts';
+import { PHRASE_LENGTHS, PLAYER_COLORS, ROLES } from '../src/stronghold/domain/types.ts';
 import { validateDeveloperOptions } from '../src/stronghold/infrastructure/developer-options.ts';
 import { equal, test } from './harness.ts';
 
@@ -62,7 +62,7 @@ test('Stronghold zoom camera stays within the full battlefield and Fit restores 
   equal(cameraBounds(10, { x: 500, y: 325 }).width, 500);
   for (const mapZoom of [NaN, Infinity, .5, 2.1]) {
     let rejected = false;
-    try { validateDeveloperOptions({ resources: 50, length: 'medium', computersPaused: false, mapZoom }); }
+    try { validateDeveloperOptions({ resources: 50, length: 'medium', computersPaused: false, mapZoom, playerColor: PLAYER_COLORS.Red }); }
     catch (error) { rejected = error instanceof Error && error.message.includes('map zoom'); }
     equal(rejected, true);
   }

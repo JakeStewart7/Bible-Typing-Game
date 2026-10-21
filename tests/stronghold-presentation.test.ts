@@ -2,6 +2,7 @@ import { addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
 import { unitMarkup } from '../src/stronghold/ui/battlefield.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
 import { equal, test } from './harness.ts';
+import { PLAYER_COLORS } from '../src/stronghold/domain/types.ts';
 
 test('Stronghold enemies use dark-red squares, diamonds and triangles with red outlines', () => {
   const state = createStronghold();
@@ -26,4 +27,6 @@ test('Stronghold concise controls retain accessible labels and essential costs',
   equal(markup.includes('for="stronghold-input"'), true);
   equal(markup.includes('for="stronghold-role-you"'), true);
   equal(markup.includes('id="stronghold-enemy"'), true);
+  equal(markup.includes('id="stronghold-dev-color"'), true);
+  for (const [name, color] of Object.entries(PLAYER_COLORS)) equal(markup.includes(`<option value="${color}">${name}</option>`), true);
 });

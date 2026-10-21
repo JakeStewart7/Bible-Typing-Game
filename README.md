@@ -75,10 +75,12 @@ Simulated teammates help with that selected work without switching your task.
 Ready work is preserved through tier challenges, and placement unlocks only at
 the building's required tier.
 
-**Dev options** sets the starting computer state, default text length, starting
+**Dev options** sets the starting computer state, default text length, default player
+color (red, blue, yellow or green), starting
 supplies (0-10,000), and starting map zoom (1.0-2.0). **Apply & new game** saves these defaults on this device and
 starts a fresh match. Subsequent **New game** actions and page reloads use the
 saved defaults; changing them does not save an ongoing match.
+Choosing a teammate's color swaps that teammate to red so everyone stays distinct.
 **Next Wave** in Dev options immediately spawns the next wave and resets the
 countdown without advancing battle time or restarting. It is unavailable while
 paused, during a tier challenge, or after the match ends.

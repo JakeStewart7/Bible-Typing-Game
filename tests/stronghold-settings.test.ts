@@ -3,7 +3,7 @@ import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
 import { TIER_QUOTA } from '../src/stronghold/domain/rules.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { addBuilding, createStronghold } from '../src/stronghold/domain/state.ts';
-import type { Participant, StrongholdCommand, StrongholdState } from '../src/stronghold/domain/types.ts';
+import { PLAYER_COLORS, type Participant, type StrongholdCommand, type StrongholdState } from '../src/stronghold/domain/types.ts';
 import { equal, test } from './harness.ts';
 import { AppStorage } from '../src/persistence/storage.ts';
 import { DEFAULT_DEVELOPER_OPTIONS, readDeveloperOptions, writeDeveloperOptions } from '../src/stronghold/infrastructure/developer-options.ts';
@@ -67,16 +67,31 @@ test('Stronghold developer defaults persist independently of the current match a
     removeItem: key => { values.delete(key); }
   });
   equal(readDeveloperOptions(storage), DEFAULT_DEVELOPER_OPTIONS);
-  const options = { resources: 25, length: 'long' as const, computersPaused: true, mapZoom: 1.5 };
+  const options = { resources: 25, length: 'long' as const, computersPaused: true, mapZoom: 1.5, playerColor: PLAYER_COLORS.Green };
   writeDeveloperOptions(storage, options);
   equal(readDeveloperOptions(storage), options);
   const saved = readDeveloperOptions(storage);
   saved.resources = 100;
   equal(readDeveloperOptions(storage).resources, 25);
   values.set('stronghold-developer-options', '{"resources":25,"length":"long","computersPaused":true}');
-  equal(readDeveloperOptions(storage), { ...options, mapZoom: 1.2 });
+  equal(readDeveloperOptions(storage), { ...options, mapZoom: 1.2, playerColor: PLAYER_COLORS.Red });
+  values.set('stronghold-developer-options', JSON.stringify({ ...options, playerColor: 'invalid' }));
+  equal(readDeveloperOptions(storage), DEFAULT_DEVELOPER_OPTIONS);
   values.set('stronghold-developer-options', '{"length":"obsolete"}');
   equal(readDeveloperOptions(storage), DEFAULT_DEVELOPER_OPTIONS);
+});
+
+test('Stronghold saved player colors survive restarts and keep teammate colors distinct', () => {
+  for (const playerColor of Object.values(PLAYER_COLORS)) {
+    const engine = new StrongholdEngine({ ...DEFAULT_DEVELOPER_OPTIONS, playerColor });
+    for (let match = 0; match < 2; match++) {
+      const snapshot = engine.snapshot('you');
+      equal(snapshot.players.find(player => player.id === 'you')?.color, playerColor);
+      equal(new Set(snapshot.players.map(player => player.color)).size, 4);
+      engine.restart();
+    }
+  }
+  equal(isMatchOptions({ ...DEFAULT_DEVELOPER_OPTIONS, playerColor: '#ffffff' }), false);
 });
 
 test('Stronghold starts with 50 supplies, Medium text and running computers, and restart clears task banks', () => {

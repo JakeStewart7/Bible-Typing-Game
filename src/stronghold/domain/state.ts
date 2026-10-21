@@ -5,6 +5,7 @@ import { createRoleTasks } from './tasks.ts';
 import { DEFAULT_MATCH_OPTIONS, validateMatchOptions } from './options.ts';
 import type { ArmyUnitKind, Building, BuildingKind, Participant, Point, Season, StrongholdMatchOptions, StrongholdState, Unit, UnitKind } from './types.ts';
 import { randomSeason, seasonalNodes } from './environment.ts';
+import { PLAYER_COLORS } from './types.ts';
 
 export function addUnit(state: StrongholdState, kind: UnitKind, point: Point, formation: ArmyUnitKind | null = null): Unit {
   const hp = ((formation ? UNIT_RULES[formation].hp : UNIT_RULES[kind].hp)
@@ -29,11 +30,13 @@ export function addBuilding(
 export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH_OPTIONS, season: Season = randomSeason()): StrongholdState {
   validateMatchOptions(options);
   const roster: Pick<Participant, 'id' | 'name' | 'color' | 'role' | 'simulated'>[] = [
-    { id: 'you', name: 'You', color: '#ff1726', role: 'economy', simulated: false },
-    { id: 'bot-1', name: 'Miriam', color: '#00aeef', role: 'production', simulated: true },
-    { id: 'bot-2', name: 'Caleb', color: '#ead500', role: 'army', simulated: true },
-    { id: 'bot-3', name: 'Esther', color: '#18b644', role: 'defenses', simulated: true }
+    { id: 'you', name: 'You', color: options.playerColor ?? PLAYER_COLORS.Red, role: 'economy', simulated: false },
+    { id: 'bot-1', name: 'Miriam', color: PLAYER_COLORS.Blue, role: 'production', simulated: true },
+    { id: 'bot-2', name: 'Caleb', color: PLAYER_COLORS.Yellow, role: 'army', simulated: true },
+    { id: 'bot-3', name: 'Esther', color: PLAYER_COLORS.Green, role: 'defenses', simulated: true }
   ];
+  const matchingTeammate = roster.find(player => player.simulated && player.color === options.playerColor);
+  if (matchingTeammate) matchingTeammate.color = PLAYER_COLORS.Red;
   const state: StrongholdState = {
     season, environmentElapsed: 0,
     phase: 'playing', tier: 0, elapsed: 0, wave: 0, waveIn: 60, resources: options.resources,
