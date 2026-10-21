@@ -22,7 +22,7 @@ function roleActions(role: Role): string {
   let index = 0;
   const task = (action: Action, label = ACTION_LABELS[action], tier?: number) => tile(action, label, tier, taskShortcut(index++));
   const improvement = (target: UpgradeTarget) => upgrade(target, taskShortcut(index++));
-  if (role === 'economy') return `<div class="stronghold-build-row">${task('resources', 'Supplies')}${task('worker', 'Gatherer')}${task('relay', 'Relay')}</div>${improvement('economy')}`;
+  if (role === 'economy') return `<div class="stronghold-build-row">${task('worker', 'Gatherer')}${task('relay', 'Relay')}${task('resources', 'Supplies')}</div>${improvement('economy')}`;
   if (role === 'production') return `<div class="stronghold-build-row">${[1, 2, 3].map(tier => task('barracks', `Barracks<br>Tier ${tier}`, tier)).join('')}</div>
     <div class="stronghold-build-row">${task('warrior', 'Warrior')}${task('archer', 'Archer')}${task('catapult', 'Catapult')}</div>
     <div class="stronghold-build-row">${improvement('warrior')}${improvement('archer')}${improvement('catapult')}</div>`;
@@ -67,7 +67,7 @@ export function strongholdWorkspaceMarkup(): string {
         <output id="stronghold-zoom">120%</output>
         <button id="stronghold-zoom-in" type="button" aria-label="Zoom in">+</button>
         <button id="stronghold-zoom-fit" type="button">Fit map</button>
-        <span>Scroll to zoom. Right-drag or move to map edges to pan.</span>
+        <span>Scroll to zoom. Arrows, right-drag or map edges to pan.</span>
       </div>
       <button id="stronghold-ready" class="stronghold-tier" type="button"><span id="stronghold-tier-label">Tier 1</span><strong id="stronghold-tier-action">Tier Up</strong></button>
       <aside class="stronghold-hud" aria-label="Kingdom status">
@@ -91,7 +91,8 @@ export function strongholdWorkspaceMarkup(): string {
         <p>Supplies, Gatherers, Barracks, Builders, Walls and Towers need typing, not supplies. Each typing option has a small progress bar; select it to show its progress in the main player-colored bar. More expensive buildings fill more slowly. Excess progress from a completed entry carries into the next bar. Once construction is ready, further entries do not bank more completions. Troops, upgrades and relays cost supplies without typing.</p>
         <p>Every match starts at Tier 1. Army selects Barracks work when you join. Fill the work bar, then click the map to place Tier 1 Barracks. You can prepare higher tiers before they unlock. Teammates help with the same selected work; placement still requires the matching tier. Unit Control can type for supplies while issuing orders.</p>
         <p>Each typing task keeps its progress when you switch tasks or roles. Building tiers keep separate progress. Dev options sets the defaults for new matches.</p>
-        <p>Use Left/Down for shorter text, Right/Up for longer text, or click the faded length options. Shift+arrows still selects typed text. Alt+number chooses the matching displayed option in your current role.</p>
+        <p>Tab selects the next typing or placement task; Shift+Tab selects the previous one, wrapping through your role's tasks without buying troops or upgrades. In menus and dropdowns, Tab keeps its normal focus behavior.</p>
+        <p>Arrow keys pan the map. Page Up selects longer text and Page Down shorter text, or click a length option. Shift+arrows still selects typed text. Alt+number chooses the matching displayed option in your current role.</p>
         <p>The map starts zoomed toward the home base. Scroll or use +/- to zoom; Fit map shows everything. Right-drag, Alt-drag or middle-drag pans. Move the pointer to a map edge to scroll. A right-click without dragging still moves units or cancels placement. Shift-drag still adds troops to your selection.</p>
         <p>Stop computers pauses simulated teammates and their barracks, not the battlefield. Resume them to finish a shared tier challenge.</p>
         <p>World events begin at 1, 3, 5 and subsequent odd minutes of battle time, last 35 seconds, and leave normal typing between events.</p>
@@ -131,10 +132,12 @@ export function strongholdWorkspaceMarkup(): string {
       <div class="stronghold-squad">${PLAYER_IDS.map(playerCard).join('')}</div>
       <div id="stronghold-private-slot">
         <section id="stronghold-private" class="stronghold-private" aria-label="Your private typing area">
+          <header class="stronghold-command-heading"><span>Command desk</span><small>Tab: switch task / Arrows: pan</small></header>
           <div class="stronghold-length-panel"><span id="stronghold-length-label" class="sr-only">Text length</span>
-            <div id="stronghold-length" class="stronghold-length-wheel" role="listbox" aria-labelledby="stronghold-length-label" aria-activedescendant="stronghold-length-medium" tabindex="0">
+            <div id="stronghold-length" class="stronghold-length-wheel" role="listbox" aria-labelledby="stronghold-length-label" aria-activedescendant="stronghold-length-medium" aria-keyshortcuts="PageUp PageDown" tabindex="0">
               ${PHRASE_LENGTHS.map(length => `<button id="stronghold-length-${length}" type="button" role="option" data-length="${length}" value="${length}" aria-selected="${length === 'medium'}" tabindex="-1">${LENGTH_LABELS[length]} <small class="stronghold-length-bonus">${TEXT_LENGTH_BONUSES[length]}x</small></button>`).join('')}
             </div>
+            <small class="stronghold-length-keys">PgUp / PgDn</small>
           </div>
           <section id="stronghold-typing" class="stronghold-typing">
             <div id="stronghold-phrase" class="text-display" tabindex="0" aria-label="Your private text to type"></div>

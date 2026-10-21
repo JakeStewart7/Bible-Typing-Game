@@ -33,7 +33,8 @@ Completed or destroyed jobs release their builders for reassignment.
 Matches start with **50 supplies** and **Medium** text. Choose **Short** (1-5
 characters, 1x), **Medium** (6-11, 1.1x), **Long** (12-24, 1.25x), or
 **Extra Long** (25-40, 1.5x) in the
-length scroller. Normal play and tier challenges use words or word groups.
+length scroller, using **Page Up** for longer text and **Page Down** for shorter
+text (or click an option). Normal play and tier challenges use words or word groups.
 World events have separate left-hand, vowel, number, symbol and code drill pools
 in `src/stronghold/domain/event-phrases.ts`, respecting the selected length.
 The four separately exported, frozen constants in
@@ -148,30 +149,37 @@ licensed under [Creative Commons: By Attribution 4.0](https://creativecommons.or
 Recordings are unmodified and loop during playback; source details are also in
 `assets/music/stronghold/CREDITS.txt`.
 
-The slim, stretched private typing strip leaves more height for the battlefield.
+The framed **Command desk** typing window leaves room for the battlefield.
 Its input stays 420px wide (or fits the available space on smaller screens),
 centered beneath the displayed text, with the unlabeled length scroller directly
-to its left. The top controls have a softly shaded blue-gray backdrop; feedback
-appears at their bottom left. The typing module has a full-width white background,
-while the player deck stays neutral gray across the full width. The header and
-footer have subtle square-grid textures and crisp edge highlights to match the
-shape-based battlefield. These backgrounds do not intercept map or control clicks.
+to its left. A parchment surface, inset text panel, brass edging and player-colored
+input make the desk distinct from the battlefield. The top controls use a shaded
+stone-green backdrop; the player deck sits on a dark textured command board.
+Warm player cards, subdued map texture and a soft battlefield vignette add depth
+without obscuring text or intercepting clicks. The desk's small legend shows its
+task and map shortcuts, and the length control is labelled **PgUp / PgDn**.
 The deck fits the viewport height, with scrolling inside action panels
 and the squad list on narrow screens rather than clipping the bottom.
 The map starts at **120% zoom**, focused toward the home base. Use the mouse wheel
 or **+/-** to zoom, **Fit map** to see everything, and **right-drag, Alt-drag or
 middle-drag** to pan without issuing orders. Hover near a map edge to scroll.
+Hold the **arrow keys** to pan; diagonal combinations work and opposite keys cancel.
 Right-click without dragging still issues movement orders or cancels placement.
 Fit shows the entire map; zoom and pan do not change world coordinates or speed.
 Shift-drag retains additive army selection.
 
-The length selector is a faded reel: **Left/Down** selects shorter entries,
-**Right/Up** longer entries, from anywhere outside dropdowns and dev fields.
+The length selector is a faded reel: **Page Down** selects shorter entries,
+**Page Up** longer entries, from anywhere outside dropdowns and dev fields.
 Clicking an option also works; endpoints do not wrap or discard current typing.
 Text length selections do not add entries to the event log.
 Shift+arrows still selects typed text. **Alt+1...9** selects the corresponding
 visible task in your current role. Army now has nine tasks and no Supplies tile;
 Unit Control has no Supplies tile either.
+Economy orders its options **Gatherer, Relay, Supplies**, then Upgrade.
+**Tab** cycles forward through the current role's typing and placement tasks;
+**Shift+Tab** cycles backward, wrapping at either end and returning focus to typing.
+Troop purchases and upgrades are excluded, so cycling never spends supplies.
+Tab retains normal focus navigation in menus, dropdowns, Dev options and tier challenges.
 Each button displays its shortcut, and locked tasks remain locked. Unit Control
 also uses Alt+1 for selection, Alt+2 for Defend, Alt+3 for Assault and Alt+4
 for rally placement. Keyboard actions restore typing focus.

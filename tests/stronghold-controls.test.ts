@@ -1,4 +1,4 @@
-import { arrowLength, actionShortcutKey, taskShortcut } from '../src/stronghold/ui/keyboard.ts';
+import { arrowPan, typingLengthKey, nextTaskIndex, actionShortcutKey, taskShortcut } from '../src/stronghold/ui/keyboard.ts';
 import { cameraBounds } from '../src/stronghold/ui/map-camera.ts';
 import { unitMotionTransform } from '../src/stronghold/ui/battlefield.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
@@ -7,14 +7,40 @@ import { PHRASE_LENGTHS, PLAYER_COLORS, ROLES } from '../src/stronghold/domain/t
 import { validateDeveloperOptions } from '../src/stronghold/infrastructure/developer-options.ts';
 import { equal, test } from './harness.ts';
 
-test('Stronghold arrow lengths move in both axes, clamp at endpoints and leave other keys alone', () => {
+test('Stronghold Page Up and Page Down change length, clamp at endpoints and leave arrows for map panning', () => {
   for (const [index, length] of PHRASE_LENGTHS.entries()) {
-    for (const key of ['ArrowRight', 'ArrowUp']) equal(arrowLength(length, key), PHRASE_LENGTHS[Math.min(3, index + 1)]);
-    for (const key of ['ArrowLeft', 'ArrowDown']) equal(arrowLength(length, key), PHRASE_LENGTHS[Math.max(0, index - 1)]);
-    equal(arrowLength(length, 'a'), null);
+    equal(typingLengthKey(length, 'PageUp'), PHRASE_LENGTHS[Math.min(3, index + 1)]);
+    equal(typingLengthKey(length, 'PageDown'), PHRASE_LENGTHS[Math.max(0, index - 1)]);
+    for (const key of ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'a']) equal(typingLengthKey(length, key), null);
   }
 });
 
+test('Stronghold task cycling wraps forwards and backwards without treating paid actions as tasks', () => {
+  equal(nextTaskIndex(0, 3, false), 1);
+  equal(nextTaskIndex(1, 3, false), 2);
+  equal(nextTaskIndex(2, 3, false), 0);
+  equal(nextTaskIndex(0, 3, true), 2);
+  equal(nextTaskIndex(2, 3, true), 1);
+  equal(nextTaskIndex(-1, 3, false), 0);
+  equal(nextTaskIndex(-1, 3, true), 2);
+  equal(nextTaskIndex(0, 0, false), null);
+  equal(nextTaskIndex(0, 1, true), 0);
+  const markup = strongholdWorkspaceMarkup();
+  const economy = /data-role="economy">([\s\S]*?)data-role="production"/.exec(markup)?.[1];
+  if (!economy) throw new Error('Missing economy tasks.');
+  equal([...economy.matchAll(/data-action="([^"]+)"/g)].map(match => match[1]), ['worker', 'relay', 'resources', 'upgrade']);
+  equal([...economy.matchAll(/data-shortcut="([^"]+)"/g)].map(match => match[1]), ['1', '2', '3', '4']);
+  equal(markup.includes('aria-keyshortcuts="PageUp PageDown"'), true);
+  equal(markup.includes('Command desk'), true);
+});
+
+test('Stronghold arrow panning combines simultaneous keys and opposite directions cancel', () => {
+  equal(arrowPan(new Set()), { x: 0, y: 0 });
+  equal(arrowPan(new Set(['ArrowLeft', 'ArrowUp'])), { x: -1, y: -1 });
+  equal(arrowPan(new Set(['ArrowRight', 'ArrowDown'])), { x: 1, y: 1 });
+  equal(arrowPan(new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'])), { x: 0, y: 0 });
+  equal(arrowPan(new Set(['PageUp', 'PageDown', 'Tab'])), { x: 0, y: 0 });
+});
 test('Stronghold role shortcuts use Alt+1 through Alt+0 without capturing bare numbers or AltGr', () => {
   equal(Array.from({ length: 10 }, (_, index) => taskShortcut(index)), ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
   const key = { key: '2', code: 'Digit2', altKey: true, ctrlKey: false, metaKey: false };

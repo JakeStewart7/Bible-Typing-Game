@@ -49,14 +49,15 @@ test('Stronghold role mates have private text lengths and contribute their own c
   equal(teammate.work, firstWork);
   const oldId = you.phraseId;
   const phrase = you.phrase;
-  executeCommand(state, you, { type: 'TYPE', phraseId: oldId, text: phrase.slice(0, 2) });
+  const partial = phrase.slice(0, -1);
+  executeCommand(state, you, { type: 'TYPE', phraseId: oldId, text: partial });
   executeCommand(state, teammate, { type: 'LENGTH', length: 'extra-long' });
   equal(you.work, firstWork);
   equal(you.length, 'short');
   equal(teammate.length, 'extra-long');
   equal(you.phraseId, oldId);
   equal(you.phrase, phrase);
-  equal(you.typed, phrase.slice(0, 2));
+  equal(you.typed, partial);
   const work = firstWork + phraseWork(you);
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
   equal(you.work, work);
@@ -120,6 +121,7 @@ test('Stronghold private lengths survive role switches and world events refresh 
   executeCommand(state, you, { type: 'ROLE', role: 'production' });
   equal(you.length, 'short');
   equal(teammate.length, 'medium');
+  you.phrase = 'tree';
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase.slice(0, 2) });
   const phrase = you.phrase;
   const phraseId = you.phraseId;

@@ -8,7 +8,7 @@ import { mapPoint, readyBuilding, troopsInRectangle, type PlacementKind } from '
 import { setText } from './dom-updates.ts';
 import { validateDeveloperOptions, type DeveloperOptions } from '../infrastructure/developer-options.ts';
 import { edgePan, wheelZoom, MIN_MAP_ZOOM, MAX_MAP_ZOOM } from './map-camera.ts';
-import { actionShortcutKey, arrowLength } from './keyboard.ts';
+import { actionShortcutKey, arrowPan, nextTaskIndex, typingLengthKey } from './keyboard.ts';
 import { createSeasonalMusic } from '../audio/music.ts';
 import { isPlayerColor } from '../domain/options.ts';
 
@@ -67,6 +67,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   let mouse: Point | null = null;
   let edgeFrame: number | null = null;
   let edgeTime = 0;
+  const panKeys = new Set<string>();
   let drag: { start: Point; end: Point; pointer: number; additive: boolean; unitId: number | null; moved: boolean } | null = null;
   let pan: { pointer: number; start: Point; client: Point; center: Point; matrix: DOMMatrix; right: boolean; moved: boolean } | null = null;
   const running = (): boolean => shown && !paused && !credits.open && !document.hidden;
@@ -81,6 +82,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     }
   }
   function clearDrag(): void {
+    panKeys.clear();
     mouse = null;
     if (edgeFrame !== null) cancelAnimationFrame(edgeFrame);
     edgeFrame = null;
@@ -195,15 +197,17 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   }
   function panAtEdge(time: number): void {
     edgeFrame = null;
-    if (!mouse || pan || !running() || snapshot?.phase !== 'playing') return;
-    const direction = edgePan(mouse, elements.map.getBoundingClientRect());
+    if (pan || !running() || snapshot?.phase !== 'playing') return;
+    const edge = mouse ? edgePan(mouse, elements.map.getBoundingClientRect()) : { x: 0, y: 0 };
+    const keys = arrowPan(panKeys);
+    const direction = { x: Math.max(-1, Math.min(1, edge.x + keys.x)), y: Math.max(-1, Math.min(1, edge.y + keys.y)) };
     if (!direction.x && !direction.y) return;
     const seconds = Math.min(.05, Math.max(0, (time - edgeTime) / 1000));
     edgeTime = time;
     const center = elements.camera.center;
     const speed = 220 / elements.camera.zoom;
     elements.camera.panTo({ x: center.x + direction.x * speed * seconds, y: center.y + direction.y * speed * seconds });
-    cursor = mapPoint(elements.map, mouse.x, mouse.y);
+    if (mouse) cursor = mapPoint(elements.map, mouse.x, mouse.y);
     elements.mapControls.ghost(snapshot, placing(), cursor, wallRotation);
     edgeFrame = requestAnimationFrame(panAtEdge);
   }
@@ -299,8 +303,10 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   });
   elements.map.addEventListener('pointerleave', () => {
     mouse = null;
-    if (edgeFrame !== null) cancelAnimationFrame(edgeFrame);
-    edgeFrame = null;
+    if (!panKeys.size) {
+      if (edgeFrame !== null) cancelAnimationFrame(edgeFrame);
+      edgeFrame = null;
+    }
     if (drag || pan) return;
     cursor = null;
     if (snapshot) elements.mapControls.ghost(snapshot, null, null);
@@ -425,6 +431,24 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     }
     const shortcut = actionShortcutKey(event);
     const player = self();
+    if (event.key === 'Tab' && !event.altKey && !event.ctrlKey && !event.metaKey && player && snapshot.phase === 'playing') {
+      const own = elements.playerCards.find(card => card.id === player.id);
+      const active = document.activeElement;
+      const inTasks = active instanceof Element && Boolean(own?.actions.contains(active));
+      if (active === elements.input || active === elements.map || elements.length.contains(active) || inTasks) {
+        const tasks = own?.groups.find(group => group.role === player.role)?.buttons
+          .filter(button => (button.miniBar || button.action === 'relay') && !button.element.disabled) ?? [];
+        const current = tasks.findIndex(button => relayPlacement ? button.action === 'relay'
+          : button.action === player.action && (!button.tier || button.tier === player.constructionTier));
+        const next = nextTaskIndex(current, tasks.length, event.shiftKey);
+        if (next !== null) {
+          event.preventDefault();
+          if (!event.repeat) tasks[next]?.element.click();
+          focusTyping();
+          return;
+        }
+      }
+    }
     if (shortcut && player && snapshot.phase === 'playing') {
       const own = elements.playerCards.find(card => card.id === player.id);
       const button = own?.groups.find(group => group.role === player.role)?.buttons.find(button => button.element.dataset.shortcut === shortcut)?.element
@@ -438,7 +462,13 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     }
     if (player && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey
       && !elements.input.disabled && !(document.activeElement instanceof HTMLSelectElement)) {
-      const length = arrowLength(player.length, event.key);
+      if (snapshot.phase === 'playing' && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
+        event.preventDefault();
+        panKeys.add(event.key);
+        if (edgeFrame === null) { edgeTime = performance.now(); edgeFrame = requestAnimationFrame(panAtEdge); }
+        return;
+      }
+      const length = typingLengthKey(player.length, event.key);
       if (length) {
         event.preventDefault();
         if (length !== player.length) void send({ type: 'LENGTH', length });
@@ -455,8 +485,11 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     elements.input.dispatchEvent(new Event('input', { bubbles: true }));
   };
   document.addEventListener('keydown', keyboard);
-  const visibility = (): void => { connection.setActive(running()); display(); focusTyping(); };
+  const keyup = (event: KeyboardEvent): void => { panKeys.delete(event.key); };
+  document.addEventListener('keyup', keyup);
+  const visibility = (): void => { if (document.hidden) clearDrag(); connection.setActive(running()); display(); focusTyping(); };
   document.addEventListener('visibilitychange', visibility);
+  window.addEventListener('blur', clearDrag);
   window.addEventListener('focus', focusTyping);
   const resize = (): void => { typingDirty = true; display(); };
   window.addEventListener('resize', resize);
@@ -471,8 +504,10 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       unsubscribe(); clearDrag(); music.dispose();
       elements.screen.removeEventListener('click', clicked);
       document.removeEventListener('keydown', keyboard);
+      document.removeEventListener('keyup', keyup);
       document.removeEventListener('visibilitychange', visibility);
       window.removeEventListener('focus', focusTyping);
+      window.removeEventListener('blur', clearDrag);
       window.removeEventListener('resize', resize);
       credits.removeEventListener('close', creditsClosed);
       if (elements.dialog.open) elements.dialog.close();
