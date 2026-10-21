@@ -96,6 +96,7 @@ test('Stronghold saved player colors survive restarts and keep teammate colors d
 
 test('Stronghold starts with 50 supplies, Medium text and running computers, and restart clears task banks', () => {
   const engine = new StrongholdEngine();
+  engine.send('you', { type: 'SET_SEASON', season: 'summer' });
   const initial = engine.snapshot('you');
   equal(initial.resources, 50);
   equal(initial.tier, 0);
