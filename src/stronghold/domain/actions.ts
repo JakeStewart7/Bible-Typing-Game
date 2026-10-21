@@ -6,7 +6,7 @@ import { ENTITY_LABELS, playerEvent, recordEvent } from './events.ts';
 import { PHRASE_LENGTHS, SEASONS, type Action, type BuildingKind, type Participant, type Point, type StrongholdCommand, type StrongholdState } from './types.ts';
 import { restoreRoleTask, saveRoleTask, taskKey } from './tasks.ts';
 import { spawnWave } from './combat.ts';
-import { daylight, DAY_SECONDS, NIGHT_SECONDS, SEASON_LABELS, seasonalNodes } from './environment.ts';
+import { creditResources, daylight, DAY_SECONDS, NIGHT_SECONDS, SEASON_BONUSES, SEASON_LABELS, seasonalNodes } from './environment.ts';
 import { tierProgress } from './tier-progress.ts';
 import { wallContains, WALL_HALF_LENGTH, WALL_HALF_WIDTH } from './navigation.ts';
 import { isArmyUnit, queuedUnits, trainingBarracks, TRAINING_SECONDS } from './training.ts';
@@ -58,7 +58,7 @@ export function placementProblem(
 
 function performAction(state: StrongholdState, player: Participant, action: Action, upgrade = player.upgradeTarget): void {
   if (action === 'resources') {
-    state.resources += 18 + state.upgrades.economy * 6;
+    creditResources(state, 18 + state.upgrades.economy * 6);
     playerEvent(state, player, 'gathered Supplies');
   } else if (action === 'upgrade') {
     applyUpgrade(state, { ...player, upgradeTarget: upgrade });
@@ -79,7 +79,8 @@ export function completePhrase(state: StrongholdState, player: Participant): voi
   player.completed++;
   if (state.phase === 'tier-up') {
     const progress = tierProgress(state.players);
-    player.contribution += Math.min(progress.goal - progress.completed, player.phrase.length);
+    const work = player.phrase.length * SEASON_BONUSES[state.season].typing;
+    player.contribution = Math.round((player.contribution + Math.min(progress.goal - progress.completed, work)) * 100) / 100;
     if (tierProgress(state.players).completed === progress.goal) {
       state.tier++;
       state.phase = 'playing';
@@ -91,7 +92,7 @@ export function completePhrase(state: StrongholdState, player: Participant): voi
   } else {
     const action = player.action === 'relay' ? 'resources' : player.action;
     player.actionPhrases++;
-    if (player.work < taskWork(player)) player.work = Math.round((player.work + phraseWork(player)) * 100) / 100;
+    if (player.work < taskWork(player)) player.work = Math.round((player.work + phraseWork(player) * SEASON_BONUSES[state.season].typing) * 100) / 100;
     if (player.work < taskWork(player)) {
       assignPhrase(state, player);
       return;

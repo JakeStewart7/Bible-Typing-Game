@@ -2,7 +2,7 @@ import { executeCommand } from '../src/stronghold/domain/actions.ts';
 import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
 import { TIER_CHARACTER_GOAL } from '../src/stronghold/domain/rules.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
-import { addBuilding, createStronghold } from '../src/stronghold/domain/state.ts';
+import { addBuilding, createStronghold } from './stronghold-fixtures.ts';
 import { PLAYER_COLORS, type Participant, type StrongholdCommand, type StrongholdState } from '../src/stronghold/domain/types.ts';
 import { equal, test } from './harness.ts';
 import { AppStorage } from '../src/persistence/storage.ts';

@@ -1,4 +1,4 @@
-import { addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
+import { addUnit, createStronghold } from './stronghold-fixtures.ts';
 import { unitMarkup } from '../src/stronghold/ui/battlefield.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
 import { equal, test } from './harness.ts';

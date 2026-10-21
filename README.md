@@ -123,6 +123,14 @@ dusk/dawn fades. Night blends a moonlit blue overlay into the entire Stronghold
 view, including its UI and tier challenge, preserving vibrant colors rather than
 uniformly dimming the screen. Pausing, tabbing away and tier challenges
 freeze the environment clock; new games start in daylight.
+Seasons also change gameplay: summer makes every friendly and enemy unit 15%
+faster; winter makes all units 15% slower and resource income worth 20% less.
+Spring increases resource income by 20%. Resource value applies once when
+supplies are credited, both from typing and from delivered cargo, including
+economy upgrades. Cargo and existing supplies are not rewritten on a season change.
+Fall adds 15% to completed typing work, including world-event drills and shared
+Tier Up contributions; partial input still earns nothing. Seasonal modifiers
+take effect immediately, and fractional supplies and work retain two decimals.
 Under **Dev options / Current match**, **Skip to Night** and **Skip to Day** jump
 the environment clock without advancing waves, world events or battle time.
 The **Season** selector immediately updates terrain, weather, music and resource

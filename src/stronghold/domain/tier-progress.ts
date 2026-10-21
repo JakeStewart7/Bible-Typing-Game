@@ -3,7 +3,7 @@ import type { Participant } from './types.ts';
 
 export function tierProgress(players: readonly Pick<Participant, 'contribution'>[]) {
   return {
-    completed: players.reduce((total, player) => total + player.contribution, 0),
+    completed: Math.round(players.reduce((total, player) => total + player.contribution, 0) * 100) / 100,
     goal: TIER_CHARACTER_GOAL
   };
 }

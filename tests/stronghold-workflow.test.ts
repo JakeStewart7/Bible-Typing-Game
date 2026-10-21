@@ -1,7 +1,7 @@
 import { executeCommand, placementProblem } from '../src/stronghold/domain/actions.ts';
 import { spawnWave, updateCombat } from '../src/stronghold/domain/combat.ts';
 import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
-import { addBuilding, addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
+import { addBuilding, addUnit, createStronghold } from './stronghold-fixtures.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { phraseWork, taskWork } from '../src/stronghold/domain/technology.ts';
 import { COSTS, isTypingAction, TEXT_LENGTH_BONUSES, TEXT_LENGTH_RANGES, TIER_CHARACTER_GOAL } from '../src/stronghold/domain/rules.ts';
@@ -328,6 +328,7 @@ test('Stronghold relays require only legal placement and do not spend typing wor
 
 test('Stronghold army control can always type for shared supplies', () => {
   const engine = new StrongholdEngine();
+  engine.send('you', { type: 'SET_SEASON', season: 'summer' });
   engine.send('you', { type: 'ROLE', role: 'army' });
   engine.send('you', { type: 'ACTION', action: 'resources' });
   let work = 0;

@@ -1,5 +1,6 @@
 import { distance, moveToward, validPoint } from './rules.ts';
 import type { Building, Point, StrongholdState, Unit } from './types.ts';
+import { SEASON_BONUSES } from './environment.ts';
 
 export const WALL_HALF_LENGTH = 24.5;
 export const WALL_HALF_WIDTH = 5.5;
@@ -103,7 +104,8 @@ function findPath(layout: Layout, start: Point, target: Point): Point[] {
   }
   return [];
 }
-export function moveUnitToward(world: World, unit: Unit, target: Point, travel: number): boolean {
+export function moveUnitToward(world: World & Pick<StrongholdState, 'season'>, unit: Unit, target: Point, travel: number): boolean {
+  travel *= SEASON_BONUSES[world.season].movement;
   const layout = layoutFor(world);
   let route = routes.get(unit);
   if (!route || route.layout !== layout || distance(route.target, target) > .1) {

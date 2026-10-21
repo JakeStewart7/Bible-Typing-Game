@@ -2,7 +2,7 @@ import { arrowPan, typingLengthKey, nextTaskIndex, actionShortcutKey, taskShortc
 import { cameraBounds } from '../src/stronghold/ui/map-camera.ts';
 import { buildingMarkup, unitMarkup, unitMotionTransform } from '../src/stronghold/ui/battlefield.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
-import { addBuilding, addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
+import { addBuilding, addUnit, createStronghold } from './stronghold-fixtures.ts';
 import { PHRASE_LENGTHS, PLAYER_COLORS, ROLES } from '../src/stronghold/domain/types.ts';
 import { validateDeveloperOptions } from '../src/stronghold/infrastructure/developer-options.ts';
 import { equal, test } from './harness.ts';

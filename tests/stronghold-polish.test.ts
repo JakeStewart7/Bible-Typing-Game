@@ -7,7 +7,7 @@ import { assignPhrase, TIER_WORD_POOLS } from '../src/stronghold/domain/phrases.
 import { tierProgress } from '../src/stronghold/domain/tier-progress.ts';
 import { distance, MIN_TIER, TEXT_LENGTH_RANGES, UNIT_CAPS, UNIT_RULES } from '../src/stronghold/domain/rules.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
-import { addBuilding, addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
+import { addBuilding, addUnit, createStronghold } from './stronghold-fixtures.ts';
 import { queuedUnits, TRAINING_SECONDS } from '../src/stronghold/domain/training.ts';
 import { PHRASE_LENGTHS } from '../src/stronghold/domain/types.ts';
 import { wheelZoom } from '../src/stronghold/ui/map-camera.ts';
@@ -200,7 +200,7 @@ test('Stronghold warriors and opposing formations have identical base health, da
 
 test('Stronghold paid queues train FIFO at matching barracks, pay only once and stop when empty', () => {
   for (const kind of ['warrior', 'archer', 'catapult'] as const) {
-    const state = createStronghold({ resources: 1000, length: 'medium', computersPaused: true });
+    const state = createStronghold({ resources: 1000, length: 'medium', computersPaused: true }, 'fall');
     state.tier = 3; state.units = []; state.buildings = [];
     const player = state.players[0]!;
     executeCommand(state, player, { type: 'ROLE', role: 'production' });

@@ -2,6 +2,7 @@ import { distance, moveToward, RELAY_RANGE, UNIT_RULES } from './rules.ts';
 import type { Building, Point, StrongholdState, Unit } from './types.ts';
 import { ENTITY_LABELS, recordEvent } from './events.ts';
 import { moveUnitToward, wallApproach } from './navigation.ts';
+import { creditResources } from './environment.ts';
 
 export function relayNeighbors(state: Pick<StrongholdState, 'buildings'>, point: Point, excludeId?: number): Building[] {
   return state.buildings.filter(building => (building.kind === 'relay' || building.kind === 'castle')
@@ -176,7 +177,7 @@ export function updateLogistics(state: StrongholdState, seconds: number): void {
     if (!connected.includes(depot)) continue;
     moveToward(chunk, depot, seconds * 85);
     if (distance(chunk, depot) < 6) {
-      if (depot.kind === 'castle') { state.resources += chunk.amount; chunk.amount = 0; }
+      if (depot.kind === 'castle') { creditResources(state, chunk.amount); chunk.amount = 0; }
       else chunk.target = routes.get(depot.id)?.id ?? null;
     }
   }

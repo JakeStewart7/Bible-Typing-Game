@@ -2,7 +2,7 @@ import { executeCommand } from '../src/stronghold/domain/actions.ts';
 import { spawnWave, updateCombat } from '../src/stronghold/domain/combat.ts';
 import { updateLogistics } from '../src/stronghold/domain/logistics.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
-import { addBuilding, addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
+import { addBuilding, addUnit, createStronghold } from './stronghold-fixtures.ts';
 import { distance, UNIT_RULES } from '../src/stronghold/domain/rules.ts';
 import { phraseWork } from '../src/stronghold/domain/technology.ts';
 import { buildingMarkup, unitMarkup, unitMotionTransform } from '../src/stronghold/ui/battlefield.ts';
@@ -83,7 +83,7 @@ test('Stronghold Next Wave rejects computers, tier challenges and finished match
 test('Stronghold units retain slow movement and double health, with equal opposing warrior stats', () => {
   const original = { worker: [42, 35], builder: [50, 55], warrior: [62, 100],
     archer: [55, 65], catapult: [32, 110], invader: [62, 100] } as const;
-  const state = createStronghold();
+  const state = createStronghold(undefined, 'fall');
   state.units = [];
   state.nodes = [{ id: 100, x: 100, y: 500, remaining: 100, rich: false }];
   addBuilding(state, 'barracks', { x: 200, y: 500 });
@@ -119,7 +119,7 @@ test('Stronghold both bases keep a 4000 HP maximum through enemy upgrades withou
 
 test('Stronghold gatherers and builders follow move orders then resume nearest work after two idle seconds', () => {
   for (const kind of ['worker', 'builder'] as const) {
-    const state = createStronghold();
+    const state = createStronghold(undefined, 'fall');
     const player = state.players[0];
     if (!player) throw new Error('Missing player.');
     executeCommand(state, player, { type: 'ROLE', role: 'army' });

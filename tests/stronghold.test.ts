@@ -2,7 +2,7 @@ import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
 import { actionProblem, executeCommand } from '../src/stronghold/domain/actions.ts';
 import { updateCombat, spawnWave } from '../src/stronghold/domain/combat.ts';
 import { connectedRelays, updateLogistics } from '../src/stronghold/domain/logistics.ts';
-import { addBuilding, addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
+import { addBuilding, addUnit, createStronghold } from './stronghold-fixtures.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { TEXT_LENGTH_RANGES, TIER_CHARACTER_GOAL } from '../src/stronghold/domain/rules.ts';
 import { LocalStrongholdConnection } from '../src/stronghold/infrastructure/local-connection.ts';

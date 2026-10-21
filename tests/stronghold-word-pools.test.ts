@@ -1,7 +1,7 @@
 import { WORD_POOLS, SHORT_WORDS, MEDIUM_WORDS, LONG_WORDS, EXTRA_LONG_WORDS } from '../src/stronghold/domain/word-pools.ts';
 import { PHRASE_LENGTHS } from '../src/stronghold/domain/types.ts';
 import { TEXT_LENGTH_RANGES } from '../src/stronghold/domain/rules.ts';
-import { createStronghold } from '../src/stronghold/domain/state.ts';
+import { createStronghold } from './stronghold-fixtures.ts';
 import { assignPhrase } from '../src/stronghold/domain/phrases.ts';
 import { equal, test } from './harness.ts';
 

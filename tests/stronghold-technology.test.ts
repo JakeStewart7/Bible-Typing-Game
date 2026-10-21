@@ -1,5 +1,5 @@
 import { executeCommand } from '../src/stronghold/domain/actions.ts';
-import { createStronghold, addBuilding, addUnit } from '../src/stronghold/domain/state.ts';
+import { createStronghold, addBuilding, addUnit } from './stronghold-fixtures.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { phraseWork, taskWork, unitUpgrade, upgradeLimit } from '../src/stronghold/domain/technology.ts';
 import type { Participant, StrongholdState } from '../src/stronghold/domain/types.ts';
