@@ -146,7 +146,10 @@ The eight original MP3s in `assets/music/stronghold/` total 57,194,887 bytes
 site. **Credits** opens a dedicated in-game page with every title and official
 source link. All eight tracks are by **Kevin MacLeod (incompetech.com)**,
 licensed under [Creative Commons: By Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
-Recordings are unmodified and loop during playback; source details are also in
+Recordings are unmodified and loop during playback. Music waits three seconds
+before its first playback, then fades in over 750 milliseconds. Pausing, muting
+and changing season or day/night fade out; resuming and the next track fade in.
+The volume slider preserves its target across fades. Source details are also in
 `assets/music/stronghold/CREDITS.txt`.
 
 The thin typing window leaves room for the battlefield, with the phrase and input
