@@ -1,6 +1,7 @@
 import { distance, moveToward, RELAY_RANGE, UNIT_RULES } from './rules.ts';
 import type { Building, StrongholdState, Unit } from './types.ts';
 import { ENTITY_LABELS, recordEvent } from './events.ts';
+import { moveUnitToward, wallApproach } from './navigation.ts';
 
 export function connectedRelays(state: StrongholdState): Building[] {
   const connected = state.buildings.filter(building => building.kind === 'castle' && building.hp > 0);
@@ -18,11 +19,11 @@ export function connectedRelays(state: StrongholdState): Building[] {
   return connected;
 }
 
-function automaticWorkTime(unit: Unit, seconds: number): number {
+function automaticWorkTime(state: StrongholdState, unit: Unit, seconds: number): number {
   if (unit.destination) {
     const travelTime = distance(unit, unit.destination) / UNIT_RULES[unit.kind].speed;
-    moveToward(unit, unit.destination, seconds * UNIT_RULES[unit.kind].speed);
-    if (travelTime - seconds > 1e-9) return 0;
+    moveUnitToward(state, unit, unit.destination, seconds * UNIT_RULES[unit.kind].speed);
+    if (distance(unit, unit.destination) > .001) return 0;
     unit.destination = null;
     unit.idleTime = 0;
     seconds = Math.max(0, seconds - travelTime);
@@ -39,7 +40,7 @@ function automaticWorkTime(unit: Unit, seconds: number): number {
 function updateWorker(state: StrongholdState, worker: Unit, seconds: number): void {
   worker.cooldown = Math.max(0, worker.cooldown - seconds);
   if (worker.cooldown <= 2.72 || worker.idleTime !== null) worker.attackTarget = null;
-  seconds = automaticWorkTime(worker, seconds);
+  seconds = automaticWorkTime(state, worker, seconds);
   const cargo = state.chunks.find(chunk => chunk.carrier === worker.id);
   if (seconds === 0) {
     if (cargo) { cargo.x = worker.x; cargo.y = worker.y; }
@@ -48,7 +49,7 @@ function updateWorker(state: StrongholdState, worker: Unit, seconds: number): vo
   if (cargo) {
     const depot = state.buildings.filter(building => (building.kind === 'relay' || building.kind === 'castle')
       && building.hp > 0 && building.progress === 1).sort((a, b) => distance(worker, a) - distance(worker, b))[0];
-    if (depot) moveToward(worker, depot, seconds * UNIT_RULES.worker.speed);
+    if (depot) moveUnitToward(state, worker, depot, seconds * UNIT_RULES.worker.speed);
     cargo.x = worker.x;
     cargo.y = worker.y;
     if (depot && distance(worker, depot) <= 14) {
@@ -66,7 +67,7 @@ function updateWorker(state: StrongholdState, worker: Unit, seconds: number): vo
     worker.task = node?.id ?? null;
   }
   if (!node) return;
-  moveToward(worker, node, seconds * UNIT_RULES.worker.speed);
+  moveUnitToward(state, worker, node, seconds * UNIT_RULES.worker.speed);
   if (distance(worker, node) > 14 || worker.cooldown > 0) return;
   const amount = Math.min(node.remaining, (node.rich ? 8 : 4) + state.upgrades.economy * 2);
   node.remaining -= amount;
@@ -77,8 +78,9 @@ function updateWorker(state: StrongholdState, worker: Unit, seconds: number): vo
 }
 
 function updateBuilder(state: StrongholdState, builder: Unit, seconds: number, project: Building): void {
-  moveToward(builder, project, seconds * UNIT_RULES.builder.speed);
-  if (distance(builder, project) > 22) return;
+  const approach = project.kind === 'wall' ? wallApproach(builder, project) : project;
+  moveUnitToward(state, builder, approach, seconds * UNIT_RULES.builder.speed);
+  if (distance(builder, approach) > (project.kind === 'wall' ? 1 : 22)) return;
   builder.attackTarget = { x: project.x, y: project.y };
   builder.cooldown = 1;
   if (project.progress < 1) {
@@ -99,7 +101,7 @@ function updateBuilders(state: StrongholdState, seconds: number): void {
     if (builder.kind !== 'builder' || builder.hp <= 0) continue;
     builder.attackTarget = null;
     builder.cooldown = 0;
-    const workTime = automaticWorkTime(builder, seconds);
+    const workTime = automaticWorkTime(state, builder, seconds);
     if (workTime === 0) { builder.task = null; continue; }
     const project = projects.find(project => project.id === builder.task
       && (project.progress === 1 || !claimed.has(project.id)));

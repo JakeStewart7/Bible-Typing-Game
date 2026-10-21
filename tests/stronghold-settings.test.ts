@@ -104,12 +104,13 @@ test('Stronghold starts with 50 supplies, Medium text and running computers, and
   equal(initial.players.every(player => player.length === 'medium'), true);
   const player = initial.players.find(player => player.id === 'you');
   if (!player) throw new Error('Missing player.');
+  const points = phraseWork(player);
   engine.send('you', { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
   const snapshot = engine.snapshot('you');
-  equal(snapshot.roleTasks.economy.progress.resources?.work, 8.8);
+  equal(snapshot.roleTasks.economy.progress.resources?.work, points);
   if (!snapshot.roleTasks.economy.progress.resources) throw new Error('Missing saved work.');
   snapshot.roleTasks.economy.progress.resources.work = 500;
-  equal(engine.snapshot('you').roleTasks.economy.progress.resources?.work, 8.8);
+  equal(engine.snapshot('you').roleTasks.economy.progress.resources?.work, points);
   equal(JSON.stringify(snapshot.roleTasks).includes('phrase'), false);
   engine.send('you', { type: 'COMPUTERS', paused: true });
   engine.restart();
@@ -232,7 +233,7 @@ test('Stronghold construction tiers keep independent bars and instant upgrades l
   equal(player.work, barracks3Work);
 });
 
-test('Stronghold joining Army selects visible Barracks work at Tier 0 and teammates help without bypassing placement unlocks', () => {
+test('Stronghold joining Army at Tier 1 permits Barracks placement immediately after shared work completes', () => {
   const engine = new StrongholdEngine({ resources: 50, length: 'medium', computersPaused: false });
   const self = () => engine.snapshot('you').players.find(player => player.id === 'you')!;
   engine.send('you', { type: 'ROLE', role: 'production' });
@@ -245,22 +246,7 @@ test('Stronghold joining Army selects visible Barracks work at Tier 0 and teamma
   equal(self().phrase, phrase);
   equal(self().typed, phrase.slice(0, 2));
   equal(engine.snapshot('you').events.some(event => event.playerId === 'bot-1' && event.text.includes('gathered Supplies')), false);
-  equal(readyBuilding(engine.snapshot('you')), null);
-  const before = engine.snapshot('you');
-  let rejected = false;
-  try { engine.send('you', { type: 'PLACE', kind: 'barracks', point: { x: 620, y: 570 } }); }
-  catch (error) { rejected = error instanceof Error && error.message.includes('tier 1'); }
-  equal(rejected, true);
-  equal(engine.snapshot('you'), before);
-  for (const player of before.players) engine.send(player.id, { type: 'READY', ready: true });
-  for (const player of before.players) {
-    for (let entry = 0; entry < TIER_QUOTA; entry++) {
-      const current = engine.snapshot(player.id).players.find(other => other.id === player.id)!;
-      engine.send(player.id, { type: 'TYPE', phraseId: current.phraseId, text: current.phrase });
-    }
-  }
   equal(engine.snapshot('you').tier, 1);
-  equal(self().work, before.players.find(player => player.id === 'you')!.work);
   equal(readyBuilding(engine.snapshot('you')), 'barracks');
   const supplies = engine.snapshot('you').resources;
   const work = self().work;
@@ -268,6 +254,16 @@ test('Stronghold joining Army selects visible Barracks work at Tier 0 and teamma
   equal(self().work, Math.round((work - 40) * 100) / 100);
   equal(engine.snapshot('you').resources, supplies);
   equal(engine.snapshot('you').buildings.some(building => building.kind === 'barracks' && building.tier === 1), true);
+  engine.send('you', { type: 'ACTION', action: 'barracks', tier: 2 });
+  for (let count = 0; self().work < 80; count++) {
+    if (count > 20) throw new Error('Barracks task did not fill.');
+    engine.send('you', { type: 'TYPE', phraseId: self().phraseId, text: self().phrase });
+  }
+  equal(readyBuilding(engine.snapshot('you')), null);
+  let rejected = false;
+  try { engine.send('you', { type: 'PLACE', kind: 'barracks', point: { x: 750, y: 570 } }); }
+  catch (error) { rejected = error instanceof Error && error.message.includes('tier 2'); }
+  equal(rejected, true);
 });
 
 test('Stronghold running computers contribute to each selected Barracks tier without replacing human selection or input', () => {
@@ -347,21 +343,20 @@ test('Stronghold all three Barracks selections preserve independent shared progr
 test('Stronghold shared tier challenges preserve normal task banks and the chosen text length', () => {
   const state = quietMatch();
   const player = human(state);
-  entry(state);
+  const suppliesWork = entry(state);
   send(state, { type: 'ACTION', action: 'worker' });
-  entry(state);
-  entry(state);
-  for (const other of state.players) executeCommand(state, other, { type: 'READY', ready: true });
+  const workerWork = Math.round((entry(state) + entry(state)) * 100) / 100;
+  send(state, { type: 'READY', ready: true });
   equal(state.phase, 'tier-up');
   send(state, { type: 'LENGTH', length: 'long' });
   for (const other of state.players) for (let index = 0; index < TIER_QUOTA; index++) entry(state, other);
   equal(state.phase, 'playing');
-  equal(state.tier, 1);
+  equal(state.tier, 2);
   equal(player.action, 'worker');
-  equal(player.work, 17.6);
+  equal(player.work, workerWork);
   equal(player.length, 'long');
   send(state, { type: 'ACTION', action: 'resources' });
-  equal(player.work, 8.8);
+  equal(player.work, suppliesWork);
   equal(player.length, 'long');
 });
 
@@ -372,8 +367,11 @@ test('Stronghold stopping computers freezes their decisions and barracks, but no
   const computerBarracks = addBuilding(state, 'barracks', { x: 650, y: 550 }, true);
   computerBarracks.ownerId = 'bot-1';
   computerBarracks.cooldown = 5;
+  computerBarracks.trainingQueue.push({ kind: 'warrior', playerId: 'bot-1' });
   const humanBarracks = addBuilding(state, 'barracks', { x: 350, y: 550 }, true);
   humanBarracks.ownerId = 'you';
+  humanBarracks.trainingQueue.push({ kind: 'warrior', playerId: 'you' });
+  humanBarracks.cooldown = 10;
   advanceStronghold(state, .1);
   send(state, { type: 'COMPUTERS', paused: true });
   const computers = structuredClone(state.players.filter(player => player.simulated));
@@ -387,8 +385,9 @@ test('Stronghold stopping computers freezes their decisions and barracks, but no
   equal(state.units.length, units + 1);
   equal(state.elapsed, time + .25);
   equal(state.events.at(-1)?.playerId, 'you');
-  entry(state);
-  equal(human(state).work, 8.8);
+  const beforeWork = human(state).work;
+  const points = entry(state);
+  equal(human(state).work, Math.round((beforeWork + points) * 100) / 100);
   send(state, { type: 'COMPUTERS', paused: false });
   advanceStronghold(state, .1);
   equal(computerBarracks.cooldown < cooldown, true);
@@ -397,25 +396,20 @@ test('Stronghold stopping computers freezes their decisions and barracks, but no
   equal(state.events.some(event => event.text === 'Computers resumed' && event.playerId === null), true);
 });
 
-test('Stronghold stopped computers cannot ready up or contribute until resumed, including within a tier challenge', () => {
+test('Stronghold stopped computers do not block a solo shared tier challenge', () => {
   const state = quietMatch();
   send(state, { type: 'READY', ready: true });
   for (let index = 0; index < 10; index++) advanceStronghold(state, .25);
-  equal(state.phase, 'playing');
-  equal(state.players.filter(player => player.simulated).every(player => !player.ready && player.typingCredit === 0), true);
-  send(state, { type: 'COMPUTERS', paused: false });
-  advanceStronghold(state, .25);
   equal(state.phase, 'tier-up');
-  send(state, { type: 'COMPUTERS', paused: true });
+  equal(state.players.filter(player => player.simulated).every(player => player.ready && player.typingCredit === 0), true);
   const computers = structuredClone(state.players.filter(player => player.simulated));
   for (let index = 0; index < TIER_QUOTA; index++) entry(state);
   const time = state.elapsed;
   for (let index = 0; index < 10; index++) advanceStronghold(state, .25);
   equal(state.elapsed, time);
   equal(state.players.filter(player => player.simulated), computers);
-  send(state, { type: 'COMPUTERS', paused: false });
-  for (let index = 0; index < 100 && state.phase === 'tier-up'; index++) advanceStronghold(state, .25);
-  equal(state.tier, 1);
+  for (let index = TIER_QUOTA; index < TIER_QUOTA * state.players.length; index++) entry(state);
+  equal(state.tier, 2);
   equal(state.phase, 'playing');
 });
 
@@ -464,7 +458,7 @@ test('Stronghold event end preserves in-progress typing and keeps subsequent ent
   equal(player.phraseId, phraseId);
   equal(player.typed, phrase.slice(0, 2));
   equal(state.message, '');
-  entry(state);
-  equal(player.work, 8.8);
+  const points = entry(state);
+  equal(player.work, points);
   equal(/^[a-z]+(?: [a-z]+)*$/.test(player.phrase), true);
 });

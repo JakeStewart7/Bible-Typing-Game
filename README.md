@@ -33,11 +33,14 @@ Completed or destroyed jobs release their builders for reassignment.
 Matches start with **50 supplies** and **Medium** text. Choose **Short** (1-5
 characters, 1x), **Medium** (6-11, 1.1x), **Long** (12-24, 1.25x), or
 **Extra Long** (25-40, 1.5x) in the
-length scroller. Entries are normal words or word groups, including during world
-events and tier challenges. The four separately exported, frozen constants in
+length scroller. Normal play and tier challenges use words or word groups.
+World events have separate left-hand, vowel, number, symbol and code drill pools
+in `src/stronghold/domain/event-phrases.ts`, respecting the selected length.
+The four separately exported, frozen constants in
 `src/stronghold/domain/word-pools.ts` provide hundreds of curated entries per
-length class, including single words and natural phrases. Players cycle through
-their class's pool while avoiding phrases currently displayed by teammates.
+length class, including single words and natural phrases. Each player draws from
+a shuffled bag of all entries in their current pool, reshuffling on exhaustion
+and avoiding immediate repeats and phrases currently displayed by teammates.
 A fully correct entry earns its character count,
 including spaces, times its length bonus; partial or incorrect text earns nothing.
 **Supplies, Gatherer, Barracks, Builder, Wall and Tower** use typing without
@@ -54,8 +57,14 @@ or cycling red layers. Excess from the entry that fills it carries into the next
 bar after placement; further entries while it is ready do not bank extra
 completions. Supplies, Gatherers and Builders execute automatically when their
 bars fill and retain entry overflow. Blocked tasks retain their earned progress.
-**Warriors, Archers, Catapults and upgrades** are immediate supplies purchases,
-requiring no typing and leaving the selected typing task and private input untouched.
+**Warriors, Archers and Catapults** queue at completed Tier 1, 2 and 3 barracks,
+respectively. Supplies are paid when queued, with no typing required; the selected
+typing task and private input stay untouched. Each barracks trains one unit every
+12 seconds, spawning it beside that barracks before it moves to the rally point.
+Multiple matching barracks balance new orders by queue length. Queued units count
+toward population limits. Buttons show queue counts; barracks show their current
+unit and training progress. Empty barracks do not produce or spend supplies.
+Destroyed barracks lose their remaining orders. Upgrades remain immediate purchases.
 Relays also use supplies without typing, paid when their map location is placed.
 Only paid actions show supplies-cost badges. Selections, buttons, the input's
 **Type here** prompt and basic arrow/text cursors share each player's dark and
@@ -101,7 +110,7 @@ seasonal maps, with an independent **25% chance per season**. Consecutive repeat
 are possible; a Dev options season override does not pin future matches. Only resource
 node positions change: every layout keeps six standard nodes, two rich nodes,
 and 7,200 total supplies, with the same bases, troops and rules. Spring uses light
-green grass and pastel flowers, summer deep green grass and faint light rays,
+green grass and pastel flowers, summer deep green grass and softly drifting light motes,
 fall light brown ground and autumn-colored triangles, and winter blue-white
 ground and softly fading snow circles. Leaves randomly use red, orange, yellow
 or brown. The small decorative particle pool starts beneath the top UI and stays
@@ -149,8 +158,10 @@ footer have subtle square-grid textures and crisp edge highlights to match the
 shape-based battlefield. These backgrounds do not intercept map or control clicks.
 The deck fits the viewport height, with scrolling inside action panels
 and the squad list on narrow screens rather than clipping the bottom.
-The map starts at **120% zoom**, focused toward the home base. Use **+/-**,
-**Fit map**, and **Alt-drag or middle-drag** to navigate without issuing orders.
+The map starts at **120% zoom**, focused toward the home base. Use the mouse wheel
+or **+/-** to zoom, **Fit map** to see everything, and **right-drag, Alt-drag or
+middle-drag** to pan without issuing orders. Hover near a map edge to scroll.
+Right-click without dragging still issues movement orders or cancels placement.
 Fit shows the entire map; zoom and pan do not change world coordinates or speed.
 Shift-drag retains additive army selection.
 
@@ -178,6 +189,11 @@ resource nodes, collect a visible yellow chunk, then physically carry it to the
 nearest completed relay or castle before harvesting again. Relays forward deposited
 chunks to the castle through links no more than 155 map units apart; destroying a
 relay interrupts deliveries until the route is restored.
+Walls block travel for friendly and enemy units, including while being built.
+**Rotate wall** turns the placement preview in 45-degree steps; after cancelling
+placement, Shift-click a friendly wall in Defenses to rotate it in place.
+Rotation and placement cannot overlap units or leave the construction area.
+Units route around wall ends; enemies attack a blocking wall if no route exists.
 
 Controls, typing and logs use consistent bold Arial-family typography and larger,
 high-contrast text; repeated captions stay out of
@@ -186,8 +202,10 @@ and triangles (siege), with red outlines. Castle and enemy-base health appear in
 the HUD. **Help** contains the map key and instructions. On narrow screens the
 player panels scroll instead of shrinking their text.
 The castle is a clean square and towers use T-shaped map and HUD icons.
-All units move at 30% of their original speed and have twice their original health,
-including wave and troop-upgrade health bonuses. The home castle has 10,000 HP,
+Friendly and opposing units of the same formation share base health, damage,
+range and speed; enemy waves no longer add hidden health or damage bonuses.
+Movement remains slow, and troop upgrades still improve your units.
+The home castle has 10,000 HP,
 ten times its original health. Moving units bob gently; attacks and harvesting
 briefly flash a strike toward their target. Reduced-motion preferences disable
 the bob and attack-size pulse. Square warriors and square enemies instead rock
@@ -204,20 +222,22 @@ scrollbar, fades smoothly at its edges, and can still be scrolled. The current
 world event and its countdown sit slightly above it in a soft purple panel,
 hidden between events.
 
-Ready up to pause the battle for a shared tier challenge: everyone completes
-three private phrases. Tier 1 unlocks warriors, barracks and towers, tier 2 adds
-archers, and tier 3 adds catapults. Barracks automatically train units at their
-selected construction tier and consume shared supplies. Separate tiles let you
+Matches start at **Tier 1**, with warriors, barracks and towers available.
+The gold **Tier Up** button pauses the battle for one shared challenge:
+12 completed private phrases for a four-player squad. Anyone can contribute any
+number; segments in the shared progress bar show each player's color and share.
+**Pause challenge** freezes typing without dismissing the dialog; **Resume
+challenge** continues with all work intact. Stopped computers do not prevent
+readiness or solo completion. Tier 2 adds archers, and Tier 3 adds catapults.
+Separate tiles let you
 build tier 1, 2 or 3 barracks and towers. Higher-tier construction fills more
-slowly; manual troop purchases require only supplies, not typing.
-The simulated Army teammate earns supplies at Tier 0 instead of waiting idle
-for locked training; after Tier 1 unlocks it builds a barracks and trains troops.
-**Stop computers** pauses simulated teammates' typing, readiness, construction
-choices and army orders, along with automatic production at their barracks.
-The battlefield, existing units and human-owned barracks keep running; the human
+slowly; queued troop purchases require only supplies, not typing.
+The simulated Army teammate builds matching barracks and queues a mixed army.
+**Stop computers** pauses simulated teammates' typing, construction
+choices and army orders, along with training their queued requests.
+The battlefield, existing units and human training requests keep running; the human
 can still type. **Resume computers** continues them without catching up missed
-typing time. The toggle is also available during tier challenges, which require
-the computers' contributions before they can finish.
+typing time. The toggle is also available during tier challenges.
 Higher-tier barracks and towers have more health, and troop upgrades enlarge
 their map icons as well as improving their combat stats.
 Each troop type and tower tier has its own resource-funded upgrade button and
@@ -225,7 +245,7 @@ once-per-tier limit beginning at its unlock tier. Economy gets two upgrades at
 tier 0 and one additional upgrade per subsequent tier. World events begin at
 **1:00, 3:00, 5:00**, and subsequent odd minutes of active battle time, each
 lasting **35 seconds**. They rotate through left-hand, vowel, number, symbol
-and code-themed events, keeping normal-word typing in every event without discarding
+and code-themed drills without discarding
 a phrase already in progress at either transition. Enemy waves add ranged and siege formations as their
 base develops. Select troops with
 click/Shift-click, drag a selection rectangle (Shift adds to the selection), or

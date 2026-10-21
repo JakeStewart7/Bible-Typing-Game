@@ -7,7 +7,7 @@ import { renderStronghold, strongholdElements } from './view.ts';
 import { mapPoint, readyBuilding, troopsInRectangle, type PlacementKind } from './map-controls.ts';
 import { setText } from './dom-updates.ts';
 import { validateDeveloperOptions, type DeveloperOptions } from '../infrastructure/developer-options.ts';
-import { MIN_MAP_ZOOM, MAX_MAP_ZOOM } from './map-camera.ts';
+import { edgePan, wheelZoom, MIN_MAP_ZOOM, MAX_MAP_ZOOM } from './map-camera.ts';
 import { actionShortcutKey, arrowLength } from './keyboard.ts';
 import { createSeasonalMusic } from '../audio/music.ts';
 import { isPlayerColor } from '../domain/options.ts';
@@ -62,8 +62,13 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   let placementCancelled = false;
   let rallyPlacement = false;
   let cursor: Point | null = null;
+  let wallRotation = 0;
+  const rotateWall = requireElement('stronghold-rotate-wall', HTMLButtonElement);
+  let mouse: Point | null = null;
+  let edgeFrame: number | null = null;
+  let edgeTime = 0;
   let drag: { start: Point; end: Point; pointer: number; additive: boolean; unitId: number | null; moved: boolean } | null = null;
-  let pan: { pointer: number; start: Point; center: Point; matrix: DOMMatrix } | null = null;
+  let pan: { pointer: number; start: Point; client: Point; center: Point; matrix: DOMMatrix; right: boolean; moved: boolean } | null = null;
   const running = (): boolean => shown && !paused && !credits.open && !document.hidden;
   const self = () => snapshot?.players.find(player => player.id === snapshot?.selfId);
   const placing = (): PlacementKind | null => snapshot && running() && snapshot.phase === 'playing' && !placementCancelled
@@ -76,6 +81,9 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     }
   }
   function clearDrag(): void {
+    mouse = null;
+    if (edgeFrame !== null) cancelAnimationFrame(edgeFrame);
+    edgeFrame = null;
     if (pan && elements.map.hasPointerCapture(pan.pointer)) elements.map.releasePointerCapture(pan.pointer);
     pan = null;
     if (drag && elements.map.hasPointerCapture(drag.pointer)) elements.map.releasePointerCapture(drag.pointer);
@@ -84,9 +92,11 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   }
   function display(): void {
     if (!snapshot) return;
-    renderStronghold(elements, snapshot, selected, running(), paused, relayPlacement, placementCancelled, rallyPlacement);
+    renderStronghold(elements, snapshot, selected, running(), paused, relayPlacement, placementCancelled, rallyPlacement, shown);
     music.update(snapshot.season, snapshot.environmentElapsed, running() && snapshot.phase !== 'won' && snapshot.phase !== 'lost');
-    elements.mapControls.ghost(snapshot, placing(), cursor);
+    rotateWall.classList.toggle('is-hidden', placing() !== 'wall');
+    setText(rotateWall, `Rotate wall: ${wallRotation} deg`);
+    elements.mapControls.ghost(snapshot, placing(), cursor, wallRotation);
     const selecting = drag?.moved && self()?.role === 'army' && !placing() && !rallyPlacement;
     elements.mapControls.selection(selecting ? drag?.start ?? null : null, selecting ? drag?.end ?? null : null);
     const feedback = errorMessage || (paused ? 'Paused' : rallyPlacement ? 'Click the map to set the rally point. Escape cancels.' : snapshot.message);
@@ -156,7 +166,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   }
   function place(point: Point): void {
     const kind = placing();
-    if (kind) void send({ type: 'PLACE', kind, point });
+    if (kind) void send({ type: 'PLACE', kind, point, rotation: kind === 'wall' ? wallRotation : undefined });
   }
   function armyIds(): number[] {
     return snapshot?.units.filter(unit => ['warrior', 'archer', 'catapult'].includes(unit.kind)).map(unit => unit.id) ?? [];
@@ -183,6 +193,38 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       updateCameraControls(); display(); focusTyping();
     });
   }
+  function panAtEdge(time: number): void {
+    edgeFrame = null;
+    if (!mouse || pan || !running() || snapshot?.phase !== 'playing') return;
+    const direction = edgePan(mouse, elements.map.getBoundingClientRect());
+    if (!direction.x && !direction.y) return;
+    const seconds = Math.min(.05, Math.max(0, (time - edgeTime) / 1000));
+    edgeTime = time;
+    const center = elements.camera.center;
+    const speed = 220 / elements.camera.zoom;
+    elements.camera.panTo({ x: center.x + direction.x * speed * seconds, y: center.y + direction.y * speed * seconds });
+    cursor = mapPoint(elements.map, mouse.x, mouse.y);
+    elements.mapControls.ghost(snapshot, placing(), cursor, wallRotation);
+    edgeFrame = requestAnimationFrame(panAtEdge);
+  }
+  elements.map.addEventListener('wheel', event => {
+    if (!running() || snapshot?.phase !== 'playing' || event.ctrlKey) return;
+    event.preventDefault();
+    const before = mapPoint(elements.map, event.clientX, event.clientY);
+    clearDrag();
+    elements.camera.setZoom(wheelZoom(elements.camera.zoom, event.deltaY, event.deltaMode));
+    const after = mapPoint(elements.map, event.clientX, event.clientY);
+    if (before && after) {
+      const center = elements.camera.center;
+      elements.camera.panTo({ x: center.x + before.x - after.x, y: center.y + before.y - after.y });
+    }
+    cursor = mapPoint(elements.map, event.clientX, event.clientY);
+    updateCameraControls(); display();
+  }, { passive: false });
+  rotateWall.addEventListener('click', () => {
+    wallRotation = (wallRotation + 45) % 180;
+    display(); focusTyping();
+  });
   requireElement('stronghold-zoom-fit', HTMLButtonElement).addEventListener('click', () => {
     clearDrag(); elements.camera.reset(1); cursor = null; updateCameraControls(); display(); focusTyping();
   });
@@ -205,23 +247,22 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   }
   elements.map.addEventListener('pointerdown', event => {
     if (!running() || snapshot?.phase !== 'playing') return;
-    if (event.button === 2) {
-      event.preventDefault();
+    if (event.button === 2 || event.button === 1 || (event.button === 0 && event.altKey)) {
       clearDrag();
-      if (placing() || rallyPlacement) { cancelPlacement(); return; }
-      const point = mapPoint(elements.map, event.clientX, event.clientY);
-      if (point && self()?.role === 'army') move(point);
-      return;
-    }
-    if (event.button === 1 || (event.button === 0 && event.altKey)) {
       const matrix = elements.map.getScreenCTM();
       const point = mapPoint(elements.map, event.clientX, event.clientY);
       if (!matrix || !point) return;
-      pan = { pointer: event.pointerId, start: point, center: elements.camera.center, matrix: matrix.inverse() };
+      pan = { pointer: event.pointerId, start: point, client: { x: event.clientX, y: event.clientY },
+        center: elements.camera.center, matrix: matrix.inverse(), right: event.button === 2, moved: false };
       elements.map.setPointerCapture(event.pointerId); event.preventDefault();
       return;
     }
     if (event.button !== 0) return;
+    const building = event.target instanceof Element ? event.target.closest('[data-building]') : null;
+    if (event.shiftKey && building && self()?.role === 'defenses' && !placing()) {
+      const wall = snapshot.buildings.find(candidate => candidate.id === Number(building.getAttribute('data-building')) && candidate.kind === 'wall');
+      if (wall) { event.preventDefault(); void send({ type: 'ROTATE_WALL', id: wall.id }); return; }
+    }
     const point = mapPoint(elements.map, event.clientX, event.clientY);
     if (!point) return;
     const target = event.target instanceof Element ? event.target.closest('[data-unit]') : null;
@@ -233,11 +274,17 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   });
   elements.map.addEventListener('pointermove', event => {
     if (pan && pan.pointer === event.pointerId) {
+      pan.moved ||= distance(pan.client, { x: event.clientX, y: event.clientY }) > 4;
+      if (!pan.moved) return;
       const point = elements.map.createSVGPoint();
       point.x = event.clientX; point.y = event.clientY;
       const location = point.matrixTransform(pan.matrix);
       elements.camera.panTo({ x: pan.center.x + pan.start.x - location.x, y: pan.center.y + pan.start.y - location.y });
       return;
+    }
+    mouse = { x: event.clientX, y: event.clientY };
+    if (edgeFrame === null && running() && snapshot?.phase === 'playing') {
+      edgeTime = performance.now(); edgeFrame = requestAnimationFrame(panAtEdge);
     }
     cursor = mapPoint(elements.map, event.clientX, event.clientY);
     if (drag && drag.pointer === event.pointerId && cursor) {
@@ -245,18 +292,30 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       drag.moved ||= distance(drag.start, cursor) > 4;
     }
     if (snapshot) {
-      elements.mapControls.ghost(snapshot, placing(), cursor);
+      elements.mapControls.ghost(snapshot, placing(), cursor, wallRotation);
       const selecting = drag?.moved && self()?.role === 'army' && !placing() && !rallyPlacement;
       elements.mapControls.selection(selecting ? drag?.start ?? null : null, selecting ? drag?.end ?? null : null);
     }
   });
   elements.map.addEventListener('pointerleave', () => {
+    mouse = null;
+    if (edgeFrame !== null) cancelAnimationFrame(edgeFrame);
+    edgeFrame = null;
     if (drag || pan) return;
     cursor = null;
     if (snapshot) elements.mapControls.ghost(snapshot, null, null);
   });
   elements.map.addEventListener('pointerup', event => {
-    if (pan?.pointer === event.pointerId) { clearDrag(); cursor = null; display(); focusTyping(); return; }
+    if (pan?.pointer === event.pointerId) {
+      const gesture = pan;
+      const point = mapPoint(elements.map, event.clientX, event.clientY);
+      clearDrag();
+      if (gesture.right && !gesture.moved) {
+        if (placing() || rallyPlacement) cancelPlacement();
+        else if (point && self()?.role === 'army') move(point);
+      }
+      cursor = null; display(); focusTyping(); return;
+    }
     if (!drag || event.pointerId !== drag.pointer || !snapshot) return;
     const gesture = drag;
     const point = mapPoint(elements.map, event.clientX, event.clientY) ?? gesture.end;

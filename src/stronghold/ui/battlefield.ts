@@ -4,6 +4,7 @@ import { towerUpgrade, unitUpgrade } from '../domain/technology.ts';
 import type { Building, Point, ResourceChunk, ResourceNode, StrongholdSnapshot, Unit } from '../domain/types.ts';
 import { createSvgLayer, setAttribute, setText } from './dom-updates.ts';
 import { playerTheme } from './player-theme.ts';
+import { TRAINING_SECONDS } from '../domain/training.ts';
 
 function health(hp: number, max: number, y: number, width = 26): string {
   return `<rect x="${-width / 2}" y="${y}" width="${width}" height="3" fill="#1d3029"/><rect data-health x="${-width / 2}" y="${y}" width="${width * Math.max(0, hp / max)}" height="3" fill="#a6ed89"/>`;
@@ -40,9 +41,9 @@ export function buildingMarkup(building: Building): string {
   const size = building.kind === 'castle' || building.kind === 'enemy-base' ? 34 : 14;
   const shape = building.kind === 'tower' ? `<path d="M-16 -20 H16 V-10 H5 V20 H-5 V-10 H-16 Z" fill="${building.enemy ? color : '#fff'}" stroke="${building.enemy ? '#ff1726' : '#ffd500'}" stroke-width="3"/>`
     : building.kind === 'relay' ? `<path d="M-4 16 L-4 -7 L-9 -12 L0 -18 L9 -12 L4 -7 L4 16 Z" fill="${color}" stroke="#7f7f7f" stroke-width="2"/>`
-    : building.kind === 'wall' ? `<rect x="-23" y="-4" width="46" height="8" fill="${building.enemy ? color : '#ffdb58'}" stroke="${building.enemy ? '#ff1726' : '#e8ad23'}" stroke-width="3"/>`
+    : building.kind === 'wall' ? `<rect data-wall-shape transform="rotate(${building.rotation ?? 0})" x="-23" y="-4" width="46" height="8" fill="${building.enemy ? color : '#ffdb58'}" stroke="${building.enemy ? '#ff1726' : '#e8ad23'}" stroke-width="3"/>`
     : `<rect x="${-size}" y="${-size}" width="${size * 2}" height="${size * 2}" fill="${color}" stroke="${building.enemy ? '#ff1726' : '#7f7f7f'}" stroke-width="4"/>`;
-  return `${attackMarkup()}${shape}${health(building.hp, building.maxHp, building.kind === 'tower' ? 26 : size + 6, size * 2)}<title></title>${building.kind === 'barracks' ? `<text data-tier y="5" text-anchor="middle" fill="#111" font-size="16">T${building.tier}</text>` : ''}`;
+  return `${attackMarkup()}${shape}${health(building.hp, building.maxHp, building.kind === 'tower' ? 26 : size + 6, size * 2)}<title></title>${building.kind === 'barracks' ? `<text data-tier y="5" text-anchor="middle" fill="#111" font-size="16">T${building.tier}</text><g data-training><rect x="-16" y="26" width="32" height="4" fill="#333"/><rect data-training-fill x="-16" y="26" width="0" height="4" fill="#a6ed89"/><text data-training-count y="43" text-anchor="middle" fill="#111" stroke="white" stroke-width="2" paint-order="stroke" font-size="12"></text></g>` : ''}`;
 }
 function relayLinks(snapshot: StrongholdSnapshot): string {
   // Snapshot world data matches the logistics inputs; private player fields are not needed.
@@ -116,13 +117,24 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     const level = building.kind === 'tower' && !building.enemy ? towerUpgrade(technology, building.tier) : 0;
     const scale = building.kind === 'tower' || building.kind === 'enemy-base' ? 1 + Math.min(3, building.tier) * .08 + level * .05 : 1;
     position(element, building, scale);
+    setAttribute(element, 'data-building', String(building.id));
+    const wallShape = element.querySelector('[data-wall-shape]');
+    if (wallShape) setAttribute(wallShape, 'transform', `rotate(${building.rotation ?? 0})`);
     renderAttack(element, building, scale);
     setAttribute(element, 'opacity', building.progress < 1 ? String(.3 + building.progress * .7) : '1');
     const width = building.kind === 'castle' || building.kind === 'enemy-base' ? 68 : 28;
     setAttribute(child(element, '[data-health]'), 'width', String(width * Math.max(0, building.hp / building.maxHp)));
-    setText(child(element, 'title'), `${building.kind} / T${building.tier}: ${Math.ceil(building.hp)} HP, ${Math.round(building.progress * 100)}% built`);
+    setText(child(element, 'title'), `${building.kind} / T${building.tier}: ${Math.ceil(building.hp)} HP, ${Math.round(building.progress * 100)}% built${building.kind === 'wall' && !building.enemy ? '. Defenses: Shift-click to rotate.' : ''}`);
     const tier = element.querySelector('[data-tier]');
     if (tier) setText(tier, `T${building.tier}`);
+    const training = element.querySelector('[data-training]');
+    if (training) {
+      const order = building.trainingQueue[0];
+      setAttribute(training, 'visibility', order ? 'visible' : 'hidden');
+      setAttribute(child(training, '[data-training-fill]'), 'width', String(order ? 32 * Math.max(0, 1 - building.cooldown / TRAINING_SECONDS) : 0));
+      setText(child(training, '[data-training-count]'), order ? `${order.kind}: ${building.trainingQueue.length} queued` : '');
+      if (order) setText(child(element, 'title'), `T${building.tier} Barracks: ${order.kind}, ${Math.ceil(building.cooldown)}s remaining; ${building.trainingQueue.length} queued`);
+    }
   }, building => `${building.kind}/${building.enemy}`);
   const renderNodes = createSvgLayer<ResourceNode>(layer('nodes'), node =>
     `<circle r="${node.rich ? 27 : 24}" stroke="${node.rich ? '#a64caf' : '#00aeef'}" stroke-width="3"/><title></title>`, (element, node) => {

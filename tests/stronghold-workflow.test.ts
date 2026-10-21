@@ -1,7 +1,7 @@
 import { executeCommand, placementProblem } from '../src/stronghold/domain/actions.ts';
 import { spawnWave, updateCombat } from '../src/stronghold/domain/combat.ts';
 import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
-import { addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
+import { addBuilding, addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { phraseWork, taskWork } from '../src/stronghold/domain/technology.ts';
 import { COSTS, isTypingAction, TEXT_LENGTH_BONUSES, TEXT_LENGTH_RANGES } from '../src/stronghold/domain/rules.ts';
@@ -43,27 +43,31 @@ test('Stronghold role mates have private text lengths and contribute their own c
   if (!you || !teammate) throw new Error('Missing players.');
   executeCommand(state, teammate, { type: 'ROLE', role: 'economy' });
   executeCommand(state, you, { type: 'LENGTH', length: 'short' });
+  const firstWork = phraseWork(you);
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
-  equal(you.work, 4);
-  equal(teammate.work, 4);
+  equal(you.work, firstWork);
+  equal(teammate.work, firstWork);
   const oldId = you.phraseId;
   const phrase = you.phrase;
   executeCommand(state, you, { type: 'TYPE', phraseId: oldId, text: phrase.slice(0, 2) });
   executeCommand(state, teammate, { type: 'LENGTH', length: 'extra-long' });
-  equal(you.work, 4);
+  equal(you.work, firstWork);
   equal(you.length, 'short');
   equal(teammate.length, 'extra-long');
   equal(you.phraseId, oldId);
   equal(you.phrase, phrase);
   equal(you.typed, phrase.slice(0, 2));
+  const work = firstWork + phraseWork(you);
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
-  equal(you.work, 8);
-  equal(teammate.work, 8);
-  const overflow = Math.round((8 + phraseWork(teammate) - 32) * 100) / 100;
+  equal(you.work, work);
+  equal(teammate.work, work);
+  const total = Math.round((work + phraseWork(teammate)) * 100) / 100;
+  const rewards = Math.floor(total / 32);
+  const overflow = Math.round((total - rewards * 32) * 100) / 100;
   executeCommand(state, teammate, { type: 'TYPE', phraseId: teammate.phraseId, text: teammate.phrase });
   equal(you.work, overflow);
   equal(teammate.work, overflow);
-  equal(state.resources, 68);
+  equal(state.resources, 50 + rewards * 18);
 });
 
 test('Stronghold text length selections never add event log entries', () => {
@@ -198,7 +202,7 @@ test('Stronghold free construction has proportional requirements, preserves word
   equal(placementProblem(state, player, 'tower', { x: 450, y: 500 }), 'Complete the construction work first.');
 });
 
-test('Stronghold paid troops and every upgrade purchase instantly without spending or changing typing progress', () => {
+test('Stronghold paid troop queues and upgrades never spend or change typing progress', () => {
   const cases: { role: Role; action: Action; cost: number; kind?: UnitKind; upgrade?: UpgradeTarget }[] = [
     { role: 'production', action: 'warrior', cost: 10, kind: 'warrior' },
     { role: 'production', action: 'archer', cost: 20, kind: 'archer' },
@@ -214,6 +218,7 @@ test('Stronghold paid troops and every upgrade purchase instantly without spendi
   for (const purchase of cases) {
     const state = createStronghold();
     state.tier = 3; state.resources = 1000;
+    for (const tier of [1, 2, 3]) addBuilding(state, 'barracks', { x: 600 + tier * 50, y: 550 }, true, false, tier);
     const player = state.players[0];
     if (!player) throw new Error('Missing player.');
     executeCommand(state, player, { type: 'ROLE', role: purchase.role });
@@ -227,7 +232,10 @@ test('Stronghold paid troops and every upgrade purchase instantly without spendi
     equal(state.resources, 1000 - purchase.cost);
     equal(player, beforePlayer);
     equal(state.roleTasks, beforeTasks);
-    if (purchase.kind) equal(state.units.filter(unit => unit.kind === purchase.kind).length, count + 1);
+    if (purchase.kind) {
+      equal(state.units.filter(unit => unit.kind === purchase.kind).length, count);
+      equal(state.buildings.flatMap(building => building.trainingQueue).filter(order => order.kind === purchase.kind).length, 1);
+    }
     if (purchase.upgrade) equal(state.technology[purchase.upgrade], 1);
     equal(state.events.at(-1)?.text.startsWith('Player 1 '), true);
     state.resources = 0;
@@ -294,13 +302,14 @@ test('Stronghold relays require only legal placement and do not spend typing wor
   const state = createStronghold();
   const player = state.players[0];
   if (!player) throw new Error('Missing player.');
+  const points = phraseWork(player);
   executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
-  equal(player.work, 8.8);
+  equal(player.work, points);
   const phraseId = player.phraseId;
   equal(placementProblem(state, player, 'relay', { x: 500, y: 595 }), 'Leave space between buildings.');
   executeCommand(state, player, { type: 'PLACE', kind: 'relay', point: { x: 350, y: 540 } });
   equal(state.resources, 35);
-  equal(player.work, 8.8);
+  equal(player.work, points);
   equal(player.phraseId, phraseId);
   equal(state.events.at(-1)?.text, 'Player 1 placed Relay');
   executeCommand(state, player, { type: 'ROLE', role: 'army' });
@@ -311,14 +320,16 @@ test('Stronghold army control can always type for shared supplies', () => {
   const engine = new StrongholdEngine();
   engine.send('you', { type: 'ROLE', role: 'army' });
   engine.send('you', { type: 'ACTION', action: 'resources' });
-  for (let entry = 0; entry < 4; entry++) {
+  let work = 0;
+  for (let entry = 0; work < 32 && entry < 10; entry++) {
     const player = engine.snapshot('you').players.find(candidate => candidate.id === 'you');
     if (!player) throw new Error('Missing player.');
+    work = Math.round((work + phraseWork(player)) * 100) / 100;
     engine.send('you', { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
   }
   const snapshot = engine.snapshot('you');
   equal(snapshot.resources, 68);
-  equal(snapshot.players.filter(player => player.role === 'army').every(player => player.work === 3.2), true);
+  equal(snapshot.players.filter(player => player.role === 'army').every(player => player.work === Math.round((work - 32) * 100) / 100), true);
   equal(snapshot.players.every(player => player.id === 'you' || player.phrase === ''), true);
 });
 
@@ -372,14 +383,13 @@ test('Stronghold central private typing, length controls and distinct costs repl
   equal(markup.includes('class="stronghold-work-track"'), true);
 });
 
-test('Stronghold Army bot earns supplies before unlock then constructs barracks and trains units', () => {
+test('Stronghold Army bot constructs Tier 1 barracks and trains units from the start', () => {
   const state = createStronghold();
   state.resources = 1000;
   state.waveIn = 10000;
   for (let step = 0; step < 100; step++) advanceStronghold(state, .25);
-  equal(state.events.some(event => event.playerId === 'bot-1' && event.text === 'Player 2 gathered Supplies'), true);
-  equal(state.buildings.some(building => building.kind === 'barracks'), false);
-  state.tier = 1;
+  equal(state.tier, 1);
+  equal(state.buildings.some(building => building.kind === 'barracks'), true);
   for (let step = 0; step < 480; step++) advanceStronghold(state, .25);
   equal(state.buildings.some(building => building.kind === 'barracks' && building.progress === 1), true);
   equal(state.events.some(event => event.playerId === 'bot-1' && event.text === 'Player 2 created Warrior'), true);

@@ -1,4 +1,5 @@
-import { distance, ENEMY_BASE, moveToward, TOWER_STRENGTH_MULTIPLIER, UNIT_CAPS, UNIT_RULES } from './rules.ts';
+import { distance, ENEMY_BASE, TOWER_STRENGTH_MULTIPLIER, UNIT_CAPS, UNIT_RULES } from './rules.ts';
+import { moveUnitToward, wallApproach, wallBetween } from './navigation.ts';
 import { addBuilding, addUnit } from './state.ts';
 import { towerUpgrade, unitUpgrade } from './technology.ts';
 import { ENTITY_LABELS, recordEvent } from './events.ts';
@@ -27,18 +28,30 @@ function updateUnit(state: StrongholdState, unit: Unit, seconds: number): void {
   if (unit.kind === 'invader') {
     const defenders = enemies.filter(other => isFighter(other) && distance(unit, other) < 140);
     const workers = enemies.filter(other => (other.kind === 'worker' || other.kind === 'builder') && distance(unit, other) < 100);
-    target = closest(unit, defenders) ?? closest(unit, workers) ?? closest(unit, buildings);
+    target = closest(unit, defenders) ?? closest(unit, workers)
+      ?? closest(unit, buildings.filter(building => building.kind !== 'wall')) ?? closest(unit, buildings);
   } else {
     target = closest(unit, enemies.filter(other => distance(unit, other) < Math.max(140, rule.range)));
     if (!target && unit.destination) {
-      moveToward(unit, unit.destination, seconds * rule.speed);
+      moveUnitToward(state, unit, unit.destination, seconds * rule.speed);
       if (distance(unit, unit.destination) < 5) unit.destination = null;
     }
     if (!target) target = closest(unit, buildings.filter(building => distance(unit, building) < rule.range + 20));
   }
   if (!target) return;
-  if (distance(unit, target) > rule.range) moveToward(unit, target, seconds * rule.speed);
-  else attack(unit, target, rule.damage + (unit.kind === 'invader' ? state.wave : unitUpgrade(state, unit) * 3));
+  const targetWall = 'enemy' in target && target.kind === 'wall' ? target : undefined;
+  const approach = targetWall ? wallApproach(unit, targetWall) : target;
+  const blocked = wallBetween(state, unit, target, targetWall);
+  if (distance(unit, approach) > (targetWall ? 1 : rule.range) || blocked) {
+    if (!moveUnitToward(state, unit, approach, seconds * rule.speed) && unit.kind === 'invader') {
+      const wall = closest(unit, buildings.filter(building => building.kind === 'wall'));
+      if (wall && 'enemy' in wall) {
+        const point = wallApproach(unit, wall);
+        if (distance(unit, point) <= 1) attack(unit, wall, rule.damage);
+        else moveUnitToward(state, unit, point, seconds * rule.speed);
+      }
+    }
+  } else attack(unit, target, rule.damage + (unit.kind === 'invader' ? 0 : unitUpgrade(state, unit) * 3));
 }
 
 export function spawnWave(state: StrongholdState): void {

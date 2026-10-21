@@ -9,6 +9,9 @@ import { LocalStrongholdConnection } from '../src/stronghold/infrastructure/loca
 import { themeForWorkspace } from '../src/ui/page-theme.ts';
 import type { Participant, StrongholdState } from '../src/stronghold/domain/types.ts';
 import { equal, test } from './harness.ts';
+import { phraseWork, taskWork } from '../src/stronghold/domain/technology.ts';
+import { EVENT_WORD_POOLS } from '../src/stronghold/domain/event-phrases.ts';
+import { WORD_POOLS } from '../src/stronghold/domain/word-pools.ts';
 
 function self(state: StrongholdState): Participant {
   const player = state.players.find(candidate => candidate.id === 'you');
@@ -16,8 +19,12 @@ function self(state: StrongholdState): Participant {
   return player;
 }
 function finish(state: StrongholdState, player = self(state)): void {
-  const entries = state.phase === 'tier-up' ? 1 : Math.ceil(32 / player.phrase.length);
-  for (let entry = 0; entry < entries; entry++) executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+  for (let entry = 0; entry < 100; entry++) {
+    const done = state.phase === 'tier-up' || player.work + phraseWork(player) >= taskWork(player);
+    executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+    if (done) return;
+  }
+  throw new Error('Typing task failed to complete.');
 }
 function rejects(run: () => void, message: string): void {
   try { run(); } catch (error) { equal(error instanceof Error && error.message.includes(message), true); return; }
@@ -62,7 +69,7 @@ test('Stronghold role selection joins teammates without displacing them', () => 
   rejects(() => executeCommand(state, self(state), { type: 'ACTION', action: 'tower' }), 'another role');
 });
 
-test('Stronghold tier-up waits for everyone, pauses battle and requires each contribution', () => {
+test('Stronghold tier-up waits for readiness, pauses battle and accepts unequal shared contributions', () => {
   const state = createStronghold();
   noBots(state);
   executeCommand(state, self(state), { type: 'READY', ready: true });
@@ -74,10 +81,10 @@ test('Stronghold tier-up waits for everyone, pauses battle and requires each con
   equal(state.elapsed, time);
   const first = self(state);
   for (let index = 0; index < TIER_QUOTA + 2; index++) finish(state, first);
-  equal(first.contribution, TIER_QUOTA);
-  equal(state.tier, 0);
-  for (const player of state.players.slice(1)) for (let index = 0; index < TIER_QUOTA; index++) finish(state, player);
+  equal(first.contribution, TIER_QUOTA + 2);
   equal(state.tier, 1);
+  for (let index = first.contribution; index < state.players.length * TIER_QUOTA; index++) finish(state, state.players[1]);
+  equal(state.tier, 2);
   equal(state.phase, 'playing');
   equal(state.players.every(player => !player.ready), true);
 });
@@ -89,7 +96,7 @@ test('Stronghold simulated teammates ready up and finish their own tier phrases'
   equal(state.phase, 'tier-up');
   for (let index = 0; index < TIER_QUOTA; index++) finish(state);
   for (let index = 0; index < 120; index++) advanceStronghold(state, .25);
-  equal(state.tier, 1);
+  equal(state.tier, 2);
   equal(state.phase, 'playing');
 });
 
@@ -126,9 +133,10 @@ test('Stronghold upgrades obey per-tier limits and population caps', () => {
   state.resources = 1000;
   executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade' });
   executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade' });
+  executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade' });
   rejects(() => executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade' }), 'Upgrade limit');
-  equal(state.upgrades.economy, 2);
-  equal(state.resources, 880);
+  equal(state.upgrades.economy, 3);
+  equal(state.resources, 820);
   executeCommand(state, self(state), { type: 'ACTION', action: 'worker' });
   while (state.units.filter(unit => unit.kind === 'worker').length < 12) finish(state);
   const resources = state.resources;
@@ -251,15 +259,19 @@ test('Stronghold only army role orders friendly troops and rejects nonfinite map
   rejects(() => executeCommand(state, self(state), { type: 'MOVE', ids: [99999], point: { x: 500, y: 100 } }), 'friendly');
 });
 
-test('Stronghold completed barracks train units and consume supplies, unfinished ones do not', () => {
+test('Stronghold barracks require explicit paid queues and completed matching construction', () => {
   const state = createStronghold();
   noBots(state); state.tier = 2;
   state.units = [];
   const barracks = addBuilding(state, 'barracks', { x: 650, y: 570 });
   advanceStronghold(state, .1);
   equal(state.units.length, 0);
+  executeCommand(state, self(state), { type: 'ROLE', role: 'production' });
+  rejects(() => executeCommand(state, self(state), { type: 'ACTION', action: 'archer' }), 'Barracks');
   barracks.progress = 1;
-  advanceStronghold(state, .1);
+  executeCommand(state, self(state), { type: 'ACTION', action: 'archer' });
+  equal(state.units.length, 0);
+  for (let second = 0; second < 12; second++) advanceStronghold(state, 1);
   equal(state.units[0]?.kind, 'archer');
   equal(state.resources, 30);
   equal(state.units[0]?.destination, state.rally);
@@ -270,7 +282,7 @@ test('Stronghold waves grow enemy defenses, world events change drills and termi
   noBots(state);
   spawnWave(state); spawnWave(state); spawnWave(state);
   equal(state.wave, 3);
-  equal(state.buildings.find(building => building.kind === 'enemy-base')?.tier, 1);
+  equal(state.buildings.find(building => building.kind === 'enemy-base')?.tier, 2);
   state.elapsed = 59.9; state.eventIn = .1;
   advanceStronghold(state, .25);
   equal(state.event, 'left-hand');
@@ -291,7 +303,7 @@ test('Stronghold waves grow enemy defenses, world events change drills and termi
   equal(loss.phase, 'lost');
 });
 
-test('Stronghold length selection uses normal words within the requested character ranges', () => {
+test('Stronghold length selection uses event-specific pools within the requested character ranges', () => {
   const state = createStronghold();
   const player = self(state);
   for (const phase of ['playing', 'tier-up'] as const) for (const event of ['peace', 'left-hand', 'vowels', 'numbers', 'symbols', 'code'] as const) {
@@ -302,7 +314,8 @@ test('Stronghold length selection uses normal words within the requested charact
         executeCommand(state, player, { type: 'LENGTH', length });
         const [min, max] = TEXT_LENGTH_RANGES[length];
         equal(player.phrase.length >= min && player.phrase.length <= max, true);
-        equal(/^[a-z]+(?: [a-z]+)*$/.test(player.phrase), true);
+        const pool = phase === 'tier-up' || event === 'peace' ? WORD_POOLS[length] : EVENT_WORD_POOLS[event][length];
+        equal(pool.includes(player.phrase), true);
       }
     }
   }

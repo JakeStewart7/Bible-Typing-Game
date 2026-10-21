@@ -9,7 +9,7 @@ import { PLAYER_COLORS } from './types.ts';
 
 export function addUnit(state: StrongholdState, kind: UnitKind, point: Point, formation: ArmyUnitKind | null = null): Unit {
   const hp = ((formation ? UNIT_RULES[formation].hp : UNIT_RULES[kind].hp)
-    + (kind === 'invader' ? state.wave * 5 : unitUpgrade(state, { kind }) * 10)) * UNIT_HEALTH_MULTIPLIER;
+    + (kind === 'invader' ? 0 : unitUpgrade(state, { kind }) * 10)) * UNIT_HEALTH_MULTIPLIER;
   const unit: Unit = { ...point, id: state.nextId++, kind, hp, maxHp: hp, destination: null, cooldown: 0, task: null, formation, attackTarget: null, idleTime: null };
   state.units.push(unit);
   return unit;
@@ -22,7 +22,7 @@ export function addBuilding(
   const hp = baseHp * (kind === 'tower' ? TOWER_STRENGTH_MULTIPLIER : 1);
   const building: Building = {
     ...point, id: state.nextId++, kind, hp, maxHp: hp, tier,
-    progress: complete ? 1 : 0, cooldown: 0, enemy, attackTarget: null, ownerId: null
+    progress: complete ? 1 : 0, cooldown: 0, enemy, attackTarget: null, ownerId: null, rotation: 0, trainingQueue: []
   };
   state.buildings.push(building);
   return building;
@@ -39,7 +39,7 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
   if (matchingTeammate) matchingTeammate.color = PLAYER_COLORS.Red;
   const state: StrongholdState = {
     season, environmentElapsed: 0,
-    phase: 'playing', tier: 0, elapsed: 0, wave: 0, waveIn: 60, resources: options.resources,
+    phase: 'playing', tier: 1, elapsed: 0, wave: 0, waveIn: 60, resources: options.resources,
     event: 'peace', eventIn: 60, nextId: 1, units: [], buildings: [], chunks: [],
     players: roster.map(player => ({
       ...player, action: player.role === 'defenses' ? 'builder' : 'resources',

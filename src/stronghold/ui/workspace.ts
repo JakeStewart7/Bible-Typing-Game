@@ -6,11 +6,12 @@ import { SEASON_LABELS } from '../domain/environment.ts';
 import { taskShortcut } from './keyboard.ts';
 import { weatherMarkup } from './environment.ts';
 import { creditsMarkup } from './credits.ts';
+import { isArmyUnit } from '../domain/training.ts';
 
 export const PLAYER_IDS = ['you', 'bot-1', 'bot-2', 'bot-3'] as const;
 function tile(action: Action, label: string, tier: number | undefined, shortcut: string): string {
   return `<button type="button" class="stronghold-build-tile" data-action="${action}"${tier ? ` data-tier="${tier}"` : ''} data-min-tier="${tier ?? MIN_TIER[action]}" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}">
-    <kbd class="stronghold-hotkey">Alt+${shortcut}</kbd><span class="stronghold-action-label">${label}</span>${COSTS[action] > 0 ? `<span class="stronghold-cost">${COSTS[action] * (tier ?? 1)}<span class="sr-only"> supplies</span></span>` : ''}${isTypingAction(action) ? `<span class="stronghold-task-progress" data-task-progress role="progressbar" aria-label="${ACTION_LABELS[action]}${tier ? ` tier ${tier}` : ''} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span data-task-fill></span></span>${tier ? '<small class="stronghold-task-lock is-hidden" data-task-lock></small>' : ''}` : ''}</button>`;
+    <kbd class="stronghold-hotkey">Alt+${shortcut}</kbd><span class="stronghold-action-label">${isArmyUnit(action) ? `Queue ${label}` : label}</span>${COSTS[action] > 0 ? `<span class="stronghold-cost">${COSTS[action] * (tier ?? 1)}<span class="sr-only"> supplies</span></span>` : ''}${isArmyUnit(action) ? '<small data-training-queued>0 queued</small>' : ''}${isTypingAction(action) ? `<span class="stronghold-task-progress" data-task-progress role="progressbar" aria-label="${ACTION_LABELS[action]}${tier ? ` tier ${tier}` : ''} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span data-task-fill></span></span>${tier ? '<small class="stronghold-task-lock is-hidden" data-task-lock></small>' : ''}` : ''}</button>`;
 }
 function upgrade(target: UpgradeTarget, shortcut: string): string {
   const option = UPGRADE_OPTIONS[target];
@@ -66,9 +67,9 @@ export function strongholdWorkspaceMarkup(): string {
         <output id="stronghold-zoom">120%</output>
         <button id="stronghold-zoom-in" type="button" aria-label="Zoom in">+</button>
         <button id="stronghold-zoom-fit" type="button">Fit map</button>
-        <span>Alt-drag or middle-drag to pan</span>
+        <span>Scroll to zoom. Right-drag or move to map edges to pan.</span>
       </div>
-      <button id="stronghold-ready" class="stronghold-tier" type="button"><span id="stronghold-tier-label">Tier 0</span><strong id="stronghold-tier-action">Tier Up</strong></button>
+      <button id="stronghold-ready" class="stronghold-tier" type="button"><span id="stronghold-tier-label">Tier 1</span><strong id="stronghold-tier-action">Tier Up</strong></button>
       <aside class="stronghold-hud" aria-label="Kingdom status">
         <div class="stronghold-populations">
           <span title="Towers"><span class="sr-only">Towers: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--tower"></i><b id="stronghold-tower-count">0/8</b></span>
@@ -83,17 +84,19 @@ export function strongholdWorkspaceMarkup(): string {
         <div class="stronghold-legend"><span>Dark red: enemies</span><span>□ Warrior</span><span>◇ Archer</span><span>▲ Catapult</span><span>△ Builder</span><span>○ Gatherer</span></div>
         <p>Completed characters, including spaces, advance your selected free task. Short is 1-5 characters at 1x, Medium 6-11 at 1.1x, Long 12-24 at 1.25x, and Extra Long 25-40 at 1.5x. All lengths use normal words or word groups.</p>
         <p>Relays need no typing: select Relay and click the map to place its shadow. Other buildings need a full work bar first. Escape cancels placement. Builders construct and repair automatically.</p>
+        <p>Use Rotate wall before placing to turn it 45 degrees. In Defenses, cancel placement then Shift-click an existing friendly wall to rotate it. Walls block all units; enemies go around them or attack a wall if there is no route.</p>
         <p>Gatherers strike resource nodes and carry yellow supply chunks to the nearest relay or castle. Relays forward supplies through links within 155 map units. Purple nodes yield twice as much. Broken connections stop relay deliveries.</p>
         <p>In Unit Control, left-click or drag to select friendly units, right-click to move, and left-click empty ground to deselect. Shift adds units. Right-click cancels placement or rally targeting; left-click places the building or rally point. A plus badge on the cursor shows targeting mode.</p>
         <p>Gatherers and builders resume nearest work after two idle seconds at their destination. Builders and walls cost no supplies, only typing work.</p>
         <p>Supplies, Gatherers, Barracks, Builders, Walls and Towers need typing, not supplies. Each typing option has a small progress bar; select it to show its progress in the main player-colored bar. More expensive buildings fill more slowly. Excess progress from a completed entry carries into the next bar. Once construction is ready, further entries do not bank more completions. Troops, upgrades and relays cost supplies without typing.</p>
-        <p>Army selects Barracks work when you join. You can select and prepare any building tier before it unlocks; its tile shows the tier required to place it. Teammates help with the same selected work, but placement still requires the matching tier. An unattended Army teammate earns supplies at Tier 0. Unit Control can type for supplies while issuing orders.</p>
+        <p>Every match starts at Tier 1. Army selects Barracks work when you join. Fill the work bar, then click the map to place Tier 1 Barracks. You can prepare higher tiers before they unlock. Teammates help with the same selected work; placement still requires the matching tier. Unit Control can type for supplies while issuing orders.</p>
         <p>Each typing task keeps its progress when you switch tasks or roles. Building tiers keep separate progress. Dev options sets the defaults for new matches.</p>
         <p>Use Left/Down for shorter text, Right/Up for longer text, or click the faded length options. Shift+arrows still selects typed text. Alt+number chooses the matching displayed option in your current role.</p>
-        <p>The map starts zoomed toward the home base. Use +/- and Fit map to zoom, and Alt-drag or middle-drag to pan. Shift-drag still adds troops to your selection.</p>
+        <p>The map starts zoomed toward the home base. Scroll or use +/- to zoom; Fit map shows everything. Right-drag, Alt-drag or middle-drag pans. Move the pointer to a map edge to scroll. A right-click without dragging still moves units or cancels placement. Shift-drag still adds troops to your selection.</p>
         <p>Stop computers pauses simulated teammates and their barracks, not the battlefield. Resume them to finish a shared tier challenge.</p>
         <p>World events begin at 1, 3, 5 and subsequent odd minutes of battle time, last 35 seconds, and leave normal typing between events.</p>
-        <p>Tier Up requires three phrases from each player. Barracks train their tier's units automatically. Destroy the enemy base to win.</p>
+        <p>Tier Up fills one shared bar: 12 phrases for a four-player squad. Anyone can contribute any number of phrases, even with computers stopped. Colors show each player's contribution. Pause challenge keeps your progress; Resume challenge continues it.</p>
+        <p>Queue Warriors at completed T1 Barracks, Archers at T2 and Catapults at T3. Supplies are paid when queued; each unit trains for 12 seconds at its barracks before heading to the rally point. Empty barracks do not train automatically. Queues count toward population caps. Destroy the enemy base to win.</p>
       </details>
       <details id="stronghold-dev-options" class="stronghold-dev-options">
         <summary>Dev options</summary>
@@ -147,12 +150,13 @@ export function strongholdWorkspaceMarkup(): string {
         <button id="stronghold-select-army" type="button" data-shortcut="1" aria-keyshortcuts="Alt+1"><kbd class="stronghold-hotkey">Alt+1</kbd>Select all troops</button><button id="stronghold-defend" type="button" data-shortcut="2" aria-keyshortcuts="Alt+2"><kbd class="stronghold-hotkey">Alt+2</kbd>Defend</button><button id="stronghold-assault" type="button" data-shortcut="3" aria-keyshortcuts="Alt+3"><kbd class="stronghold-hotkey">Alt+3</kbd>Assault base</button>
         <button id="stronghold-rally" type="button" data-shortcut="4" aria-keyshortcuts="Alt+4"><kbd class="stronghold-hotkey">Alt+4</kbd>Set rally on map</button><p id="stronghold-selection"></p>
       </section>
-      <div id="stronghold-placement" class="stronghold-placement is-hidden"><span>Click the map to place.</span><button id="stronghold-cancel-placement" type="button">Cancel</button></div>
+      <div id="stronghold-placement" class="stronghold-placement is-hidden"><span>Click the map to place.</span><button id="stronghold-rotate-wall" type="button" class="is-hidden">Rotate wall: 0 deg</button><button id="stronghold-cancel-placement" type="button">Cancel</button></div>
     </div>
     ${creditsMarkup()}
     <dialog id="stronghold-tier-dialog" class="stronghold-tier-dialog">
       <div id="stronghold-tier-typing-slot"></div>
       <div class="stronghold-tier-status"><h2 id="stronghold-tier-title">Tier Up</h2><p id="stronghold-tier-description"></p><button id="stronghold-tier-pause" type="button">Pause challenge</button><button id="stronghold-tier-computers" type="button" aria-pressed="false">Stop computers</button></div>
+      <div id="stronghold-tier-progress" class="stronghold-tier-progress" role="progressbar" aria-label="Shared tier challenge" aria-valuemin="0" aria-valuemax="12" aria-valuenow="0"></div>
       <div id="stronghold-tier-contributions" class="stronghold-tier-contributions"></div>
     </dialog>
   </section>`;

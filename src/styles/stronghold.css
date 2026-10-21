@@ -30,7 +30,16 @@
 }
 [data-weather-running="false"] .stronghold-weather-particle { animation-play-state: paused; }
 [data-season="fall"] .stronghold-weather-particle { width: 12px; height: 13px; border-radius: 0; background: var(--leaf-color); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-[data-season="summer"] .stronghold-weather-particle { width: 4px; height: 48px; background: #fff4af; box-shadow: 0 0 12px #fff7c8; border-radius: 50%; }
+[data-season="summer"] .stronghold-weather-particle {
+  top: calc(15% + var(--weather-x) * .6); width: 3px; height: 3px; background: #fff4af;
+  box-shadow: 0 0 5px 1px #fff7c866; border-radius: 50%;
+  animation-name: stronghold-summer-mote; animation-duration: calc(var(--weather-duration) * 3);
+}
+@keyframes stronghold-summer-mote {
+  0%, 100% { opacity: 0; transform: translate(0, 8px); }
+  35% { opacity: .45; transform: translate(var(--weather-drift), -7px); }
+  70% { opacity: .2; transform: translate(6px, -18px); }
+}
 [data-season="spring"] .stronghold-weather-particle {
   --petal: #f4a9ce; width: 17px; height: 17px; border-radius: 0;
   background: radial-gradient(circle at center, #fff0a9 0 16%, transparent 18%),
@@ -106,9 +115,14 @@
   z-index: 5; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
   background: #111; border: none; border-radius: 0; padding: 24px 10px; font: var(--stronghold-font-weight) 20px/1.25 var(--stronghold-font); color: #111;
 }
-.stronghold-tier::before { content: ''; position: absolute; inset: 4px; background: white; clip-path: inherit; }
+.stronghold-tier::before { content: ''; position: absolute; inset: 4px; background: linear-gradient(#fff6a6, #f6bd35); clip-path: inherit; }
+.stronghold-tier:not(:disabled) { filter: drop-shadow(0 0 6px #ffe96a); }
+.stronghold-tier:not(:disabled):hover::before { background: #fff6ba; }
+.stronghold-tier:disabled { opacity: .65; }
 .stronghold-tier span, .stronghold-tier strong { position: relative; display: block; }
 .stronghold-tier span { font-size: 14px; }
+.stronghold-tier-progress { display: flex; flex: 0 0 36px; width: 100%; overflow: hidden; border: 3px solid #111; background: #ddd; }
+.stronghold-tier-progress > span { height: 100%; flex-shrink: 0; }
 .stronghold-tier:disabled { cursor: default; }
 .stronghold-guide { position: absolute; left: 14px; top: 60px; z-index: 5; width: min(380px, calc(100% - 28px)); font-size: 16px; }
 .stronghold-guide summary { cursor: pointer; width: fit-content; font-weight: bold; }

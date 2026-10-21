@@ -1,5 +1,6 @@
 import { requireElement } from '../../shared/dom.ts';
-import { BUILDING_CAPS, EVENT_LABELS, ROLE_ACTIONS, TIER_MAX, TIER_QUOTA, UNIT_CAPS } from '../domain/rules.ts';
+import { BUILDING_CAPS, EVENT_LABELS, ROLE_ACTIONS, TIER_MAX, UNIT_CAPS } from '../domain/rules.ts';
+import { tierProgress } from '../domain/tier-progress.ts';
 import { taskWork, upgradeLimit } from '../domain/technology.ts';
 import { actionProblem } from '../domain/actions.ts';
 import { taskKey } from '../domain/tasks.ts';
@@ -15,6 +16,7 @@ import { applyPlayerTheme, playerCursor } from './player-theme.ts';
 import { workProgress } from './work-progress.ts';
 import { renderEnvironment } from './environment.ts';
 import { daylight } from '../domain/environment.ts';
+import { isArmyUnit, queuedUnits } from '../domain/training.ts';
 
 export function strongholdElements() {
   const map = document.getElementById('stronghold-map');
@@ -48,7 +50,7 @@ export function strongholdElements() {
     mapControls: createMapControls(map),
     camera: createMapCamera(map),
     renderEventLog: createEventLog(requireElement('stronghold-event-log', HTMLElement)),
-    contributionCards: new Map<string, { card: HTMLElement; name: HTMLElement; progress: HTMLElement; typed: HTMLElement }>(),
+    contributionCards: new Map<string, { card: HTMLElement; name: HTMLElement; progress: HTMLElement; typed: HTMLElement; segment: HTMLElement }>(),
     input: requireElement('stronghold-input', HTMLInputElement), phrase: requireElement('stronghold-phrase', HTMLElement),
     typedBar: requireElement('stronghold-typed-bar', HTMLElement), progressFill: requireElement('stronghold-typing-progress', HTMLElement),
     typing: requireElement('stronghold-typing', HTMLElement), typedArea: requireElement('stronghold-typed-area', HTMLElement),
@@ -75,7 +77,7 @@ function text(id: string, value: string): void {
 }
 export function renderStronghold(
   elements: StrongholdElements, snapshot: StrongholdSnapshot, selected: ReadonlySet<number>, running: boolean, paused: boolean,
-  relayPlacement = false, placementCancelled = false, rallyPlacement = false
+  relayPlacement = false, placementCancelled = false, rallyPlacement = false, shown = true
 ): void {
   const self = snapshot.players.find(player => player.id === snapshot.selfId);
   const ownCard = elements.playerCards.find(card => card.id === snapshot.selfId);
@@ -115,6 +117,7 @@ export function renderStronghold(
   if (ready.disabled !== readyDisabled) ready.disabled = readyDisabled;
   ready.setAttribute('aria-label', `Tier ${snapshot.tier}. ${self.ready ? 'Cancel ready' : 'Ready up for the next tier'}`);
   text('stronghold-pause', paused ? 'Resume' : 'Pause');
+  text('stronghold-tier-pause', paused ? 'Resume challenge' : 'Pause challenge');
   elements.renderBattlefield(snapshot, selected);
   elements.renderEventLog(snapshot);
   requireElement('stronghold-outcome', HTMLElement).classList.toggle('is-hidden', !terminal);
@@ -153,15 +156,16 @@ export function renderStronghold(
     setText(entry.typed, player.typed);
     entry.typed.classList.remove('is-hidden');
     const bank = workProgress(player.work, taskWork(player));
-    const percent = challenge ? player.contribution / TIER_QUOTA * 100 : bank.percent;
+    const goal = tierProgress(snapshot.players).goal;
+    const percent = challenge ? player.contribution / goal * 100 : bank.percent;
     const width = `${percent}%`;
     if (entry.progress.style.width !== width) entry.progress.style.width = width;
     const progressBar = entry.progress.closest('[role="progressbar"]');
     if (progressBar) {
       setAttribute(progressBar, 'aria-valuenow', String(Math.round(percent)));
-      setAttribute(progressBar, 'aria-valuetext', challenge ? `${player.contribution} of ${TIER_QUOTA} tier entries` : bank.description);
+      setAttribute(progressBar, 'aria-valuetext', challenge ? `${player.contribution} of ${goal} shared tier entries` : bank.description);
     }
-    setText(entry.progressLabel, challenge ? `${player.contribution}/${TIER_QUOTA}` : bank.label);
+    setText(entry.progressLabel, challenge ? `${player.contribution} contributed` : bank.label);
     if (entry.roleSelect.value !== player.role) entry.roleSelect.value = player.role;
     const roleDisabled = !own || challenge || terminal || !running;
     if (entry.roleSelect.disabled !== roleDisabled) entry.roleSelect.disabled = roleDisabled;
@@ -171,6 +175,11 @@ export function renderStronghold(
         const capped = button.upgrade ? snapshot.technology[button.upgrade] >= upgradeLimit(snapshot.tier, button.upgrade) : false;
         const selection = { action: button.action, constructionTier: button.tier ?? 1, upgradeTarget: button.upgrade ?? player.upgradeTarget };
         const purchaseProblem = button.miniBar ? null : actionProblem(snapshot, { ...player, ...selection }, button.action);
+        if (isArmyUnit(button.action)) {
+          const queued = button.element.querySelector('[data-training-queued]');
+          if (queued) setText(queued, `${queuedUnits(snapshot, button.action)} queued`);
+          setAttribute(button.element, 'title', purchaseProblem ?? `Queue a ${button.action} at completed Tier ${button.minimumTier} Barracks. Supplies are paid now.`);
+        }
         const tierLocked = snapshot.tier < button.minimumTier;
         const disabled = !own || !running || challenge || terminal || (!button.miniBar && tierLocked) || capped || Boolean(purchaseProblem);
         if (button.element.disabled !== disabled) button.element.disabled = disabled;
@@ -196,5 +205,5 @@ export function renderStronghold(
       }
     }
   }
-  renderTierChallenge(elements, snapshot, running);
+  renderTierChallenge(elements, snapshot, running, shown, paused);
 }

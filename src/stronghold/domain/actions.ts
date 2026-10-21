@@ -1,14 +1,17 @@
 import { assignPhrase, copyRoleTask } from './phrases.ts';
 import { addBuilding, addUnit } from './state.ts';
-import { ACTION_LABELS, BASE, BUILDING_CAPS, distance, isTypingAction, MIN_TIER, ROLE_ACTIONS, ROLE_LABELS, TIER_MAX, TIER_QUOTA, UNIT_CAPS, validPoint } from './rules.ts';
+import { ACTION_LABELS, BASE, BUILDING_CAPS, distance, isTypingAction, MIN_TIER, ROLE_ACTIONS, ROLE_LABELS, TIER_MAX, UNIT_CAPS, validPoint } from './rules.ts';
 import { applyUpgrade, phraseWork, taskCost, taskWork, upgradeLimit, UPGRADE_OPTIONS } from './technology.ts';
 import { ENTITY_LABELS, playerEvent, recordEvent } from './events.ts';
 import { PHRASE_LENGTHS, SEASONS, type Action, type BuildingKind, type Participant, type Point, type StrongholdCommand, type StrongholdState } from './types.ts';
 import { restoreRoleTask, saveRoleTask, taskKey } from './tasks.ts';
 import { spawnWave } from './combat.ts';
 import { daylight, DAY_SECONDS, NIGHT_SECONDS, SEASON_LABELS, seasonalNodes } from './environment.ts';
+import { tierProgress } from './tier-progress.ts';
+import { wallContains, WALL_HALF_LENGTH, WALL_HALF_WIDTH } from './navigation.ts';
+import { isArmyUnit, queuedUnits, trainingBarracks, TRAINING_SECONDS } from './training.ts';
 
-type ActionWorld = Pick<StrongholdState, 'tier' | 'resources' | 'units' | 'technology'>;
+type ActionWorld = Pick<StrongholdState, 'tier' | 'resources' | 'units' | 'technology' | 'buildings'>;
 type TaskPlayer = Pick<Participant, 'role' | 'action' | 'constructionTier' | 'upgradeTarget' | 'work'>;
 export function actionProblem(state: ActionWorld, player: TaskPlayer, action: Action): string | null {
   if (!ROLE_ACTIONS[player.role].includes(action)) return 'This action belongs to another role.';
@@ -21,16 +24,28 @@ export function actionProblem(state: ActionWorld, player: TaskPlayer, action: Ac
     if (state.technology[player.upgradeTarget] >= upgradeLimit(state.tier, player.upgradeTarget)) return 'Upgrade limit reached for this tier.';
   }
   if (action === 'worker' || action === 'builder' || action === 'warrior' || action === 'archer' || action === 'catapult') {
-    if (state.units.filter(unit => unit.kind === action).length >= UNIT_CAPS[action]) return `${ACTION_LABELS[action]} population limit reached.`;
+    const queued = isArmyUnit(action) ? queuedUnits(state, action) : 0;
+    if (state.units.filter(unit => unit.kind === action && unit.hp > 0).length + queued >= UNIT_CAPS[action]) return `${ACTION_LABELS[action]} population limit reached.`;
   }
+  if (isArmyUnit(action) && !trainingBarracks(state, action)) return `Build and finish Tier ${MIN_TIER[action]} Barracks to queue ${action}s.`;
   return null;
 }
 
 export function placementProblem(
   state: ActionWorld & Pick<StrongholdState, 'buildings'>,
-  player: TaskPlayer, kind: Extract<BuildingKind, 'relay' | 'barracks' | 'tower' | 'wall'>, point: Point
+  player: TaskPlayer, kind: Extract<BuildingKind, 'relay' | 'barracks' | 'tower' | 'wall'>, point: Point, rotation = 0
 ): string | null {
   if (!validPoint(point)) return 'Choose a location inside the battlefield.';
+  if (!Number.isInteger(rotation) || rotation < 0 || rotation >= 180 || rotation % 45 !== 0) return 'Choose a wall angle of 0, 45, 90 or 135 degrees.';
+  if (kind === 'wall') {
+    const wall = { ...point, rotation };
+    const angle = rotation * Math.PI / 180;
+    for (const x of [-WALL_HALF_LENGTH, WALL_HALF_LENGTH]) for (const y of [-WALL_HALF_WIDTH, WALL_HALF_WIDTH]) {
+      const corner = { x: point.x + x * Math.cos(angle) - y * Math.sin(angle), y: point.y + x * Math.sin(angle) + y * Math.cos(angle) };
+      if (!validPoint(corner) || corner.y < 130) return 'Keep the entire wall inside the construction area.';
+    }
+    if (state.units.some(unit => unit.hp > 0 && wallContains(unit, wall, 10))) return 'Leave space for units before placing or rotating a wall.';
+  }
   if (kind !== 'relay' && (player.action !== kind || player.work < taskWork(player))) return 'Complete the construction work first.';
   const problem = actionProblem(state, player, kind);
   if (problem) return problem;
@@ -48,10 +63,14 @@ function performAction(state: StrongholdState, player: Participant, action: Acti
   } else if (action === 'upgrade') {
     applyUpgrade(state, { ...player, upgradeTarget: upgrade });
     playerEvent(state, player, `upgraded ${UPGRADE_OPTIONS[upgrade].label}`);
-  } else if (action === 'worker' || action === 'builder'
-    || action === 'warrior' || action === 'archer' || action === 'catapult') {
-    const unit = addUnit(state, action, { x: BASE.x + (state.nextId % 5 - 2) * 16, y: BASE.y - 40 });
-    if (player.role === 'production') unit.destination = { ...state.rally };
+  } else if (isArmyUnit(action)) {
+    const barracks = trainingBarracks(state, action);
+    if (!barracks) throw new Error('No completed matching-tier barracks are available.');
+    if (!barracks.trainingQueue.length) barracks.cooldown = TRAINING_SECONDS;
+    barracks.trainingQueue.push({ kind: action, playerId: player.id });
+    playerEvent(state, player, `queued ${ENTITY_LABELS[action]} at T${barracks.tier} Barracks`);
+  } else if (action === 'worker' || action === 'builder') {
+    addUnit(state, action, { x: BASE.x + (state.nextId % 5 - 2) * 16, y: BASE.y - 40 });
     playerEvent(state, player, `created ${ENTITY_LABELS[action]}`);
   }
 }
@@ -59,9 +78,9 @@ function performAction(state: StrongholdState, player: Participant, action: Acti
 export function completePhrase(state: StrongholdState, player: Participant): void {
   player.completed++;
   if (state.phase === 'tier-up') {
-    if (player.contribution >= TIER_QUOTA) { assignPhrase(state, player); return; }
     player.contribution++;
-    if (state.players.every(other => other.contribution >= TIER_QUOTA)) {
+    const progress = tierProgress(state.players);
+    if (progress.completed >= progress.goal) {
       state.tier++;
       state.phase = 'playing';
       state.message = `Tier ${state.tier} unlocked! New units, defenses and upgrades are available.`;
@@ -168,16 +187,30 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
   if (command.type === 'READY') {
     if (state.phase !== 'playing' || state.tier >= TIER_MAX) throw new Error('Tier-up is not available right now.');
     player.ready = command.ready;
+    if (!player.simulated) state.players.filter(other => other.simulated).forEach(other => { other.ready = command.ready; });
     playerEvent(state, player, command.ready ? 'is ready' : 'cancelled ready');
     if (state.players.every(other => other.ready)) {
       state.phase = 'tier-up';
-      state.message = 'All players locked in. Complete three phrases each to advance. The battlefield is paused.';
+      state.message = `Complete ${tierProgress(state.players).goal} phrases together to advance. Anyone can contribute; the battlefield is paused.`;
       recordEvent(state, 'Tier challenge started');
       state.players.forEach(other => { other.contribution = 0; assignPhrase(state, other); });
     }
     return;
   }
   if (state.phase !== 'playing') throw new Error('Battlefield orders are paused during tier-up.');
+  if (command.type === 'ROTATE_WALL') {
+    if (player.role !== 'defenses') throw new Error('Switch to Defenses to rotate walls.');
+    const wall = state.buildings.find(building => building.id === command.id && building.kind === 'wall' && !building.enemy && building.hp > 0);
+    if (!wall) throw new Error('Choose a friendly wall.');
+    const rotation = ((wall.rotation ?? 0) + 45) % 180;
+    // Validate geometry without spending or requiring another completed construction task.
+    const problem = placementProblem({ ...state, buildings: state.buildings.filter(building => building !== wall) },
+      { ...player, action: 'wall', work: taskWork({ ...player, action: 'wall' }) }, 'wall', wall, rotation);
+    if (problem) throw new Error(problem);
+    wall.rotation = rotation;
+    playerEvent(state, player, 'rotated Wall');
+    return;
+  }
   if (command.type === 'ACTION') {
     if (!ROLE_ACTIONS[player.role].includes(command.action)) throw new Error('This action belongs to another role.');
     const tier = command.tier ?? Math.max(1, state.tier);
@@ -202,11 +235,12 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     return;
   }
   if (command.type === 'PLACE') {
-    const problem = placementProblem(state, player, command.kind, command.point);
+    const problem = placementProblem(state, player, command.kind, command.point, command.rotation);
     if (problem) throw new Error(problem);
     state.resources -= taskCost({ ...player, action: command.kind });
     const building = addBuilding(state, command.kind, command.point, false, false, player.constructionTier);
     building.ownerId = player.id;
+    if (command.kind === 'wall') building.rotation = command.rotation ?? 0;
     state.message = '';
     playerEvent(state, player, `placed ${ENTITY_LABELS[command.kind]}`);
     if (command.kind !== 'relay') {

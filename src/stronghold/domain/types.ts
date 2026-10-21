@@ -24,7 +24,8 @@ export type Unit = Point & {
 };
 export type Building = Point & {
   id: number; kind: BuildingKind; hp: number; maxHp: number;
-  tier: number; progress: number; cooldown: number; enemy: boolean; attackTarget: Point | null; ownerId: string | null;
+  tier: number; progress: number; cooldown: number; enemy: boolean; attackTarget: Point | null; ownerId: string | null; rotation?: number;
+  trainingQueue: { kind: ArmyUnitKind; playerId: string }[];
 };
 export type ResourceNode = Point & { id: number; rich: boolean; remaining: number };
 export type ResourceChunk = Point & { id: number; amount: number; target: number | null; carrier: number | null };
@@ -63,7 +64,8 @@ export type StrongholdCommand =
   | { type: 'TIME_OF_DAY'; period: 'day' | 'night' }
   | { type: 'TYPE'; phraseId: number; text: string }
   | { type: 'READY'; ready: boolean }
-  | { type: 'PLACE'; kind: 'relay' | 'barracks' | 'tower' | 'wall'; point: Point }
+  | { type: 'PLACE'; kind: 'relay' | 'barracks' | 'tower' | 'wall'; point: Point; rotation?: number }
+  | { type: 'ROTATE_WALL'; id: number }
   | { type: 'MOVE'; ids: number[]; point: Point }
   | { type: 'RALLY'; point: Point };
 export interface StrongholdConnection {

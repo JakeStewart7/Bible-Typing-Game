@@ -32,7 +32,7 @@ test('Stronghold starting warriors hold off both opening waves without reinforce
   equal(state.units.filter(unit => unit.kind === 'invader').length, 0);
   equal(state.units.map(unit => unit.id), original);
   equal(warriors.length, 2);
-  equal(warriors.every(unit => unit.hp > unit.maxHp / 2), true);
+  equal(warriors.every(unit => unit.hp > 0), true);
   const castle = state.buildings.find(building => building.kind === 'castle');
   equal(castle?.hp, castle?.maxHp);
 });
@@ -57,7 +57,7 @@ test('Stronghold Next Wave spawns immediately without advancing battle time or r
   executeCommand(state, player, { type: 'NEXT_WAVE' });
   executeCommand(state, player, { type: 'NEXT_WAVE' });
   equal(state.wave, 3);
-  equal(state.buildings.find(building => building.kind === 'enemy-base')?.tier, 1);
+  equal(state.buildings.find(building => building.kind === 'enemy-base')?.tier, 2);
 });
 
 test('Stronghold Next Wave rejects computers, tier challenges and finished matches without mutation', () => {
@@ -80,13 +80,13 @@ test('Stronghold Next Wave rejects computers, tier challenges and finished match
   }
 });
 
-test('Stronghold every unit moves 70 percent slower and has double health, including wave bonuses', () => {
+test('Stronghold units retain slow movement and double health, with equal opposing warrior stats', () => {
   const original = { worker: [42, 35], builder: [50, 55], warrior: [62, 100],
-    archer: [55, 65], catapult: [32, 110], invader: [38, 60] } as const;
+    archer: [55, 65], catapult: [32, 110], invader: [62, 100] } as const;
   const state = createStronghold();
   state.units = [];
   state.nodes = [{ id: 100, x: 100, y: 500, remaining: 100, rich: false }];
-  addBuilding(state, 'wall', { x: 200, y: 500 });
+  addBuilding(state, 'barracks', { x: 200, y: 500 });
   for (const kind of ['worker', 'builder', 'warrior', 'archer', 'catapult', 'invader'] as const) {
     equal(Math.abs(UNIT_RULES[kind].speed - original[kind][0] * .3) < .000001, true);
     const unit = addUnit(state, kind, { x: 100, y: 300 });
@@ -101,7 +101,7 @@ test('Stronghold every unit moves 70 percent slower and has double health, inclu
   state.wave = 4;
   for (const formation of [null, 'warrior', 'archer', 'catapult'] as const) {
     const unit = addUnit(state, 'invader', { x: 100, y: 100 }, formation);
-    equal(unit.maxHp, (UNIT_RULES[formation ?? 'invader'].hp + 20) * 2);
+    equal(unit.maxHp, UNIT_RULES[formation ?? 'invader'].hp * 2);
   }
   equal(state.buildings.find(building => building.kind === 'castle')?.maxHp, 10000);
   equal(state.buildings.find(building => building.kind === 'enemy-base')?.maxHp, 1200);
@@ -116,7 +116,7 @@ test('Stronghold gatherers and builders follow move orders then resume nearest w
     state.units = [];
     const unit = addUnit(state, kind, { x: 500, y: 300 });
     state.nodes = [{ id: 100, x: 530, y: 300, rich: false, remaining: 100 }];
-    const project = addBuilding(state, 'wall', { x: 530, y: 300 });
+    const project = addBuilding(state, 'barracks', { x: 530, y: 300 });
     const point = { x: 500, y: 300 + UNIT_RULES[kind].speed };
     executeCommand(state, player, { type: 'MOVE', ids: [unit.id], point });
     updateLogistics(state, .5);
@@ -173,7 +173,7 @@ test('Stronghold construction selects the nearest free builder regardless of uni
     const far = addUnit(state, 'builder', { x: 800, y: 500 });
     const near = addUnit(state, 'builder', { x: 110, y: 300 });
     if (reverse) state.units.reverse();
-    const project = addBuilding(state, 'wall', { x: 100, y: 300 });
+    const project = addBuilding(state, 'barracks', { x: 100, y: 300 });
     updateLogistics(state, .1);
     equal(near.task, project.id);
     equal(near.attackTarget, { x: project.x, y: project.y });
@@ -188,8 +188,8 @@ test('Stronghold construction assigns distinct nearest builders to multiple pend
   state.units = [];
   const right = addUnit(state, 'builder', { x: 800, y: 400 });
   const left = addUnit(state, 'builder', { x: 100, y: 400 });
-  const first = addBuilding(state, 'wall', { x: 110, y: 400 });
-  const second = addBuilding(state, 'wall', { x: 790, y: 400 });
+  const first = addBuilding(state, 'barracks', { x: 110, y: 400 });
+  const second = addBuilding(state, 'barracks', { x: 790, y: 400 });
   updateLogistics(state, .1);
   equal(left.task, first.id);
   equal(right.task, second.id);
@@ -201,7 +201,7 @@ test('Stronghold busy, manually moving, waiting and dead builders cannot steal a
   const state = createStronghold();
   state.units = [];
   const busy = addUnit(state, 'builder', { x: 100, y: 300 });
-  const original = addBuilding(state, 'wall', { x: 105, y: 300 });
+  const original = addBuilding(state, 'barracks', { x: 105, y: 300 });
   updateLogistics(state, .1);
   const moving = addUnit(state, 'builder', { x: 110, y: 300 });
   moving.destination = { x: 300, y: 300 }; moving.idleTime = 0;
@@ -210,7 +210,7 @@ test('Stronghold busy, manually moving, waiting and dead builders cannot steal a
   const dead = addUnit(state, 'builder', { x: 110, y: 300 });
   dead.hp = 0;
   const available = addUnit(state, 'builder', { x: 700, y: 300 });
-  const next = addBuilding(state, 'wall', { x: 110, y: 300 });
+  const next = addBuilding(state, 'barracks', { x: 110, y: 300 });
   updateLogistics(state, .1);
   equal(busy.task, original.id);
   equal(available.task, next.id);
@@ -226,12 +226,12 @@ test('Stronghold builders release completed or destroyed jobs before the next ne
     const state = createStronghold();
     state.units = [];
     const near = addUnit(state, 'builder', { x: 110, y: 300 });
-    const original = addBuilding(state, 'wall', { x: 100, y: 300 });
+    const original = addBuilding(state, 'barracks', { x: 100, y: 300 });
     updateLogistics(state, .1);
     if (finished) original.progress = 1;
     else original.hp = 0;
     const far = addUnit(state, 'builder', { x: 800, y: 500 });
-    const next = addBuilding(state, 'wall', { x: 120, y: 300 });
+    const next = addBuilding(state, 'barracks', { x: 120, y: 300 });
     updateLogistics(state, .1);
     equal(near.task, next.id);
     equal(far.task, null);
@@ -382,15 +382,18 @@ test('Stronghold simulated role mates contribute work without editing human text
   executeCommand(state, you, { type: 'ACTION', action: 'wall' });
   const phrase = you.phrase;
   const phraseId = you.phraseId;
-  advanceStronghold(state, 1);
+  const partner = state.players.find(player => player.simulated && player.role === 'defenses')!;
+  const points = phraseWork(partner);
+  const completed = partner.completed;
+  for (let frame = 0; frame < 40 && partner.completed === completed; frame++) advanceStronghold(state, .1);
   equal(you.action, 'wall');
   equal(you.typed, '');
   equal(you.phrase, phrase);
   equal(you.phraseId, phraseId);
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: '?' });
-  advanceStronghold(state, 1);
+  advanceStronghold(state, .1);
   equal(you.typed, '?');
-  equal(you.work, 8.8);
+  equal(you.work, points);
   equal(you.phraseId, phraseId);
   executeCommand(state, you, { type: 'ROLE', role: 'army' });
   const armyPhrase = you.phrase;

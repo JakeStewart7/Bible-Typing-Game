@@ -4,6 +4,18 @@ import { setAttribute } from './dom-updates.ts';
 import { DEFAULT_MAP_ZOOM, MIN_MAP_ZOOM, MAX_MAP_ZOOM } from '../infrastructure/developer-options.ts';
 export { DEFAULT_MAP_ZOOM, MIN_MAP_ZOOM, MAX_MAP_ZOOM } from '../infrastructure/developer-options.ts';
 
+export function edgePan(point: Point, bounds: { left: number; top: number; right: number; bottom: number }): Point {
+  const edge = 28;
+  const axis = (value: number, min: number, max: number) => value < min || value > max ? 0
+    : value < min + edge ? -(1 - (value - min) / edge) : value > max - edge ? 1 - (max - value) / edge : 0;
+  return { x: axis(point.x, bounds.left, bounds.right), y: axis(point.y, bounds.top, bounds.bottom) };
+}
+
+export function wheelZoom(zoom: number, deltaY: number, deltaMode: number): number {
+  const pixels = deltaY * (deltaMode === 1 ? 16 : deltaMode === 2 ? 240 : 1);
+  return Math.max(MIN_MAP_ZOOM, Math.min(MAX_MAP_ZOOM, zoom * Math.exp(-Math.max(-240, Math.min(240, pixels)) * .002)));
+}
+
 export function cameraBounds(zoom: number, center: Point) {
   if (!Number.isFinite(zoom) || !Number.isFinite(center.x) || !Number.isFinite(center.y)) throw new Error('Invalid map camera coordinates.');
   const level = Math.max(MIN_MAP_ZOOM, Math.min(MAX_MAP_ZOOM, zoom));

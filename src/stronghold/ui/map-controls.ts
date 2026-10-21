@@ -53,17 +53,17 @@ export function createMapControls(map: SVGSVGElement) {
       setAttribute(selection, 'fill', theme.light);
       setAttribute(selection, 'stroke', theme.bold);
     },
-    ghost(snapshot: StrongholdSnapshot, kind: PlacementKind | null, point: Point | null): void {
+    ghost(snapshot: StrongholdSnapshot, kind: PlacementKind | null, point: Point | null, rotation = 0): void {
       const self = snapshot.players.find(player => player.id === snapshot.selfId);
       if (!self || !kind || !point || snapshot.phase !== 'playing') {
         setAttribute(ghost, 'visibility', 'hidden');
         return;
       }
-      const nextSignature = `${kind}/${self.constructionTier}`;
+      const nextSignature = `${kind}/${self.constructionTier}/${rotation}`;
       if (signature !== nextSignature) {
         ghost.innerHTML = buildingMarkup({
           ...point, id: 0, kind, hp: 1, maxHp: 1, tier: self.constructionTier,
-          progress: 1, cooldown: 0, enemy: false, attackTarget: null, ownerId: self.id
+          progress: 1, cooldown: 0, enemy: false, attackTarget: null, ownerId: self.id, rotation, trainingQueue: []
         }) + '<rect data-outline x="-22" y="-28" width="44" height="58" fill="none" stroke-width="3" stroke-dasharray="5 3"/>';
         signature = nextSignature;
       }
@@ -71,7 +71,7 @@ export function createMapControls(map: SVGSVGElement) {
       setAttribute(ghost, 'visibility', 'visible');
       const outline = ghost.querySelector('[data-outline]');
       if (!outline) throw new Error('Missing Stronghold placement outline.');
-      const problem = placementProblem(snapshot, self, kind, point);
+      const problem = placementProblem(snapshot, self, kind, point, rotation);
       setAttribute(outline, 'stroke', problem ? '#ff1726' : highlight);
       setAttribute(ghost, 'data-valid', String(!problem));
     },

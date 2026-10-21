@@ -39,7 +39,7 @@ export const UNIT_RULES: Record<UnitKind, { hp: number; speed: number; damage: n
   warrior: { hp: 100, speed: 18.6, damage: 12, range: 26 },
   archer: { hp: 65, speed: 16.5, damage: 9, range: 120 },
   catapult: { hp: 110, speed: 9.6, damage: 30, range: 165 },
-  invader: { hp: 60, speed: 11.4, damage: 8, range: 25 }
+  invader: { hp: 100, speed: 18.6, damage: 12, range: 26 }
 };
 export const UNIT_HEALTH_MULTIPLIER = 2;
 export const TOWER_STRENGTH_MULTIPLIER = 1.5;
