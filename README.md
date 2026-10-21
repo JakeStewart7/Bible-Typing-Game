@@ -257,7 +257,7 @@ Movement remains slow, and troop upgrades still improve your units.
 Both bases have **4,000 HP**; enemy tier upgrades do not increase that maximum
 or heal damage. Archers on both sides bob slowly, even while standing or firing.
 Builders bob quickly only while building or repairing. Building and gathering
-use silver-white sparks and a soft shimmer; warriors use copper colors, and combat uses an ember-colored jagged
+use silver-white sparks and a soft shimmer; warriors use silver with a dark steel outline, and combat uses an ember-colored jagged
 strike and expanding slash burst. Enemy attacks show only the explosion, without
 overlaid beam or slash lines. Reduced-motion preferences disable bobbing,
 pulsing and rotating effects. Square warriors and square enemies rock back and

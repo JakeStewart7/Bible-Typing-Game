@@ -46,7 +46,7 @@ export function unitMotionTransform(unit: Unit, previous: Point | undefined, ela
 export function unitMarkup(unit: Unit, selected: boolean): string {
   const shape = unit.kind === 'worker' ? '<circle r="8" fill="#fff" stroke="#b88051" stroke-width="2"/>'
     : unit.kind === 'builder' ? '<path d="M0 -11 L10 8 L-10 8 Z" fill="#cec0df" stroke="#a64caf" stroke-width="2"/>'
-    : unit.kind === 'warrior' ? '<rect x="-8" y="-8" width="16" height="16" fill="#e5c2a0" stroke="#9a5b2e" stroke-width="2"/>'
+    : unit.kind === 'warrior' ? '<rect x="-8" y="-8" width="16" height="16" fill="#dce2e8" stroke="#65727e" stroke-width="2"/>'
     : unit.kind === 'archer' ? '<path d="M0 -10 L8 0 L0 10 L-8 0 Z" fill="#9ed7e6" stroke="#00aeef" stroke-width="2"/>'
     : unit.kind === 'catapult' ? '<path d="M0 -12 L10 9 L-10 9 Z" fill="#f0e3a7" stroke="#cfb000" stroke-width="2"/>'
     : unit.formation === 'archer' ? '<path d="M0 -10 L8 0 L0 10 L-8 0 Z" fill="#870018" stroke="#ff1726" stroke-width="2"/>'
