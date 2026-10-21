@@ -49,7 +49,7 @@ export function strongholdElements() {
     mapControls: createMapControls(map),
     camera: createMapCamera(map),
     renderEventLog: createEventLog(requireElement('stronghold-event-log', HTMLElement)),
-    contributionCards: new Map<string, { card: HTMLElement; name: HTMLElement; progress: HTMLElement; typed: HTMLElement; segment: HTMLElement }>(),
+    contributionCards: new Map<string, { card: HTMLElement; name: HTMLElement; progress: HTMLElement; segment: HTMLElement }>(),
     input: requireElement('stronghold-input', HTMLInputElement), phrase: requireElement('stronghold-phrase', HTMLElement),
     typedBar: requireElement('stronghold-typed-bar', HTMLElement), progressFill: requireElement('stronghold-typing-progress', HTMLElement),
     typing: requireElement('stronghold-typing', HTMLElement), typedArea: requireElement('stronghold-typed-area', HTMLElement),
@@ -158,9 +158,9 @@ export function renderStronghold(
     const progressBar = entry.progress.closest('[role="progressbar"]');
     if (progressBar) {
       setAttribute(progressBar, 'aria-valuenow', String(Math.round(percent)));
-      setAttribute(progressBar, 'aria-valuetext', challenge ? `${player.contribution} of ${goal} shared tier characters` : bank.description);
+      setAttribute(progressBar, 'aria-valuetext', challenge ? `${Math.round(percent)}% of shared tier progress` : bank.description);
     }
-    setText(entry.progressLabel, challenge ? `${player.contribution} characters` : bank.label);
+    setText(entry.progressLabel, challenge ? `${Math.round(percent)}%` : bank.label);
     if (entry.roleSelect.value !== player.role) entry.roleSelect.value = player.role;
     const roleDisabled = !own || challenge || terminal || !running;
     if (entry.roleSelect.disabled !== roleDisabled) entry.roleSelect.disabled = roleDisabled;

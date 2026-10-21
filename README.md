@@ -259,11 +259,12 @@ The first challenge advances to Tier 1, unlocking T1 barracks, warrior training
 and tower construction; prepared construction work is preserved.
 The gold **Tier Up** hexagon hangs 40% below the header with a subtle depth
 shadow. It pauses the battle for one shared challenge:
-500 correct characters shared by the squad. Correct partial input counts
-immediately, without length bonuses or duplicate credit for backspacing and
-retyping. The first challenge uses letters, the next adds numbers, and the last
+500 correct characters shared by the squad, credited only when a whole phrase
+is completed correctly. Partial and incorrect input add no progress, and length
+bonuses do not apply. The first challenge uses letters, the next adds numbers, and the last
 adds symbols and punctuation. Anyone can contribute any number; segments in the
-shared progress bar use each player's light color and show their character share.
+shared progress bar use each player's light color. The challenge displays
+progress percentages rather than character counts or teammates' typed text.
 **Pause challenge** freezes typing without dismissing the dialog; **Resume
 challenge** continues with all work intact. Stopped computers do not prevent
 readiness or solo completion. Tier 2 adds archers, and Tier 3 adds catapults.

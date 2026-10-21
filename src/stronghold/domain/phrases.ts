@@ -38,7 +38,6 @@ export function assignPhrase(state: StrongholdState, player: Participant, random
   player.phraseId++;
   player.typed = '';
   player.typingCredit = 0;
-  player.tierPhraseCredit = 0;
   const challenge = TIER_WORD_POOLS[state.tier];
   if (state.phase === 'tier-up' && !challenge) throw new Error('No further tier challenge is available.');
   const phrases = state.phase === 'tier-up' && challenge ? challenge[player.length]

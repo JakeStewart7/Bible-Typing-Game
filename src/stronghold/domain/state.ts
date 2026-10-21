@@ -43,7 +43,7 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
     event: 'peace', eventIn: 60, nextId: 1, units: [], buildings: [], chunks: [],
     players: roster.map(player => ({
       ...player, action: player.role === 'defenses' ? 'builder' : 'resources',
-      phrase: '', typed: '', phraseId: 0, completed: 0, ready: false, contribution: 0, typingCredit: 0, tierPhraseCredit: 0,
+      phrase: '', typed: '', phraseId: 0, completed: 0, ready: false, contribution: 0, typingCredit: 0,
       constructionTier: 1, upgradeTarget: player.role === 'production' ? 'warrior' : player.role === 'defenses' ? 'tower-1' : 'economy',
       actionPhrases: 0, work: 0, length: options.length
     })),

@@ -65,21 +65,29 @@ test('Stronghold tier drills progress from letters to numbers to punctuation at 
   }
 });
 
-test('Stronghold tier characters count correct partial input once and stop at exactly 500 without length bonuses', () => {
+test('Stronghold tier progress counts only completed correct phrases without length bonuses or duplicate credit', () => {
   const state = createStronghold({ resources: 50, length: 'long', computersPaused: true }), player = state.players[0]!;
   executeCommand(state, player, { type: 'READY', ready: true });
   const phraseId = player.phraseId, prefix = player.phrase.slice(0, 3);
   const type = (text: string) => executeCommand(state, player, { type: 'TYPE', phraseId, text });
-  type(prefix); equal(player.contribution, 3);
-  type(prefix); type(''); type(prefix); equal(player.contribution, 3);
+  type(prefix); equal(player.contribution, 0);
+  type(prefix); type(''); type(prefix); equal(player.contribution, 0);
   const wrong = player.phrase[3] === 'x' ? 'y' : 'x';
-  type(prefix + wrong); equal(player.contribution, 3);
-  type(player.phrase.slice(0, 4)); equal(player.contribution, 4);
+  type(prefix + wrong); equal(player.contribution, 0);
+  type(player.phrase.slice(0, 4)); equal(player.contribution, 0);
   const phraseLength = player.phrase.length;
+  type(player.phrase.slice(0, -1) + '!');
+  equal(player.contribution, 0); equal(player.completed, 0);
   type(player.phrase); equal(player.contribution, phraseLength);
+  equal(player.completed, 1);
+  rejects(() => type(prefix), 'expired');
+  equal(player.contribution, phraseLength);
   player.contribution = 498;
   executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase.slice(0, 2) });
+  equal(state.tier, 0); equal(state.phase, 'tier-up'); equal(player.contribution, 498);
+  executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
   equal(state.tier, 1); equal(state.phase, 'playing');
+  equal(player.completed, 2);
   equal(tierProgress(state.players), { completed: 500, goal: 500 });
 });
 

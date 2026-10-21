@@ -84,7 +84,7 @@ export function strongholdWorkspaceMarkup(): string {
         <p>The map starts zoomed toward the home base. Scroll to zoom; right-drag, Alt-drag, middle-drag or arrow keys pan. Moving the pointer to a map edge does not scroll. A right-click without dragging still moves units or cancels placement. Shift-drag still adds troops to your selection.</p>
         <p>Stop computers pauses simulated teammates and their barracks, not the battlefield. Resume them to finish a shared tier challenge.</p>
         <p>World events begin at 1, 3, 5 and subsequent odd minutes of battle time, last 35 seconds, and leave normal typing between events.</p>
-        <p>Tier Up fills one shared bar with 500 correct characters, even partway through a phrase. The first challenge uses letters, the next letters and numbers, and the last adds symbols and punctuation. Anyone can contribute, even with computers stopped. Light player colors show each contribution. Retyping the same characters does not add progress. Pause challenge keeps your progress; Resume challenge continues it.</p>
+        <p>Tier Up fills one shared bar by completing phrases. Only fully correct phrases add progress; partial or incorrect entries do not count. The first challenge uses letters, the next letters and numbers, and the last adds symbols and punctuation. Anyone can contribute, even with computers stopped. Light player colors show each contribution as progress, not character counts. Pause challenge keeps your progress; Resume challenge continues it.</p>
         <p>Queue Warriors at completed T1 Barracks, Archers at T2 and Catapults at T3. Supplies are paid when queued; each unit trains for 12 seconds at its barracks before heading to the rally point. Empty barracks do not train automatically. Queues count toward population caps. Destroy the enemy base to win.</p>
         </div>
       </details>
@@ -156,7 +156,7 @@ export function strongholdWorkspaceMarkup(): string {
     <dialog id="stronghold-tier-dialog" class="stronghold-tier-dialog">
       <div id="stronghold-tier-typing-slot"></div>
       <div class="stronghold-tier-status"><h2 id="stronghold-tier-title">Tier Up</h2><p id="stronghold-tier-description"></p><button id="stronghold-tier-pause" type="button">Pause challenge</button><button id="stronghold-tier-computers" type="button" aria-pressed="false">Stop computers</button></div>
-      <div id="stronghold-tier-progress" class="stronghold-tier-progress" role="progressbar" aria-label="Shared tier challenge characters" aria-valuemin="0" aria-valuemax="500" aria-valuenow="0"></div>
+      <div id="stronghold-tier-progress" class="stronghold-tier-progress" role="progressbar" aria-label="Shared tier challenge progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
       <div id="stronghold-tier-contributions" class="stronghold-tier-contributions"></div>
     </dialog>
   </section>`;

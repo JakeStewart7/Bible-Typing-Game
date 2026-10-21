@@ -114,7 +114,7 @@ test('Stronghold each shared challenge advances exactly one tier without chainin
     for (let entry = 0; player.contribution + player.phrase.length < TIER_CHARACTER_GOAL && entry < TIER_CHARACTER_GOAL; entry++) finish(state);
     equal(state.phase, 'tier-up');
     equal(state.tier, tier - 1);
-    const finalPhrase = { type: 'TYPE' as const, phraseId: player.phraseId, text: player.phrase.slice(0, TIER_CHARACTER_GOAL - player.contribution) };
+    const finalPhrase = { type: 'TYPE' as const, phraseId: player.phraseId, text: player.phrase };
     executeCommand(state, player, finalPhrase);
     equal(state.phase, 'playing');
     equal(state.tier, tier);
