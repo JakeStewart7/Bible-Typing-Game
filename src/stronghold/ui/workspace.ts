@@ -23,13 +23,13 @@ function roleActions(role: Role): string {
   const task = (action: Action, label = ACTION_LABELS[action], tier?: number) => tile(action, label, tier, taskShortcut(index++));
   const improvement = (target: UpgradeTarget) => upgrade(target, taskShortcut(index++));
   if (role === 'economy') return `<div class="stronghold-build-row">${task('worker', 'Gatherer')}${task('relay', 'Relay')}${task('resources', 'Supplies')}</div>${improvement('economy')}`;
-  if (role === 'production') return `<div class="stronghold-build-row">${[1, 2, 3].map(tier => task('barracks', `Barracks<br>Tier ${tier}`, tier)).join('')}</div>
+  if (role === 'production') return `<div class="stronghold-build-row">${[1, 2, 3].map(tier => task('barracks', `Barracks T${tier}`, tier)).join('')}</div>
     <div class="stronghold-build-row">${task('warrior', 'Warrior')}${task('archer', 'Archer')}${task('catapult', 'Catapult')}</div>
     <div class="stronghold-build-row">${improvement('warrior')}${improvement('archer')}${improvement('catapult')}</div>`;
   if (role === 'defenses') return `<div class="stronghold-build-row">${task('builder', 'Builder')}${task('wall', 'Wall')}</div>
-    <div class="stronghold-build-row">${[1, 2, 3].map(tier => task('tower', `Tower<br>Tier ${tier}`, tier)).join('')}</div>
+    <div class="stronghold-build-row">${[1, 2, 3].map(tier => task('tower', `Tower T${tier}`, tier)).join('')}</div>
     <div class="stronghold-build-row">${improvement('tower-1')}${improvement('tower-2')}${improvement('tower-3')}</div>`;
-  return '<p class="stronghold-army-help">Left-click or drag to select units. Right-click to move. Left-click empty ground to deselect. Shift adds to your selection.</p>';
+  return '<p class="stronghold-army-help">Click or drag to select. Right-click to move. Shift adds units.</p>';
 }
 function playerCard(id: string, index: number): string {
   return `<section class="stronghold-player" data-player="${id}">
@@ -51,24 +51,11 @@ export function strongholdWorkspaceMarkup(): string {
         <svg id="stronghold-map" viewBox="0 0 1000 650" role="img" aria-label="Stronghold battlefield: left-click or drag to select friendly units, right-click to move, or left-click to place a prepared building." tabindex="0"></svg>
         <div id="stronghold-outcome" class="stronghold-outcome is-hidden"><h3 id="stronghold-outcome-title"></h3><p id="stronghold-outcome-copy"></p><button id="stronghold-play-again" class="primary-btn" type="button">Build again</button></div>
       </div>
+      <header class="stronghold-command-bar" aria-label="Kingdom command bar">
       <nav class="stronghold-map-toolbar" aria-label="Stronghold controls">${menuNavigationMarkup()}
         <button id="stronghold-pause" type="button">Pause</button><button id="stronghold-restart" type="button">New game</button>
         <button id="stronghold-computers" type="button" aria-pressed="false">Stop computers</button>
       </nav>
-      <div class="stronghold-atmosphere-controls" role="group" aria-label="Soundtrack and credits">
-        <button id="stronghold-music" type="button" aria-pressed="true">Music on</button>
-        <label class="sr-only" for="stronghold-volume">Stronghold music volume</label>
-        <input id="stronghold-volume" type="range" min="0" max="0.5" step="0.01" value="0.18">
-        <button id="stronghold-open-credits" type="button">Credits</button>
-        <output id="stronghold-music-status" class="stronghold-music-status is-hidden" role="status"></output>
-      </div>
-      <div class="stronghold-map-camera" role="group" aria-label="Map zoom and navigation">
-        <button id="stronghold-zoom-out" type="button" aria-label="Zoom out">-</button>
-        <output id="stronghold-zoom">120%</output>
-        <button id="stronghold-zoom-in" type="button" aria-label="Zoom in">+</button>
-        <button id="stronghold-zoom-fit" type="button">Fit map</button>
-        <span>Scroll to zoom. Arrows, right-drag or map edges to pan.</span>
-      </div>
       <button id="stronghold-ready" class="stronghold-tier" type="button"><span id="stronghold-tier-label">Tier 0</span><strong id="stronghold-tier-action">Tier Up</strong></button>
       <aside class="stronghold-hud" aria-label="Kingdom status">
         <div class="stronghold-populations">
@@ -80,7 +67,9 @@ export function strongholdWorkspaceMarkup(): string {
         </div>
         <div class="stronghold-watch"><span>Castle <b id="stronghold-castle"></b></span><span>Enemy <b id="stronghold-enemy"></b></span><span id="stronghold-wave"></span><span id="stronghold-season"></span></div>
       </aside>
+      <div class="stronghold-utilities">
       <details class="stronghold-guide"><summary>Help</summary>
+        <div class="stronghold-guide-content">
         <div class="stronghold-legend"><span>Dark red: enemies</span><span>□ Warrior</span><span>◇ Archer</span><span>▲ Catapult</span><span>△ Builder</span><span>○ Gatherer</span></div>
         <p>Completed characters, including spaces, advance your selected free task. Short is 1-5 characters at 1x, Medium 6-11 at 1.1x, Long 12-24 at 1.25x, and Extra Long 25-40 at 1.5x. All lengths use normal words or word groups.</p>
         <p>Relays need no typing: select Relay and click the map to place its shadow. Other buildings need a full work bar first. Escape cancels placement. Builders construct and repair automatically.</p>
@@ -98,6 +87,7 @@ export function strongholdWorkspaceMarkup(): string {
         <p>World events begin at 1, 3, 5 and subsequent odd minutes of battle time, last 35 seconds, and leave normal typing between events.</p>
         <p>Tier Up fills one shared bar: 12 phrases for a four-player squad. Anyone can contribute any number of phrases, even with computers stopped. Colors show each player's contribution. Pause challenge keeps your progress; Resume challenge continues it.</p>
         <p>Queue Warriors at completed T1 Barracks, Archers at T2 and Catapults at T3. Supplies are paid when queued; each unit trains for 12 seconds at its barracks before heading to the rally point. Empty barracks do not train automatically. Queues count toward population caps. Destroy the enemy base to win.</p>
+        </div>
       </details>
       <details id="stronghold-dev-options" class="stronghold-dev-options">
         <summary>Dev options</summary>
@@ -124,6 +114,21 @@ export function strongholdWorkspaceMarkup(): string {
           <p>Spawn the next wave now and reset its countdown without restarting the match.</p>
         </form>
       </details>
+      <div class="stronghold-atmosphere-controls" role="group" aria-label="Soundtrack and credits">
+        <button id="stronghold-music" type="button" aria-pressed="true">Music on</button>
+        <label class="sr-only" for="stronghold-volume">Stronghold music volume</label>
+        <input id="stronghold-volume" type="range" min="0" max="0.5" step="0.01" value="0.18">
+        <button id="stronghold-open-credits" type="button">Credits</button>
+        <output id="stronghold-music-status" class="stronghold-music-status is-hidden" role="status"></output>
+      </div>
+      </div>
+      </header>
+      <div class="stronghold-map-camera" role="group" aria-label="Map zoom and navigation" title="Scroll to zoom. Arrows, right-drag or map edges to pan.">
+        <button id="stronghold-zoom-out" type="button" aria-label="Zoom out">-</button>
+        <output id="stronghold-zoom">120%</output>
+        <button id="stronghold-zoom-in" type="button" aria-label="Zoom in">+</button>
+        <button id="stronghold-zoom-fit" type="button">Fit map</button>
+      </div>
       <p id="stronghold-feedback" class="stronghold-feedback" role="status" aria-live="polite"></p>
       <aside class="stronghold-event-panel" aria-label="World event and history">
         <div id="stronghold-world-event" class="stronghold-world-event is-hidden" aria-live="polite"><strong id="stronghold-event"></strong><span id="stronghold-event-time"></span></div>

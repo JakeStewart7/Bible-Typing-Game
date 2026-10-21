@@ -188,7 +188,7 @@ export function renderStronghold(
         button.element.classList.toggle('selected', selectedAction);
         setAttribute(button.element, 'aria-pressed', String(selectedAction));
         if (button.lockLabel) {
-          setText(button.lockLabel, `Place at Tier ${button.minimumTier}`);
+          setText(button.lockLabel, `Place at T${button.minimumTier}`);
           button.lockLabel.classList.toggle('is-hidden', !tierLocked);
           setAttribute(button.element, 'title', tierLocked ? `Prepare work now; placement requires Tier ${button.minimumTier}.` : '');
         }

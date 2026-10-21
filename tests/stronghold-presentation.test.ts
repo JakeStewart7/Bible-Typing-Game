@@ -30,3 +30,18 @@ test('Stronghold concise controls retain accessible labels and essential costs',
   equal(markup.includes('id="stronghold-dev-color"'), true);
   for (const [name, color] of Object.entries(PLAYER_COLORS)) equal(markup.includes(`<option value="${color}">${name}</option>`), true);
 });
+
+test('Stronghold compact command bar retains unique controls and leaves the map and player panels outside it', () => {
+  const markup = strongholdWorkspaceMarkup();
+  const bar = markup.match(/<header class="stronghold-command-bar"[\s\S]*?<\/header>/)?.[0];
+  if (!bar) throw new Error('Missing Stronghold command bar.');
+  for (const id of ['stronghold-pause', 'stronghold-restart', 'stronghold-computers', 'stronghold-music',
+    'stronghold-volume', 'stronghold-open-credits', 'stronghold-ready', 'stronghold-dev-form']) {
+    equal(bar.includes(`id="${id}"`), true);
+    equal(markup.split(`id="${id}"`).length, 2);
+  }
+  equal(bar.includes('stronghold-guide-content'), true);
+  equal(bar.includes('stronghold-map-camera'), false);
+  equal(bar.includes('stronghold-squad'), false);
+  for (const tier of [1, 2, 3]) equal(markup.includes(`Barracks T${tier}`), true);
+});

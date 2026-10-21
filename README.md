@@ -176,6 +176,10 @@ Shift+arrows still selects typed text. **Alt+1...9** selects the corresponding
 visible task in your current role. Army now has nine tasks and no Supplies tile;
 Unit Control has no Supplies tile either.
 Economy orders its options **Gatherer, Relay, Supplies**, then Upgrade.
+The compact forest-green and brass command bar reserves more room for the map.
+The slimmer parchment typing desk places the phrase and textbox side by side
+on wider screens. All four player panels stay within the bottom dock; narrow
+screens use a two-by-two layout, with scrolling inside action lists when needed.
 **Tab** cycles forward through the current role's typing and placement tasks;
 **Shift+Tab** cycles backward, wrapping at either end and returning focus to typing.
 Troop purchases and upgrades are excluded, so cycling never spends supplies.
