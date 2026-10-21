@@ -11,7 +11,7 @@ import { isArmyUnit } from '../domain/training.ts';
 export const PLAYER_IDS = ['you', 'bot-1', 'bot-2', 'bot-3'] as const;
 function tile(action: Action, label: string, tier: number | undefined, shortcut: string): string {
   return `<button type="button" class="stronghold-build-tile" data-action="${action}"${tier ? ` data-tier="${tier}"` : ''} data-min-tier="${tier ?? MIN_TIER[action]}" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}">
-    <kbd class="stronghold-hotkey">Alt+${shortcut}</kbd><span class="stronghold-action-label">${isArmyUnit(action) ? `Queue ${label}` : label}</span>${COSTS[action] > 0 ? `<span class="stronghold-cost">${COSTS[action] * (tier ?? 1)}<span class="sr-only"> supplies</span></span>` : ''}${isArmyUnit(action) ? '<small data-training-queued>0 queued</small>' : ''}${isTypingAction(action) ? `<span class="stronghold-task-progress" data-task-progress role="progressbar" aria-label="${ACTION_LABELS[action]}${tier ? ` tier ${tier}` : ''} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span data-task-fill></span></span>${tier ? '<small class="stronghold-task-lock is-hidden" data-task-lock></small>' : ''}` : ''}</button>`;
+    <kbd class="stronghold-hotkey">Alt+${shortcut}</kbd><span class="stronghold-action-label">${label}</span>${COSTS[action] > 0 ? `<span class="stronghold-cost">${COSTS[action] * (tier ?? 1)}<span class="sr-only"> supplies</span></span>` : ''}${isArmyUnit(action) ? '<small data-training-queued>0 queued</small>' : ''}${isTypingAction(action) ? `<span class="stronghold-task-progress" data-task-progress role="progressbar" aria-label="${ACTION_LABELS[action]}${tier ? ` tier ${tier}` : ''} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span data-task-fill></span></span>${tier ? '<small class="stronghold-task-lock is-hidden" data-task-lock></small>' : ''}` : ''}</button>`;
 }
 function upgrade(target: UpgradeTarget, shortcut: string): string {
   const option = UPGRADE_OPTIONS[target];
@@ -56,16 +56,15 @@ export function strongholdWorkspaceMarkup(): string {
         <button id="stronghold-pause" type="button">Pause</button><button id="stronghold-restart" type="button">New game</button>
         <button id="stronghold-computers" type="button" aria-pressed="false">Stop computers</button>
       </nav>
-      <button id="stronghold-ready" class="stronghold-tier" type="button"><span id="stronghold-tier-label">Tier 0</span><strong id="stronghold-tier-action">Tier Up</strong></button>
+      <div class="stronghold-tier-mount"><button id="stronghold-ready" class="stronghold-tier" type="button"><span id="stronghold-tier-label">Tier 0</span><strong id="stronghold-tier-action">Tier Up</strong></button></div>
       <aside class="stronghold-hud" aria-label="Kingdom status">
         <div class="stronghold-populations">
+          <span class="stronghold-supplies" title="Shared supplies"><span>Supplies</span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--resource"></i><b id="stronghold-resources">50</b></span>
           <span title="Towers"><span class="sr-only">Towers: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--tower"></i><b id="stronghold-tower-count">0/8</b></span>
           <span title="Warriors"><span class="sr-only">Warriors: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--warrior"></i><b id="stronghold-warrior-count">2/18</b></span>
           <span title="Builders"><span class="sr-only">Builders: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--builder"></i><b id="stronghold-builder-count">1/4</b></span>
           <span title="Gatherers"><span class="sr-only">Gatherers: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--worker"></i><b id="stronghold-worker-count">2/12</b></span>
-          <span title="Shared supplies"><span class="sr-only">Supplies: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--resource"></i><b id="stronghold-resources">50</b></span>
         </div>
-        <div class="stronghold-watch"><span>Castle <b id="stronghold-castle"></b></span><span>Enemy <b id="stronghold-enemy"></b></span><span id="stronghold-wave"></span><span id="stronghold-season"></span></div>
       </aside>
       <div class="stronghold-utilities">
       <details class="stronghold-guide"><summary>Help</summary>
@@ -73,8 +72,8 @@ export function strongholdWorkspaceMarkup(): string {
         <div class="stronghold-legend"><span>Dark red: enemies</span><span>□ Warrior</span><span>◇ Archer</span><span>▲ Catapult</span><span>△ Builder</span><span>○ Gatherer</span></div>
         <p>Completed characters, including spaces, advance your selected free task. Short is 1-5 characters at 1x, Medium 6-11 at 1.1x, Long 12-24 at 1.25x, and Extra Long 25-40 at 1.5x. All lengths use normal words or word groups.</p>
         <p>Relays need no typing: select Relay and click the map to place its shadow. Other buildings need a full work bar first. Escape cancels placement. Builders construct and repair automatically.</p>
-        <p>Use Rotate wall before placing to turn it 45 degrees. In Defenses, cancel placement then Shift-click an existing friendly wall to rotate it. Walls block all units; enemies go around them or attack a wall if there is no route.</p>
-        <p>Gatherers strike resource nodes and carry yellow supply chunks to the nearest relay or castle. Relays forward supplies through links within 155 map units. Purple nodes yield twice as much. Broken connections stop relay deliveries.</p>
+        <p>Use Rotate or Alt+R before placing a wall to turn it 45 degrees. In Defenses, click an existing friendly wall to show its angle and Rotate button; Done or Escape finishes editing. Shift-click also rotates immediately. Walls block all units; enemies go around them or attack a wall if there is no route.</p>
+        <p>Gatherers strike resource nodes and carry yellow supply chunks to the nearest relay or castle. Faint rings show relay and castle range. Hover either, or place a relay, to highlight nearby completed connections within 155 map units, including the castle. Green previews reach the castle network; amber previews are disconnected. Purple nodes yield twice as much. Broken connections stop relay deliveries.</p>
         <p>In Unit Control, left-click or drag to select friendly units, right-click to move, and left-click empty ground to deselect. Shift adds units. Right-click cancels placement or rally targeting; left-click places the building or rally point. A plus badge on the cursor shows targeting mode.</p>
         <p>Gatherers and builders resume nearest work after two idle seconds at their destination. Builders and walls cost no supplies, only typing work.</p>
         <p>Supplies, Gatherers, Barracks, Builders, Walls and Towers need typing, not supplies. Each typing option has a small progress bar; select it to show its progress in the main player-colored bar. More expensive buildings fill more slowly. Excess progress from a completed entry carries into the next bar. Once construction is ready, further entries do not bank more completions. Troops, upgrades and relays cost supplies without typing.</p>
@@ -82,7 +81,7 @@ export function strongholdWorkspaceMarkup(): string {
         <p>Each typing task keeps its progress when you switch tasks or roles. Building tiers keep separate progress. Dev options sets the defaults for new matches.</p>
         <p>Tab selects the next typing or placement task; Shift+Tab selects the previous one, wrapping through your role's tasks without buying troops or upgrades. In menus and dropdowns, Tab keeps its normal focus behavior.</p>
         <p>Arrow keys pan the map. Page Up selects longer text and Page Down shorter text, or click a length option. Shift+arrows still selects typed text. Alt+number chooses the matching displayed option in your current role.</p>
-        <p>The map starts zoomed toward the home base. Scroll or use +/- to zoom; Fit map shows everything. Right-drag, Alt-drag or middle-drag pans. Move the pointer to a map edge to scroll. A right-click without dragging still moves units or cancels placement. Shift-drag still adds troops to your selection.</p>
+        <p>The map starts zoomed toward the home base. Scroll to zoom; right-drag, Alt-drag, middle-drag or arrow keys pan. Moving the pointer to a map edge does not scroll. A right-click without dragging still moves units or cancels placement. Shift-drag still adds troops to your selection.</p>
         <p>Stop computers pauses simulated teammates and their barracks, not the battlefield. Resume them to finish a shared tier challenge.</p>
         <p>World events begin at 1, 3, 5 and subsequent odd minutes of battle time, last 35 seconds, and leave normal typing between events.</p>
         <p>Tier Up fills one shared bar: 12 phrases for a four-player squad. Anyone can contribute any number of phrases, even with computers stopped. Colors show each player's contribution. Pause challenge keeps your progress; Resume challenge continues it.</p>
@@ -123,12 +122,6 @@ export function strongholdWorkspaceMarkup(): string {
       </div>
       </div>
       </header>
-      <div class="stronghold-map-camera" role="group" aria-label="Map zoom and navigation" title="Scroll to zoom. Arrows, right-drag or map edges to pan.">
-        <button id="stronghold-zoom-out" type="button" aria-label="Zoom out">-</button>
-        <output id="stronghold-zoom">120%</output>
-        <button id="stronghold-zoom-in" type="button" aria-label="Zoom in">+</button>
-        <button id="stronghold-zoom-fit" type="button">Fit map</button>
-      </div>
       <p id="stronghold-feedback" class="stronghold-feedback" role="status" aria-live="polite"></p>
       <aside class="stronghold-event-panel" aria-label="World event and history">
         <div id="stronghold-world-event" class="stronghold-world-event is-hidden" aria-live="polite"><strong id="stronghold-event"></strong><span id="stronghold-event-time"></span></div>
@@ -137,12 +130,11 @@ export function strongholdWorkspaceMarkup(): string {
       <div class="stronghold-squad">${PLAYER_IDS.map(playerCard).join('')}</div>
       <div id="stronghold-private-slot">
         <section id="stronghold-private" class="stronghold-private" aria-label="Your private typing area">
-          <header class="stronghold-command-heading"><span>Command desk</span><small>Tab: switch task / Arrows: pan</small></header>
           <div class="stronghold-length-panel"><span id="stronghold-length-label" class="sr-only">Text length</span>
+            <small class="stronghold-length-keys">PgUp<br>PgDn</small>
             <div id="stronghold-length" class="stronghold-length-wheel" role="listbox" aria-labelledby="stronghold-length-label" aria-activedescendant="stronghold-length-medium" aria-keyshortcuts="PageUp PageDown" tabindex="0">
               ${PHRASE_LENGTHS.map(length => `<button id="stronghold-length-${length}" type="button" role="option" data-length="${length}" value="${length}" aria-selected="${length === 'medium'}" tabindex="-1">${LENGTH_LABELS[length]} <small class="stronghold-length-bonus">${TEXT_LENGTH_BONUSES[length]}x</small></button>`).join('')}
             </div>
-            <small class="stronghold-length-keys">PgUp / PgDn</small>
           </div>
           <section id="stronghold-typing" class="stronghold-typing">
             <div id="stronghold-phrase" class="text-display" tabindex="0" aria-label="Your private text to type"></div>
@@ -158,7 +150,7 @@ export function strongholdWorkspaceMarkup(): string {
         <button id="stronghold-select-army" type="button" data-shortcut="1" aria-keyshortcuts="Alt+1"><kbd class="stronghold-hotkey">Alt+1</kbd>Select all troops</button><button id="stronghold-defend" type="button" data-shortcut="2" aria-keyshortcuts="Alt+2"><kbd class="stronghold-hotkey">Alt+2</kbd>Defend</button><button id="stronghold-assault" type="button" data-shortcut="3" aria-keyshortcuts="Alt+3"><kbd class="stronghold-hotkey">Alt+3</kbd>Assault base</button>
         <button id="stronghold-rally" type="button" data-shortcut="4" aria-keyshortcuts="Alt+4"><kbd class="stronghold-hotkey">Alt+4</kbd>Set rally on map</button><p id="stronghold-selection"></p>
       </section>
-      <div id="stronghold-placement" class="stronghold-placement is-hidden"><span>Click the map to place.</span><button id="stronghold-rotate-wall" type="button" class="is-hidden">Rotate wall: 0 deg</button><button id="stronghold-cancel-placement" type="button">Cancel</button></div>
+      <div id="stronghold-placement" class="stronghold-placement is-hidden"><span id="stronghold-placement-label">Click the map to place.</span><button id="stronghold-rotate-wall" type="button" class="is-hidden" aria-keyshortcuts="Alt+R">Rotate +45 deg (Alt+R)</button><button id="stronghold-cancel-placement" type="button">Cancel</button></div>
     </div>
     ${creditsMarkup()}
     <dialog id="stronghold-tier-dialog" class="stronghold-tier-dialog">

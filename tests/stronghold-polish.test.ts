@@ -1,7 +1,7 @@
 import { executeCommand } from '../src/stronghold/domain/actions.ts';
 import { updateCombat } from '../src/stronghold/domain/combat.ts';
 import { EVENT_WORD_POOLS } from '../src/stronghold/domain/event-phrases.ts';
-import { updateLogistics } from '../src/stronghold/domain/logistics.ts';
+import { connectedRelays, relayNeighbors, updateLogistics } from '../src/stronghold/domain/logistics.ts';
 import { moveUnitToward, wallBetween, wallContains } from '../src/stronghold/domain/navigation.ts';
 import { assignPhrase } from '../src/stronghold/domain/phrases.ts';
 import { distance, MIN_TIER, TEXT_LENGTH_RANGES, UNIT_CAPS, UNIT_RULES } from '../src/stronghold/domain/rules.ts';
@@ -9,7 +9,8 @@ import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { addBuilding, addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
 import { queuedUnits, TRAINING_SECONDS } from '../src/stronghold/domain/training.ts';
 import { PHRASE_LENGTHS } from '../src/stronghold/domain/types.ts';
-import { edgePan, wheelZoom } from '../src/stronghold/ui/map-camera.ts';
+import { wheelZoom } from '../src/stronghold/ui/map-camera.ts';
+import { relayPreviewMarkup } from '../src/stronghold/ui/battlefield.ts';
 import { equal, test } from './harness.ts';
 
 function rejects(run: () => void, text: string): void {
@@ -201,15 +202,47 @@ test('Stronghold troop queues balance matching barracks, count against caps and 
   equal(state.units.filter(unit => unit.kind === 'warrior').length, 2);
 });
 
-test('Stronghold wheel zoom normalizes deltas and edge panning respects map bounds', () => {
+test('Stronghold wheel zoom normalizes deltas and clamps at the full map and maximum zoom', () => {
   equal(wheelZoom(1.2, -100, 0) > 1.2, true);
   equal(wheelZoom(1.2, 100, 0) < 1.2, true);
   equal(wheelZoom(1.2, 1, 1), wheelZoom(1.2, 16, 0));
   equal(wheelZoom(2, -500, 0), 2);
   equal(wheelZoom(1, 500, 0), 1);
-  const bounds = { left: 0, top: 100, right: 800, bottom: 500 };
-  equal(edgePan({ x: 400, y: 300 }, bounds), { x: 0, y: 0 });
-  equal(edgePan({ x: 0, y: 100 }, bounds), { x: -1, y: -1 });
-  equal(edgePan({ x: 800, y: 500 }, bounds), { x: 1, y: 1 });
-  equal(edgePan({ x: -1, y: 99 }, bounds), { x: 0, y: 0 });
+});
+
+test('Stronghold relay previews include the base at exactly 155 units and exclude unavailable or out-of-range sites', () => {
+  const state = createStronghold();
+  state.buildings = [];
+  const castle = addBuilding(state, 'castle', { x: 0, y: 0 }, true);
+  const source = addBuilding(state, 'relay', { x: 155, y: 0 }, true);
+  const neighbor = addBuilding(state, 'relay', { x: 310, y: 0 }, true);
+  addBuilding(state, 'relay', { x: 310.001, y: 0 }, true);
+  const incomplete = addBuilding(state, 'relay', { x: 100, y: 0 });
+  const destroyed = addBuilding(state, 'relay', { x: 120, y: 0 }, true); destroyed.hp = 0;
+  const enemy = addBuilding(state, 'relay', { x: 130, y: 0 }, true, true);
+  equal(relayNeighbors(state, source, source.id).map(building => building.id), [castle.id, neighbor.id]);
+  const connected = connectedRelays(state);
+  equal(connected.includes(neighbor), true);
+  for (const building of [incomplete, destroyed, enemy]) equal(connected.includes(building), false);
+  const markup = relayPreviewMarkup(state, source, source.id);
+  equal(markup.includes('r="155"'), true);
+  for (const building of [castle, neighbor]) equal(markup.includes(`data-relay-connection="${building.id}"`), true);
+  equal(markup.includes(`data-relay-connection="${source.id}"`), false);
+  equal(markup.includes('stroke="#65eb98"'), true);
+});
+
+test('Stronghold relay previews distinguish castle-connected extensions from disconnected relay groups', () => {
+  const state = createStronghold();
+  state.buildings = [];
+  const castle = addBuilding(state, 'castle', { x: 100, y: 500 }, true);
+  const relay = addBuilding(state, 'relay', { x: 250, y: 500 }, true);
+  const isolated = addBuilding(state, 'relay', { x: 600, y: 500 }, true);
+  const connected = relayPreviewMarkup(state, { x: 400, y: 500 });
+  equal(connected.includes(`data-relay-connection="${relay.id}" data-powered="true"`), true);
+  equal(connected.includes(`data-relay-connection="${castle.id}"`), false);
+  equal(connected.includes('stroke="#65eb98"'), true);
+  const disconnected = relayPreviewMarkup(state, { x: 500, y: 500 });
+  equal(disconnected.includes(`data-relay-connection="${isolated.id}" data-powered="false"`), true);
+  equal(disconnected.includes('stroke="#ffd76a"'), true);
+  equal(relayPreviewMarkup(state, { x: 900, y: 100 }).includes('data-relay-connection='), false);
 });

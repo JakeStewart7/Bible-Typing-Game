@@ -22,11 +22,15 @@ test('Stronghold concise controls retain accessible labels and essential costs',
   equal(markup.includes('Waiting to type...'), false);
   equal(markup.includes('(T1 unit)'), false);
   equal(markup.includes('class="stronghold-tier-help"'), false);
-  equal(markup.includes('<span class="sr-only">Supplies: </span>'), true);
+  equal(markup.includes('<span>Supplies</span>'), true);
+  equal(markup.indexOf('id="stronghold-resources"') < markup.indexOf('id="stronghold-tower-count"'), true);
   equal(markup.includes('<span class="sr-only"> supplies</span>'), true);
   equal(markup.includes('for="stronghold-input"'), true);
   equal(markup.includes('for="stronghold-role-you"'), true);
-  equal(markup.includes('id="stronghold-enemy"'), true);
+  for (const id of ['stronghold-castle', 'stronghold-enemy', 'stronghold-wave', 'stronghold-season']) {
+    equal(markup.includes(`id="${id}"`), false);
+  }
+  equal(markup.includes('class="stronghold-tier-mount"'), true);
   equal(markup.includes('id="stronghold-dev-color"'), true);
   for (const [name, color] of Object.entries(PLAYER_COLORS)) equal(markup.includes(`<option value="${color}">${name}</option>`), true);
 });

@@ -1,4 +1,4 @@
-import { connectedRelays } from '../domain/logistics.ts';
+import { connectedRelays, relayNeighbors } from '../domain/logistics.ts';
 import { distance, RELAY_RANGE } from '../domain/rules.ts';
 import { towerUpgrade, unitUpgrade } from '../domain/technology.ts';
 import type { Building, Point, ResourceChunk, ResourceNode, StrongholdSnapshot, Unit } from '../domain/types.ts';
@@ -45,11 +45,20 @@ export function buildingMarkup(building: Building): string {
     : `<rect x="${-size}" y="${-size}" width="${size * 2}" height="${size * 2}" fill="${color}" stroke="${building.enemy ? '#ff1726' : '#7f7f7f'}" stroke-width="4"/>`;
   return `${attackMarkup()}${shape}${health(building.hp, building.maxHp, building.kind === 'tower' ? 26 : size + 6, size * 2)}<title></title>${building.kind === 'barracks' ? `<text data-tier y="5" text-anchor="middle" fill="#111" font-size="16">T${building.tier}</text><g data-training><rect x="-16" y="26" width="32" height="4" fill="#333"/><rect data-training-fill x="-16" y="26" width="0" height="4" fill="#a6ed89"/><text data-training-count y="43" text-anchor="middle" fill="#111" stroke="white" stroke-width="2" paint-order="stroke" font-size="12"></text></g>` : ''}`;
 }
+export function relayPreviewMarkup(snapshot: Pick<StrongholdSnapshot, 'buildings'>, point: Point, sourceId?: number): string {
+  const connected = connectedRelays(snapshot);
+  const neighbors = relayNeighbors(snapshot, point, sourceId);
+  const powered = connected.some(building => building.id === sourceId || neighbors.includes(building));
+  const color = powered ? '#65eb98' : '#ffd76a';
+  return `<circle data-relay-preview-radius cx="${point.x}" cy="${point.y}" r="${RELAY_RANGE}" fill="${color}" fill-opacity=".1" stroke="${color}" stroke-width="2" stroke-dasharray="7 4"/>`
+    + neighbors.map(building => `<g data-relay-connection="${building.id}" data-powered="${connected.includes(building)}">
+      <line x1="${point.x}" y1="${point.y}" x2="${building.x}" y2="${building.y}" stroke="${color}" stroke-width="3" stroke-dasharray="5 4"/>
+      <circle cx="${building.x}" cy="${building.y}" r="${building.kind === 'castle' ? 43 : 25}" fill="${color}" fill-opacity=".16" stroke="${color}" stroke-width="3"/>
+    </g>`).join('');
+}
 function relayLinks(snapshot: StrongholdSnapshot): string {
-  // Snapshot world data matches the logistics inputs; private player fields are not needed.
-  const world = { ...snapshot, nextId: 0, players: [] };
-  const connected = connectedRelays(world);
-  const relays = snapshot.buildings.filter(building => building.kind === 'relay' || building.kind === 'castle');
+  const connected = connectedRelays(snapshot);
+  const relays = snapshot.buildings.filter(building => (building.kind === 'relay' || building.kind === 'castle') && !building.enemy && building.hp > 0);
   const links: string[] = [];
   for (let index = 0; index < relays.length; index++) {
     const a = relays[index];
@@ -82,7 +91,7 @@ function renderAttack(element: Element, entity: Unit | Building, scale: number, 
   setAttribute(child(effect, 'circle'), 'r', String(entity.kind === 'builder' && !reducedMotion ? 4 + Math.sin(elapsed * 12) * 2 : 6));
 }
 export function createBattlefieldRenderer(map: SVGSVGElement) {
-  map.innerHTML = `<g data-layer="links"></g><g data-layer="nodes"></g><g data-layer="chunks"></g><g data-layer="buildings"></g><g data-layer="units"></g>
+  map.innerHTML = `<g data-layer="coverage" pointer-events="none"></g><g data-layer="links" pointer-events="none"></g><g data-layer="nodes"></g><g data-layer="chunks"></g><g data-layer="buildings"></g><g data-layer="units"></g>
     <g data-layer="rally"><path d="M0 14V-15l20 7-20 7" fill="#e7d98b" stroke="#e7d98b" opacity=".6"/><title>Production rally point</title></g>`;
   function layer(name: string): SVGGElement {
     const found = map.querySelector(`[data-layer="${name}"]`);
@@ -95,6 +104,9 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
   let selectionColor = '#ffb3c9';
   const previousUnits = new Map<number, Point>();
   const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const renderCoverage = createSvgLayer<Building>(layer('coverage'), () =>
+    `<circle data-relay-radius r="${RELAY_RANGE}" fill="#8ce4db" fill-opacity=".035" stroke="#b4ede2" stroke-opacity=".3" stroke-width="1" stroke-dasharray="4 5"/>`,
+  (element, building) => { position(element, building); setAttribute(element, 'data-relay-source', String(building.id)); });
   const renderUnits = createSvgLayer<Unit>(layer('units'), unit => unitMarkup(unit, false), (element, unit) => {
     if (!technology) throw new Error('Missing Stronghold technology snapshot.');
     const level = unitUpgrade(technology, unit);
@@ -124,7 +136,7 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     setAttribute(element, 'opacity', building.progress < 1 ? String(.3 + building.progress * .7) : '1');
     const width = building.kind === 'castle' || building.kind === 'enemy-base' ? 68 : 28;
     setAttribute(child(element, '[data-health]'), 'width', String(width * Math.max(0, building.hp / building.maxHp)));
-    setText(child(element, 'title'), `${building.kind} / T${building.tier}: ${Math.ceil(building.hp)} HP, ${Math.round(building.progress * 100)}% built${building.kind === 'wall' && !building.enemy ? '. Defenses: Shift-click to rotate.' : ''}`);
+    setText(child(element, 'title'), `${building.kind} / T${building.tier}: ${Math.ceil(building.hp)} HP, ${Math.round(building.progress * 100)}% built${building.kind === 'wall' && !building.enemy ? '. Defenses: click to select; Rotate or Alt+R turns the wall. Shift-click rotates immediately.' : ''}`);
     const tier = element.querySelector('[data-tier]');
     if (tier) setText(tier, `T${building.tier}`);
     const training = element.querySelector('[data-training]');
@@ -161,6 +173,8 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     const signature = snapshot.buildings.filter(building => building.kind === 'castle' || building.kind === 'relay')
       .map(building => `${building.id}:${building.x}:${building.y}:${building.hp > 0}:${building.progress === 1}`).join('|');
     if (signature !== linkSignature) { links.innerHTML = relayLinks(snapshot); linkSignature = signature; }
+    renderCoverage(snapshot.buildings.filter(building => (building.kind === 'relay' || building.kind === 'castle')
+      && !building.enemy && building.hp > 0 && building.progress === 1));
     renderNodes(snapshot.nodes); renderChunks(snapshot.chunks);
     renderBuildings(snapshot.buildings); renderUnits(snapshot.units);
     position(rally, snapshot.rally);

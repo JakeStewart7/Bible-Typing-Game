@@ -1,11 +1,17 @@
 import { distance, moveToward, RELAY_RANGE, UNIT_RULES } from './rules.ts';
-import type { Building, StrongholdState, Unit } from './types.ts';
+import type { Building, Point, StrongholdState, Unit } from './types.ts';
 import { ENTITY_LABELS, recordEvent } from './events.ts';
 import { moveUnitToward, wallApproach } from './navigation.ts';
 
-export function connectedRelays(state: StrongholdState): Building[] {
-  const connected = state.buildings.filter(building => building.kind === 'castle' && building.hp > 0);
-  const relays = state.buildings.filter(building => building.kind === 'relay' && building.hp > 0 && building.progress === 1);
+export function relayNeighbors(state: Pick<StrongholdState, 'buildings'>, point: Point, excludeId?: number): Building[] {
+  return state.buildings.filter(building => (building.kind === 'relay' || building.kind === 'castle')
+    && !building.enemy && building.hp > 0 && building.progress === 1
+    && building.id !== excludeId && distance(point, building) <= RELAY_RANGE);
+}
+
+export function connectedRelays(state: Pick<StrongholdState, 'buildings'>): Building[] {
+  const connected = state.buildings.filter(building => building.kind === 'castle' && !building.enemy && building.hp > 0 && building.progress === 1);
+  const relays = state.buildings.filter(building => building.kind === 'relay' && !building.enemy && building.hp > 0 && building.progress === 1);
   let changed = true;
   while (changed) {
     changed = false;

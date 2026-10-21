@@ -149,23 +149,21 @@ licensed under [Creative Commons: By Attribution 4.0](https://creativecommons.or
 Recordings are unmodified and loop during playback; source details are also in
 `assets/music/stronghold/CREDITS.txt`.
 
-The framed **Command desk** typing window leaves room for the battlefield.
-Its input stays 420px wide (or fits the available space on smaller screens),
-centered beneath the displayed text, with the unlabeled length scroller directly
-to its left. A parchment surface, inset text panel, brass edging and player-colored
-input make the desk distinct from the battlefield. The top controls use a shaded
-stone-green backdrop; the player deck sits on a dark textured command board.
-Warm player cards, subdued map texture and a soft battlefield vignette add depth
-without obscuring text or intercepting clicks. The desk's small legend shows its
-task and map shortcuts, and the length control is labelled **PgUp / PgDn**.
+The thin typing window leaves room for the battlefield, with the phrase and input
+side by side on wider screens and stacked on small screens. Flat gray panels,
+square controls and player-colored highlights keep the bottom dock simple.
+The top controls use a shaded forest-green backdrop; the player deck sits on a
+dark command board. Subdued map texture and a soft battlefield vignette add depth
+without obscuring text or intercepting clicks. The faded length reel sits to the
+left of typing, with its **PgUp / PgDn** indicator on the reel's left.
 The deck fits the viewport height, with scrolling inside action panels
 and the squad list on narrow screens rather than clipping the bottom.
 The map starts at **120% zoom**, focused toward the home base. Use the mouse wheel
-or **+/-** to zoom, **Fit map** to see everything, and **right-drag, Alt-drag or
-middle-drag** to pan without issuing orders. Hover near a map edge to scroll.
+to zoom, and **right-drag, Alt-drag or middle-drag** to pan without issuing orders.
+Hovering near a map edge does not scroll.
 Hold the **arrow keys** to pan; diagonal combinations work and opposite keys cancel.
 Right-click without dragging still issues movement orders or cancels placement.
-Fit shows the entire map; zoom and pan do not change world coordinates or speed.
+Minimum zoom shows the entire map; zoom and pan do not change world coordinates or speed.
 Shift-drag retains additive army selection.
 
 The length selector is a faded reel: **Page Down** selects shorter entries,
@@ -177,8 +175,7 @@ visible task in your current role. Army now has nine tasks and no Supplies tile;
 Unit Control has no Supplies tile either.
 Economy orders its options **Gatherer, Relay, Supplies**, then Upgrade.
 The compact forest-green and brass command bar reserves more room for the map.
-The slimmer parchment typing desk places the phrase and textbox side by side
-on wider screens. All four player panels stay within the bottom dock; narrow
+All four player panels stay within the bottom dock; narrow
 screens use a two-by-two layout, with scrolling inside action lists when needed.
 **Tab** cycles forward through the current role's typing and placement tasks;
 **Shift+Tab** cycles backward, wrapping at either end and returning focus to typing.
@@ -201,17 +198,26 @@ resource nodes, collect a visible yellow chunk, then physically carry it to the
 nearest completed relay or castle before harvesting again. Relays forward deposited
 chunks to the castle through links no more than 155 map units apart; destroying a
 relay interrupts deliveries until the route is restored.
+Faint radius rings mark completed friendly relays and the castle. Hover a relay
+or the castle, or preview a new relay, to highlight completed living connections
+within 155 map units, including the castle itself. A green preview reaches the
+castle network; an amber preview is disconnected. Radius rings use world units
+and remain accurate while zooming.
 Walls block travel for friendly and enemy units, including while being built.
-**Rotate wall** turns the placement preview in 45-degree steps; after cancelling
-placement, Shift-click a friendly wall in Defenses to rotate it in place.
+**Rotate +45 deg** or **Alt+R** turns the placement preview in 45-degree steps.
+In Defenses, click a friendly wall to highlight it and show its current angle
+and Rotate button. **Done**, Escape or clicking empty ground finishes editing;
+Shift-click still rotates a wall immediately.
 Rotation and placement cannot overlap units or leave the construction area.
 Units route around wall ends; enemies attack a blocking wall if no route exists.
 
 Controls, typing and logs use consistent bold Arial-family typography and larger,
 high-contrast text; repeated captions stay out of
 the battlefield. Enemy troops are dark-red squares (melee), diamonds (archers),
-and triangles (siege), with red outlines. Castle and enemy-base health appear in
-the HUD. **Help** contains the map key and instructions. On narrow screens the
+and triangles (siege), with red outlines. Shared supplies lead the HUD, followed
+by population counts; castle health, wave countdown and season/day labels are
+omitted. Weather, day/night lighting and Dev previews still work.
+**Help** contains the map key and instructions. On narrow screens the
 player panels scroll instead of shrinking their text.
 The castle is a clean square and towers use T-shaped map and HUD icons.
 Friendly and opposing units of the same formation share base health, damage,
@@ -226,10 +232,10 @@ Full-width player progress bars are three times
 thicker for visibility and show the same progress for everyone sharing a role.
 Their outer borders are thick black around an inner player-colored rim. The event
 history aligns with Player 1's left edge above the bottom panels, starts at the
-top of a stable-height window and fills downward, with a transparent background,
+top of a stable-height window and fills downward, with a mostly transparent background,
 player-colored action text and gray world events. Dark text outlines keep entries
 readable over different battlefield colors. History is retained for the whole
-match and resets with **New game**. The taller history window has no visible
+match, begins with **Game started**, and resets with **New game**. The history window has no visible
 scrollbar, fades smoothly at its edges, and can still be scrolled. The current
 world event and its countdown sit slightly above it in a soft purple panel,
 hidden between events.
@@ -237,7 +243,8 @@ hidden between events.
 Matches start at **Tier 0**, with T1 starting units and buildings.
 The first challenge advances to Tier 1, unlocking T1 barracks, warrior training
 and tower construction; prepared construction work is preserved.
-The gold **Tier Up** button pauses the battle for one shared challenge:
+The gold **Tier Up** hexagon hangs halfway below the header with a subtle depth
+shadow. It pauses the battle for one shared challenge:
 12 completed private phrases for a four-player squad. Anyone can contribute any
 number; segments in the shared progress bar show each player's color and share.
 **Pause challenge** freezes typing without dismissing the dialog; **Resume

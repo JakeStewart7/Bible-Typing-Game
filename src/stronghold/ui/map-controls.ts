@@ -1,7 +1,7 @@
 import { actionProblem, placementProblem } from '../domain/actions.ts';
 import { taskWork } from '../domain/technology.ts';
-import type { BuildingKind, Point, StrongholdSnapshot, Unit } from '../domain/types.ts';
-import { buildingMarkup } from './battlefield.ts';
+import type { Building, BuildingKind, Point, StrongholdSnapshot, Unit } from '../domain/types.ts';
+import { buildingMarkup, relayPreviewMarkup } from './battlefield.ts';
 import { setAttribute } from './dom-updates.ts';
 import { playerTheme } from './player-theme.ts';
 
@@ -30,6 +30,14 @@ export function mapPoint(map: SVGSVGElement, clientX: number, clientY: number): 
 }
 export function createMapControls(map: SVGSVGElement) {
   const namespace = 'http://www.w3.org/2000/svg';
+  const relayPreview = document.createElementNS(namespace, 'g');
+  relayPreview.setAttribute('data-relay-preview', '');
+  relayPreview.setAttribute('pointer-events', 'none');
+  const wallSelection = document.createElementNS(namespace, 'g');
+  wallSelection.setAttribute('data-wall-selection', '');
+  wallSelection.setAttribute('pointer-events', 'none');
+  wallSelection.setAttribute('visibility', 'hidden');
+  wallSelection.innerHTML = '<rect x="-29" y="-10" width="58" height="20" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="4 3"/>';
   const ghost = document.createElementNS(namespace, 'g');
   ghost.setAttribute('data-placement-ghost', '');
   ghost.setAttribute('pointer-events', 'none');
@@ -43,8 +51,9 @@ export function createMapControls(map: SVGSVGElement) {
   selection.setAttribute('stroke', '#fff');
   selection.setAttribute('stroke-width', '2');
   selection.setAttribute('visibility', 'hidden');
-  map.append(ghost, selection);
+  map.append(relayPreview, wallSelection, ghost, selection);
   let signature = '';
+  let relaySignature = '';
   let highlight = '#ffb3c9';
   return {
     theme(color: string): void {
@@ -52,6 +61,14 @@ export function createMapControls(map: SVGSVGElement) {
       highlight = theme.light;
       setAttribute(selection, 'fill', theme.light);
       setAttribute(selection, 'stroke', theme.bold);
+    },
+    relayPreview(snapshot: StrongholdSnapshot, point: Point | null, sourceId?: number): void {
+      const markup = point && snapshot.phase === 'playing' ? relayPreviewMarkup(snapshot, point, sourceId) : '';
+      if (markup !== relaySignature) { relayPreview.innerHTML = markup; relaySignature = markup; }
+    },
+    wallSelection(wall: Building | null): void {
+      setAttribute(wallSelection, 'visibility', wall ? 'visible' : 'hidden');
+      if (wall) setAttribute(wallSelection, 'transform', `translate(${wall.x} ${wall.y}) rotate(${wall.rotation ?? 0})`);
     },
     ghost(snapshot: StrongholdSnapshot, kind: PlacementKind | null, point: Point | null, rotation = 0): void {
       const self = snapshot.players.find(player => player.id === snapshot.selfId);
@@ -64,7 +81,9 @@ export function createMapControls(map: SVGSVGElement) {
         ghost.innerHTML = buildingMarkup({
           ...point, id: 0, kind, hp: 1, maxHp: 1, tier: self.constructionTier,
           progress: 1, cooldown: 0, enemy: false, attackTarget: null, ownerId: self.id, rotation, trainingQueue: []
-        }) + '<rect data-outline x="-22" y="-28" width="44" height="58" fill="none" stroke-width="3" stroke-dasharray="5 3"/>';
+        }) + (kind === 'wall'
+          ? `<rect data-outline transform="rotate(${rotation})" x="-29" y="-10" width="58" height="20" fill="none" stroke-width="3" stroke-dasharray="5 3"/>`
+          : '<rect data-outline x="-22" y="-28" width="44" height="58" fill="none" stroke-width="3" stroke-dasharray="5 3"/>');
         signature = nextSignature;
       }
       setAttribute(ghost, 'transform', `translate(${point.x} ${point.y})`);

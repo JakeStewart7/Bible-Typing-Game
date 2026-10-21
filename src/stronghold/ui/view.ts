@@ -45,7 +45,6 @@ export function strongholdElements() {
   });
   return {
     screen: requireElement('stronghold-screen', HTMLElement), map, playerCards,
-    season: requireElement('stronghold-season', HTMLElement),
     renderBattlefield: createBattlefieldRenderer(map),
     mapControls: createMapControls(map),
     camera: createMapCamera(map),
@@ -83,9 +82,8 @@ export function renderStronghold(
   const ownCard = elements.playerCards.find(card => card.id === snapshot.selfId);
   if (!self || !ownCard) throw new Error('Stronghold snapshot has no local player.');
   applyPlayerTheme(elements.screen, self.color);
-  renderEnvironment(elements.screen, elements.season, snapshot, running);
+  renderEnvironment(elements.screen, snapshot, running);
   elements.mapControls.theme(self.color);
-  const castle = snapshot.buildings.find(building => building.kind === 'castle');
   const terminal = snapshot.phase === 'won' || snapshot.phase === 'lost';
   const challenge = snapshot.phase === 'tier-up';
   const army = self.role === 'army' && !challenge;
@@ -97,9 +95,6 @@ export function renderStronghold(
   elements.nextNight.disabled = environmentDisabled || period === 'night';
   elements.nextDay.disabled = environmentDisabled || period === 'day';
   text('stronghold-resources', String(Math.floor(snapshot.resources)));
-  text('stronghold-castle', `${Math.max(0, Math.ceil(castle?.hp ?? 0))}/${castle?.maxHp ?? 10000}`);
-  text('stronghold-enemy', String(Math.max(0, Math.ceil(snapshot.buildings.find(building => building.kind === 'enemy-base')?.hp ?? 0))));
-  text('stronghold-wave', `Wave ${snapshot.wave + 1}: ${Math.ceil(snapshot.waveIn)}s`);
   text('stronghold-event', EVENT_LABELS[snapshot.event]);
   text('stronghold-event-time', `${Math.ceil(snapshot.eventIn)}s`);
   elements.worldEvent.classList.toggle('is-hidden', snapshot.event === 'peace');

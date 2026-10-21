@@ -7,7 +7,7 @@ import { renderStronghold, strongholdElements } from './view.ts';
 import { mapPoint, readyBuilding, troopsInRectangle, type PlacementKind } from './map-controls.ts';
 import { setText } from './dom-updates.ts';
 import { validateDeveloperOptions, type DeveloperOptions } from '../infrastructure/developer-options.ts';
-import { edgePan, wheelZoom, MIN_MAP_ZOOM, MAX_MAP_ZOOM } from './map-camera.ts';
+import { wheelZoom } from './map-camera.ts';
 import { actionShortcutKey, arrowPan, nextTaskIndex, typingLengthKey } from './keyboard.ts';
 import { createSeasonalMusic } from '../audio/music.ts';
 import { isPlayerColor } from '../domain/options.ts';
@@ -43,12 +43,6 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   startingResources.value = String(defaults.resources);
   startingZoom.value = String(defaults.mapZoom);
   elements.camera.reset(defaults.mapZoom);
-  function updateCameraControls(): void {
-    setText(requireElement('stronghold-zoom', HTMLElement), `${Math.round(elements.camera.zoom * 100)}%`);
-    requireElement('stronghold-zoom-out', HTMLButtonElement).disabled = elements.camera.zoom <= MIN_MAP_ZOOM;
-    requireElement('stronghold-zoom-in', HTMLButtonElement).disabled = elements.camera.zoom >= MAX_MAP_ZOOM;
-  }
-  updateCameraControls();
   const selected = new Set<number>();
   let snapshot: StrongholdSnapshot | null = null;
   let typing: Game = createGame('');
@@ -63,10 +57,14 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   let rallyPlacement = false;
   let cursor: Point | null = null;
   let wallRotation = 0;
+  let editingWall: number | null = null;
+  let hoveredRelay: number | null = null;
   const rotateWall = requireElement('stronghold-rotate-wall', HTMLButtonElement);
+  const placementLabel = requireElement('stronghold-placement-label', HTMLElement);
+  const cancelPlacementButton = requireElement('stronghold-cancel-placement', HTMLButtonElement);
   let mouse: Point | null = null;
-  let edgeFrame: number | null = null;
-  let edgeTime = 0;
+  let panFrame: number | null = null;
+  let panTime = 0;
   const panKeys = new Set<string>();
   let drag: { start: Point; end: Point; pointer: number; additive: boolean; unitId: number | null; moved: boolean } | null = null;
   let pan: { pointer: number; start: Point; client: Point; center: Point; matrix: DOMMatrix; right: boolean; moved: boolean } | null = null;
@@ -74,6 +72,17 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   const self = () => snapshot?.players.find(player => player.id === snapshot?.selfId);
   const placing = (): PlacementKind | null => snapshot && running() && snapshot.phase === 'playing' && !placementCancelled
     ? relayPlacement ? 'relay' : readyBuilding(snapshot) : null;
+  const selectedWall = () => snapshot?.phase === 'playing' && self()?.role === 'defenses'
+    ? snapshot.buildings.find(building => building.id === editingWall && building.kind === 'wall' && !building.enemy && building.hp > 0) : undefined;
+  function renderMapPreview(): void {
+    if (!snapshot) return;
+    const kind = placing();
+    elements.mapControls.ghost(snapshot, kind, cursor, wallRotation);
+    elements.mapControls.wallSelection(running() ? selectedWall() ?? null : null);
+    const relay = snapshot.buildings.find(building => building.id === hoveredRelay
+      && (building.kind === 'relay' || building.kind === 'castle') && !building.enemy && building.hp > 0 && building.progress === 1);
+    elements.mapControls.relayPreview(snapshot, running() ? kind === 'relay' ? cursor : relay ?? null : null, kind === 'relay' ? undefined : relay?.id);
+  }
   function focusTyping(): void {
     if (document.activeElement === musicVolume) return;
     if (developerPanel.open && document.activeElement instanceof Element && developerPanel.contains(document.activeElement)) return;
@@ -84,8 +93,9 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   function clearDrag(): void {
     panKeys.clear();
     mouse = null;
-    if (edgeFrame !== null) cancelAnimationFrame(edgeFrame);
-    edgeFrame = null;
+    hoveredRelay = null;
+    if (panFrame !== null) cancelAnimationFrame(panFrame);
+    panFrame = null;
     if (pan && elements.map.hasPointerCapture(pan.pointer)) elements.map.releasePointerCapture(pan.pointer);
     pan = null;
     if (drag && elements.map.hasPointerCapture(drag.pointer)) elements.map.releasePointerCapture(drag.pointer);
@@ -96,15 +106,21 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     if (!snapshot) return;
     renderStronghold(elements, snapshot, selected, running(), paused, relayPlacement, placementCancelled, rallyPlacement, shown);
     music.update(snapshot.season, snapshot.environmentElapsed, running() && snapshot.phase !== 'won' && snapshot.phase !== 'lost');
-    rotateWall.classList.toggle('is-hidden', placing() !== 'wall');
-    setText(rotateWall, `Rotate wall: ${wallRotation} deg`);
-    elements.mapControls.ghost(snapshot, placing(), cursor, wallRotation);
+    const wall = selectedWall();
+    if (!wall) editingWall = null;
+    rotateWall.classList.toggle('is-hidden', !running() || (placing() !== 'wall' && !wall));
+    setText(rotateWall, 'Rotate +45 deg (Alt+R)');
+    setText(placementLabel, wall ? `Wall: ${wall.rotation ?? 0} deg. Rotate or click empty ground to finish.`
+      : placing() === 'wall' ? `Wall: ${wallRotation} deg. Alt+R rotates; click to place.` : 'Click the map to place.');
+    setText(cancelPlacementButton, wall ? 'Done' : 'Cancel');
+    if (wall && running()) elements.placement.classList.remove('is-hidden');
+    renderMapPreview();
     const selecting = drag?.moved && self()?.role === 'army' && !placing() && !rallyPlacement;
     elements.mapControls.selection(selecting ? drag?.start ?? null : null, selecting ? drag?.end ?? null : null);
     const feedback = errorMessage || (paused ? 'Paused' : rallyPlacement ? 'Click the map to set the rally point. Escape cancels.' : snapshot.message);
     setText(elements.feedback, feedback);
     elements.feedback.classList.toggle('is-hidden', !feedback || Boolean(placing() && !errorMessage));
-    if (errorMessage) elements.placement.classList.add('is-hidden');
+    if (errorMessage && !wall) elements.placement.classList.add('is-hidden');
     const layout = `${snapshot.phase}/${running()}/${elements.privateTyping.parentElement?.id}`;
     if (typingDirty || layout !== typingLayout) {
       renderTypingExperience(typing, { text: elements.phrase, typedBar: elements.typedBar, progressFill: elements.progressFill },
@@ -128,6 +144,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     if (!player) throw new Error('Stronghold snapshot has no local player.');
     if (previousRole !== player.role) {
       relayPlacement = false; placementCancelled = false; rallyPlacement = false; clearDrag();
+      editingWall = null;
     }
     const changedPhrase = phraseId !== player.phraseId;
     if (changedPhrase) {
@@ -146,7 +163,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     if (changedPhrase) focusTyping();
   });
   function cancelPlacement(): void {
-    relayPlacement = false; placementCancelled = true; rallyPlacement = false;
+    relayPlacement = false; placementCancelled = true; rallyPlacement = false; editingWall = null;
     errorMessage = ''; clearDrag(); display(); focusTyping();
   }
   function togglePause(): void {
@@ -158,10 +175,10 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   function restart(): void {
     paused = false;
     selected.clear();
-    relayPlacement = false; placementCancelled = false; rallyPlacement = false;
+    relayPlacement = false; placementCancelled = false; rallyPlacement = false; editingWall = null;
     errorMessage = ''; phraseId = -1;
     clearDrag();
-    elements.camera.reset(defaults.mapZoom); updateCameraControls();
+    elements.camera.reset(defaults.mapZoom);
     connection.restart(defaults);
     connection.setActive(running());
     focusTyping();
@@ -189,27 +206,20 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     if (self()?.length !== option.length) void send({ type: 'LENGTH', length: option.length });
     else focusTyping();
   });
-  for (const [id, change] of [['stronghold-zoom-out', -.1], ['stronghold-zoom-in', .1]] as const) {
-    requireElement(id, HTMLButtonElement).addEventListener('click', () => {
-      clearDrag(); elements.camera.setZoom(elements.camera.zoom + change); cursor = null;
-      updateCameraControls(); display(); focusTyping();
-    });
-  }
-  function panAtEdge(time: number): void {
-    edgeFrame = null;
+  function panWithKeys(time: number): void {
+    panFrame = null;
     if (pan || !running() || snapshot?.phase !== 'playing') return;
-    const edge = mouse ? edgePan(mouse, elements.map.getBoundingClientRect()) : { x: 0, y: 0 };
-    const keys = arrowPan(panKeys);
-    const direction = { x: Math.max(-1, Math.min(1, edge.x + keys.x)), y: Math.max(-1, Math.min(1, edge.y + keys.y)) };
+    const direction = arrowPan(panKeys);
     if (!direction.x && !direction.y) return;
-    const seconds = Math.min(.05, Math.max(0, (time - edgeTime) / 1000));
-    edgeTime = time;
+    const seconds = Math.min(.05, Math.max(0, (time - panTime) / 1000));
+    panTime = time;
     const center = elements.camera.center;
     const speed = 220 / elements.camera.zoom;
     elements.camera.panTo({ x: center.x + direction.x * speed * seconds, y: center.y + direction.y * speed * seconds });
     if (mouse) cursor = mapPoint(elements.map, mouse.x, mouse.y);
-    elements.mapControls.ghost(snapshot, placing(), cursor, wallRotation);
-    edgeFrame = requestAnimationFrame(panAtEdge);
+    hoveredRelay = null;
+    renderMapPreview();
+    panFrame = requestAnimationFrame(panWithKeys);
   }
   elements.map.addEventListener('wheel', event => {
     if (!running() || snapshot?.phase !== 'playing' || event.ctrlKey) return;
@@ -223,15 +233,14 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       elements.camera.panTo({ x: center.x + before.x - after.x, y: center.y + before.y - after.y });
     }
     cursor = mapPoint(elements.map, event.clientX, event.clientY);
-    updateCameraControls(); display();
+    display();
   }, { passive: false });
-  rotateWall.addEventListener('click', () => {
-    wallRotation = (wallRotation + 45) % 180;
-    display(); focusTyping();
-  });
-  requireElement('stronghold-zoom-fit', HTMLButtonElement).addEventListener('click', () => {
-    clearDrag(); elements.camera.reset(1); cursor = null; updateCameraControls(); display(); focusTyping();
-  });
+  function rotateCurrentWall(): void {
+    const wall = selectedWall();
+    if (wall) void send({ type: 'ROTATE_WALL', id: wall.id });
+    else if (placing() === 'wall') { wallRotation = (wallRotation + 45) % 180; display(); focusTyping(); }
+  }
+  rotateWall.addEventListener('click', rotateCurrentWall);
   for (const card of elements.playerCards) {
     card.roleSelect.addEventListener('change', () => {
       const role = ROLES.find(candidate => candidate === card.roleSelect.value);
@@ -241,6 +250,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     for (const group of card.groups) {
       for (const button of group.buttons) {
         button.element.addEventListener('click', () => {
+          editingWall = null;
           relayPlacement = button.action === 'relay';
           placementCancelled = false; rallyPlacement = false;
           if (relayPlacement) { errorMessage = ''; display(); focusTyping(); }
@@ -263,10 +273,17 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     }
     if (event.button !== 0) return;
     const building = event.target instanceof Element ? event.target.closest('[data-building]') : null;
-    if (event.shiftKey && building && self()?.role === 'defenses' && !placing()) {
-      const wall = snapshot.buildings.find(candidate => candidate.id === Number(building.getAttribute('data-building')) && candidate.kind === 'wall');
-      if (wall) { event.preventDefault(); void send({ type: 'ROTATE_WALL', id: wall.id }); return; }
+    if (building && self()?.role === 'defenses') {
+      const wall = snapshot.buildings.find(candidate => candidate.id === Number(building.getAttribute('data-building'))
+        && candidate.kind === 'wall' && !candidate.enemy && candidate.hp > 0);
+      if (wall) {
+        event.preventDefault(); clearDrag();
+        editingWall = wall.id; relayPlacement = false; rallyPlacement = false; placementCancelled = true; cursor = null; errorMessage = '';
+        if (event.shiftKey) rotateCurrentWall(); else { display(); focusTyping(); }
+        return;
+      }
     }
+    editingWall = null;
     const point = mapPoint(elements.map, event.clientX, event.clientY);
     if (!point) return;
     const target = event.target instanceof Element ? event.target.closest('[data-unit]') : null;
@@ -284,32 +301,29 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       point.x = event.clientX; point.y = event.clientY;
       const location = point.matrixTransform(pan.matrix);
       elements.camera.panTo({ x: pan.center.x + pan.start.x - location.x, y: pan.center.y + pan.start.y - location.y });
+      hoveredRelay = null; renderMapPreview();
       return;
     }
     mouse = { x: event.clientX, y: event.clientY };
-    if (edgeFrame === null && running() && snapshot?.phase === 'playing') {
-      edgeTime = performance.now(); edgeFrame = requestAnimationFrame(panAtEdge);
-    }
+    const building = event.target instanceof Element ? event.target.closest('[data-building]') : null;
+    hoveredRelay = building ? Number(building.getAttribute('data-building')) : null;
     cursor = mapPoint(elements.map, event.clientX, event.clientY);
     if (drag && drag.pointer === event.pointerId && cursor) {
       drag.end = cursor;
       drag.moved ||= distance(drag.start, cursor) > 4;
     }
     if (snapshot) {
-      elements.mapControls.ghost(snapshot, placing(), cursor, wallRotation);
+      renderMapPreview();
       const selecting = drag?.moved && self()?.role === 'army' && !placing() && !rallyPlacement;
       elements.mapControls.selection(selecting ? drag?.start ?? null : null, selecting ? drag?.end ?? null : null);
     }
   });
   elements.map.addEventListener('pointerleave', () => {
     mouse = null;
-    if (!panKeys.size) {
-      if (edgeFrame !== null) cancelAnimationFrame(edgeFrame);
-      edgeFrame = null;
-    }
+    hoveredRelay = null;
     if (drag || pan) return;
     cursor = null;
-    if (snapshot) elements.mapControls.ghost(snapshot, null, null);
+    if (snapshot) { elements.mapControls.ghost(snapshot, null, null); elements.mapControls.relayPreview(snapshot, null); }
   });
   elements.map.addEventListener('pointerup', event => {
     if (pan?.pointer === event.pointerId) {
@@ -317,7 +331,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       const point = mapPoint(elements.map, event.clientX, event.clientY);
       clearDrag();
       if (gesture.right && !gesture.moved) {
-        if (placing() || rallyPlacement) cancelPlacement();
+        if (placing() || rallyPlacement || editingWall !== null) cancelPlacement();
         else if (point && self()?.role === 'army') move(point);
       }
       cursor = null; display(); focusTyping(); return;
@@ -403,7 +417,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   requireElement('stronghold-rally', HTMLButtonElement).addEventListener('click', () => {
     rallyPlacement = true; relayPlacement = false; placementCancelled = true; display(); focusTyping();
   });
-  requireElement('stronghold-cancel-placement', HTMLButtonElement).addEventListener('click', cancelPlacement);
+  cancelPlacementButton.addEventListener('click', cancelPlacement);
   elements.dialog.addEventListener('cancel', event => { event.preventDefault(); togglePause(); });
   const clicked = (event: MouseEvent): void => {
     if (event.target instanceof Node && !developerPanel.contains(event.target)) developerPanel.open = false;
@@ -418,6 +432,12 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       return;
     }
     if (event.key === 'Escape' && snapshot.phase === 'playing') { cancelPlacement(); return; }
+    if (event.altKey && !event.ctrlKey && !event.metaKey && event.code === 'KeyR' && snapshot.phase === 'playing'
+      && (placing() === 'wall' || selectedWall())) {
+      event.preventDefault();
+      if (!event.repeat) rotateCurrentWall();
+      return;
+    }
     if (event.altKey && placing() && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter'].includes(event.key)) {
       event.preventDefault();
       cursor ??= { x: 500, y: 450 };
@@ -465,7 +485,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       if (snapshot.phase === 'playing' && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
         event.preventDefault();
         panKeys.add(event.key);
-        if (edgeFrame === null) { edgeTime = performance.now(); edgeFrame = requestAnimationFrame(panAtEdge); }
+        if (panFrame === null) { panTime = performance.now(); panFrame = requestAnimationFrame(panWithKeys); }
         return;
       }
       const length = typingLengthKey(player.length, event.key);

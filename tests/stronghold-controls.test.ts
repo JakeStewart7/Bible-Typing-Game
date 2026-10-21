@@ -31,7 +31,9 @@ test('Stronghold task cycling wraps forwards and backwards without treating paid
   equal([...economy.matchAll(/data-action="([^"]+)"/g)].map(match => match[1]), ['worker', 'relay', 'resources', 'upgrade']);
   equal([...economy.matchAll(/data-shortcut="([^"]+)"/g)].map(match => match[1]), ['1', '2', '3', '4']);
   equal(markup.includes('aria-keyshortcuts="PageUp PageDown"'), true);
-  equal(markup.includes('Command desk'), true);
+  equal(markup.includes('Command desk'), false);
+  equal(markup.includes('Tab: switch task / Arrows: pan'), false);
+  equal(markup.indexOf('class="stronghold-length-keys"') < markup.indexOf('id="stronghold-length"'), true);
 });
 
 test('Stronghold arrow panning combines simultaneous keys and opposite directions cancel', () => {
@@ -71,14 +73,19 @@ test('Stronghold military panels omit Supplies and every remaining task has a ma
     }
   }
   equal(markup.includes('id="stronghold-length" class="stronghold-length-wheel" role="listbox"'), true);
-  equal(markup.includes('id="stronghold-zoom-fit"'), true);
+  for (const id of ['stronghold-zoom-fit', 'stronghold-zoom-in', 'stronghold-zoom-out', 'stronghold-zoom']) {
+    equal(markup.includes(`id="${id}"`), false);
+  }
+  equal(markup.includes('aria-keyshortcuts="Alt+R"'), true);
+  equal(markup.includes('class="stronghold-action-label">Queue '), false);
+  equal(markup.includes('data-training-queued>0 queued'), true);
   equal(markup.includes('id="stronghold-next-wave" type="button">Next Wave</button>'), true);
   const orders = /<section id="stronghold-army-orders"[\s\S]*?<\/section>/.exec(markup)?.[0];
   if (!orders) throw new Error('Missing Unit Control orders.');
   equal([...orders.matchAll(/data-shortcut="([0-9])"/g)].map(match => match[1]), ['1', '2', '3', '4']);
 });
 
-test('Stronghold zoom camera stays within the full battlefield and Fit restores all legal construction sites', () => {
+test('Stronghold zoom camera stays within the full battlefield and minimum zoom exposes all legal construction sites', () => {
   equal(cameraBounds(1, { x: 500, y: 400 }), { x: 0, y: 0, width: 1000, height: 650 });
   equal(cameraBounds(2, { x: -1000, y: -1000 }), { x: 0, y: 0, width: 500, height: 325 });
   equal(cameraBounds(2, { x: 2000, y: 2000 }), { x: 500, y: 325, width: 500, height: 325 });
