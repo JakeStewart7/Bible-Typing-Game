@@ -54,7 +54,7 @@ export const EVENT_LABELS: Record<WorldEvent, string> = {
 };
 export const TIER_MAX = 3;
 export const RELAY_RANGE = 155;
-export const TIER_QUOTA = 3;
+export const TIER_CHARACTER_GOAL = 500;
 export const BASE: Point = { x: 500, y: 595 };
 export const ENEMY_BASE: Point = { x: 500, y: 60 };
 export function distance(a: Point, b: Point): number {

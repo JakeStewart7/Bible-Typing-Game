@@ -1,9 +1,22 @@
-import type { Participant, StrongholdState } from './types.ts';
+import type { Participant, PhraseLength, StrongholdState } from './types.ts';
+import { TEXT_LENGTH_RANGES } from './rules.ts';
 import { saveRoleTask } from './tasks.ts';
 import { WORD_POOLS } from './word-pools.ts';
 import { EVENT_WORD_POOLS } from './event-phrases.ts';
 
 const bags = new WeakMap<Participant, Map<readonly string[], string[]>>();
+function challengePools(suffixes: readonly string[]): Record<PhraseLength, readonly string[]> {
+  const pool = (length: PhraseLength) => Object.freeze([...new Set(WORD_POOLS[length].map((phrase, index) => {
+    const suffix = suffixes[index % suffixes.length];
+    if (!suffix) throw new Error('Missing tier challenge characters.');
+    return phrase.slice(0, TEXT_LENGTH_RANGES[length][1] - suffix.length).trimEnd() + suffix;
+  }))]);
+  return { short: pool('short'), medium: pool('medium'), long: pool('long'), 'extra-long': pool('extra-long') };
+}
+export const TIER_WORD_POOLS = [
+  WORD_POOLS, challengePools(['7', '42', '9', '21', '5', '83']),
+  challengePools(['7!', '4?', '2+', '9.', '3:', '6%', '5=', '8-'])
+] as const;
 
 export function copyRoleTask(source: Participant, target: Participant): void {
   target.action = source.action;
@@ -25,7 +38,11 @@ export function assignPhrase(state: StrongholdState, player: Participant, random
   player.phraseId++;
   player.typed = '';
   player.typingCredit = 0;
-  const phrases = state.phase === 'tier-up' || state.event === 'peace' ? WORD_POOLS[player.length] : EVENT_WORD_POOLS[state.event][player.length];
+  player.tierPhraseCredit = 0;
+  const challenge = TIER_WORD_POOLS[state.tier];
+  if (state.phase === 'tier-up' && !challenge) throw new Error('No further tier challenge is available.');
+  const phrases = state.phase === 'tier-up' && challenge ? challenge[player.length]
+    : state.event === 'peace' ? WORD_POOLS[player.length] : EVENT_WORD_POOLS[state.event][player.length];
   let playerBags = bags.get(player);
   if (!playerBags) { playerBags = new Map(); bags.set(player, playerBags); }
   let bag = playerBags.get(phrases);

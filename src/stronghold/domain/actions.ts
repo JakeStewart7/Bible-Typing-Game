@@ -10,6 +10,7 @@ import { daylight, DAY_SECONDS, NIGHT_SECONDS, SEASON_LABELS, seasonalNodes } fr
 import { tierProgress } from './tier-progress.ts';
 import { wallContains, WALL_HALF_LENGTH, WALL_HALF_WIDTH } from './navigation.ts';
 import { isArmyUnit, queuedUnits, trainingBarracks, TRAINING_SECONDS } from './training.ts';
+import { getValidatedTypingLength } from '../../game/input.ts';
 
 type ActionWorld = Pick<StrongholdState, 'tier' | 'resources' | 'units' | 'technology' | 'buildings'>;
 type TaskPlayer = Pick<Participant, 'role' | 'action' | 'constructionTier' | 'upgradeTarget' | 'work'>;
@@ -77,18 +78,7 @@ function performAction(state: StrongholdState, player: Participant, action: Acti
 
 export function completePhrase(state: StrongholdState, player: Participant): void {
   player.completed++;
-  if (state.phase === 'tier-up') {
-    player.contribution++;
-    const progress = tierProgress(state.players);
-    if (progress.completed >= progress.goal) {
-      state.tier++;
-      state.phase = 'playing';
-      state.message = `Tier ${state.tier} unlocked! New units, defenses and upgrades are available.`;
-      recordEvent(state, `Tier ${state.tier} unlocked`);
-      state.players.forEach(other => { other.ready = false; restoreRoleTask(state, other); assignPhrase(state, other); });
-      return;
-    }
-  } else {
+  if (state.phase !== 'tier-up') {
     const action = player.action === 'relay' ? 'resources' : player.action;
     player.actionPhrases++;
     if (player.work < taskWork(player)) player.work = Math.round((player.work + phraseWork(player)) * 100) / 100;
@@ -181,6 +171,21 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     if (command.phraseId !== player.phraseId) throw new Error('That phrase has expired.');
     if (typeof command.text !== 'string' || command.text.length > player.phrase.length) throw new Error('Invalid typing update.');
     player.typed = command.text;
+    if (state.phase === 'tier-up') {
+      const validated = getValidatedTypingLength(player.phrase, player.typed);
+      const progress = tierProgress(state.players);
+      player.contribution += Math.min(progress.goal - progress.completed, Math.max(0, validated - player.tierPhraseCredit));
+      player.tierPhraseCredit = Math.max(player.tierPhraseCredit, validated);
+      if (tierProgress(state.players).completed === progress.goal) {
+        if (player.typed === player.phrase) player.completed++;
+        state.tier++;
+        state.phase = 'playing';
+        state.message = `Tier ${state.tier} unlocked! New units, defenses and upgrades are available.`;
+        recordEvent(state, `Tier ${state.tier} unlocked`);
+        state.players.forEach(other => { other.ready = false; restoreRoleTask(state, other); assignPhrase(state, other); });
+        return;
+      }
+    }
     if (player.typed === player.phrase) completePhrase(state, player);
     return;
   }
@@ -191,7 +196,7 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     playerEvent(state, player, command.ready ? 'is ready' : 'cancelled ready');
     if (state.players.every(other => other.ready)) {
       state.phase = 'tier-up';
-      state.message = `Complete ${tierProgress(state.players).goal} phrases together to advance. Anyone can contribute; the battlefield is paused.`;
+      state.message = `Type ${tierProgress(state.players).goal} correct characters together to advance. Anyone can contribute; the battlefield is paused.`;
       recordEvent(state, 'Tier challenge started');
       state.players.forEach(other => { other.contribution = 0; assignPhrase(state, other); });
     }

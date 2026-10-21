@@ -158,9 +158,9 @@ export function renderStronghold(
     const progressBar = entry.progress.closest('[role="progressbar"]');
     if (progressBar) {
       setAttribute(progressBar, 'aria-valuenow', String(Math.round(percent)));
-      setAttribute(progressBar, 'aria-valuetext', challenge ? `${player.contribution} of ${goal} shared tier entries` : bank.description);
+      setAttribute(progressBar, 'aria-valuetext', challenge ? `${player.contribution} of ${goal} shared tier characters` : bank.description);
     }
-    setText(entry.progressLabel, challenge ? `${player.contribution} contributed` : bank.label);
+    setText(entry.progressLabel, challenge ? `${player.contribution} characters` : bank.label);
     if (entry.roleSelect.value !== player.role) entry.roleSelect.value = player.role;
     const roleDisabled = !own || challenge || terminal || !running;
     if (entry.roleSelect.disabled !== roleDisabled) entry.roleSelect.disabled = roleDisabled;

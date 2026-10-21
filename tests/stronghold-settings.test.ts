@@ -1,6 +1,6 @@
 import { executeCommand } from '../src/stronghold/domain/actions.ts';
 import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
-import { TIER_QUOTA } from '../src/stronghold/domain/rules.ts';
+import { TIER_CHARACTER_GOAL } from '../src/stronghold/domain/rules.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { addBuilding, createStronghold } from '../src/stronghold/domain/state.ts';
 import { PLAYER_COLORS, type Participant, type StrongholdCommand, type StrongholdState } from '../src/stronghold/domain/types.ts';
@@ -259,7 +259,7 @@ test('Stronghold Army prepares Barracks at Tier 0 and places them after the firs
   const preparedWork = self().work;
   engine.send('you', { type: 'COMPUTERS', paused: true });
   engine.send('you', { type: 'READY', ready: true });
-  for (let index = 0; index < TIER_QUOTA * engine.snapshot('you').players.length; index++) {
+  for (let index = 0; engine.snapshot('you').phase === 'tier-up' && index < TIER_CHARACTER_GOAL; index++) {
     engine.send('you', { type: 'TYPE', phraseId: self().phraseId, text: self().phrase });
   }
   equal(engine.snapshot('you').tier, 1);
@@ -366,7 +366,7 @@ test('Stronghold shared tier challenges preserve normal task banks and the chose
   send(state, { type: 'READY', ready: true });
   equal(state.phase, 'tier-up');
   send(state, { type: 'LENGTH', length: 'long' });
-  for (const other of state.players) for (let index = 0; index < TIER_QUOTA; index++) entry(state, other);
+  for (let index = 0; state.phase === 'tier-up' && index < TIER_CHARACTER_GOAL; index++) entry(state, state.players[index % state.players.length]!);
   equal(state.phase, 'playing');
   equal(state.tier, 1);
   equal(player.action, 'worker');
@@ -420,12 +420,12 @@ test('Stronghold stopped computers do not block a solo shared tier challenge', (
   equal(state.phase, 'tier-up');
   equal(state.players.filter(player => player.simulated).every(player => player.ready && player.typingCredit === 0), true);
   const computers = structuredClone(state.players.filter(player => player.simulated));
-  for (let index = 0; index < TIER_QUOTA; index++) entry(state);
+  for (let index = 0; index < 5; index++) entry(state);
   const time = state.elapsed;
   for (let index = 0; index < 10; index++) advanceStronghold(state, .25);
   equal(state.elapsed, time);
   equal(state.players.filter(player => player.simulated), computers);
-  for (let index = TIER_QUOTA; index < TIER_QUOTA * state.players.length; index++) entry(state);
+  for (let index = 0; state.phase === 'tier-up' && index < TIER_CHARACTER_GOAL; index++) entry(state);
   equal(state.tier, 1);
   equal(state.phase, 'playing');
 });

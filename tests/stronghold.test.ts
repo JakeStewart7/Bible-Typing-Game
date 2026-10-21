@@ -4,7 +4,7 @@ import { updateCombat, spawnWave } from '../src/stronghold/domain/combat.ts';
 import { connectedRelays, updateLogistics } from '../src/stronghold/domain/logistics.ts';
 import { addBuilding, addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
-import { TEXT_LENGTH_RANGES, TIER_QUOTA } from '../src/stronghold/domain/rules.ts';
+import { TEXT_LENGTH_RANGES, TIER_CHARACTER_GOAL } from '../src/stronghold/domain/rules.ts';
 import { LocalStrongholdConnection } from '../src/stronghold/infrastructure/local-connection.ts';
 import { themeForWorkspace } from '../src/ui/page-theme.ts';
 import type { Participant, StrongholdState } from '../src/stronghold/domain/types.ts';
@@ -80,10 +80,12 @@ test('Stronghold tier-up waits for readiness, pauses battle and accepts unequal 
   advanceStronghold(state, .5);
   equal(state.elapsed, time);
   const first = self(state);
-  for (let index = 0; index < TIER_QUOTA + 2; index++) finish(state, first);
-  equal(first.contribution, TIER_QUOTA + 2);
+  let characters = 0;
+  for (let index = 0; index < 5; index++) { characters += first.phrase.length; finish(state, first); }
+  equal(first.contribution, characters);
   equal(state.tier, 0);
-  for (let index = first.contribution; index < state.players.length * TIER_QUOTA; index++) finish(state, state.players[1]);
+  for (let index = 0; state.phase === 'tier-up' && index < TIER_CHARACTER_GOAL; index++) finish(state, state.players[1]);
+  equal(state.players.reduce((sum, player) => sum + player.contribution, 0), TIER_CHARACTER_GOAL);
   equal(state.tier, 1);
   equal(state.phase, 'playing');
   equal(state.players.every(player => !player.ready), true);
@@ -94,8 +96,8 @@ test('Stronghold simulated teammates ready up and finish their own tier phrases'
   executeCommand(state, self(state), { type: 'READY', ready: true });
   advanceStronghold(state, .25);
   equal(state.phase, 'tier-up');
-  for (let index = 0; index < TIER_QUOTA; index++) finish(state);
-  for (let index = 0; index < 120; index++) advanceStronghold(state, .25);
+  for (let index = 0; index < 5; index++) finish(state);
+  for (let index = 0; index < 160; index++) advanceStronghold(state, .25);
   equal(state.tier, 1);
   equal(state.phase, 'playing');
 });
@@ -109,13 +111,14 @@ test('Stronghold each shared challenge advances exactly one tier without chainin
     executeCommand(state, player, { type: 'READY', ready: true });
     equal(state.phase, 'tier-up');
     equal(state.players.every(other => other.contribution === 0), true);
-    for (let entry = 0; entry < state.players.length * TIER_QUOTA - 1; entry++) finish(state);
+    for (let entry = 0; player.contribution + player.phrase.length < TIER_CHARACTER_GOAL && entry < TIER_CHARACTER_GOAL; entry++) finish(state);
     equal(state.phase, 'tier-up');
     equal(state.tier, tier - 1);
-    const finalPhrase = { type: 'TYPE' as const, phraseId: player.phraseId, text: player.phrase };
+    const finalPhrase = { type: 'TYPE' as const, phraseId: player.phraseId, text: player.phrase.slice(0, TIER_CHARACTER_GOAL - player.contribution) };
     executeCommand(state, player, finalPhrase);
     equal(state.phase, 'playing');
     equal(state.tier, tier);
+    equal(player.contribution, TIER_CHARACTER_GOAL);
     equal(state.players.every(other => !other.ready), true);
     rejects(() => executeCommand(state, player, finalPhrase), 'expired');
     executeCommand(state, player, { type: 'COMPUTERS', paused: false });
@@ -394,7 +397,7 @@ test('Stronghold can win a complete match with human supply typing and a simulat
   const player = self(state);
   for (let step = 0; step < 2400 && state.phase !== 'won' && state.phase !== 'lost'; step++) {
     if (state.phase === 'playing' && state.tier < 3 && !player.ready) executeCommand(state, player, { type: 'READY', ready: true });
-    if (state.phase === 'tier-up' && player.contribution < TIER_QUOTA && step % 10 === 0) finish(state);
+    if (state.phase === 'tier-up' && player.contribution < TIER_CHARACTER_GOAL / 4 && step % 10 === 0) finish(state);
     if (state.phase === 'playing' && state.tier === 3 && step % 16 === 0) finish(state);
     advanceStronghold(state, .25);
   }

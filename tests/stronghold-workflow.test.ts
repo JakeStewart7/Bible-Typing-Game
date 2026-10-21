@@ -4,7 +4,7 @@ import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
 import { addBuilding, addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { phraseWork, taskWork } from '../src/stronghold/domain/technology.ts';
-import { COSTS, isTypingAction, TEXT_LENGTH_BONUSES, TEXT_LENGTH_RANGES, TIER_QUOTA } from '../src/stronghold/domain/rules.ts';
+import { COSTS, isTypingAction, TEXT_LENGTH_BONUSES, TEXT_LENGTH_RANGES, TIER_CHARACTER_GOAL } from '../src/stronghold/domain/rules.ts';
 import { PHRASE_LENGTHS, type Action, type Role, type UpgradeTarget, type UnitKind } from '../src/stronghold/domain/types.ts';
 import { selectionBounds, troopsInRectangle } from '../src/stronghold/ui/map-controls.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
@@ -394,7 +394,7 @@ test('Stronghold Army bot prepares Tier 1 barracks before unlocking and trains u
   equal(state.buildings.some(building => building.kind === 'barracks'), false);
   const player = state.players[0]!;
   executeCommand(state, player, { type: 'READY', ready: true });
-  for (let entry = 0; entry < state.players.length * TIER_QUOTA; entry++) {
+  for (let entry = 0; state.phase === 'tier-up' && entry < TIER_CHARACTER_GOAL; entry++) {
     executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
   }
   equal(state.tier, 1);

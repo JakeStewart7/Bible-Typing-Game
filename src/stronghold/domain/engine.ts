@@ -32,7 +32,7 @@ export class StrongholdEngine {
     const { nextId: _nextId, players, ...world } = this.state;
     return structuredClone({
       ...world, selfId: playerId,
-      players: players.map(({ typingCredit: _credit, ...player }) => ({
+      players: players.map(({ typingCredit: _credit, tierPhraseCredit: _tierCredit, ...player }) => ({
         ...player, progress: getValidatedTypingLength(player.phrase, player.typed) / player.phrase.length,
         phrase: player.id === playerId ? player.phrase : ''
       }))

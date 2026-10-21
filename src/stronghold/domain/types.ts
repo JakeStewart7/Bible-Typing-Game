@@ -32,7 +32,7 @@ export type ResourceChunk = Point & { id: number; amount: number; target: number
 export type Participant = {
   id: string; name: string; color: string; role: Role; simulated: boolean;
   action: Action; phrase: string; typed: string; phraseId: number;
-  completed: number; ready: boolean; contribution: number; typingCredit: number;
+  completed: number; ready: boolean; contribution: number; typingCredit: number; tierPhraseCredit: number;
   constructionTier: number; upgradeTarget: UpgradeTarget; actionPhrases: number; work: number; length: PhraseLength;
 };
 export type TaskSelection = Pick<Participant, 'action' | 'constructionTier' | 'upgradeTarget'>;
@@ -52,7 +52,7 @@ export type StrongholdState = {
 };
 export type StrongholdSnapshot = Omit<StrongholdState, 'players' | 'nextId'> & {
   selfId: string;
-  players: (Omit<Participant, 'typingCredit'> & { progress: number })[];
+  players: (Omit<Participant, 'typingCredit' | 'tierPhraseCredit'> & { progress: number })[];
 };
 export type StrongholdCommand =
   | { type: 'ROLE'; role: Role }

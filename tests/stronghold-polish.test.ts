@@ -3,7 +3,8 @@ import { updateCombat } from '../src/stronghold/domain/combat.ts';
 import { EVENT_WORD_POOLS } from '../src/stronghold/domain/event-phrases.ts';
 import { connectedRelays, relayNeighbors, updateLogistics } from '../src/stronghold/domain/logistics.ts';
 import { moveUnitToward, wallBetween, wallContains } from '../src/stronghold/domain/navigation.ts';
-import { assignPhrase } from '../src/stronghold/domain/phrases.ts';
+import { assignPhrase, TIER_WORD_POOLS } from '../src/stronghold/domain/phrases.ts';
+import { tierProgress } from '../src/stronghold/domain/tier-progress.ts';
 import { distance, MIN_TIER, TEXT_LENGTH_RANGES, UNIT_CAPS, UNIT_RULES } from '../src/stronghold/domain/rules.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { addBuilding, addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
@@ -46,6 +47,40 @@ test('Stronghold phrase shuffles respond to random choices rather than phrase ID
   assignPhrase(first, a, () => 0);
   assignPhrase(second, b, () => .999);
   equal(a.phrase !== b.phrase, true);
+});
+
+test('Stronghold tier drills progress from letters to numbers to punctuation at every text length', () => {
+  for (const [tier, pools] of TIER_WORD_POOLS.entries()) for (const length of PHRASE_LENGTHS) {
+    const pool = pools[length], [min, max] = TEXT_LENGTH_RANGES[length];
+    equal(pool.length >= 5, true);
+    equal(new Set(pool).size, pool.length);
+    equal(pool.every(phrase => phrase.length >= min && phrase.length <= max && /[a-z]/i.test(phrase)), true);
+    equal(pool.every(phrase => tier === 0 ? /^[a-z ]+$/i.test(phrase) : /\d/.test(phrase)), true);
+    equal(pool.every(phrase => tier < 2 ? /^[a-z0-9 ]+$/i.test(phrase) : /[^a-z0-9 ]/i.test(phrase)), true);
+    const state = createStronghold({ resources: 50, length, computersPaused: true });
+    state.tier = tier;
+    executeCommand(state, state.players[0]!, { type: 'READY', ready: true });
+    equal(state.players.every(player => pool.includes(player.phrase)), true);
+    equal(new Set(state.players.map(player => player.phrase)).size, state.players.length);
+  }
+});
+
+test('Stronghold tier characters count correct partial input once and stop at exactly 500 without length bonuses', () => {
+  const state = createStronghold({ resources: 50, length: 'long', computersPaused: true }), player = state.players[0]!;
+  executeCommand(state, player, { type: 'READY', ready: true });
+  const phraseId = player.phraseId, prefix = player.phrase.slice(0, 3);
+  const type = (text: string) => executeCommand(state, player, { type: 'TYPE', phraseId, text });
+  type(prefix); equal(player.contribution, 3);
+  type(prefix); type(''); type(prefix); equal(player.contribution, 3);
+  const wrong = player.phrase[3] === 'x' ? 'y' : 'x';
+  type(prefix + wrong); equal(player.contribution, 3);
+  type(player.phrase.slice(0, 4)); equal(player.contribution, 4);
+  const phraseLength = player.phrase.length;
+  type(player.phrase); equal(player.contribution, phraseLength);
+  player.contribution = 498;
+  executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase.slice(0, 2) });
+  equal(state.tier, 1); equal(state.phase, 'playing');
+  equal(tierProgress(state.players), { completed: 500, goal: 500 });
 });
 
 test('Stronghold all unit types route around horizontal, diagonal and vertical walls without crossing them', () => {
