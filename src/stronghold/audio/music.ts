@@ -1,6 +1,6 @@
 import { seasonalTrack, type MusicTrack } from './catalog.ts';
 import type { Season } from '../domain/types.ts';
-import { browserFrameClock, createFrameScheduler, type FrameClock } from '../../shared/frame-scheduler.ts';
+import { createFrameScheduler, type FrameClock } from '../../shared/frame-scheduler.ts';
 
 export interface MusicAudio {
   src: string; volume: number; loop: boolean; preload: string; paused: boolean;
@@ -15,8 +15,14 @@ export type MusicStatus = { enabled: boolean; playing: boolean; track: MusicTrac
 
 export const MUSIC_START_DELAY_MS = 3000;
 export const MUSIC_FADE_MS = 750;
+// Hidden tabs suspend animation frames, but their audio still needs to fade out.
+const musicClock: FrameClock = {
+  now: () => performance.now(),
+  request: callback => window.setTimeout(() => callback(performance.now()), 16),
+  cancel: timer => window.clearTimeout(timer)
+};
 
-export function createSeasonalMusic(audio: MusicAudio, report: (status: MusicStatus) => void, clock: FrameClock = browserFrameClock) {
+export function createSeasonalMusic(audio: MusicAudio, report: (status: MusicStatus) => void, clock: FrameClock = musicClock) {
   audio.preload = 'none';
   audio.loop = true;
   audio.volume = 0;
