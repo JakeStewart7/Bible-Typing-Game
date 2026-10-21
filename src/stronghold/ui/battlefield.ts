@@ -5,6 +5,7 @@ import type { Building, Point, ResourceChunk, ResourceNode, StrongholdSnapshot, 
 import { createSvgLayer, setAttribute, setText } from './dom-updates.ts';
 import { playerTheme } from './player-theme.ts';
 import { TRAINING_SECONDS } from '../domain/training.ts';
+import { WALL_HALF_WIDTH } from '../domain/navigation.ts';
 
 function health(hp: number, max: number, y: number, width = 26): string {
   return `<rect x="${-width / 2}" y="${y}" width="${width}" height="3" fill="#1d3029"/><rect data-health x="${-width / 2}" y="${y}" width="${width * Math.max(0, hp / max)}" height="3" fill="#a6ed89"/>`;
@@ -12,18 +13,18 @@ function health(hp: number, max: number, y: number, width = 26): string {
 function actionActive(entity: Unit | Building): boolean {
   return entity.attackTarget !== null && entity.cooldown > (entity.kind === 'worker' ? 2.72 : .72);
 }
-function actionEffectMarkup(working = false): string {
+function actionEffectMarkup(working = false, enemy = false): string {
   if (working) return `<g data-work visibility="hidden" pointer-events="none" filter="url(#stronghold-work-glow)">
     <path data-beam fill="none" stroke="#dce7f0" stroke-width="1.5" stroke-dasharray="3 5"/>
     <g data-impact><circle r="7" fill="#eef5ff" fill-opacity=".18" stroke="#c5d2dc" stroke-width="1.5"/>
       <path d="M-11 0H-7 M7 0H11 M0 -11V-7 M0 7V11" stroke="#fff" stroke-width="2"/>
       <rect x="-2" y="-2" width="4" height="4" fill="#fff"/></g></g>`;
   return `<g data-attack visibility="hidden" pointer-events="none">
-    <path data-trail fill="none" stroke="#483526" stroke-width="5" stroke-linejoin="bevel"/>
-    <path data-beam fill="none" stroke="#ed914c" stroke-width="2" stroke-linejoin="bevel" filter="url(#stronghold-attack-glow)"/>
+    ${enemy ? '' : `<path data-trail fill="none" stroke="#483526" stroke-width="5" stroke-linejoin="bevel"/>
+    <path data-beam fill="none" stroke="#ed914c" stroke-width="2" stroke-linejoin="bevel" filter="url(#stronghold-attack-glow)"/>`}
     <g data-impact filter="url(#stronghold-attack-glow)">
       <path d="M0 -11L3 -4L10 -7L6 0L11 4L4 5L0 12L-3 5L-11 7L-6 0L-11 -4L-4 -5Z" fill="#9c572d" fill-opacity=".55" stroke="#ed914c" stroke-width="1.5"/>
-      <path d="M-7 5L6 -6 M-1 8L7 0" stroke="#fff1d2" stroke-width="2"/></g></g>`;
+      ${enemy ? '' : '<path d="M-7 5L6 -6 M-1 8L7 0" stroke="#fff1d2" stroke-width="2"/>'}</g></g>`;
 }
 export function unitMotionTransform(unit: Unit, previous: Point | undefined, elapsed: number, reducedMotion = false): string {
   if (reducedMotion) return '';
@@ -51,16 +52,16 @@ export function unitMarkup(unit: Unit, selected: boolean): string {
     : unit.formation === 'archer' ? '<path d="M0 -10 L8 0 L0 10 L-8 0 Z" fill="#870018" stroke="#ff1726" stroke-width="2"/>'
     : unit.formation === 'catapult' ? '<path d="M0 -12 L10 9 L-10 9 Z" fill="#870018" stroke="#ff1726" stroke-width="2"/>'
     : '<rect x="-8" y="-8" width="16" height="16" fill="#870018" stroke="#ff1726" stroke-width="2"/>';
-  return `${actionEffectMarkup(unit.kind === 'worker' || unit.kind === 'builder')}<circle data-selected r="16" fill="none" stroke="#fff" stroke-width="2" visibility="${selected ? 'visible' : 'hidden'}"/><g data-visual>${shape}</g>${health(unit.hp, unit.maxHp, 13, 20)}<desc>${unit.kind}${unit.formation ? ' ' + unit.formation : ''}: ${Math.ceil(unit.hp)} HP</desc>`;
+  return `${actionEffectMarkup(unit.kind === 'worker' || unit.kind === 'builder', unit.kind === 'invader')}<circle data-selected r="16" fill="none" stroke="#fff" stroke-width="2" visibility="${selected ? 'visible' : 'hidden'}"/><g data-visual>${shape}</g>${health(unit.hp, unit.maxHp, 13, 20)}<desc>${unit.kind}${unit.formation ? ' ' + unit.formation : ''}: ${Math.ceil(unit.hp)} HP</desc>`;
 }
 export function buildingMarkup(building: Building): string {
   const color = building.enemy ? '#870018' : building.kind === 'relay' ? '#b0b0b0' : '#c3c3c3';
   const size = building.kind === 'castle' || building.kind === 'enemy-base' ? 34 : 14;
   const shape = building.kind === 'tower' ? `<path d="M-16 -20 H16 V-10 H5 V20 H-5 V-10 H-16 Z" fill="${building.enemy ? color : '#fff'}" stroke="${building.enemy ? '#ff1726' : '#ffd500'}" stroke-width="3"/>`
     : building.kind === 'relay' ? `<path d="M-4 16 L-4 -7 L-9 -12 L0 -18 L9 -12 L4 -7 L4 16 Z" fill="${color}" stroke="#7f7f7f" stroke-width="2"/>`
-    : building.kind === 'wall' ? `<rect data-wall-shape transform="rotate(${building.rotation ?? 0})" x="-23" y="-4" width="46" height="8" fill="${building.enemy ? color : '#ffdb58'}" stroke="${building.enemy ? '#ff1726' : '#e8ad23'}" stroke-width="3"/>`
+    : building.kind === 'wall' ? `<rect data-wall-shape transform="rotate(${building.rotation ?? 0})" x="-23" y="${-WALL_HALF_WIDTH + 1.5}" width="46" height="${WALL_HALF_WIDTH * 2 - 3}" fill="${building.enemy ? color : '#ffdb58'}" stroke="${building.enemy ? '#ff1726' : '#e8ad23'}" stroke-width="3"/>`
     : `<rect x="${-size}" y="${-size}" width="${size * 2}" height="${size * 2}" fill="${color}" stroke="${building.enemy ? '#ff1726' : '#7f7f7f'}" stroke-width="4"/>`;
-  return `${actionEffectMarkup()}${shape}${health(building.hp, building.maxHp, building.kind === 'tower' ? 26 : size + 6, size * 2)}<desc></desc>${building.kind === 'barracks' ? `<text data-tier y="5" text-anchor="middle" fill="#111" font-size="16">T${building.tier}</text><g data-training><rect x="-17" y="26" width="34" height="8" fill="#23372e"/><rect x="-16" y="27" width="32" height="6" fill="#333"/><rect data-training-fill x="-16" y="27" width="0" height="6" fill="#a6ed89"/><text data-training-count y="43" text-anchor="middle" fill="#111" stroke="white" stroke-width="2" paint-order="stroke" font-size="12"></text></g>` : ''}`;
+  return `${actionEffectMarkup(false, building.enemy)}${shape}${health(building.hp, building.maxHp, building.kind === 'tower' ? 26 : size + 6, size * 2)}<desc></desc>${building.kind === 'barracks' ? `<text data-tier y="5" text-anchor="middle" fill="#111" font-size="16">T${building.tier}</text><g data-training><rect x="-17" y="26" width="34" height="8" fill="#23372e"/><rect x="-16" y="27" width="32" height="6" fill="#333"/><rect data-training-fill x="-16" y="27" width="0" height="6" fill="#a6ed89"/><text data-training-count y="43" text-anchor="middle" fill="#111" stroke="white" stroke-width="2" paint-order="stroke" font-size="12"></text></g>` : ''}`;
 }
 export function relayPreviewMarkup(snapshot: Pick<StrongholdSnapshot, 'buildings'>, point: Point, sourceId?: number): string {
   const connected = connectedRelays(snapshot);
@@ -109,11 +110,12 @@ function renderActionEffect(element: Element, entity: Unit | Building, scale: nu
   if (!active || !entity.attackTarget) return;
   const x = (entity.attackTarget.x - entity.x) / scale;
   const y = (entity.attackTarget.y - entity.y) / scale;
-  const beam = child(effect, '[data-beam]');
   if (working) {
+    const beam = child(effect, '[data-beam]');
     setAttribute(beam, 'd', `M0 0L${x} ${y}`);
     setAttribute(beam, 'stroke-dashoffset', String(reducedMotion ? 0 : -elapsed * 24 % 8));
-  } else {
+  } else if (entity.kind !== 'invader' && !('enemy' in entity && entity.enemy)) {
+    const beam = child(effect, '[data-beam]');
     const reach = Math.max(1, Math.hypot(x, y));
     const offsetX = -y / reach * 3, offsetY = x / reach * 3;
     const path = `M0 0L${x * .6 + offsetX} ${y * .6 + offsetY}L${x * .8 - offsetX} ${y * .8 - offsetY}L${x} ${y}`;

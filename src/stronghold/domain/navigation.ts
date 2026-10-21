@@ -3,7 +3,7 @@ import type { Building, Point, StrongholdState, Unit } from './types.ts';
 import { SEASON_BONUSES } from './environment.ts';
 
 export const WALL_HALF_LENGTH = 24.5;
-export const WALL_HALF_WIDTH = 5.5;
+export const WALL_HALF_WIDTH = 6.875;
 const UNIT_RADIUS = 10;
 type World = Pick<StrongholdState, 'buildings'>;
 type Obstacle = { wall: Building; x: number; y: number; cosine: number; sine: number; halfX: number; halfY: number };

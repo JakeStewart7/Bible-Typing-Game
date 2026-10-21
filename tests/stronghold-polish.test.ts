@@ -2,7 +2,7 @@ import { executeCommand } from '../src/stronghold/domain/actions.ts';
 import { updateCombat } from '../src/stronghold/domain/combat.ts';
 import { EVENT_WORD_POOLS } from '../src/stronghold/domain/event-phrases.ts';
 import { connectedRelays, relayNeighbors, updateLogistics } from '../src/stronghold/domain/logistics.ts';
-import { moveUnitToward, wallBetween, wallContains } from '../src/stronghold/domain/navigation.ts';
+import { moveUnitToward, wallBetween, wallContains, WALL_HALF_WIDTH } from '../src/stronghold/domain/navigation.ts';
 import { assignPhrase, TIER_WORD_POOLS } from '../src/stronghold/domain/phrases.ts';
 import { tierProgress } from '../src/stronghold/domain/tier-progress.ts';
 import { distance, MIN_TIER, TEXT_LENGTH_RANGES, UNIT_CAPS, UNIT_RULES } from '../src/stronghold/domain/rules.ts';
@@ -162,6 +162,19 @@ test('Stronghold enemies attack an enclosing wall when no route to their target 
     equal(wallBetween(state, before, invader), undefined);
   }
   equal(state.buildings.some(wall => wall.hp < wall.maxHp), true);
+});
+
+test('Stronghold thicker walls block the added edge area at every wall angle', () => {
+  equal(WALL_HALF_WIDTH, 5.5 * 1.25);
+  for (const rotation of [0, 45, 90, 135]) {
+    const wall = { x: 300, y: 400, rotation };
+    const angle = rotation * Math.PI / 180;
+    const across = (offset: number) => ({ x: wall.x - Math.sin(angle) * offset, y: wall.y + Math.cos(angle) * offset });
+    for (const side of [-1, 1]) {
+      equal(wallContains(across(side * 6.8), wall), true);
+      equal(wallContains(across(side * 6.9), wall), false);
+    }
+  }
 });
 
 test('Stronghold wall placement and existing rotation preserve angle, reject unit overlap and leave typing work untouched on failure', () => {

@@ -51,7 +51,8 @@
   70% { opacity: .2; transform: translate(6px, -18px); }
 }
 [data-season="spring"] .stronghold-weather-particle {
-  --petal: #f4a9ce; width: 17px; height: 17px; border-radius: 0;
+  --petal: #f4a9ce; top: var(--weather-y); width: 17px; height: 17px; border-radius: 0;
+  animation-name: stronghold-spring-breeze; animation-duration: calc(var(--weather-duration) * 3); animation-delay: calc(var(--weather-delay) * 3);
   background: radial-gradient(circle at center, #fff0a9 0 16%, transparent 18%),
     radial-gradient(circle at 50% 25%, var(--petal) 0 24%, transparent 26%),
     radial-gradient(circle at 75% 50%, var(--petal) 0 24%, transparent 26%),
@@ -60,6 +61,13 @@
 }
 [data-season="spring"] .stronghold-weather-particle:nth-child(3n) { --petal: #cab4ef; }
 [data-season="spring"] .stronghold-weather-particle:nth-child(3n + 1) { --petal: #fff2b1; }
+@keyframes stronghold-spring-breeze {
+  0% { opacity: 0; transform: translate(-48px, 8px) rotate(-12deg); }
+  20% { opacity: .35; }
+  35% { transform: translate(-16px, -6px) rotate(4deg); }
+  65% { opacity: .4; transform: translate(20px, 5px) rotate(-5deg); }
+  100% { opacity: 0; transform: translate(64px, -8px) rotate(12deg); }
+}
 @keyframes stronghold-weather-drift {
   0% { top: -16px; opacity: 0; transform: translate(0, 0) rotate(-12deg); }
   20% { opacity: .4; }

@@ -4,8 +4,10 @@ import type { Building, BuildingKind, Point, StrongholdSnapshot, Unit } from '..
 import { buildingMarkup, relayPreviewMarkup } from './battlefield.ts';
 import { setAttribute } from './dom-updates.ts';
 import { playerTheme } from './player-theme.ts';
+import { WALL_HALF_WIDTH } from '../domain/navigation.ts';
 
 export type PlacementKind = Extract<BuildingKind, 'relay' | 'barracks' | 'tower' | 'wall'>;
+const WALL_OUTLINE_HEIGHT = WALL_HALF_WIDTH * 2 + 9;
 export function readyBuilding(snapshot: StrongholdSnapshot): PlacementKind | null {
   const self = snapshot.players.find(player => player.id === snapshot.selfId);
   if (!self || snapshot.phase !== 'playing' || self.work < taskWork(self) || actionProblem(snapshot, self, self.action)) return null;
@@ -37,7 +39,7 @@ export function createMapControls(map: SVGSVGElement) {
   wallSelection.setAttribute('data-wall-selection', '');
   wallSelection.setAttribute('pointer-events', 'none');
   wallSelection.setAttribute('visibility', 'hidden');
-  wallSelection.innerHTML = '<rect x="-29" y="-10" width="58" height="20" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="4 3"/>';
+  wallSelection.innerHTML = `<rect x="-29" y="${-WALL_OUTLINE_HEIGHT / 2}" width="58" height="${WALL_OUTLINE_HEIGHT}" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="4 3"/>`;
   const moveIndicator = document.createElementNS(namespace, 'g');
   moveIndicator.setAttribute('data-move-indicator', '');
   moveIndicator.setAttribute('pointer-events', 'none');
@@ -103,7 +105,7 @@ export function createMapControls(map: SVGSVGElement) {
           ...point, id: 0, kind, hp: 1, maxHp: 1, tier: self.constructionTier,
           progress: 1, cooldown: 0, enemy: false, attackTarget: null, ownerId: self.id, rotation, trainingQueue: []
         }) + (kind === 'wall'
-          ? `<rect data-outline transform="rotate(${rotation})" x="-29" y="-10" width="58" height="20" fill="none" stroke-width="3" stroke-dasharray="5 3"/>`
+          ? `<rect data-outline transform="rotate(${rotation})" x="-29" y="${-WALL_OUTLINE_HEIGHT / 2}" width="58" height="${WALL_OUTLINE_HEIGHT}" fill="none" stroke-width="3" stroke-dasharray="5 3"/>`
           : '<rect data-outline x="-22" y="-28" width="44" height="58" fill="none" stroke-width="3" stroke-dasharray="5 3"/>');
         signature = nextSignature;
       }

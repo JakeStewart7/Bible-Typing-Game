@@ -5,6 +5,7 @@ import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
 import { addBuilding, addUnit, createStronghold } from './stronghold-fixtures.ts';
 import { PHRASE_LENGTHS, PLAYER_COLORS, ROLES } from '../src/stronghold/domain/types.ts';
 import { validateDeveloperOptions } from '../src/stronghold/infrastructure/developer-options.ts';
+import { WALL_HALF_WIDTH } from '../src/stronghold/domain/navigation.ts';
 import { equal, test } from './harness.ts';
 
 test('Stronghold Page Up and Page Down change length, clamp at endpoints and leave arrows for map panning', () => {
@@ -94,11 +95,42 @@ test('Stronghold work effects use silver sparks instead of the copper and ember 
     const markup = unitMarkup(addUnit(state, kind, { x: 100, y: 100 }), false);
     equal(markup.includes('data-attack'), true);
     equal(markup.includes('data-work'), false);
-    equal(markup.includes('#483526'), true);
+    equal(markup.includes('#483526'), kind !== 'invader');
     equal(markup.includes('#ed914c'), true);
   }
   equal(buildingMarkup(addBuilding(state, 'tower', { x: 200, y: 100 })).includes('data-attack'), true);
   equal(buildingMarkup(addBuilding(state, 'barracks', { x: 300, y: 100 })).includes('height="6"'), true);
+});
+
+test('Stronghold enemy attacks retain the explosion without beam, trail or slash lines', () => {
+  const state = createStronghold();
+  const enemies = ([null, 'warrior', 'archer', 'catapult'] as const).map(formation =>
+    unitMarkup(addUnit(state, 'invader', { x: 100, y: 100 }, formation), false));
+  enemies.push(buildingMarkup(addBuilding(state, 'tower', { x: 200, y: 100 }, true, true)));
+  for (const markup of enemies) {
+    equal(markup.includes('data-impact'), true);
+    equal(markup.includes('fill="#9c572d"'), true);
+    equal(markup.includes('data-beam'), false);
+    equal(markup.includes('data-trail'), false);
+    equal(markup.includes('#fff1d2'), false);
+  }
+  const friendly = unitMarkup(addUnit(state, 'warrior', { x: 300, y: 100 }), false);
+  equal(friendly.includes('data-beam'), true);
+  equal(friendly.includes('data-trail'), true);
+  equal(friendly.includes('#fff1d2'), true);
+});
+
+test('Stronghold wall visuals are 25 percent thicker and match collision thickness including their border', () => {
+  const state = createStronghold();
+  const markup = buildingMarkup(addBuilding(state, 'wall', { x: 300, y: 400 }));
+  const shape = /<rect data-wall-shape[^>]*>/.exec(markup)?.[0];
+  if (!shape) throw new Error('Missing wall shape.');
+  const height = Number(/height="([^"]+)"/.exec(shape)?.[1]);
+  const stroke = Number(/stroke-width="([^"]+)"/.exec(shape)?.[1]);
+  const y = Number(/ y="([^"]+)"/.exec(shape)?.[1]);
+  equal(height + stroke, 11 * 1.25);
+  equal(height + stroke, WALL_HALF_WIDTH * 2);
+  equal(y - stroke / 2, -WALL_HALF_WIDTH);
 });
 
 test('Stronghold arrow panning combines simultaneous keys and opposite directions cancel', () => {

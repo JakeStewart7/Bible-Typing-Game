@@ -111,11 +111,12 @@ seasonal maps, with an independent **25% chance per season**. Consecutive repeat
 are possible; a Dev options season override does not pin future matches. Only resource
 node positions change: every layout keeps six standard nodes, two rich nodes,
 and 7,200 total supplies, with the same bases, troops and rules. Spring uses light
-green grass and pastel flowers, summer deep green grass and softly drifting light motes,
+green grass and pastel flowers floating slowly sideways in the breeze, summer deep green grass and softly drifting light motes,
 fall light brown ground and autumn-colored triangles, and winter blue-white
 ground and softly fading snow circles. Leaves randomly use red, orange, yellow
 or brown. A fixed pool of 36 decorative particles spans the entire battlefield,
-with staggered falling phases and summer motes spread across both axes. Weather
+with staggered phases; spring flowers and summer motes are spread across both axes
+rather than falling from the top. Weather
 is clipped to the map and layered underneath UI, never intercepts clicks, and
 is hidden for reduced-motion preferences.
 Days and nights each last three minutes of battle time, with fifteen-second
@@ -232,6 +233,7 @@ and remain accurate while zooming. Unfinished relays can preview potential
 connections but do not deliver resources until construction finishes.
 
 Walls block travel for friendly and enemy units, including while being built.
+Walls are 25% thicker, with matching collision bounds and placement previews.
 **Rotate +45 deg** or **Alt+R** turns the placement preview in 45-degree steps.
 In Defenses, click a friendly wall to highlight it and show its current angle
 and Rotate button. **Done**, Escape or clicking empty ground finishes editing;
@@ -256,7 +258,8 @@ Both bases have **4,000 HP**; enemy tier upgrades do not increase that maximum
 or heal damage. Archers on both sides bob slowly, even while standing or firing.
 Builders bob quickly only while building or repairing. Building and gathering
 use silver-white sparks and a soft shimmer; warriors use copper colors, and combat uses an ember-colored jagged
-strike and expanding slash burst. Reduced-motion preferences disable bobbing,
+strike and expanding slash burst. Enemy attacks show only the explosion, without
+overlaid beam or slash lines. Reduced-motion preferences disable bobbing,
 pulsing and rotating effects. Square warriors and square enemies rock back and
 forth on alternating lower corners while walking.
 Player progress bars are 20 pixels tall with 2-pixel colored borders and stay
