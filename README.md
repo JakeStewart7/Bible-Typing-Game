@@ -143,13 +143,14 @@ loading failures display a retry message rather than failing silently.
 
 The eight original MP3s in `assets/music/stronghold/` total 57,194,887 bytes
 (57.19 MB). They are bundled for local playback, not streamed from a third-party
-site. **Credits** opens a dedicated in-game page with every title and official
-source link. All eight tracks are by **Kevin MacLeod (incompetech.com)**,
+site. **Credits** opens a dedicated in-game page with plain-text track titles
+and attribution, without clickable links. All eight tracks are by **Kevin MacLeod (incompetech.com)**,
 licensed under [Creative Commons: By Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
 Recordings are unmodified and loop during playback. Music waits three seconds
-before its first playback, then fades in over 750 milliseconds. Pausing, muting
+before its first playback, then fades in over half a second. Pausing, muting
 and changing season or day/night fade out; resuming and the next track fade in.
-The volume slider preserves its target across fades. Source details are also in
+Each fade in or out lasts half a second. The volume slider preserves its target
+across fades. Official source details are in
 `assets/music/stronghold/CREDITS.txt`.
 
 The thin typing window leaves room for the battlefield, with the phrase and input

@@ -14,7 +14,7 @@ export interface MusicAudio {
 export type MusicStatus = { enabled: boolean; playing: boolean; track: MusicTrack | null; message: string };
 
 export const MUSIC_START_DELAY_MS = 3000;
-export const MUSIC_FADE_MS = 750;
+export const MUSIC_FADE_MS = 500;
 // Hidden tabs suspend animation frames, but their audio still needs to fade out.
 const musicClock: FrameClock = {
   now: () => performance.now(),

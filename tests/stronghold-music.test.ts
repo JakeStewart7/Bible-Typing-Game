@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { MUSIC_TRACKS, seasonalTrack, trackSource } from '../src/stronghold/audio/catalog.ts';
+import { MUSIC_TRACKS, seasonalTrack } from '../src/stronghold/audio/catalog.ts';
 import { createSeasonalMusic, MUSIC_FADE_MS, MUSIC_START_DELAY_MS } from '../src/stronghold/audio/music.ts';
 import { DAY_SECONDS, NIGHT_SECONDS } from '../src/stronghold/domain/environment.ts';
 import { SEASONS } from '../src/stronghold/domain/types.ts';
@@ -67,6 +67,8 @@ test('Stronghold uses exactly the eight requested local recordings with the late
 });
 
 test('Stronghold music only loads the active track, loops it, switches at night, and resumes without resetting on pause or mute', async () => {
+  equal(MUSIC_FADE_MS, 500);
+  equal(MUSIC_START_DELAY_MS, 3000);
   const audio = new TestAudio();
   const clock = new MusicClock();
   const music = createSeasonalMusic(audio, () => {}, clock);
@@ -187,15 +189,17 @@ test('Stronghold music cancels its opening delay and fades toward the latest req
   music.dispose(); equal(clock.frames.size, 0);
 });
 
-test('Stronghold dedicated credits page attributes all recordings with official sources and CC BY 4.0', () => {
+test('Stronghold credits preserve recording attribution and license information without clickable links', () => {
   const markup = creditsMarkup();
   equal(markup.includes('id="stronghold-credits"'), true);
   equal(markup.includes('id="stronghold-close-credits"'), true);
   equal(markup.includes('Kevin MacLeod (incompetech.com)'), true);
   equal(markup.includes('https://creativecommons.org/licenses/by/4.0/'), true);
   equal(markup.includes('Recordings are unmodified'), true);
+  equal(markup.includes('<a '), false);
+  equal(markup.includes('Each title links'), false);
+  equal(markup.includes('playback does not require the music website'), false);
   for (const track of Object.values(MUSIC_TRACKS)) {
     equal(markup.includes(track.title), true);
-    equal(markup.includes(trackSource(track)), true);
   }
 });
