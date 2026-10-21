@@ -103,8 +103,18 @@ test('Stronghold units retain slow movement and double health, with equal opposi
     const unit = addUnit(state, 'invader', { x: 100, y: 100 }, formation);
     equal(unit.maxHp, UNIT_RULES[formation ?? 'invader'].hp * 2);
   }
-  equal(state.buildings.find(building => building.kind === 'castle')?.maxHp, 10000);
-  equal(state.buildings.find(building => building.kind === 'enemy-base')?.maxHp, 1200);
+  equal(state.buildings.find(building => building.kind === 'castle')?.maxHp, 4000);
+  equal(state.buildings.find(building => building.kind === 'enemy-base')?.maxHp, 4000);
+});
+
+test('Stronghold both bases keep a 4000 HP maximum through enemy upgrades without healing damage', () => {
+  const state = createStronghold();
+  equal(state.events[0]?.text, 'Game started');
+  const bases = state.buildings.filter(building => building.kind === 'castle' || building.kind === 'enemy-base');
+  equal(bases.map(base => [base.hp, base.maxHp]), [[4000, 4000], [4000, 4000]]);
+  bases.forEach(base => { base.hp -= 100; });
+  for (let wave = 0; wave < 6; wave++) spawnWave(state);
+  equal(bases.map(base => [base.hp, base.maxHp]), [[3900, 4000], [3900, 4000]]);
 });
 
 test('Stronghold gatherers and builders follow move orders then resume nearest work after two idle seconds', () => {

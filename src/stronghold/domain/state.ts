@@ -17,7 +17,7 @@ export function addUnit(state: StrongholdState, kind: UnitKind, point: Point, fo
 export function addBuilding(
   state: StrongholdState, kind: BuildingKind, point: Point, complete = false, enemy = false, tier = Math.max(1, state.tier)
 ): Building {
-  const baseHp = kind === 'castle' ? 10000 : kind === 'enemy-base' ? 1200 : kind === 'wall' ? 260
+  const baseHp = kind === 'castle' || kind === 'enemy-base' ? 4000 : kind === 'wall' ? 260
     : 160 + (kind === 'tower' ? 60 : kind === 'barracks' ? 40 : 0) * Math.max(0, tier - 1);
   const hp = baseHp * (kind === 'tower' ? TOWER_STRENGTH_MULTIPLIER : 1);
   const building: Building = {
@@ -50,7 +50,7 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
     nodes: seasonalNodes(season),
     upgrades: { economy: 0, production: 0, defenses: 0 },
     technology: { economy: 0, warrior: 0, archer: 0, catapult: 0, 'tower-1': 0, 'tower-2': 0, 'tower-3': 0 },
-    rally: { x: 500, y: 450 }, message: '', events: [{ id: 1, elapsed: 0, playerId: null, text: 'Stronghold started' }],
+    rally: { x: 500, y: 450 }, message: '', events: [{ id: 1, elapsed: 0, playerId: null, text: 'Game started' }],
     computersPaused: options.computersPaused,
     roleTasks: {
       economy: createRoleTasks({ action: 'resources', constructionTier: 1, upgradeTarget: 'economy' }),

@@ -217,8 +217,8 @@ The castle is a clean square and towers use T-shaped map and HUD icons.
 Friendly and opposing units of the same formation share base health, damage,
 range and speed; enemy waves no longer add hidden health or damage bonuses.
 Movement remains slow, and troop upgrades still improve your units.
-The home castle has 10,000 HP,
-ten times its original health. Moving units bob gently; attacks and harvesting
+Both bases have **4,000 HP**; enemy tier upgrades do not increase that maximum
+or heal damage. Moving units bob gently; attacks and harvesting
 briefly flash a strike toward their target. Reduced-motion preferences disable
 the bob and attack-size pulse. Square warriors and square enemies instead rock
 back and forth on alternating lower corners; triangle motion is unchanged.

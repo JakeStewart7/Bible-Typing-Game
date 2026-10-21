@@ -71,7 +71,7 @@ export function spawnWave(state: StrongholdState): void {
   recordEvent(state, `Wave ${state.wave} approaching`);
   if (state.wave % 3 === 0) {
     const base = state.buildings.find(building => building.kind === 'enemy-base');
-    if (base) { base.maxHp += 100; base.hp += 100; base.tier++; recordEvent(state, 'Enemy base upgraded'); }
+    if (base) { base.tier++; recordEvent(state, 'Enemy base upgraded'); }
     if (state.buildings.filter(building => building.enemy && building.kind === 'tower').length < 6) {
       addBuilding(state, 'tower', { x: 280 + (state.wave % 5) * 95, y: 190 }, true, true);
       recordEvent(state, 'Enemy created Tower');
