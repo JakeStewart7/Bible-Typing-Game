@@ -3,11 +3,13 @@ import { rallyArmy, spawnWave, updateCombat } from './combat.ts';
 import { updateLogistics } from './logistics.ts';
 import { assignPhrase } from './phrases.ts';
 import { addUnit } from './state.ts';
-import { distance, isTypingAction, TIER_MAX, TIER_QUOTA, UNIT_CAPS } from './rules.ts';
+import { distance, isTypingAction, MIN_TIER, TIER_MAX, UNIT_CAPS, validPoint } from './rules.ts';
 import { taskWork } from './technology.ts';
 import { ENTITY_LABELS, recordEvent } from './events.ts';
 import type { Action, Participant, Point, StrongholdState } from './types.ts';
 import { updateWorldEvent } from './world-events.ts';
+import { queuedUnits, TRAINING_SECONDS } from './training.ts';
+import { wallContains } from './navigation.ts';
 
 const BOT_RELAY_SITES = [
   { x: 360, y: 540 }, { x: 640, y: 540 }, { x: 250, y: 435 }, { x: 760, y: 435 },
@@ -16,6 +18,13 @@ const BOT_RELAY_SITES = [
 ];
 function nextRelaySite(state: StrongholdState): Point | undefined {
   return BOT_RELAY_SITES.find(site => !state.buildings.some(building => building.hp > 0 && distance(site, building) < 38));
+}
+function botTroop(state: StrongholdState): 'warrior' | 'archer' | 'catapult' {
+  const count = (kind: 'warrior' | 'archer' | 'catapult') => state.units.filter(unit => unit.kind === kind).length + queuedUnits(state, kind);
+  if (count('warrior') < 6) return 'warrior';
+  if (state.tier >= 2 && count('archer') < 5) return 'archer';
+  if (state.tier >= 3 && count('catapult') < 3) return 'catapult';
+  return 'warrior';
 }
 function botAction(state: StrongholdState, player: Participant): Action {
   if (player.role === 'army') return 'resources';
@@ -32,11 +41,9 @@ function botAction(state: StrongholdState, player: Participant): Action {
     if (state.upgrades.defenses < state.tier) return 'upgrade';
     return state.buildings.filter(building => building.kind === 'wall').length < 8 ? 'wall' : 'builder';
   }
-  if (state.tier === 0) return 'resources';
-  if (!state.buildings.some(building => building.kind === 'barracks') && state.tier > 0) return 'barracks';
-  if (state.tier === 3 && state.units.filter(unit => unit.kind === 'catapult').length < 3) return 'catapult';
-  if (state.tier >= 2 && state.units.filter(unit => unit.kind === 'archer').length < 5) return 'archer';
-  return 'warrior';
+  const troop = botTroop(state);
+  if (!state.buildings.some(building => building.kind === 'barracks' && building.hp > 0 && building.tier === MIN_TIER[troop])) return 'barracks';
+  return troop;
 }
 function updateBot(state: StrongholdState, player: Participant, seconds: number): void {
   if (state.phase === 'playing') {
@@ -60,8 +67,9 @@ function updateBot(state: StrongholdState, player: Participant, seconds: number)
       executeCommand(state, player, { type: 'ACTION', action });
       return;
     }
-    if (action !== player.action) {
-      executeCommand(state, player, { type: 'ACTION', action });
+    const tier = !humanOnRole && action === 'barracks' ? MIN_TIER[botTroop(state)] : player.constructionTier;
+    if (action !== player.action || (action === 'barracks' && player.constructionTier !== tier)) {
+      executeCommand(state, player, { type: 'ACTION', action, tier });
     }
     const preparingConstruction = (action === 'barracks' || action === 'tower') && player.work < taskWork(player);
     if (actionProblem(state, player, action) && !preparingConstruction) return;
@@ -81,7 +89,7 @@ function updateBot(state: StrongholdState, player: Participant, seconds: number)
       }
       return;
     }
-  } else if (player.contribution >= TIER_QUOTA) return;
+  }
   if (!player.phrase.startsWith(player.typed)) return;
   player.typingCredit += seconds * 5;
   const characters = Math.floor(player.typingCredit);
@@ -92,17 +100,22 @@ function updateBot(state: StrongholdState, player: Participant, seconds: number)
 }
 function produceArmy(state: StrongholdState, seconds: number): void {
   for (const barracks of state.buildings.filter(building => building.kind === 'barracks' && building.progress === 1 && building.hp > 0)) {
-    if (state.computersPaused && state.players.some(player => player.id === barracks.ownerId && player.simulated)) continue;
+    const order = barracks.trainingQueue[0];
+    if (!order) continue;
+    if (state.computersPaused && state.players.some(player => player.id === order.playerId && player.simulated)) continue;
     barracks.cooldown = Math.max(0, barracks.cooldown - seconds);
-    const kind = state.tier >= 3 && barracks.tier >= 3 ? 'catapult' : state.tier >= 2 && barracks.tier >= 2 ? 'archer' : 'warrior';
-    const cost = kind === 'catapult' ? 35 : kind === 'archer' ? 20 : 10;
-    if (barracks.cooldown > 0 || state.resources < cost || state.units.filter(unit => unit.kind === kind).length >= UNIT_CAPS[kind]) continue;
-    state.resources -= cost;
-    const unit = addUnit(state, kind, { x: barracks.x, y: barracks.y - 30 });
+    if (barracks.cooldown < 1e-9) barracks.cooldown = 0;
+    if (barracks.cooldown > 0 || state.units.filter(unit => unit.kind === order.kind).length >= UNIT_CAPS[order.kind]) continue;
+    const spawn = [{ x: 0, y: -30 }, { x: 30, y: 0 }, { x: -30, y: 0 }, { x: 0, y: 30 }]
+      .map(offset => ({ x: barracks.x + offset.x, y: barracks.y + offset.y }))
+      .find(point => validPoint(point) && !state.buildings.some(building => building.kind === 'wall' && building.hp > 0 && wallContains(point, building, 10)));
+    if (!spawn) continue;
+    const unit = addUnit(state, order.kind, spawn);
     unit.destination = { ...state.rally };
-    const owner = state.players.find(player => player.id === barracks.ownerId);
-    recordEvent(state, `${owner ? `Player ${state.players.indexOf(owner) + 1}` : 'Barracks'} created ${ENTITY_LABELS[kind]}`, barracks.ownerId);
-    barracks.cooldown = 12;
+    const owner = state.players.find(player => player.id === order.playerId);
+    recordEvent(state, `${owner ? `Player ${state.players.indexOf(owner) + 1}` : 'Barracks'} created ${ENTITY_LABELS[order.kind]}`, order.playerId);
+    barracks.trainingQueue.shift();
+    barracks.cooldown = barracks.trainingQueue.length ? TRAINING_SECONDS : 0;
   }
 }
 export function advanceStronghold(state: StrongholdState, seconds: number): void {

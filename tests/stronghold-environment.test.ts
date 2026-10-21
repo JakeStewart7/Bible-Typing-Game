@@ -1,6 +1,8 @@
 import { daylight, DAY_SECONDS, NIGHT_SECONDS, randomSeason, seasonalNodes, TWILIGHT_SECONDS } from '../src/stronghold/domain/environment.ts';
 import { SEASONS } from '../src/stronghold/domain/types.ts';
-import { createStronghold } from '../src/stronghold/domain/state.ts';
+import { addUnit, createStronghold } from '../src/stronghold/domain/state.ts';
+import { moveUnitToward } from '../src/stronghold/domain/navigation.ts';
+import { updateLogistics } from '../src/stronghold/domain/logistics.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
 import { AUTUMN_LEAF_COLORS, weatherMarkup } from '../src/stronghold/ui/environment.ts';
@@ -165,7 +167,7 @@ test('Stronghold live season changes relocate nodes without refilling them or in
   state.nodes[5]!.remaining = 77;
   const worker = state.units.find(unit => unit.kind === 'worker')!;
   worker.task = state.nodes[5]!.id;
-  state.chunks.push({ id: 999, x: worker.x, y: worker.y, amount: 4, target: state.buildings[0]!.id, carrier: worker.id });
+  state.chunks.push({ id: 999, x: worker.x, y: worker.y, amount: 4, rich: false, target: state.buildings[0]!.id, carrier: worker.id });
   const player = state.players[0]!;
   for (const season of SEASONS) {
     const before = structuredClone(state);
@@ -224,9 +226,14 @@ test('Stronghold dev markup provides live season, day and night controls separat
 
 test('Stronghold weather uses a fixed small decorative particle pool instead of growing the DOM', () => {
   const markup = weatherMarkup();
-  equal((markup.match(/class="stronghold-weather-particle"/g) ?? []).length, 14);
+  equal((markup.match(/class="stronghold-weather-particle"/g) ?? []).length, 36);
   equal(markup.includes('aria-hidden="true"'), true);
   equal(markup.includes('<button'), false);
+  for (const axis of ['x', 'y']) {
+    const positions = [...markup.matchAll(new RegExp(`--weather-${axis}:(\\d+)%`, 'g'))].map(match => Number(match[1]));
+    equal(positions.length, 36);
+    equal(new Set(positions.map(position => Math.floor(position / 25))).size, 4);
+  }
 });
 
 test('Stronghold autumn leaves randomly choose red, orange, yellow or brown for each particle', () => {
@@ -235,12 +242,105 @@ test('Stronghold autumn leaves randomly choose red, orange, yellow or brown for 
   for (let index = 0; index < AUTUMN_LEAF_COLORS.length; index++) {
     for (const offset of [0, .99999]) {
       const markup = weatherMarkup(() => (index + offset) / AUTUMN_LEAF_COLORS.length);
-      equal((markup.match(new RegExp(`--leaf-color:${AUTUMN_LEAF_COLORS[index]}`, 'g')) ?? []).length, 14);
+      equal((markup.match(new RegExp(`--leaf-color:${AUTUMN_LEAF_COLORS[index]}`, 'g')) ?? []).length, 36);
     }
   }
   let samples = 0;
   const markup = weatherMarkup(() => samples++ % AUTUMN_LEAF_COLORS.length / AUTUMN_LEAF_COLORS.length);
-  equal(samples, 14);
+  equal(samples, 36);
   equal([...markup.matchAll(/--leaf-color:(#[a-f0-9]+)/g)].map(match => match[1]),
-    Array.from({ length: 14 }, (_, index) => AUTUMN_LEAF_COLORS[index % AUTUMN_LEAF_COLORS.length]));
+    Array.from({ length: 36 }, (_, index) => AUTUMN_LEAF_COLORS[index % AUTUMN_LEAF_COLORS.length]));
+});
+
+test('Stronghold seasonal movement applies equally to every friendly unit and enemy formation', () => {
+  for (const [season, travel] of [['spring', 100], ['summer', 115], ['fall', 100], ['winter', 85]] as const) {
+    const state = createStronghold(undefined, season);
+    state.buildings = []; state.units = [];
+    for (const [kind, formation] of [
+      ['worker', null], ['builder', null], ['warrior', null], ['archer', null], ['catapult', null],
+      ['invader', null], ['invader', 'archer'], ['invader', 'catapult']
+    ] as const) {
+      const unit = addUnit(state, kind, { x: 100, y: 300 }, formation);
+      moveUnitToward(state, unit, { x: 900, y: 300 }, 100);
+      equal(Math.round((unit.x - 100) * 100) / 100, travel);
+      equal(unit.y, 300);
+    }
+  }
+});
+
+test('Stronghold seasonal resource value applies once to typed supplies and castle deliveries, including upgrades', () => {
+  for (const [season, typed, upgraded, delivered] of [
+    ['spring', 21.6, 57.6, 69.6], ['summer', 18, 48, 58],
+    ['fall', 18, 48, 58], ['winter', 14.4, 38.4, 46.4]
+  ] as const) {
+    const state = createStronghold({ resources: 0, length: 'short', computersPaused: true }, season);
+    const player = state.players[0]!;
+    player.work = 31; player.phrase = 'a';
+    executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: 'a' });
+    equal(state.resources, typed);
+    state.upgrades.economy = 2; player.work = 31; player.phrase = 'b';
+    executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: 'b' });
+    equal(state.resources, upgraded);
+    const castle = state.buildings.find(building => building.kind === 'castle')!;
+    state.units = [];
+    state.chunks.push({ id: 999, x: castle.x, y: castle.y, amount: 10, rich: false, target: castle.id, carrier: null });
+    updateLogistics(state, .1);
+    equal(state.resources, delivered); equal(state.chunks.length, 0);
+    updateLogistics(state, .1);
+    equal(state.resources, delivered);
+  }
+});
+
+test('Stronghold fall adds fifteen percent to every completed typing task, including during world events', () => {
+  for (const [role, action] of [['economy', 'worker'], ['production', 'barracks'], ['army', 'resources'], ['defenses', 'wall']] as const) {
+    for (const [event, phrase] of [['peace', 'abcdefghijkl'], ['numbers', '123456789012'], ['symbols', '+=!?[]{}()?!']] as const) {
+      const state = createStronghold({ resources: 0, length: 'long', computersPaused: true }, 'fall');
+      const player = state.players[0]!;
+      state.tier = 3; state.event = event;
+      executeCommand(state, player, { type: 'ROLE', role });
+      executeCommand(state, player, { type: 'ACTION', action });
+      player.phrase = phrase;
+      executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: phrase.slice(0, -1) });
+      equal(player.work, 0);
+      executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: phrase });
+      equal(player.work, 17.25);
+      equal(state.resources, 0);
+    }
+  }
+});
+
+test('Stronghold fall boosts completed tier phrases without partial credit, rounding drift or duplicate unlocks', () => {
+  const state = createStronghold({ resources: 0, length: 'medium', computersPaused: true }, 'fall');
+  const player = state.players[0]!;
+  executeCommand(state, player, { type: 'READY', ready: true });
+  player.phrase = 'abcdef';
+  const first = { type: 'TYPE' as const, phraseId: player.phraseId, text: player.phrase };
+  executeCommand(state, player, first);
+  equal(player.contribution, 6.9);
+  player.contribution = 498;
+  const final = { type: 'TYPE' as const, phraseId: player.phraseId, text: player.phrase };
+  executeCommand(state, player, { ...final, text: final.text.slice(0, -1) });
+  equal(player.contribution, 498); equal(state.tier, 0);
+  executeCommand(state, player, final);
+  equal(player.contribution, 500); equal(state.tier, 1); equal(state.phase, 'playing');
+  let expired = false;
+  try { executeCommand(state, player, final); } catch (error) { expired = error instanceof Error && error.message.includes('expired'); }
+  equal(expired, true); equal(state.tier, 1);
+});
+
+test('Stronghold changing season applies current bonuses immediately without rewriting cargo or earned supplies', () => {
+  const state = createStronghold(undefined, 'summer');
+  state.buildings = state.buildings.filter(building => building.kind === 'castle'); state.units = [];
+  const unit = addUnit(state, 'warrior', { x: 100, y: 300 });
+  moveUnitToward(state, unit, { x: 900, y: 300 }, 100);
+  equal(Math.round(unit.x), 215);
+  executeCommand(state, state.players[0]!, { type: 'SET_SEASON', season: 'winter' });
+  moveUnitToward(state, unit, { x: 900, y: 300 }, 100);
+  equal(Math.round(unit.x), 300);
+  const castle = state.buildings[0]!;
+  state.chunks.push({ id: 999, x: castle.x, y: castle.y, amount: 10, rich: false, target: castle.id, carrier: null });
+  executeCommand(state, state.players[0]!, { type: 'SET_SEASON', season: 'spring' });
+  equal(state.chunks[0]!.amount, 10); equal(state.resources, 50);
+  updateLogistics(state, .1);
+  equal(state.resources, 62);
 });

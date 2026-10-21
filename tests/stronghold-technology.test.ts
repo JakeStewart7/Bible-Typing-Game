@@ -1,5 +1,5 @@
 import { executeCommand } from '../src/stronghold/domain/actions.ts';
-import { createStronghold, addUnit } from '../src/stronghold/domain/state.ts';
+import { createStronghold, addBuilding, addUnit } from './stronghold-fixtures.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { phraseWork, taskWork, unitUpgrade, upgradeLimit } from '../src/stronghold/domain/technology.ts';
 import type { Participant, StrongholdState } from '../src/stronghold/domain/types.ts';
@@ -52,10 +52,12 @@ test('Stronghold free barracks require proportional tier-specific typing and ret
   equal(barracks.map(building => building.tier), [1, 3]);
   equal(barracks.map(building => building.maxHp), [160, 240]);
   barracks.forEach(building => { building.progress = 1; });
-  advanceStronghold(state, .1);
+  executeCommand(state, self(state), { type: 'ACTION', action: 'warrior' });
+  executeCommand(state, self(state), { type: 'ACTION', action: 'catapult' });
+  for (let second = 0; second < 12; second++) advanceStronghold(state, 1);
   equal(state.units.some(unit => unit.kind === 'catapult'), true);
   equal(state.units.filter(unit => unit.kind === 'warrior').length, 3);
-  equal(state.resources, 455);
+  equal(state.resources, 395);
 });
 
 test('Stronghold free towers retain their tier and paid troops are purchased without typing', () => {
@@ -63,19 +65,22 @@ test('Stronghold free towers retain their tier and paid troops are purchased wit
   state.tier = 3; state.resources = 500;
   executeCommand(state, self(state), { type: 'ROLE', role: 'defenses' });
   executeCommand(state, self(state), { type: 'ACTION', action: 'tower', tier: 2 });
+  const points = phraseWork(self(state));
   executeCommand(state, self(state), { type: 'TYPE', phraseId: self(state).phraseId, text: self(state).phrase });
-  equal(self(state).work, 8.8);
+  equal(self(state).work, points);
   finish(state);
   executeCommand(state, self(state), { type: 'PLACE', kind: 'tower', point: { x: 360, y: 425 } });
   equal(state.buildings.find(building => building.kind === 'tower' && !building.enemy)?.tier, 2);
   equal(state.buildings.find(building => building.kind === 'tower' && !building.enemy)?.maxHp, 330);
   equal(state.resources, 500);
   executeCommand(state, self(state), { type: 'ROLE', role: 'production' });
+  addBuilding(state, 'barracks', { x: 650, y: 570 }, true, false, 3);
   const phraseId = self(state).phraseId;
   executeCommand(state, self(state), { type: 'ACTION', action: 'catapult' });
-  equal(state.units.some(unit => unit.kind === 'catapult'), true);
+  equal(state.units.some(unit => unit.kind === 'catapult'), false);
+  equal(state.buildings.some(building => building.trainingQueue.some(order => order.kind === 'catapult')), true);
   equal(self(state).phraseId, phraseId);
-  equal(state.resources, 465);
+  equal(state.resources, 420);
 });
 
 test('Stronghold upgrades are tracked independently for each troop and tower tier', () => {
@@ -98,10 +103,10 @@ test('Stronghold upgrades are tracked independently for each troop and tower tie
   executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade', upgrade: 'warrior' });
   equal(state.technology.warrior, 1);
   equal(warrior.maxHp, oldHp + 20);
-  equal(state.resources, 490);
+  equal(state.resources, 440);
   rejects(() => executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade', upgrade: 'warrior' }));
   equal(state.technology.warrior, 1);
-  equal(state.resources, 490);
+  equal(state.resources, 440);
   rejects(() => executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade', upgrade: 'archer' }));
   equal(state.technology.archer, 0);
   equal(unitUpgrade(state, { kind: 'archer' }), 0);

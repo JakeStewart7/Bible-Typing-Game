@@ -1,12 +1,14 @@
 import { AppStorage, decodeJson } from '../../persistence/storage.ts';
 import { DEFAULT_MATCH_OPTIONS, isMatchOptions, validateMatchOptions } from '../domain/options.ts';
-import type { StrongholdMatchOptions } from '../domain/types.ts';
+import { PLAYER_COLORS, type PlayerColor, type StrongholdMatchOptions } from '../domain/types.ts';
 export const DEFAULT_MAP_ZOOM = 1.2;
 export const MIN_MAP_ZOOM = 1;
 export const MAX_MAP_ZOOM = 2;
 
-export type DeveloperOptions = StrongholdMatchOptions & { mapZoom: number };
-export const DEFAULT_DEVELOPER_OPTIONS: Readonly<DeveloperOptions> = { ...DEFAULT_MATCH_OPTIONS, mapZoom: DEFAULT_MAP_ZOOM };
+export type DeveloperOptions = StrongholdMatchOptions & { mapZoom: number; playerColor: PlayerColor };
+export const DEFAULT_DEVELOPER_OPTIONS: Readonly<DeveloperOptions> = {
+  ...DEFAULT_MATCH_OPTIONS, mapZoom: DEFAULT_MAP_ZOOM, playerColor: PLAYER_COLORS.Red
+};
 function isStoredOptions(value: unknown): value is StrongholdMatchOptions & { mapZoom?: number } {
   return isMatchOptions(value) && (!('mapZoom' in value) || (typeof value.mapZoom === 'number'
     && Number.isFinite(value.mapZoom) && value.mapZoom >= MIN_MAP_ZOOM && value.mapZoom <= MAX_MAP_ZOOM));
@@ -16,7 +18,9 @@ const storedOptions = {
   key: 'stronghold-developer-options',
   decode: (raw: string): DeveloperOptions | null => {
     const options = decodeOptions(raw);
-    return options ? { ...options, mapZoom: options.mapZoom ?? DEFAULT_MAP_ZOOM } : null;
+    return options ? {
+      ...options, mapZoom: options.mapZoom ?? DEFAULT_MAP_ZOOM, playerColor: options.playerColor ?? PLAYER_COLORS.Red
+    } : null;
   }
 };
 

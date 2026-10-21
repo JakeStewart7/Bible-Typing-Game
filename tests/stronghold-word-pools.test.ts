@@ -1,7 +1,7 @@
 import { WORD_POOLS, SHORT_WORDS, MEDIUM_WORDS, LONG_WORDS, EXTRA_LONG_WORDS } from '../src/stronghold/domain/word-pools.ts';
 import { PHRASE_LENGTHS } from '../src/stronghold/domain/types.ts';
 import { TEXT_LENGTH_RANGES } from '../src/stronghold/domain/rules.ts';
-import { createStronghold } from '../src/stronghold/domain/state.ts';
+import { createStronghold } from './stronghold-fixtures.ts';
 import { assignPhrase } from '../src/stronghold/domain/phrases.ts';
 import { equal, test } from './harness.ts';
 
@@ -29,13 +29,13 @@ test('Stronghold each length class has its own frozen pool of at least two hundr
 
 test('Stronghold every expanded entry can be reached before a solo player cycles through the pool', () => {
   for (const length of PHRASE_LENGTHS) {
-    const state = createStronghold();
+    const state = createStronghold({ resources: 50, length, computersPaused: true });
     const player = state.players[0]!;
     state.players = [player];
     player.length = length;
     player.phraseId = 0;
-    const seen = new Set<string>();
-    for (let i = 0; i < WORD_POOLS[length].length; i++) {
+    const seen = new Set<string>([player.phrase]);
+    for (let i = 1; i < WORD_POOLS[length].length; i++) {
       assignPhrase(state, player);
       seen.add(player.phrase);
     }

@@ -1,4 +1,4 @@
-import { SEASONS, type ResourceNode, type Season } from './types.ts';
+import { SEASONS, type ResourceNode, type Season, type StrongholdState } from './types.ts';
 
 export const DAY_SECONDS = 180;
 export const NIGHT_SECONDS = 180;
@@ -6,6 +6,16 @@ export const TWILIGHT_SECONDS = 15;
 export const SEASON_LABELS: Record<Season, string> = {
   spring: 'Spring', summer: 'Summer', fall: 'Fall', winter: 'Winter'
 };
+export const SEASON_BONUSES: Readonly<Record<Season, { movement: number; resources: number; typing: number }>> = {
+  spring: { movement: 1, resources: 1.2, typing: 1 },
+  summer: { movement: 1.15, resources: 1, typing: 1 },
+  fall: { movement: 1, resources: 1, typing: 1.15 },
+  winter: { movement: .85, resources: .8, typing: 1 }
+};
+
+export function creditResources(state: Pick<StrongholdState, 'resources' | 'season'>, amount: number): void {
+  state.resources = Math.round((state.resources + amount * SEASON_BONUSES[state.season].resources) * 100) / 100;
+}
 
 const LAYOUTS: Record<Season, readonly (readonly [number, number])[]> = {
   spring: [[350, 515], [675, 530], [195, 400], [835, 375], [410, 335], [640, 300], [155, 235], [790, 180]],

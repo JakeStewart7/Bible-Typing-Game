@@ -11,11 +11,15 @@ export function playerTheme(color: string) {
   return theme;
 }
 
-export function playerCursor(color: string, placing = false): string {
+export function playerCursorImage(color: string, placing = false): string {
   const bold = playerTheme(color).bold;
   const badge = placing ? `<rect x="17" y="17" width="13" height="13" rx="2" fill="white" stroke="${bold}" stroke-width="2"/><path d="M20 23.5h7m-3.5-3.5v7" fill="none" stroke="${bold}" stroke-width="2"/>` : '';
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${placing ? 32 : 24}" height="${placing ? 34 : 30}" viewBox="0 0 ${placing ? '32 34' : '24 30'}"><path d="M3 2V23L9 18L14 28L19 25L14 16H22Z" fill="${bold}" stroke="white" stroke-width="2" stroke-linejoin="round"/>${badge}</svg>`;
-  return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 3 2, auto`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+export function playerCursor(color: string, placing = false): string {
+  return `url("${playerCursorImage(color, placing)}") 3 2, default`;
 }
 
 export function applyPlayerTheme(element: HTMLElement, color: string): void {

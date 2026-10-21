@@ -16,8 +16,8 @@ export const ACTION_LABELS: Record<Action, string> = {
   wall: 'Place wall', upgrade: 'Upgrade role'
 };
 export const COSTS: Record<Action, number> = {
-  resources: 0, worker: 0, relay: 15, barracks: 0, warrior: 10,
-  archer: 20,   catapult: 35, builder: 0, tower: 0, wall: 0, upgrade: 60
+  resources: 0, worker: 0, relay: 30, barracks: 0, warrior: 25,
+  archer: 45,   catapult: 80, builder: 0, tower: 0, wall: 0, upgrade: 120
 };
 export function isTypingAction(action: Action): boolean {
   return action === 'resources' || action === 'worker' || action === 'barracks'
@@ -39,7 +39,7 @@ export const UNIT_RULES: Record<UnitKind, { hp: number; speed: number; damage: n
   warrior: { hp: 100, speed: 18.6, damage: 12, range: 26 },
   archer: { hp: 65, speed: 16.5, damage: 9, range: 120 },
   catapult: { hp: 110, speed: 9.6, damage: 30, range: 165 },
-  invader: { hp: 60, speed: 11.4, damage: 8, range: 25 }
+  invader: { hp: 100, speed: 18.6, damage: 12, range: 26 }
 };
 export const UNIT_HEALTH_MULTIPLIER = 2;
 export const TOWER_STRENGTH_MULTIPLIER = 1.5;
@@ -54,7 +54,7 @@ export const EVENT_LABELS: Record<WorldEvent, string> = {
 };
 export const TIER_MAX = 3;
 export const RELAY_RANGE = 155;
-export const TIER_QUOTA = 3;
+export const TIER_CHARACTER_GOAL = 500;
 export const BASE: Point = { x: 500, y: 595 };
 export const ENEMY_BASE: Point = { x: 500, y: 60 };
 export function distance(a: Point, b: Point): number {
