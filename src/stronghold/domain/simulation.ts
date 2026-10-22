@@ -10,6 +10,7 @@ import type { Action, Participant, Point, StrongholdState } from './types.ts';
 import { updateWorldEvent } from './world-events.ts';
 import { queuedUnits, TRAINING_SECONDS } from './training.ts';
 import { unitRadius, unitSpawnPoint } from './navigation.ts';
+import { taskKey } from './tasks.ts';
 
 const BOT_RELAY_SITES = [
   { x: 360, y: 540 }, { x: 640, y: 540 }, { x: 250, y: 435 }, { x: 760, y: 435 },
@@ -75,7 +76,7 @@ function updateBot(state: StrongholdState, player: Participant, seconds: number)
     }
     if (actionProblem(state, player, action)) return;
     if (['relay', 'barracks', 'tower', 'wall'].includes(action) && (action === 'relay' || player.work >= taskWork(player))) {
-      if (humanOnRole) return;
+      if (state.players.some(other => !other.simulated && other.role === player.role && taskKey(other) === taskKey(player))) return;
       const count = state.buildings.filter(building => building.kind === action && !building.enemy).length;
       const point = action === 'relay' ? nextRelaySite(state) : action === 'barracks'
         ? { x: 620 + count * 48, y: 575 }

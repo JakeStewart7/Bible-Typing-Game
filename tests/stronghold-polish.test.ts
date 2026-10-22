@@ -718,6 +718,35 @@ test('Stronghold builders stay still within construction and repair range', () =
   equal(project.hp > hp, true);
 });
 
+test('Stronghold escaped units resume routing around subsequent buildings instead of retaining a through-building fallback', () => {
+  const state = createStronghold();
+  state.units = []; state.buildings = [];
+  for (const point of [{ x: 300, y: 370 }, { x: 300, y: 430 }, { x: 270, y: 400 }, { x: 330, y: 400 }]) {
+    const wall = addBuilding(state, 'wall', point, true);
+    if (point.x !== 300) wall.rotation = 90;
+  }
+  addBuilding(state, 'barracks', { x: 500, y: 400 }, true);
+  const unit = addUnit(state, 'warrior', { x: 300, y: 400 }), target = { x: 650, y: 400 };
+  for (let step = 0; step < 600; step++) {
+    moveUnitToward(state, unit, target, 1);
+    equal(Math.abs(unit.x - 500) < 25 && Math.abs(unit.y - 400) < 25, false);
+  }
+  equal({ x: unit.x, y: unit.y }, target);
+});
+
+test('Stronghold role mates can place their own prepared construction while the human selects a different task', () => {
+  const state = createStronghold({ resources: 50, length: 'medium', computersPaused: false });
+  const human = state.players[0]!, partner = state.players.find(player => player.role === 'defenses')!;
+  executeCommand(state, human, { type: 'ROLE', role: 'defenses' });
+  executeCommand(state, partner, { type: 'ACTION', action: 'wall' });
+  partner.work = 32;
+  assignPhrase(state, partner);
+  equal(human.action, 'builder');
+  advanceStronghold(state, .1);
+  equal(state.buildings.some(building => building.kind === 'wall'), true);
+  equal(human.action, 'builder');
+});
+
 test('Stronghold relay previews distinguish castle-connected extensions from disconnected relay groups', () => {
   const state = createStronghold();
   state.buildings = [];

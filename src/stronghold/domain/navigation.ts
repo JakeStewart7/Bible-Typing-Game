@@ -10,7 +10,7 @@ type World = Pick<StrongholdState, 'buildings' | 'technology'>;
 type Obstacle = { wall: Building; x: number; y: number; cosine: number; sine: number; halfX: number; halfY: number };
 type Layout = { signature: string; obstacles: Obstacle[]; corners: Point[]; edges: { to: number; cost: number }[][] };
 const layouts = new WeakMap<World, Map<number, Layout>>();
-const routes = new WeakMap<Unit, { layout: Layout; target: Point; path: Point[] }>();
+const routes = new WeakMap<Unit, { layout: Layout; target: Point; path: Point[]; fallback: boolean }>();
 export function unitRadius(unit: Partial<Pick<Unit, 'kind' | 'formation'>>): number {
   return (unit.formation ?? unit.kind) === 'catapult' ? 20 : UNIT_RADIUS;
 }
@@ -157,8 +157,9 @@ export function moveUnitToward(world: World & Pick<StrongholdState, 'season'>, u
   travel *= SEASON_BONUSES[world.season].movement;
   const layout = layoutFor(world, unitRadius(unit));
   let route = routes.get(unit);
-  if (!route || route.layout !== layout || distance(route.target, target) > .1) {
-    route = { layout, target: { ...target }, path: findPath(layout, unit, target) };
+  if (!route || route.fallback || route.layout !== layout || distance(route.target, target) > .1) {
+    const path = findPath(layout, unit, target);
+    route = { layout, target: { ...target }, path, fallback: !path.length };
     if (!route.path.length) route.path.push({ ...target });
     routes.set(unit, route);
   }
