@@ -26,6 +26,7 @@ function entry(state: StrongholdState, player = human(state)): number {
 }
 function quietMatch(): StrongholdState {
   const state = createStronghold();
+  send(state, { type: 'ACTION', action: 'resources' });
   send(state, { type: 'COMPUTERS', paused: true });
   state.waveIn = 10000;
   return state;
@@ -110,10 +111,11 @@ test('Stronghold starts with 50 supplies, Medium text and running computers, and
   const points = phraseWork(player);
   engine.send('you', { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
   const snapshot = engine.snapshot('you');
-  equal(snapshot.roleTasks.economy.progress.resources?.work, points);
-  if (!snapshot.roleTasks.economy.progress.resources) throw new Error('Missing saved work.');
-  snapshot.roleTasks.economy.progress.resources.work = 500;
-  equal(engine.snapshot('you').roleTasks.economy.progress.resources?.work, points);
+  equal(snapshot.players[0]!.action, 'worker');
+  equal(snapshot.roleTasks.economy.progress.worker?.work, points);
+  if (!snapshot.roleTasks.economy.progress.worker) throw new Error('Missing saved work.');
+  snapshot.roleTasks.economy.progress.worker.work = 500;
+  equal(engine.snapshot('you').roleTasks.economy.progress.worker?.work, points);
   equal(JSON.stringify(snapshot.roleTasks).includes('phrase'), false);
   engine.send('you', { type: 'COMPUTERS', paused: true });
   engine.restart();
@@ -121,7 +123,8 @@ test('Stronghold starts with 50 supplies, Medium text and running computers, and
   equal(restarted.tier, 0);
   equal(restarted.buildings.every(building => building.tier === 1), true);
   equal(restarted.computersPaused, false);
-  equal(restarted.roleTasks.economy.progress.resources?.work, 0);
+  equal(restarted.roleTasks.economy.progress.worker?.work, 0);
+  equal(restarted.players[0]!.action, 'worker');
   equal(restarted.players.every(player => player.work === 0 && player.length === 'medium'), true);
 });
 
@@ -146,7 +149,7 @@ test('Stronghold restart replaces the entire progressed match with a fresh initi
   const restarted = engine.snapshot('you');
   const normalize = (snapshot: typeof initial) => ({
     ...snapshot, season: 'random',
-    nodes: snapshot.nodes.map(({ x: _x, y: _y, ...node }) => node),
+    nodes: snapshot.nodes.map(({ x: _x, y: _y, id: _id, ...node }) => node),
     players: snapshot.players.map(player => ({ ...player, phrase: '' }))
   });
   equal(normalize(restarted), normalize(initial));

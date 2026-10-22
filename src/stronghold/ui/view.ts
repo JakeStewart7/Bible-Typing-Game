@@ -110,8 +110,8 @@ export function renderStronghold(
     setAttribute(button, 'aria-pressed', String(snapshot.computersPaused));
     button.disabled = !running || terminal;
   }
-  text('stronghold-tower-count', `${snapshot.buildings.filter(building => building.kind === 'tower' && !building.enemy).length}/${BUILDING_CAPS.tower}`);
-  for (const kind of ['warrior', 'builder', 'worker'] as const) text(`stronghold-${kind}-count`, `${snapshot.units.filter(unit => unit.kind === kind).length}/${UNIT_CAPS[kind]}`);
+  text('stronghold-tower-count', `${snapshot.buildings.filter(building => building.kind === 'tower' && !building.enemy && building.hp > 0).length}/${BUILDING_CAPS.tower}`);
+  for (const kind of ['warrior', 'archer', 'catapult', 'builder', 'worker'] as const) text(`stronghold-${kind}-count`, `${snapshot.units.filter(unit => unit.kind === kind && unit.hp > 0).length}/${UNIT_CAPS[kind]}`);
   text('stronghold-tier-label', `Tier ${snapshot.tier}`);
   text('stronghold-tier-action', self.ready ? 'Ready!' : snapshot.tier === TIER_MAX ? 'Max Tier' : 'Tier Up');
   const ready = requireElement('stronghold-ready', HTMLButtonElement);
@@ -168,7 +168,11 @@ export function renderStronghold(
       setAttribute(progressBar, 'aria-valuenow', String(displayPercent));
       setAttribute(progressBar, 'aria-valuetext', challenge ? `${displayPercent}% of shared tier progress` : bank.description);
     }
-    setText(entry.progressLabel, challenge ? `${displayPercent}%` : bank.label);
+    const recruitCount = player.action === 'worker' || player.action === 'builder'
+      ? snapshot.units.filter(unit => unit.kind === player.action && unit.hp > 0).length : null;
+    const recruitLimit = player.action === 'worker' || player.action === 'builder' ? UNIT_CAPS[player.action] : null;
+    const recruitCapped = recruitCount !== null && recruitLimit !== null && recruitCount >= recruitLimit;
+    setText(entry.progressLabel, challenge ? `${displayPercent}%` : recruitCapped ? `Limit ${recruitCount}/${recruitLimit}` : bank.label);
     const roleDisabled = !own || challenge || terminal || !running;
     for (const button of entry.roleButtons) {
       setAttribute(button.element, 'aria-pressed', String(button.role === player.role));
@@ -182,7 +186,14 @@ export function renderStronghold(
         const cost = taskCost(selection);
         const unaffordable = snapshot.resources < cost;
         button.element.classList.toggle('is-unaffordable', unaffordable);
-        const purchaseProblem = button.miniBar ? null : actionProblem(snapshot, { ...player, ...selection }, button.action);
+        const recruitment = button.action === 'worker' || button.action === 'builder';
+        const purchaseProblem = button.miniBar && !recruitment ? null : actionProblem(snapshot, { ...player, ...selection }, button.action);
+        const population = button.element.querySelector('[data-unit-population]');
+        if (population && (button.action === 'worker' || button.action === 'builder' || isArmyUnit(button.action))) {
+          const kind = button.action;
+          const count = snapshot.units.filter(unit => unit.kind === kind && unit.hp > 0).length;
+          setText(population, `${count}/${UNIT_CAPS[kind]} on field`);
+        }
         if (isArmyUnit(button.action)) {
           const queued = button.element.querySelector('[data-training-queued]');
           if (queued) setText(queued, `${queuedUnits(snapshot, button.action)} queued`);

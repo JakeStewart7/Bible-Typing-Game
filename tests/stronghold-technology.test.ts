@@ -119,7 +119,7 @@ test('Stronghold rejects invalid construction tiers and upgrades from the wrong 
   rejects(() => executeCommand(state, self(state), { type: 'ACTION', action: 'relay', tier: 4 }));
   rejects(() => executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade', upgrade: 'catapult' }));
   equal(self(state).phraseId, phraseId);
-  equal(self(state).action, 'resources');
+  equal(self(state).action, 'worker');
   equal(state.resources, 50);
 });
 

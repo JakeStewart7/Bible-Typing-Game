@@ -3,13 +3,13 @@ import { rallyArmy, spawnWave, updateCombat } from './combat.ts';
 import { updateLogistics } from './logistics.ts';
 import { assignPhrase } from './phrases.ts';
 import { addUnit } from './state.ts';
-import { distance, isTypingAction, MIN_TIER, TIER_MAX, UNIT_CAPS, validPoint } from './rules.ts';
+import { distance, isTypingAction, MIN_TIER, TIER_MAX, UNIT_CAPS } from './rules.ts';
 import { taskWork } from './technology.ts';
 import { ENTITY_LABELS, recordEvent } from './events.ts';
 import type { Action, Participant, Point, StrongholdState } from './types.ts';
 import { updateWorldEvent } from './world-events.ts';
 import { queuedUnits, TRAINING_SECONDS } from './training.ts';
-import { wallContains } from './navigation.ts';
+import { unitSpawnPoint } from './navigation.ts';
 
 const BOT_RELAY_SITES = [
   { x: 360, y: 540 }, { x: 640, y: 540 }, { x: 250, y: 435 }, { x: 760, y: 435 },
@@ -106,10 +106,8 @@ function produceArmy(state: StrongholdState, seconds: number): void {
     if (state.computersPaused && state.players.some(player => player.id === order.playerId && player.simulated)) continue;
     barracks.cooldown = Math.max(0, barracks.cooldown - seconds);
     if (barracks.cooldown < 1e-9) barracks.cooldown = 0;
-    if (barracks.cooldown > 0 || state.units.filter(unit => unit.kind === order.kind).length >= UNIT_CAPS[order.kind]) continue;
-    const spawn = [{ x: 0, y: -30 }, { x: 30, y: 0 }, { x: -30, y: 0 }, { x: 0, y: 30 }]
-      .map(offset => ({ x: barracks.x + offset.x, y: barracks.y + offset.y }))
-      .find(point => validPoint(point) && !state.buildings.some(building => building.kind === 'wall' && building.hp > 0 && wallContains(point, building, 10)));
+    if (barracks.cooldown > 0 || state.units.filter(unit => unit.kind === order.kind && unit.hp > 0).length >= UNIT_CAPS[order.kind]) continue;
+    const spawn = unitSpawnPoint(state, barracks);
     if (!spawn) continue;
     const unit = addUnit(state, order.kind, spawn);
     unit.destination = { ...state.rally };

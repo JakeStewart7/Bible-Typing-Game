@@ -310,6 +310,7 @@ test('Stronghold dropped cargo survives a gatherer death and routes without dupl
 
 test('Stronghold role members keep private text and share completed work and placement without duplicate costs', () => {
   const state = createStronghold();
+  executeCommand(state, state.players[0]!, { type: 'ACTION', action: 'resources' });
   state.players.forEach(player => { player.simulated = false; });
   const [you, teammate] = state.players;
   if (!you || !teammate) throw new Error('Missing players.');

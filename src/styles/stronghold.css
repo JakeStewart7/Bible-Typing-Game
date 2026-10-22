@@ -152,6 +152,9 @@
 .stronghold-supplies > span { font-size: 10px; }
 .stronghold-symbol { display: inline-block; flex: 0 0 15px; width: 15px; height: 15px; }
 .stronghold-symbol--warrior { background: #dce2e8; border: 3px solid #65727e; }
+.stronghold-symbol--archer { background: #9ed7e6; border: 3px solid #00aeef; transform: rotate(45deg) scale(.8); }
+.stronghold-symbol--catapult { background: #cfb000; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.stronghold-build-tile [data-unit-population] { display: block; font-size: 9px; line-height: 1.1; }
 .stronghold-symbol--worker { background: white; border: 3px solid #b88051; border-radius: 50%; }
 .stronghold-symbol--resource { background: #00aeef; border: 3px solid #9ed7e6; border-radius: 50%; }
 .stronghold-symbol--builder { background: #a64caf; clip-path: polygon(50% 0, 100% 100%, 0 100%); position: relative; }

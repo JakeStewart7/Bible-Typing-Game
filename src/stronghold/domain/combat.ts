@@ -41,6 +41,7 @@ function updateUnit(state: StrongholdState, unit: Unit, seconds: number): void {
       ?? closest(unit, buildings.filter(building => building.kind !== 'wall')) ?? closest(unit, buildings);
   } else {
     target = closest(unit, enemies.filter(other => distance(unit, other) < Math.max(140, rule.range)));
+    if (!target && unit.kind === 'warrior') target = closest(unit, buildings.filter(building => building.kind === 'tower' && distance(unit, building) < 140));
     if (!target && unit.destination) {
       moveUnitToward(state, unit, unit.destination, seconds * rule.speed);
       if (distance(unit, unit.destination) < 5) unit.destination = null;

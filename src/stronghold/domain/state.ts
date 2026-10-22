@@ -42,7 +42,7 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
     phase: 'playing', tier: 0, elapsed: 0, wave: 0, waveIn: 60, resources: options.resources,
     event: 'peace', eventIn: 60, nextId: 1, units: [], buildings: [], chunks: [],
     players: roster.map(player => ({
-      ...player, action: player.role === 'defenses' ? 'builder' : 'resources',
+      ...player, action: player.role === 'economy' ? 'worker' : player.role === 'defenses' ? 'builder' : 'resources',
       phrase: '', typed: '', phraseId: 0, completed: 0, ready: false, contribution: 0, typingCredit: 0,
       constructionTier: 1, upgradeTarget: player.role === 'production' ? 'warrior' : player.role === 'defenses' ? 'tower-1' : 'economy',
       actionPhrases: 0, work: 0, length: options.length
@@ -53,7 +53,7 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
     rally: { x: 500, y: 450 }, message: '', events: [{ id: 1, elapsed: 0, playerId: null, text: 'Game started' }],
     computersPaused: options.computersPaused,
     roleTasks: {
-      economy: createRoleTasks({ action: 'resources', constructionTier: 1, upgradeTarget: 'economy' }),
+      economy: createRoleTasks({ action: 'worker', constructionTier: 1, upgradeTarget: 'economy' }),
       production: createRoleTasks({ action: 'resources', constructionTier: 1, upgradeTarget: 'warrior' }),
       army: createRoleTasks({ action: 'resources', constructionTier: 1, upgradeTarget: 'economy' }),
       defenses: createRoleTasks({ action: 'builder', constructionTier: 1, upgradeTarget: 'tower-1' })

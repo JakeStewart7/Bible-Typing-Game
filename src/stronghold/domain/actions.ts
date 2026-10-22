@@ -8,7 +8,7 @@ import { restoreRoleTask, saveRoleTask, taskKey } from './tasks.ts';
 import { spawnWave } from './combat.ts';
 import { creditResources, daylight, DAY_SECONDS, NIGHT_SECONDS, SEASON_BONUSES, SEASON_LABELS, seasonalNodes } from './environment.ts';
 import { tierProgress } from './tier-progress.ts';
-import { wallContains, WALL_HALF_LENGTH, WALL_HALF_WIDTH } from './navigation.ts';
+import { unitSpawnPoint, wallContains, WALL_HALF_LENGTH, WALL_HALF_WIDTH } from './navigation.ts';
 import { isArmyUnit, queuedUnits, trainingBarracks, TRAINING_SECONDS } from './training.ts';
 
 type ActionWorld = Pick<StrongholdState, 'tier' | 'resources' | 'units' | 'technology' | 'buildings'>;
@@ -31,6 +31,7 @@ export function actionProblem(state: ActionWorld, player: TaskPlayer, action: Ac
   if (action === 'worker' || action === 'builder' || action === 'warrior' || action === 'archer' || action === 'catapult') {
     const queued = isArmyUnit(action) ? queuedUnits(state, action) : 0;
     if (state.units.filter(unit => unit.kind === action && unit.hp > 0).length + queued >= UNIT_CAPS[action]) return `${ACTION_LABELS[action]} population limit reached.`;
+    if ((action === 'worker' || action === 'builder') && !unitSpawnPoint(state, BASE)) return 'Clear space near the castle to recruit another unit.';
   }
   if (isArmyUnit(action) && !trainingBarracks(state, action)) return `Build and finish Tier ${MIN_TIER[action]} Barracks to queue ${action}s.`;
   return null;
@@ -75,7 +76,9 @@ function performAction(state: StrongholdState, player: Participant, action: Acti
     barracks.trainingQueue.push({ kind: action, playerId: player.id });
     playerEvent(state, player, `queued ${ENTITY_LABELS[action]} at T${barracks.tier} Barracks`);
   } else if (action === 'worker' || action === 'builder') {
-    addUnit(state, action, { x: BASE.x + (state.nextId % 5 - 2) * 16, y: BASE.y - 40 });
+    const point = unitSpawnPoint(state, BASE);
+    if (!point) throw new Error('Clear space near the castle to recruit another unit.');
+    addUnit(state, action, point);
     playerEvent(state, player, `created ${ENTITY_LABELS[action]}`);
   }
 }

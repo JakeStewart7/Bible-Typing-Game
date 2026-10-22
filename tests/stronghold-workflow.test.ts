@@ -39,6 +39,7 @@ test('Stronghold completed entries, not partial typing, fill the shared task bar
 
 test('Stronghold role mates have private text lengths and contribute their own character counts to shared work', () => {
   const state = createStronghold();
+  executeCommand(state, state.players[0]!, { type: 'ACTION', action: 'resources' });
   const [you, teammate] = state.players;
   if (!you || !teammate) throw new Error('Missing players.');
   executeCommand(state, teammate, { type: 'ROLE', role: 'economy' });
@@ -86,6 +87,7 @@ test('Stronghold text length selections never add event log entries', () => {
 test('Stronghold four players on one role keep unique phrases and private typing state for every length', () => {
   for (const length of PHRASE_LENGTHS) {
     const state = createStronghold({ resources: 50, length, computersPaused: true });
+    executeCommand(state, state.players[0]!, { type: 'ACTION', action: 'resources' });
     for (const player of state.players) {
       executeCommand(state, player, { type: 'ROLE', role: 'economy' });
       executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase.slice(0, Math.min(2, player.phrase.length - 1)) });

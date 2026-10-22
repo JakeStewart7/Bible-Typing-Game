@@ -20,6 +20,18 @@ export function wallContains(point: Point, wall: Point & { rotation?: number }, 
   const local = wallLocal(point, wall);
   return Math.abs(local.x) < WALL_HALF_LENGTH + padding && Math.abs(local.y) < WALL_HALF_WIDTH + padding;
 }
+export function unitSpawnPoint(world: Pick<StrongholdState, 'buildings' | 'units'>, origin: Point): Point | undefined {
+  const directions = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 },
+    { x: 1, y: -1 }, { x: -1, y: -1 }, { x: 1, y: 1 }, { x: -1, y: 1 }];
+  for (const radius of [30, 50, 70, 90]) for (const direction of directions) {
+    const point = { x: origin.x + direction.x * radius, y: origin.y + direction.y * radius };
+    if (validPoint(point) && world.units.every(unit => unit.hp <= 0 || distance(unit, point) >= UNIT_RADIUS * 2)
+      && world.buildings.every(building => building.hp <= 0 || (building.kind === 'wall'
+        ? !wallContains(point, building, UNIT_RADIUS)
+        : distance(point, building) >= (building.kind === 'castle' || building.kind === 'enemy-base' ? 44 : 24)))) return point;
+  }
+  return undefined;
+}
 function local(point: Point, obstacle: Obstacle): Point {
   const x = point.x - obstacle.x, y = point.y - obstacle.y;
   return { x: x * obstacle.cosine + y * obstacle.sine, y: -x * obstacle.sine + y * obstacle.cosine };

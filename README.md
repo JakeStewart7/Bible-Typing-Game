@@ -24,6 +24,11 @@ Pause, hidden/inactive gameplay, a finished match, or a tier-locked task disable
 Mistyped letters in both the prompt and input have vibrant pink-red highlighting
 and a strike-through; correct letters remain unmarked in the input.
 Unit Control can select and move gatherers and builders as well as troops.
+Economy starts with **Gatherer** selected. Recruitment tiles show living units
+on the field separately from troop queues; the HUD includes all five friendly
+unit types. Builder and Gatherer progress clearly indicates a reached population
+limit. Recruitment resumes when a slot opens; new recruits and trained troops
+spawn at clear, unoccupied positions rather than inside walls or other units.
 After reaching a manual destination, gatherers and builders wait two seconds,
 then automatically resume the nearest resource, construction or repair job.
 Builders bob quickly and show silver-white pulsing sparks while building or repairing.
@@ -338,6 +343,8 @@ click/Shift-click, drag a selection rectangle (Shift adds to the selection), or
 base**. **Set rally on map** makes the next map click the production rally point.
 Manual movement takes priority over enemy pursuit and automatic rally orders
 until arrival, allowing troops to retreat from combat; normal fighting then resumes.
+Warriors prioritize nearby enemy towers over the enemy castle once movement
+orders finish, while still defending themselves against nearby enemy troops.
 No coordinate fields are needed. Destroy the enemy
 stronghold before invading waves destroy yours.
 Left-clicking empty ground clears the selection without moving units.

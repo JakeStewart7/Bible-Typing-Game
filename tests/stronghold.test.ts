@@ -49,6 +49,7 @@ test('Stronghold snapshots are independent and expose only each player private p
 test('Stronghold typing requires exact phrase and rejects expired phrase IDs', () => {
   const state = createStronghold();
   const player = self(state);
+  executeCommand(state, player, { type: 'ACTION', action: 'resources' });
   const phraseId = player.phraseId;
   executeCommand(state, player, { type: 'TYPE', phraseId, text: player.phrase.toUpperCase() });
   equal(state.resources, 50);

@@ -288,6 +288,7 @@ test('Stronghold seasonal resource value applies once to typed supplies and cast
   ] as const) {
     const state = createStronghold({ resources: 0, length: 'short', computersPaused: true }, season);
     const player = state.players[0]!;
+    executeCommand(state, player, { type: 'ACTION', action: 'resources' });
     player.work = 31; player.phrase = 'a';
     executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: 'a' });
     equal(state.resources, typed);
