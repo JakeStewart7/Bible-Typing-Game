@@ -32,6 +32,7 @@ function automaticWorkTime(state: StrongholdState, unit: Unit, seconds: number):
     moveUnitToward(state, unit, unit.destination, seconds * UNIT_RULES[unit.kind].speed);
     if (distance(unit, unit.destination) > .001) return 0;
     unit.destination = null;
+    unit.manualMove = false;
     unit.idleTime = 0;
     seconds = Math.max(0, seconds - travelTime);
   }

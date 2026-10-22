@@ -1,4 +1,4 @@
-import { actionProblem, executeCommand } from './actions.ts';
+import { actionProblem, actionUnlockProblem, executeCommand } from './actions.ts';
 import { rallyArmy, spawnWave, updateCombat } from './combat.ts';
 import { updateLogistics } from './logistics.ts';
 import { assignPhrase } from './phrases.ts';
@@ -42,6 +42,7 @@ function botAction(state: StrongholdState, player: Participant): Action {
     return state.buildings.filter(building => building.kind === 'wall').length < 8 ? 'wall' : 'builder';
   }
   const troop = botTroop(state);
+  if (state.tier < MIN_TIER[troop]) return 'resources';
   if (!state.buildings.some(building => building.kind === 'barracks' && building.hp > 0 && building.tier === MIN_TIER[troop])) return 'barracks';
   return troop;
 }
@@ -68,11 +69,11 @@ function updateBot(state: StrongholdState, player: Participant, seconds: number)
       return;
     }
     const tier = !humanOnRole && action === 'barracks' ? MIN_TIER[botTroop(state)] : player.constructionTier;
+    if (actionUnlockProblem(state, { ...player, action, constructionTier: tier })) return;
     if (action !== player.action || (action === 'barracks' && player.constructionTier !== tier)) {
       executeCommand(state, player, { type: 'ACTION', action, tier });
     }
-    const preparingConstruction = (action === 'barracks' || action === 'tower') && player.work < taskWork(player);
-    if (actionProblem(state, player, action) && !preparingConstruction) return;
+    if (actionProblem(state, player, action)) return;
     if (['relay', 'barracks', 'tower', 'wall'].includes(action) && (action === 'relay' || player.work >= taskWork(player))) {
       if (humanOnRole) return;
       const count = state.buildings.filter(building => building.kind === action && !building.enemy).length;

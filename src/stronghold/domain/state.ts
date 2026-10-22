@@ -10,7 +10,7 @@ import { PLAYER_COLORS } from './types.ts';
 export function addUnit(state: StrongholdState, kind: UnitKind, point: Point, formation: ArmyUnitKind | null = null): Unit {
   const hp = ((formation ? UNIT_RULES[formation].hp : UNIT_RULES[kind].hp)
     + (kind === 'invader' ? 0 : unitUpgrade(state, { kind }) * 10)) * UNIT_HEALTH_MULTIPLIER;
-  const unit: Unit = { ...point, id: state.nextId++, kind, hp, maxHp: hp, destination: null, cooldown: 0, task: null, formation, attackTarget: null, idleTime: null };
+  const unit: Unit = { ...point, id: state.nextId++, kind, hp, maxHp: hp, destination: null, manualMove: false, cooldown: 0, task: null, formation, attackTarget: null, idleTime: null };
   state.units.push(unit);
   return unit;
 }

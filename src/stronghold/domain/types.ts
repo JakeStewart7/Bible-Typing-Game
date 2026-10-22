@@ -18,7 +18,7 @@ export type WorldEvent = 'peace' | 'left-hand' | 'vowels' | 'numbers' | 'symbols
 export type Action = 'resources' | 'worker' | 'relay' | 'barracks' | 'warrior' | 'archer' | 'catapult' | 'builder' | 'tower' | 'wall' | 'upgrade';
 export type Unit = Point & {
   id: number; kind: UnitKind; hp: number; maxHp: number;
-  destination: Point | null; cooldown: number; task: number | null;
+  destination: Point | null; manualMove: boolean; cooldown: number; task: number | null;
   formation: ArmyUnitKind | null; attackTarget: Point | null;
   idleTime: number | null;
 };

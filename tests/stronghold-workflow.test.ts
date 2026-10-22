@@ -386,21 +386,23 @@ test('Stronghold central private typing, length controls and distinct costs repl
   equal(markup.includes('stronghold-build-x'), false);
   equal(markup.includes('stronghold-order-x'), false);
   for (const length of PHRASE_LENGTHS) equal(markup.includes(`value="${length}"`), true);
-  equal(markup.includes('>Army</option>'), true);
-  equal(markup.includes('>Unit Control</option>'), true);
+  equal(markup.includes('aria-label="Army"'), true);
+  equal(markup.includes('aria-label="Unit Control"'), true);
   equal(markup.includes('Army production'), false);
   equal(markup.includes('Army control'), false);
   equal(markup.includes('id="stronghold-world-event" class="stronghold-world-event is-hidden"'), true);
   equal(markup.includes('class="stronghold-work-track"'), true);
 });
 
-test('Stronghold Army bot prepares Tier 1 barracks before unlocking and trains units after the first challenge', () => {
+test('Stronghold Army bot waits for Tier 1 before preparing barracks and training units', () => {
   const state = createStronghold();
   state.resources = 1000;
   state.waveIn = 10000;
   for (let step = 0; step < 100; step++) advanceStronghold(state, .25);
   equal(state.tier, 0);
   equal(state.buildings.some(building => building.kind === 'barracks'), false);
+  equal(state.players.find(player => player.role === 'production')?.action, 'resources');
+  equal(state.roleTasks.production.progress['barracks:1'], undefined);
   const player = state.players[0]!;
   executeCommand(state, player, { type: 'READY', ready: true });
   for (let entry = 0; state.phase === 'tier-up' && entry < TIER_CHARACTER_GOAL; entry++) {

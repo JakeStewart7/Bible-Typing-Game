@@ -28,7 +28,8 @@ test('Stronghold concise controls retain accessible labels and essential costs',
   equal(markup.indexOf('id="stronghold-resources"') < markup.indexOf('id="stronghold-tower-count"'), true);
   equal(markup.includes('<span class="sr-only"> supplies</span>'), true);
   equal(markup.includes('for="stronghold-input"'), true);
-  equal(markup.includes('for="stronghold-role-you"'), true);
+  equal(markup.includes('role="group" aria-label="Player 1 role"'), true);
+  equal(markup.includes('class="stronghold-role-select"'), false);
   for (const id of ['stronghold-castle', 'stronghold-enemy', 'stronghold-wave', 'stronghold-season']) {
     equal(markup.includes(`id="${id}"`), false);
   }

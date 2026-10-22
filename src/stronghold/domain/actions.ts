@@ -13,10 +13,15 @@ import { isArmyUnit, queuedUnits, trainingBarracks, TRAINING_SECONDS } from './t
 
 type ActionWorld = Pick<StrongholdState, 'tier' | 'resources' | 'units' | 'technology' | 'buildings'>;
 type TaskPlayer = Pick<Participant, 'role' | 'action' | 'constructionTier' | 'upgradeTarget' | 'work'>;
+export function actionUnlockProblem(state: Pick<StrongholdState, 'tier'>, task: Pick<Participant, 'action' | 'constructionTier' | 'upgradeTarget'>): string | null {
+  const tier = Math.max(MIN_TIER[task.action], task.action === 'tower' || task.action === 'barracks' ? task.constructionTier
+    : task.action === 'upgrade' ? UPGRADE_OPTIONS[task.upgradeTarget].tier : 0);
+  return state.tier < tier ? `Requires tier ${tier}. Ready up to advance together.` : null;
+}
 export function actionProblem(state: ActionWorld, player: TaskPlayer, action: Action): string | null {
   if (!ROLE_ACTIONS[player.role].includes(action)) return 'This action belongs to another role.';
-  if (state.tier < MIN_TIER[action]) return `Requires tier ${MIN_TIER[action]}. Ready up to advance together.`;
-  if ((action === 'tower' || action === 'barracks') && state.tier < player.constructionTier) return `Requires tier ${player.constructionTier}.`;
+  const locked = actionUnlockProblem(state, { ...player, action });
+  if (locked) return locked;
   if (state.resources < taskCost({ ...player, action })) return `Need ${taskCost({ ...player, action })} shared supplies.`;
   if (action === 'upgrade') {
     if (player.role === 'army') return 'Unit Control does not have typing upgrades.';
@@ -76,6 +81,10 @@ function performAction(state: StrongholdState, player: Participant, action: Acti
 }
 
 export function completePhrase(state: StrongholdState, player: Participant): void {
+  if (state.phase === 'playing') {
+    const locked = actionUnlockProblem(state, player);
+    if (locked) throw new Error(locked);
+  }
   player.completed++;
   if (state.phase === 'tier-up') {
     const progress = tierProgress(state.players);
@@ -166,7 +175,7 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     playerEvent(state, player, `joined ${ROLE_LABELS[player.role]}`);
     if (partner) copyRoleTask(partner, player);
     else restoreRoleTask(state, player);
-    if (!player.simulated && player.role === 'production' && player.action === 'resources') {
+    if (!player.simulated && player.role === 'production' && player.action === 'resources' && state.tier >= 1) {
       restoreRoleTask(state, player, { action: 'barracks', constructionTier: 1, upgradeTarget: player.upgradeTarget });
     }
     assignPhrase(state, player);
@@ -181,6 +190,10 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
   if (command.type === 'TYPE') {
     if (command.phraseId !== player.phraseId) throw new Error('That phrase has expired.');
     if (typeof command.text !== 'string' || command.text.length > player.phrase.length) throw new Error('Invalid typing update.');
+    if (state.phase === 'playing') {
+      const locked = actionUnlockProblem(state, player);
+      if (locked) throw new Error(locked);
+    }
     player.typed = command.text;
     if (player.typed === player.phrase) completePhrase(state, player);
     return;
@@ -220,6 +233,8 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     if (!Object.prototype.hasOwnProperty.call(UPGRADE_OPTIONS, upgrade)
       || ((command.action === 'upgrade' || command.upgrade !== undefined) && UPGRADE_OPTIONS[upgrade].role !== player.role)) throw new Error('This upgrade belongs to another role.');
     const selection = { action: command.action, constructionTier: tier, upgradeTarget: upgrade };
+    const locked = actionUnlockProblem(state, selection);
+    if (locked) throw new Error(locked);
     if (!isTypingAction(command.action) && command.action !== 'relay') {
       const purchase = { ...player, ...selection };
       const problem = actionProblem(state, purchase, command.action);
@@ -265,6 +280,8 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
   }
   for (const unit of state.units) if (command.ids.includes(unit.id)) {
     unit.destination = { ...command.point };
+    unit.manualMove = true;
+    unit.attackTarget = null;
     if (unit.kind === 'worker' || unit.kind === 'builder') {
       unit.task = null;
       unit.idleTime = 0;

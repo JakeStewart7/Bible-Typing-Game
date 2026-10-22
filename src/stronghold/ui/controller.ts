@@ -1,7 +1,7 @@
 import { createGame, type Game } from '../../game/state.ts';
 import { requireElement } from '../../shared/dom.ts';
 import { renderTypingExperience, updateTypingInput } from '../../typing/session.ts';
-import { PHRASE_LENGTHS, ROLES, SEASONS, type Point, type StrongholdCommand, type StrongholdConnection, type StrongholdSnapshot } from '../domain/types.ts';
+import { PHRASE_LENGTHS, SEASONS, type Point, type StrongholdCommand, type StrongholdConnection, type StrongholdSnapshot } from '../domain/types.ts';
 import { distance } from '../domain/rules.ts';
 import { renderStronghold, strongholdElements } from './view.ts';
 import { mapPoint, readyBuilding, troopsInRectangle, type PlacementKind } from './map-controls.ts';
@@ -132,6 +132,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
         'teleport');
       typingDirty = false;
       typingLayout = layout;
+      elements.typedBar.scrollLeft = elements.input.scrollLeft;
     }
   }
   async function send(command: StrongholdCommand): Promise<boolean> {
@@ -183,7 +184,21 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     selected.clear();
     relayPlacement = false; placementCancelled = false; rallyPlacement = false; editingWall = null;
     errorMessage = ''; phraseId = -1;
+    cursor = null; wallRotation = 0; panTime = 0;
+    typing = createGame(''); typingDirty = true; typingLayout = '';
+    elements.input.value = '';
+    elements.typedBar.scrollLeft = 0;
     clearDrag();
+    if (credits.open) credits.close();
+    if (elements.dialog.open) elements.dialog.close();
+    developerPanel.open = false;
+    const guide = elements.screen.querySelector('details.stronghold-guide');
+    if (guide instanceof HTMLDetailsElement) guide.open = false;
+    elements.renderBattlefield.reset();
+    elements.renderEventLog.reset();
+    for (const particle of elements.screen.querySelectorAll('.stronghold-weather-particle')) {
+      for (const animation of particle.getAnimations()) animation.currentTime = 0;
+    }
     elements.mapControls.moveIndicator(null);
     elements.camera.reset(defaults.mapZoom);
     connection.restart(defaults);
@@ -210,6 +225,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     typingDirty = true;
     void send({ type: 'TYPE', phraseId, text: elements.input.value });
   });
+  elements.input.addEventListener('scroll', () => { elements.typedBar.scrollLeft = elements.input.scrollLeft; });
   elements.phrase.addEventListener('click', focusTyping);
   for (const option of elements.lengthOptions) option.element.addEventListener('click', () => {
     if (self()?.length !== option.length) void send({ type: 'LENGTH', length: option.length });
@@ -251,10 +267,8 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   }
   rotateWall.addEventListener('click', rotateCurrentWall);
   for (const card of elements.playerCards) {
-    card.roleSelect.addEventListener('change', () => {
-      const role = ROLES.find(candidate => candidate === card.roleSelect.value);
-      if (!role) { errorMessage = 'Unknown Stronghold role.'; display(); return; }
-      selected.clear(); elements.input.focus({ preventScroll: true }); void send({ type: 'ROLE', role });
+    for (const button of card.roleButtons) button.element.addEventListener('click', () => {
+      selected.clear(); void send({ type: 'ROLE', role: button.role });
     });
     for (const group of card.groups) {
       for (const button of group.buttons) {
@@ -467,8 +481,9 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       const active = document.activeElement;
       const inTasks = active instanceof Element && Boolean(own?.actions.contains(active));
       if (active === elements.input || active === elements.map || elements.length.contains(active) || inTasks) {
+        const tier = snapshot.tier;
         const tasks = own?.groups.find(group => group.role === player.role)?.buttons
-          .filter(button => (button.miniBar || button.action === 'relay') && !button.element.disabled) ?? [];
+          .filter(button => (button.miniBar || button.action === 'relay') && tier >= button.minimumTier && !button.element.disabled) ?? [];
         const current = tasks.findIndex(button => relayPlacement ? button.action === 'relay'
           : button.action === player.action && (!button.tier || button.tier === player.constructionTier));
         const next = nextTaskIndex(current, tasks.length, event.shiftKey);

@@ -46,6 +46,19 @@ test('Stronghold places input before the prompt and replaces tier labels with ac
   equal(markup.includes('data-tooltip="Defend (Alt+2)"'), true);
 });
 
+test('Stronghold role icon buttons replace dropdowns and expose selected-state semantics for every player', () => {
+  const markup = strongholdWorkspaceMarkup();
+  equal(markup.includes('stronghold-role-select'), false);
+  for (const id of ['you', 'bot-1', 'bot-2', 'bot-3']) {
+    for (const role of ROLES) {
+      equal(markup.includes(`id="stronghold-role-${id}-${role}" type="button" data-role-button="${role}"`), true);
+    }
+  }
+  equal((markup.match(/data-role-button=/g) ?? []).length, 16);
+  equal((markup.match(/aria-pressed="false" data-tooltip="(?:Economy|Army|Unit Control|Defenses)"/g) ?? []).length, 16);
+  equal(markup.includes('id="stronghold-timer" datetime="PT0S">0:00</time>'), true);
+});
+
 test('Stronghold map entities retain accessible descriptions without delayed native SVG tooltips', () => {
   const state = createStronghold();
   const unit = unitMarkup(addUnit(state, 'warrior', { x: 500, y: 500 }), false);
@@ -56,17 +69,17 @@ test('Stronghold map entities retain accessible descriptions without delayed nat
   }
 });
 
-test('Stronghold friendly and enemy archers bob slowly even when standing or attacking', () => {
+test('Stronghold friendly and enemy archers bob 25 percent faster even when standing or attacking', () => {
   const state = createStronghold();
   for (const [kind, formation] of [['archer', null], ['invader', 'archer']] as const) {
     const unit = addUnit(state, kind, { x: 100, y: 100 }, formation);
     unit.id = 0;
     equal(unitMotionTransform(unit, unit, 0), 'translate(0 0)');
-    equal(unitMotionTransform(unit, unit, Math.PI / 4.4), 'translate(0 2.5)');
-    equal(unitMotionTransform(unit, unit, 3 * Math.PI / 4.4), 'translate(0 -2.5)');
+    equal(unitMotionTransform(unit, unit, Math.PI / 5.5), 'translate(0 2.5)');
+    equal(unitMotionTransform(unit, unit, 3 * Math.PI / 5.5), 'translate(0 -2.5)');
     unit.attackTarget = { x: 120, y: 100 }; unit.cooldown = 1;
-    equal(unitMotionTransform(unit, unit, Math.PI / 4.4), 'translate(0 2.5) scale(1.15)');
-    equal(unitMotionTransform(unit, unit, Math.PI / 4.4, true), '');
+    equal(unitMotionTransform(unit, unit, Math.PI / 5.5), 'translate(0 2.5) scale(1.15)');
+    equal(unitMotionTransform(unit, unit, Math.PI / 5.5, true), '');
   }
 });
 

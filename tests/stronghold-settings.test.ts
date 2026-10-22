@@ -125,6 +125,33 @@ test('Stronghold starts with 50 supplies, Medium text and running computers, and
   equal(restarted.players.every(player => player.work === 0 && player.length === 'medium'), true);
 });
 
+test('Stronghold restart replaces the entire progressed match with a fresh initial state', () => {
+  const engine = new StrongholdEngine({ resources: 75, length: 'long', computersPaused: true });
+  const initial = engine.snapshot('you');
+  engine.send('you', { type: 'ROLE', role: 'army' });
+  const unit = engine.snapshot('you').units.find(unit => unit.kind === 'warrior')!;
+  engine.send('you', { type: 'MOVE', ids: [unit.id], point: { x: 800, y: 450 } });
+  engine.send('you', { type: 'RALLY', point: { x: 700, y: 400 } });
+  engine.send('you', { type: 'LENGTH', length: 'short' });
+  engine.send('you', { type: 'SET_SEASON', season: 'winter' });
+  engine.send('you', { type: 'TIME_OF_DAY', period: 'night' });
+  engine.send('you', { type: 'NEXT_WAVE' });
+  for (let second = 0; second < 20; second++) engine.advance(1);
+  engine.send('you', { type: 'READY', ready: true });
+  const player = engine.snapshot('you').players[0]!;
+  engine.send('you', { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+  equal(engine.snapshot('you').phase, 'tier-up');
+  equal(engine.snapshot('you').players[0]!.contribution > 0, true);
+  engine.restart();
+  const restarted = engine.snapshot('you');
+  const normalize = (snapshot: typeof initial) => ({
+    ...snapshot, season: 'random',
+    nodes: snapshot.nodes.map(({ x: _x, y: _y, ...node }) => node),
+    players: snapshot.players.map(player => ({ ...player, phrase: '' }))
+  });
+  equal(normalize(restarted), normalize(initial));
+});
+
 test('Stronghold each task retains completed work across task changes and a vacant role', () => {
   const state = quietMatch();
   const player = human(state);
@@ -238,33 +265,38 @@ test('Stronghold construction tiers keep independent bars and instant upgrades l
   equal(player.work, barracks3Work);
 });
 
-test('Stronghold Army prepares Barracks at Tier 0 and places them after the first shared challenge', () => {
+test('Stronghold Army cannot prepare locked Barracks and unlocks each building tier independently', () => {
   const engine = new StrongholdEngine({ resources: 50, length: 'medium', computersPaused: false });
   const self = () => engine.snapshot('you').players.find(player => player.id === 'you')!;
   engine.send('you', { type: 'ROLE', role: 'production' });
-  equal(self().action, 'barracks');
+  equal(self().action, 'resources');
   equal(self().constructionTier, 1);
+  const before = engine.snapshot('you');
+  let locked = false;
+  try { engine.send('you', { type: 'ACTION', action: 'barracks', tier: 1 }); }
+  catch (error) { locked = error instanceof Error && error.message.includes('tier 1'); }
+  equal(locked, true);
+  equal(engine.snapshot('you'), before);
   const phrase = self().phrase;
   engine.send('you', { type: 'TYPE', phraseId: self().phraseId, text: phrase.slice(0, 2) });
   for (let second = 0; second < 15; second++) engine.advance(1);
-  equal(self().work >= 40, true);
+  equal(engine.snapshot('you').roleTasks.production.progress['barracks:1'], undefined);
   equal(self().phrase, phrase);
   equal(self().typed, phrase.slice(0, 2));
-  equal(engine.snapshot('you').events.some(event => event.playerId === 'bot-1' && event.text.includes('gathered Supplies')), false);
   equal(engine.snapshot('you').tier, 0);
   equal(readyBuilding(engine.snapshot('you')), null);
-  let locked = false;
-  try { engine.send('you', { type: 'PLACE', kind: 'barracks', point: { x: 620, y: 570 } }); }
-  catch (error) { locked = error instanceof Error && error.message.includes('tier 1'); }
-  equal(locked, true);
-  const preparedWork = self().work;
   engine.send('you', { type: 'COMPUTERS', paused: true });
   engine.send('you', { type: 'READY', ready: true });
   for (let index = 0; engine.snapshot('you').phase === 'tier-up' && index < TIER_CHARACTER_GOAL; index++) {
     engine.send('you', { type: 'TYPE', phraseId: self().phraseId, text: self().phrase });
   }
   equal(engine.snapshot('you').tier, 1);
-  equal(self().work, preparedWork);
+  engine.send('you', { type: 'ACTION', action: 'barracks', tier: 1 });
+  equal(self().work, 0);
+  for (let count = 0; self().work < 40; count++) {
+    if (count > 20) throw new Error('Barracks task did not fill.');
+    engine.send('you', { type: 'TYPE', phraseId: self().phraseId, text: self().phrase });
+  }
   equal(readyBuilding(engine.snapshot('you')), 'barracks');
   const supplies = engine.snapshot('you').resources;
   const work = self().work;
@@ -272,16 +304,12 @@ test('Stronghold Army prepares Barracks at Tier 0 and places them after the firs
   equal(self().work, Math.round((work - 40) * 100) / 100);
   equal(engine.snapshot('you').resources, supplies);
   equal(engine.snapshot('you').buildings.some(building => building.kind === 'barracks' && building.tier === 1), true);
-  engine.send('you', { type: 'ACTION', action: 'barracks', tier: 2 });
-  for (let count = 0; self().work < 80; count++) {
-    if (count > 20) throw new Error('Barracks task did not fill.');
-    engine.send('you', { type: 'TYPE', phraseId: self().phraseId, text: self().phrase });
-  }
-  equal(readyBuilding(engine.snapshot('you')), null);
+  const afterPlacement = engine.snapshot('you');
   let rejected = false;
-  try { engine.send('you', { type: 'PLACE', kind: 'barracks', point: { x: 750, y: 570 } }); }
+  try { engine.send('you', { type: 'ACTION', action: 'barracks', tier: 2 }); }
   catch (error) { rejected = error instanceof Error && error.message.includes('tier 2'); }
   equal(rejected, true);
+  equal(engine.snapshot('you'), afterPlacement);
 });
 
 test('Stronghold running computers contribute to each selected Barracks tier without replacing human selection or input', () => {

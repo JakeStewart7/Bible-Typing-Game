@@ -1,5 +1,5 @@
-import { executeCommand } from '../src/stronghold/domain/actions.ts';
-import { updateCombat } from '../src/stronghold/domain/combat.ts';
+import { actionUnlockProblem, completePhrase, executeCommand } from '../src/stronghold/domain/actions.ts';
+import { rallyArmy, updateCombat } from '../src/stronghold/domain/combat.ts';
 import { EVENT_WORD_POOLS } from '../src/stronghold/domain/event-phrases.ts';
 import { connectedRelays, relayNeighbors, updateLogistics } from '../src/stronghold/domain/logistics.ts';
 import { moveUnitToward, wallBetween, wallContains, WALL_HALF_WIDTH } from '../src/stronghold/domain/navigation.ts';
@@ -11,13 +11,108 @@ import { addBuilding, addUnit, createStronghold } from './stronghold-fixtures.ts
 import { queuedUnits, TRAINING_SECONDS } from '../src/stronghold/domain/training.ts';
 import { PHRASE_LENGTHS } from '../src/stronghold/domain/types.ts';
 import { wheelZoom } from '../src/stronghold/ui/map-camera.ts';
-import { relayPreviewMarkup, resourceChunkMarkup } from '../src/stronghold/ui/battlefield.ts';
+import { carriedResourcePosition, relayPreviewMarkup, resourceChunkMarkup } from '../src/stronghold/ui/battlefield.ts';
+import { formatBattleTime } from '../src/stronghold/ui/view.ts';
 import { equal, test } from './harness.ts';
 
 function rejects(run: () => void, text: string): void {
   try { run(); } catch (error) { equal(error instanceof Error && error.message.includes(text), true); return; }
   throw new Error(`Expected rejection: ${text}`);
 }
+
+test('Stronghold locked construction cannot be selected or receive partial or completed typing work', () => {
+  for (const action of ['barracks', 'tower'] as const) for (const tier of [1, 2, 3]) {
+    const state = createStronghold({ resources: 1000, length: 'medium', computersPaused: true });
+    const player = state.players[0]!;
+    state.tier = tier - 1;
+    executeCommand(state, player, { type: 'ROLE', role: action === 'barracks' ? 'production' : 'defenses' });
+    const before = structuredClone(state);
+    rejects(() => executeCommand(state, player, { type: 'ACTION', action, tier }), `tier ${tier}`);
+    equal(state, before);
+    player.action = action;
+    player.constructionTier = tier;
+    const locked = structuredClone(state);
+    for (const text of [player.phrase.slice(0, 2), player.phrase]) {
+      rejects(() => executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text }), `tier ${tier}`);
+      equal(state, locked);
+    }
+    rejects(() => completePhrase(state, player), `tier ${tier}`);
+    equal(state, locked);
+    state.tier = tier;
+    equal(actionUnlockProblem(state, player), null);
+    executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+    equal(player.work > 0, true);
+  }
+});
+
+test('Stronghold manual retreat overrides combat and computer rally orders until arrival for every army type', () => {
+  for (const kind of ['warrior', 'archer', 'catapult'] as const) {
+    const state = createStronghold({ resources: 50, length: 'medium', computersPaused: true });
+    state.units = []; state.buildings = [];
+    const player = state.players[0]!;
+    executeCommand(state, player, { type: 'ROLE', role: 'army' });
+    const unit = addUnit(state, kind, { x: 500, y: 350 });
+    const enemy = addUnit(state, 'invader', { x: 490, y: 350 });
+    unit.attackTarget = { x: enemy.x, y: enemy.y };
+    const destination = { x: 530, y: 350 };
+    executeCommand(state, player, { type: 'MOVE', ids: [unit.id], point: destination });
+    equal(unit.attackTarget, null);
+    for (let step = 0; unit.destination && step < 100; step++) {
+      rallyArmy(state, { x: 400, y: 350 });
+      equal(unit.destination, destination);
+      const x = unit.x;
+      updateCombat(state, .1);
+      equal(unit.x > x, true);
+      equal(unit.attackTarget, null);
+      equal(enemy.hp, enemy.maxHp);
+    }
+    equal(unit.destination, null);
+    equal(unit.manualMove, false);
+    enemy.x = unit.x - 10;
+    updateCombat(state, .1);
+    equal(enemy.hp < enemy.maxHp, true);
+  }
+});
+
+test('Stronghold manually retreating troops still route around walls and accept new destinations', () => {
+  const state = createStronghold({ resources: 50, length: 'medium', computersPaused: true });
+  state.units = []; state.buildings = [];
+  const player = state.players[0]!;
+  executeCommand(state, player, { type: 'ROLE', role: 'army' });
+  const unit = addUnit(state, 'warrior', { x: 500, y: 290 });
+  const wall = addBuilding(state, 'wall', { x: 500, y: 350 }, true);
+  executeCommand(state, player, { type: 'MOVE', ids: [unit.id], point: { x: 500, y: 410 } });
+  for (let step = 0; unit.destination && step < 200; step++) {
+    const previous = { x: unit.x, y: unit.y };
+    updateCombat(state, .1);
+    equal(wallContains(unit, wall, 9.9), false);
+    equal(wallBetween(state, previous, unit), undefined);
+  }
+  equal(unit.manualMove, false);
+  equal(distance(unit, { x: 500, y: 410 }) < 5, true);
+  executeCommand(state, player, { type: 'MOVE', ids: [unit.id], point: { x: 600, y: 410 } });
+  const before = unit.x;
+  updateCombat(state, .1);
+  equal(unit.x > before, true);
+});
+
+test('Stronghold carried supplies sit ahead in all movement directions without moving free deliveries', () => {
+  const chunk = { id: 1, x: 100, y: 200, amount: 4, rich: false, carrier: 2, target: null };
+  for (const direction of [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }, { x: -3, y: 4 }]) {
+    const position = carriedResourcePosition(chunk, direction);
+    equal(Math.round(distance(chunk, position)), 12);
+    equal((position.x - chunk.x) * direction.x + (position.y - chunk.y) * direction.y > 0, true);
+    equal(carriedResourcePosition({ ...chunk, carrier: null }, direction), { x: 100, y: 200 });
+  }
+  equal(carriedResourcePosition(chunk), { x: 112, y: 200 });
+  equal(carriedResourcePosition(chunk, { x: 0, y: 0 }), { x: 112, y: 200 });
+});
+
+test('Stronghold battle timer displays whole seconds and continues counting past an hour', () => {
+  for (const [seconds, label] of [[0, '0:00'], [.99, '0:00'], [1, '0:01'], [59.99, '0:59'], [60, '1:00'], [3661, '61:01']] as const) {
+    equal(formatBattleTime(seconds), label);
+  }
+});
 
 test('Stronghold event drills are unique, length-correct and specific to each event', () => {
   const patterns = {

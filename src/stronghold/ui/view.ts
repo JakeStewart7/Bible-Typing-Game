@@ -2,7 +2,7 @@ import { requireElement } from '../../shared/dom.ts';
 import { BUILDING_CAPS, EVENT_LABELS, ROLE_ACTIONS, TIER_MAX, UNIT_CAPS } from '../domain/rules.ts';
 import { tierProgress } from '../domain/tier-progress.ts';
 import { taskCost, taskWork, upgradeLimit } from '../domain/technology.ts';
-import { actionProblem } from '../domain/actions.ts';
+import { actionProblem, actionUnlockProblem } from '../domain/actions.ts';
 import { taskKey } from '../domain/tasks.ts';
 import { PHRASE_LENGTHS, ROLES, UPGRADE_TARGETS, type StrongholdSnapshot } from '../domain/types.ts';
 import { createMapCamera } from './map-camera.ts';
@@ -37,7 +37,7 @@ export function strongholdElements() {
       });
       return { role, element, buttons };
     });
-    return { id, card, groups, roleSelect: requireElement(`stronghold-role-${id}`, HTMLSelectElement),
+    return { id, card, groups, roleButtons: ROLES.map(role => ({ role, element: requireElement(`stronghold-role-${id}-${role}`, HTMLButtonElement) })),
       name: requireElement(`stronghold-name-${id}`, HTMLElement),
       typed: requireElement(`stronghold-typed-${id}`, HTMLElement), progress: requireElement(`stronghold-progress-${id}`, HTMLElement),
       progressLabel: requireElement(`stronghold-progress-label-${id}`, HTMLElement),
@@ -59,6 +59,7 @@ export function strongholdElements() {
     worldEvent: requireElement('stronghold-world-event', HTMLElement),
     computerButtons: ['stronghold-computers', 'stronghold-tier-computers'].map(id => requireElement(id, HTMLButtonElement)),
     nextWave: requireElement('stronghold-next-wave', HTMLButtonElement),
+    timer: requireElement('stronghold-timer', HTMLTimeElement),
     devSeason: requireElement('stronghold-dev-season', HTMLSelectElement),
     nextNight: requireElement('stronghold-next-night', HTMLButtonElement),
     nextDay: requireElement('stronghold-next-day', HTMLButtonElement),
@@ -69,6 +70,10 @@ export function strongholdElements() {
 }
 export type StrongholdElements = ReturnType<typeof strongholdElements>;
 const textElements = new Map<string, HTMLElement>();
+export function formatBattleTime(elapsed: number): string {
+  const seconds = Math.floor(elapsed);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+}
 function text(id: string, value: string): void {
   let element = textElements.get(id);
   if (!element?.isConnected) { element = requireElement(id, HTMLElement); textElements.set(id, element); }
@@ -90,6 +95,8 @@ export function renderStronghold(
   elements.nextWave.disabled = !running || snapshot.phase !== 'playing';
   const environmentDisabled = !running || snapshot.phase !== 'playing';
   const period = daylight(snapshot.environmentElapsed).period;
+  setText(elements.timer, formatBattleTime(snapshot.elapsed));
+  setAttribute(elements.timer, 'datetime', `PT${Math.floor(snapshot.elapsed)}S`);
   elements.devSeason.disabled = environmentDisabled;
   if (elements.devSeason.value !== snapshot.season) elements.devSeason.value = snapshot.season;
   elements.nextNight.disabled = environmentDisabled || period === 'night';
@@ -129,7 +136,7 @@ export function renderStronghold(
     elements.screen.dataset.cursorMode = cursorMode;
   }
   elements.placement.classList.toggle('is-hidden', !placing || terminal);
-  const inputDisabled = !running || terminal;
+  const inputDisabled = !running || terminal || (!challenge && Boolean(actionUnlockProblem(snapshot, self)));
   if (elements.input.disabled !== inputDisabled) elements.input.disabled = inputDisabled;
   setAttribute(elements.length, 'aria-activedescendant', `stronghold-length-${self.length}`);
   setAttribute(elements.length, 'aria-disabled', String(!running || terminal));
@@ -162,9 +169,11 @@ export function renderStronghold(
       setAttribute(progressBar, 'aria-valuetext', challenge ? `${displayPercent}% of shared tier progress` : bank.description);
     }
     setText(entry.progressLabel, challenge ? `${displayPercent}%` : bank.label);
-    if (entry.roleSelect.value !== player.role) entry.roleSelect.value = player.role;
     const roleDisabled = !own || challenge || terminal || !running;
-    if (entry.roleSelect.disabled !== roleDisabled) entry.roleSelect.disabled = roleDisabled;
+    for (const button of entry.roleButtons) {
+      setAttribute(button.element, 'aria-pressed', String(button.role === player.role));
+      button.element.disabled = roleDisabled;
+    }
     for (const group of entry.groups) {
       group.element.classList.toggle('is-hidden', group.role !== player.role);
       for (const button of group.buttons) {
@@ -182,7 +191,7 @@ export function renderStronghold(
         button.element.classList.toggle('is-unavailable', tierLocked || capped || Boolean(purchaseProblem));
         button.element.classList.toggle('is-tier-locked', tierLocked);
         button.lockIcon?.classList.toggle('is-hidden', !tierLocked);
-        const disabled = !own || !running || challenge || terminal || (!button.miniBar && tierLocked) || capped || Boolean(purchaseProblem);
+        const disabled = !own || !running || challenge || terminal || tierLocked || capped || Boolean(purchaseProblem);
         if (button.element.disabled !== disabled) button.element.disabled = disabled;
         const selectedAction = own && relayPlacement ? button.action === 'relay' : Boolean(button.miniBar) && button.action === player.action
           && (!button.tier || button.tier === player.constructionTier) && (!button.upgrade || button.upgrade === player.upgradeTarget);
@@ -190,7 +199,7 @@ export function renderStronghold(
         setAttribute(button.element, 'aria-pressed', String(selectedAction));
         const label = button.element.querySelector('.stronghold-action-label')?.textContent ?? button.action;
         const description = unaffordable ? `Need ${cost} shared supplies; ${Math.floor(snapshot.resources)} available (${Math.ceil(cost - snapshot.resources)} short).`
-          : tierLocked ? `${button.miniBar ? 'Prepare work now; placement requires' : 'Requires'} Tier ${button.minimumTier}.`
+          : tierLocked ? `Requires Tier ${button.minimumTier}.`
           : purchaseProblem ?? (cost > 0 ? `Costs ${cost} shared supplies.` : 'Complete phrases to prepare this task.');
         setAttribute(button.element, 'aria-description', description);
         setAttribute(button.element, 'data-tooltip', `${label}. ${description} (Alt+${button.element.dataset.shortcut})`);

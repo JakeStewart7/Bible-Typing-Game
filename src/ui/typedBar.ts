@@ -15,7 +15,6 @@ export function renderTypedBar(container: HTMLElement, game: Game): void {
 
     if (wi < words.length - 1) {
       span.classList.add('completed');
-      span.textContent = w + ' ';
     } else {
       if (w.length === 0) {
         span.classList.add('current');
@@ -23,8 +22,15 @@ export function renderTypedBar(container: HTMLElement, game: Game): void {
       } else {
         span.classList.add('current');
         if (!isCorrect) span.classList.add('incorrect');
-        span.textContent = w;
       }
+    }
+    const text = w + (wi < words.length - 1 ? ' ' : '');
+    for (let index = 0; index < text.length; index++) {
+      const letter = document.createElement('span');
+      letter.className = 'typed-letter';
+      if (text[index] !== expected[pos + index]) letter.classList.add('incorrect');
+      letter.textContent = text[index] ?? '';
+      span.appendChild(letter);
     }
 
     container.appendChild(span);

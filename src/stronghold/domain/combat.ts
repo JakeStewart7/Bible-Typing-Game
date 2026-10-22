@@ -22,6 +22,15 @@ function updateUnit(state: StrongholdState, unit: Unit, seconds: number): void {
   const rule = UNIT_RULES[unit.formation ?? unit.kind];
   if (rule.damage === 0 || unit.hp <= 0) return;
   unit.cooldown = Math.max(0, unit.cooldown - seconds);
+  if (unit.kind !== 'invader' && unit.manualMove && unit.destination) {
+    unit.attackTarget = null;
+    moveUnitToward(state, unit, unit.destination, seconds * rule.speed);
+    if (distance(unit, unit.destination) < 5) {
+      unit.destination = null;
+      unit.manualMove = false;
+    }
+    return;
+  }
   const enemies = state.units.filter(other => other.hp > 0 && (unit.kind === 'invader' ? other.kind !== 'invader' : other.kind === 'invader'));
   const buildings = state.buildings.filter(building => building.hp > 0 && building.enemy === (unit.kind !== 'invader'));
   let target: Target | undefined;
@@ -113,6 +122,6 @@ export function updateCombat(state: StrongholdState, seconds: number): void {
 
 export function rallyArmy(state: StrongholdState, point = ENEMY_BASE): void {
   for (const unit of state.units) {
-    if (isFighter(unit)) unit.destination = { ...point };
+    if (isFighter(unit) && !unit.manualMove) unit.destination = { ...point };
   }
 }

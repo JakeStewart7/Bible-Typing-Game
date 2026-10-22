@@ -7,8 +7,8 @@ Choose **Stronghold** from the main menu or sidebar to play a local cooperative
 typing strategy game with three simulated teammates. The full-screen battlefield
 follows the Paint design: borderless bright-green map, gray castle, colored shape-coded
 units, upper-right population/resource HUD, central hexagonal **Tier Up** button,
-and four colored player panels along the bottom. Switch Player 1's role dropdown
-between Economy, Army, Unit Control, and Defenses to join that role.
+and four colored player panels along the bottom. Switch Player 1's role with the
+coin (Economy), sword (Army), cursor (Unit Control), and castle (Defenses) buttons.
 Players on the same role contribute completed entries to a shared task work bar;
 each finished task costs and rewards supplies only once. Each player keeps an
 independent phrase, text box, display, length setting and typing progress.
@@ -20,7 +20,9 @@ the bottom panels. Focus returns to its input after game buttons, role/length
 changes, map gestures and new entries, without interrupting an open dropdown.
 Unit Control can also type for supplies, and typing stays available while a
 building is ready for placement or your tier contribution is finished.
-Only pause, hidden/inactive gameplay and a finished match disable the input.
+Pause, hidden/inactive gameplay, a finished match, or a tier-locked task disable the input.
+Mistyped letters in both the prompt and input have vibrant pink-red highlighting
+and a strike-through; correct letters remain unmarked in the input.
 Unit Control can select and move gatherers and builders as well as troops.
 After reaching a manual destination, gatherers and builders wait two seconds,
 then automatically resume the nearest resource, construction or repair job.
@@ -78,9 +80,10 @@ white/gray panel backgrounds remain unchanged.
 The Stronghold typing cursor snaps directly to the current character without
 animated travel or a movement speed limit.
 
-Joining **Army** selects its saved Barracks work rather than an invisible Supplies
-task. Building tiles can be selected and filled before their tier unlocks; a
-**Place at Tier N** hint distinguishes preparing work from permission to place.
+Joining **Army** after Tier 1 unlocks selects its saved Barracks work rather than
+an invisible Supplies task. At Tier 0, Army types for supplies until construction
+unlocks. Locked building tiles cannot be selected, cycled to, or typed for by
+humans or simulated teammates.
 Simulated teammates help with that selected work without switching your task.
 Ready work is preserved through tier challenges, and placement unlocks only at
 the building's required tier.
@@ -111,9 +114,12 @@ seasonal maps, with an independent **25% chance per season**. Consecutive repeat
 are possible; a Dev options season override does not pin future matches. Only resource
 node positions change: every layout keeps six standard nodes, two rich nodes,
 and 7,200 total supplies, with the same bases, troops and rules. Spring uses light
-green grass and pastel flowers floating slowly sideways in the breeze, summer deep green grass and softly drifting light motes,
-fall light brown ground and autumn-colored triangles, and winter blue-white
-ground and softly fading snow circles. Leaves randomly use red, orange, yellow
+green grass and pastel flowers fading in and out along one shared, randomly chosen
+breeze direction, with a faster drift. Summer uses deep green grass and light motes
+blowing right, gently undulating and pulsing as they catch the light.
+Fall uses light brown ground and slowly falling autumn-colored triangles that sway
+back and forth; winter has blue-white ground and snow circles that fade before
+reaching the bottom. Leaves randomly use red, orange, yellow
 or brown. A fixed pool of 36 decorative particles spans the entire battlefield,
 with staggered phases; spring flowers and summer motes are spread across both axes
 rather than falling from the top. Weather
@@ -200,9 +206,9 @@ Economy orders its options **Gatherer, Relay, Supplies**, then Upgrade.
 The compact forest-green and brass command bar reserves more room for the map.
 All four player panels stay within the bottom dock; narrow
 screens use a two-by-two layout, with scrolling inside action lists when needed.
-**Tab** cycles forward through the current role's typing and placement tasks;
+**Tab** cycles forward through the current role's unlocked typing and placement tasks;
 **Shift+Tab** cycles backward, wrapping at either end and returning focus to typing.
-Troop purchases and upgrades are excluded, so cycling never spends supplies.
+Locked tasks, troop purchases and upgrades are excluded, so cycling never spends supplies.
 Unit Control explicitly reminds players that typing produces shared supplies.
 Tab retains normal focus navigation in menus, dropdowns, Dev options and tier challenges.
 Button shortcuts appear instantly on hover rather than taking up tile space.
@@ -223,7 +229,8 @@ resource nodes, collect a blue chunk (standard) or purple chunk (rich), then car
 it to the nearest completed relay or castle before harvesting again. Relays forward deposited
 chunks to the castle through links no more than 155 map units apart; destroying a
 relay interrupts deliveries until the route is restored. Cargo keeps its origin
-color while carried, regardless of mining upgrades. Active relay deliveries use
+color while carried, regardless of mining upgrades, and sit ahead of the gatherer
+in its movement direction, retaining that facing while stopped. Active relay deliveries use
 neutral-colored glowing chunks and muted links; disconnected cargo does not glow.
 Faint radius rings mark friendly relays, including unfinished ones, and the castle.
 Hover a relay or the castle, or preview a new relay, to highlight completed living connections
@@ -255,7 +262,8 @@ Friendly and opposing units of the same formation share base health, damage,
 range and speed; enemy waves no longer add hidden health or damage bonuses.
 Movement remains slow, and troop upgrades still improve your units.
 Both bases have **4,000 HP**; enemy tier upgrades do not increase that maximum
-or heal damage. Archers on both sides bob slowly, even while standing or firing.
+or heal damage. Archers on both sides bob even while standing or firing, with
+a 25% faster bobbing cycle.
 Builders bob quickly only while building or repairing. Building and gathering
 use silver-white sparks and a soft shimmer; warriors use silver with a dark steel outline, and combat uses an ember-colored jagged
 strike and expanding slash burst. Enemy attacks show only the explosion, without
@@ -280,8 +288,8 @@ hidden between events.
 Matches start at **Tier 0**, with T1 starting units and buildings.
 The first challenge advances to Tier 1, unlocking T1 barracks, warrior training
 and tower construction; prepared construction work is preserved.
-The gold **Tier Up** hexagon hangs 40% below the header with a subtle depth
-shadow. It pauses the battle for one shared challenge:
+The gold **Tier Up** hexagon is top-aligned inside the command bar with a subtle
+depth shadow. It pauses the battle for one shared challenge:
 500 correct characters shared by the squad, credited only when a whole phrase
 is completed correctly. Partial and incorrect input add no progress, and length
 bonuses do not apply. The first challenge uses letters, the next adds numbers, and the last
@@ -328,6 +336,8 @@ base develops. Select troops with
 click/Shift-click, drag a selection rectangle (Shift adds to the selection), or
 **Select all troops**, then **right-click** the battlefield or use **Defend** / **Assault
 base**. **Set rally on map** makes the next map click the production rally point.
+Manual movement takes priority over enemy pursuit and automatic rally orders
+until arrival, allowing troops to retreat from combat; normal fighting then resumes.
 No coordinate fields are needed. Destroy the enemy
 stronghold before invading waves destroy yours.
 Left-clicking empty ground clears the selection without moving units.
@@ -337,7 +347,11 @@ The browser context menu is suppressed inside Stronghold, including while paused
 The game pauses when you leave the mode, hide the tab, or select **Pause**.
 The complete simulation and UI refresh on animation frames at a 60 Hz target;
 SVG entities and teammate cards are retained rather than rebuilt each frame.
-**New game** resets the match. Local matches are not saved across reloads.
+The command bar's battle timer pauses with gameplay and during tier challenges,
+and freezes on victory or defeat. **New game** and **Build again** reset the match,
+timer, typing, role/task progress, selections, placement and wall rotation, history,
+camera, weather animations, and open panels using the saved new-match defaults.
+Local matches are not saved across reloads.
 No additional dependencies or downloads are needed.
 
 `src/stronghold/domain/` implements the authoritative simulation with explicit

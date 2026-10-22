@@ -5,7 +5,8 @@ import { setAttribute } from './dom-updates.ts';
 export const AUTUMN_LEAF_COLORS: readonly string[] = Object.freeze(['#c84b3d', '#e78b32', '#e4bc4c', '#8b5d3d']);
 
 export function weatherMarkup(random: () => number = Math.random): string {
-  return `<div class="stronghold-weather" aria-hidden="true">${Array.from({ length: 36 }, (_, index) => {
+  const breeze = random() * Math.PI * 2;
+  return `<div class="stronghold-weather" aria-hidden="true" style="--breeze-x:${(Math.cos(breeze) * 160).toFixed(2)}px;--breeze-y:${(Math.sin(breeze) * 160).toFixed(2)}px">${Array.from({ length: 36 }, (_, index) => {
     const duration = 9 + index % 4 * 1.5;
     const color = AUTUMN_LEAF_COLORS[Math.floor(random() * AUTUMN_LEAF_COLORS.length)];
     if (!color) throw new Error('Leaf colors require a random value from zero up to, but not including, one.');

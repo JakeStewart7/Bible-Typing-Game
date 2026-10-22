@@ -30,7 +30,7 @@ export function unitMotionTransform(unit: Unit, previous: Point | undefined, ela
   if (reducedMotion) return '';
   const active = actionActive(unit);
   const archer = unit.kind === 'archer' || (unit.kind === 'invader' && unit.formation === 'archer');
-  const bob = archer ? `translate(0 ${Math.sin(elapsed * 2.2 + unit.id) * 2.5})` : '';
+  const bob = archer ? `translate(0 ${Math.sin(elapsed * 2.75 + unit.id) * 2.5})` : '';
   if (active && unit.kind === 'builder') return `translate(0 ${Math.sin(elapsed * 24 + unit.id) * 1.25})`;
   if (active && unit.kind === 'worker') return 'scale(1.04)';
   if (active) return `${bob ? bob + ' ' : ''}scale(1.15)`;
@@ -76,6 +76,12 @@ export function relayPreviewMarkup(snapshot: Pick<StrongholdSnapshot, 'buildings
 }
 export function resourceChunkMarkup(chunk: Pick<ResourceChunk, 'rich'>, transporting: boolean): string {
   return `<rect x="-4" y="-4" width="8" height="8" fill="${transporting ? '#bdc9c2' : chunk.rich ? '#a64caf' : '#00aeef'}" stroke="#263c33" stroke-width="1"${transporting ? ' filter="url(#stronghold-resource-glow)"' : ''}/><desc></desc>`;
+}
+export function carriedResourcePosition(chunk: ResourceChunk, direction?: Point): Point {
+  if (chunk.carrier === null) return { x: chunk.x, y: chunk.y };
+  const length = direction ? Math.hypot(direction.x, direction.y) : 0;
+  return { x: chunk.x + (direction && length > 0 ? direction.x / length : 1) * 12,
+    y: chunk.y + (direction && length > 0 ? direction.y / length : 0) * 12 };
 }
 function relayLinks(snapshot: StrongholdSnapshot): string {
   const connected = connectedRelays(snapshot);
@@ -143,6 +149,7 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
   let elapsed = 0;
   let selectionColor = '#ffb3c9';
   const previousUnits = new Map<number, Point>();
+  const unitDirections = new Map<number, Point>();
   let connectedRelayIds = new Set<number>();
   const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
   const renderCoverage = createSvgLayer<Building>(layer('coverage'), () =>
@@ -197,7 +204,7 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
   }, node => String(node.rich));
   const transporting = (chunk: ResourceChunk) => chunk.carrier === null && chunk.target !== null && connectedRelayIds.has(chunk.target);
   const renderChunks = createSvgLayer<ResourceChunk>(layer('chunks'), chunk => resourceChunkMarkup(chunk, transporting(chunk)), (element, chunk) => {
-    position(element, { x: chunk.x + (chunk.carrier === null ? 0 : 12), y: chunk.y });
+    position(element, carriedResourcePosition(chunk, chunk.carrier === null ? undefined : unitDirections.get(chunk.carrier)));
     setAttribute(element, 'data-resource-chunk', String(chunk.id));
     setAttribute(element, 'data-transporting', String(transporting(chunk)));
     describe(element, `${chunk.amount} ${chunk.rich ? 'rich' : 'standard'} supplies${chunk.carrier !== null ? ', carried by gatherer' : transporting(chunk) ? ', relay delivery' : ', waiting for a relay connection'}`);
@@ -205,14 +212,21 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
   let linkSignature = '';
   const links = layer('links');
   const rally = layer('rally');
-  return (snapshot: StrongholdSnapshot, selected: ReadonlySet<number>): void => {
+  const render = (snapshot: StrongholdSnapshot, selected: ReadonlySet<number>): void => {
     selection = selected;
     technology = snapshot;
     elapsed = snapshot.elapsed;
     const self = snapshot.players.find(player => player.id === snapshot.selfId);
     if (self) selectionColor = playerTheme(self.color).light;
     const livingUnits = new Set(snapshot.units.map(unit => unit.id));
-    for (const id of previousUnits.keys()) if (!livingUnits.has(id)) previousUnits.delete(id);
+    for (const id of previousUnits.keys()) if (!livingUnits.has(id)) { previousUnits.delete(id); unitDirections.delete(id); }
+    for (const unit of snapshot.units) {
+      const previous = previousUnits.get(unit.id);
+      if (previous && distance(unit, previous) > .001) unitDirections.set(unit.id, { x: unit.x - previous.x, y: unit.y - previous.y });
+      else if (!unitDirections.has(unit.id) && unit.destination && distance(unit, unit.destination) > .001) {
+        unitDirections.set(unit.id, { x: unit.destination.x - unit.x, y: unit.destination.y - unit.y });
+      }
+    }
     const signature = snapshot.buildings.filter(building => building.kind === 'castle' || building.kind === 'relay')
       .map(building => `${building.id}:${building.x}:${building.y}:${building.hp > 0}:${building.progress === 1}`).join('|');
     if (signature !== linkSignature) {
@@ -225,4 +239,10 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     renderBuildings(snapshot.buildings); renderUnits(snapshot.units);
     position(rally, snapshot.rally);
   };
+  return Object.assign(render, { reset(): void {
+    previousUnits.clear();
+    unitDirections.clear();
+    linkSignature = '';
+    connectedRelayIds.clear();
+  } });
 }

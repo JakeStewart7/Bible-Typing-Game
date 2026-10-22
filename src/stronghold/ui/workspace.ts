@@ -9,6 +9,12 @@ import { creditsMarkup } from './credits.ts';
 import { isArmyUnit } from '../domain/training.ts';
 
 export const PLAYER_IDS = ['you', 'bot-1', 'bot-2', 'bot-3'] as const;
+const ROLE_ICONS: Record<Role, string> = {
+  economy: '<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 4 16 4 16 0V6M4 12v6c0 4 16 4 16 0v-6"/>',
+  production: '<path d="m15 3 6 0 0 6-10 10-6-6Z M4 12l8 8 M3 21l5-5"/>',
+  army: '<path d="m5 3 15 10-7 1-3 7Z"/>',
+  defenses: '<path d="M3 21V5h4v4h3V3h4v6h3V5h4v16ZM10 21v-6h4v6"/>'
+};
 const LOCK_ICON = '<svg class="stronghold-lock is-hidden" data-tier-lock viewBox="0 0 16 18" aria-hidden="true"><path d="M4 8V5a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2"/><rect x="2" y="7" width="12" height="10" rx="1" fill="currentColor"/></svg>';
 function tile(action: Action, label: string, tier: number | undefined, shortcut: string): string {
   return `<button type="button" class="stronghold-build-tile${COSTS[action] > 0 ? ' has-cost' : ''}" data-action="${action}"${tier ? ` data-tier="${tier}"` : ''} data-min-tier="${tier ?? MIN_TIER[action]}" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}">
@@ -35,8 +41,8 @@ function roleActions(role: Role): string {
 function playerCard(id: string, index: number): string {
   return `<section class="stronghold-player" data-player="${id}">
     <div class="stronghold-player-frame">
-      <header><h3>Player ${index + 1}</h3><label class="sr-only" for="stronghold-role-${id}">Player ${index + 1} role</label>
-      <select id="stronghold-role-${id}" class="stronghold-role-select" data-player="${id}">${ROLES.map(role => `<option value="${role}">${ROLE_LABELS[role]}</option>`).join('')}</select></header>
+      <header><h3>Player ${index + 1}</h3>
+      <div class="stronghold-role-buttons" role="group" aria-label="Player ${index + 1} role">${ROLES.map(role => `<button id="stronghold-role-${id}-${role}" type="button" data-role-button="${role}" aria-label="${ROLE_LABELS[role]}" aria-pressed="false" data-tooltip="${ROLE_LABELS[role]}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">${ROLE_ICONS[role]}</svg></button>`).join('')}</div></header>
       <small id="stronghold-name-${id}" class="sr-only"></small>
       <div class="stronghold-player-progress" role="progressbar" aria-label="Player ${index + 1} selected task progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="stronghold-work-track"><div id="stronghold-progress-${id}"></div></div><span id="stronghold-progress-label-${id}" class="stronghold-progress-label">0%</span></div>
       <div class="stronghold-player-actions" id="stronghold-player-actions-${id}">${ROLES.map(role => `<div class="stronghold-actions" data-role="${role}">${roleActions(role)}</div>`).join('')}</div>
@@ -68,6 +74,7 @@ export function strongholdWorkspaceMarkup(): string {
         </div>
       </aside>
       <div class="stronghold-utilities">
+      <span class="stronghold-match-clock" title="Battle time; pauses during tier challenges"><span class="sr-only">Battle time: </span><time id="stronghold-timer" datetime="PT0S">0:00</time></span>
       <details class="stronghold-guide"><summary>Help</summary>
         <div class="stronghold-guide-content">
         <div class="stronghold-legend"><span>Dark red: enemies</span><span>□ Warrior</span><span>◇ Archer</span><span>▲ Catapult</span><span>△ Builder</span><span>○ Gatherer</span></div>
@@ -75,12 +82,13 @@ export function strongholdWorkspaceMarkup(): string {
         <p>Relays need no typing: select Relay and click the map to place its shadow. Other buildings need a full work bar first. Escape cancels placement. Builders construct and repair automatically.</p>
         <p>Use Rotate or Alt+R before placing a wall to turn it 45 degrees. In Defenses, click an existing friendly wall to show its angle and Rotate button; Done or Escape finishes editing. Shift-click also rotates immediately. Walls block all units; enemies go around them or attack a wall if there is no route.</p>
         <p>Gatherers carry blue or purple chunks matching their resource node to the nearest relay or castle. Neutral glowing chunks travel through completed relay links. Faint rings show relay and castle range, including relays still under construction. Hover either, or place a relay, to highlight nearby completed connections within 155 map units, including the castle. Green previews reach the castle network; amber previews are disconnected. Purple nodes yield twice as much. Broken connections stop relay deliveries.</p>
-        <p>In Unit Control, left-click or drag to select friendly units, right-click to move, and left-click empty ground to deselect. Shift adds units. Right-click cancels placement or rally targeting; left-click places the building or rally point. A plus badge on the cursor shows targeting mode.</p>
+        <p>In Unit Control, left-click or drag to select friendly units, right-click to move, and left-click empty ground to deselect. Shift adds units. Manual move orders take priority over combat and automatic rally orders until arrival; units then resume fighting. Right-click cancels placement or rally targeting; left-click places the building or rally point. A plus badge on the cursor shows targeting mode.</p>
         <p>Gatherers and builders resume nearest work after two idle seconds at their destination. Builders and walls cost no supplies, only typing work.</p>
         <p>Supplies, Gatherers, Barracks, Builders, Walls and Towers need typing, not supplies. Each typing option has a small progress bar; select it to show its progress in the main player-colored bar. More expensive buildings fill more slowly. Excess progress from a completed entry carries into the next bar. Once construction is ready, further entries do not bank more completions. Troops, upgrades and relays cost supplies without typing.</p>
-        <p>Every match starts at Tier 0, with T1 starting units and buildings. Complete the first shared tier challenge to unlock T1 Barracks and towers. Army selects Barracks work when you join. Fill the work bar, then click the map to place once its tier is unlocked. Teammates help with the same selected work, and prepared work survives tier challenges. Unit Control can type for supplies while issuing orders.</p>
+        <p>Every match starts at Tier 0, with T1 starting units and buildings. Complete the first shared tier challenge to unlock T1 Barracks and towers. Locked tasks cannot be selected or typed for. Army types for supplies at Tier 0 and selects Barracks work when you join after unlocking T1. Fill the work bar, then click the map to place. Teammates help with the same selected work, and prepared work survives tier challenges. Unit Control can type for supplies while issuing orders.</p>
         <p>Each typing task keeps its progress when you switch tasks or roles. Building tiers keep separate progress. Dev options sets the defaults for new matches.</p>
-        <p>Tab selects the next typing or placement task; Shift+Tab selects the previous one, wrapping through your role's tasks without buying troops or upgrades. In menus and dropdowns, Tab keeps its normal focus behavior.</p>
+        <p>Use the coin, sword, cursor and castle buttons to switch between Economy, Army, Unit Control and Defenses. Tab selects the next unlocked typing or placement task; Shift+Tab selects the previous one, skipping locked tasks without buying troops or upgrades. In menus, Tab keeps its normal focus behavior.</p>
+        <p>The command bar timer shows battle time, stopping during pauses, tier challenges and the match outcome. Build again and New game reset the battlefield, timer, typing, selections and camera using your saved new-match defaults.</p>
         <p>Arrow keys pan the map. Page Up selects longer text and Page Down shorter text, or click a length option. Shift+arrows still selects typed text. Alt+number chooses the matching displayed option in your current role.</p>
         <p>The map starts zoomed toward the home base. Scroll to zoom; Alt-drag, middle-drag or arrow keys pan. Moving the pointer to a map edge does not scroll. Right-click moves units or cancels placement, never pans. Shift-drag still adds troops to your selection.</p>
         <p>Stop computers pauses simulated teammates and their barracks, not the battlefield. Resume them to finish a shared tier challenge.</p>

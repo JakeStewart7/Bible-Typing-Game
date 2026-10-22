@@ -236,6 +236,19 @@ test('Stronghold weather uses a fixed small decorative particle pool instead of 
   }
 });
 
+test('Stronghold spring flowers share one randomly chosen breeze direction across the particle pool', () => {
+  const directions = [0, .25, .5, .75].map(sample => {
+    const markup = weatherMarkup(() => sample);
+    equal((markup.match(/--breeze-x:/g) ?? []).length, 1);
+    equal((markup.match(/--breeze-y:/g) ?? []).length, 1);
+    const x = Number(/--breeze-x:([-\d.]+)px/.exec(markup)?.[1]);
+    const y = Number(/--breeze-y:([-\d.]+)px/.exec(markup)?.[1]);
+    equal(Math.round(Math.hypot(x, y)), 160);
+    return { x: Math.round(x), y: Math.round(y) };
+  });
+  equal(directions, [{ x: 160, y: 0 }, { x: 0, y: 160 }, { x: -160, y: 0 }, { x: 0, y: -160 }]);
+});
+
 test('Stronghold autumn leaves randomly choose red, orange, yellow or brown for each particle', () => {
   equal(Object.isFrozen(AUTUMN_LEAF_COLORS), true);
   equal(AUTUMN_LEAF_COLORS, ['#c84b3d', '#e78b32', '#e4bc4c', '#8b5d3d']);
@@ -247,9 +260,9 @@ test('Stronghold autumn leaves randomly choose red, orange, yellow or brown for 
   }
   let samples = 0;
   const markup = weatherMarkup(() => samples++ % AUTUMN_LEAF_COLORS.length / AUTUMN_LEAF_COLORS.length);
-  equal(samples, 36);
+  equal(samples, 37);
   equal([...markup.matchAll(/--leaf-color:(#[a-f0-9]+)/g)].map(match => match[1]),
-    Array.from({ length: 36 }, (_, index) => AUTUMN_LEAF_COLORS[index % AUTUMN_LEAF_COLORS.length]));
+    Array.from({ length: 36 }, (_, index) => AUTUMN_LEAF_COLORS[(index + 1) % AUTUMN_LEAF_COLORS.length]));
 });
 
 test('Stronghold seasonal movement applies equally to every friendly unit and enemy formation', () => {

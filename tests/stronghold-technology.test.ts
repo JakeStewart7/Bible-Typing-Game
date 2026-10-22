@@ -128,7 +128,7 @@ test('Stronghold sketch controls do not collide with Arcade upgrade selectors', 
   equal(markup.includes(' data-upgrade='), false);
   equal(markup.includes(' data-stronghold-upgrade="warrior"'), true);
   equal(markup.includes('data-tier="3"'), true);
-  equal(markup.includes('id="stronghold-role-you"'), true);
+  equal(markup.includes('id="stronghold-role-you-production"'), true);
 });
 
 test('Stronghold completed construction holds one bar and requires refilling after every free wall', () => {

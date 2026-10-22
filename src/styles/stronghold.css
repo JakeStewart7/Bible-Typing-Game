@@ -39,20 +39,37 @@
   animation: stronghold-weather-drift var(--weather-duration) var(--weather-delay) linear infinite;
 }
 [data-weather-running="false"] .stronghold-weather-particle { animation-play-state: paused; }
-[data-season="fall"] .stronghold-weather-particle { width: 12px; height: 13px; border-radius: 0; background: var(--leaf-color); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+[data-season="fall"] .stronghold-weather-particle {
+  width: 12px; height: 13px; border-radius: 0; background: var(--leaf-color); clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  animation-name: stronghold-autumn-leaf; animation-duration: calc(var(--weather-duration) * 2.2); animation-delay: calc(var(--weather-delay) * 2.2);
+}
+@keyframes stronghold-autumn-leaf {
+  0% { top: -16px; opacity: 0; transform: translateX(0) rotate(-25deg); }
+  15% { opacity: .5; }
+  20% { transform: translateX(18px) rotate(30deg); }
+  40% { transform: translateX(-14px) rotate(-28deg); }
+  60% { transform: translateX(20px) rotate(32deg); }
+  80% { opacity: .4; transform: translateX(-12px) rotate(-24deg); }
+  100% { top: 100%; opacity: 0; transform: translateX(16px) rotate(24deg); }
+}
 [data-season="summer"] .stronghold-weather-particle {
   top: var(--weather-y); width: 3px; height: 3px; background: #fff4af;
   box-shadow: 0 0 5px 1px #fff7c866; border-radius: 50%;
-  animation-name: stronghold-summer-mote; animation-duration: calc(var(--weather-duration) * 3);
+  animation-name: stronghold-summer-mote; animation-duration: calc(var(--weather-duration) * 2); animation-delay: calc(var(--weather-delay) * 2);
 }
 @keyframes stronghold-summer-mote {
-  0%, 100% { opacity: 0; transform: translate(0, 8px); }
-  35% { opacity: .45; transform: translate(var(--weather-drift), -7px); }
-  70% { opacity: .2; transform: translate(6px, -18px); }
+  0% { opacity: 0; transform: translate(-80px, 4px) scale(.7); }
+  15% { opacity: .7; transform: translate(-47px, -6px) scale(1.2); }
+  30% { opacity: .15; transform: translate(-14px, 5px) scale(.8); }
+  45% { opacity: .65; transform: translate(19px, -7px) scale(1.15); }
+  60% { opacity: .15; transform: translate(52px, 6px) scale(.8); }
+  75% { opacity: .7; transform: translate(85px, -5px) scale(1.2); }
+  90% { opacity: .2; transform: translate(118px, 5px) scale(.8); }
+  100% { opacity: 0; transform: translate(140px, 0) scale(.7); }
 }
 [data-season="spring"] .stronghold-weather-particle {
   --petal: #f4a9ce; top: var(--weather-y); width: 17px; height: 17px; border-radius: 0;
-  animation-name: stronghold-spring-breeze; animation-duration: calc(var(--weather-duration) * 3); animation-delay: calc(var(--weather-delay) * 3);
+  animation-name: stronghold-spring-breeze; animation-duration: calc(var(--weather-duration) * 1.7); animation-delay: calc(var(--weather-delay) * 1.7);
   background: radial-gradient(circle at center, #fff0a9 0 16%, transparent 18%),
     radial-gradient(circle at 50% 25%, var(--petal) 0 24%, transparent 26%),
     radial-gradient(circle at 75% 50%, var(--petal) 0 24%, transparent 26%),
@@ -62,16 +79,17 @@
 [data-season="spring"] .stronghold-weather-particle:nth-child(3n) { --petal: #cab4ef; }
 [data-season="spring"] .stronghold-weather-particle:nth-child(3n + 1) { --petal: #fff2b1; }
 @keyframes stronghold-spring-breeze {
-  0% { opacity: 0; transform: translate(-48px, 8px) rotate(-12deg); }
-  20% { opacity: .35; }
-  35% { transform: translate(-16px, -6px) rotate(4deg); }
-  65% { opacity: .4; transform: translate(20px, 5px) rotate(-5deg); }
-  100% { opacity: 0; transform: translate(64px, -8px) rotate(12deg); }
+  0% { opacity: 0; transform: translate(0, 0) rotate(-12deg); }
+  20% { opacity: .5; }
+  35% { transform: translate(calc(var(--breeze-x) * .35), calc(var(--breeze-y) * .35)) rotate(4deg); }
+  65% { opacity: .55; transform: translate(calc(var(--breeze-x) * .65), calc(var(--breeze-y) * .65)) rotate(-5deg); }
+  100% { opacity: 0; transform: translate(var(--breeze-x), var(--breeze-y)) rotate(12deg); }
 }
 @keyframes stronghold-weather-drift {
   0% { top: -16px; opacity: 0; transform: translate(0, 0) rotate(-12deg); }
   20% { opacity: .4; }
-  65% { opacity: .25; }
+  55% { opacity: .25; }
+  80% { opacity: 0; }
   100% { top: 100%; opacity: 0; transform: translate(var(--weather-drift), 16px) rotate(24deg); }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -98,13 +116,14 @@
 #stronghold-map { position: absolute; top: var(--header-height); width: 100%; height: max(0px, calc(100% - var(--header-height) - var(--deck-height) - var(--typing-height))); cursor: crosshair; touch-action: none; user-select: none; }
 .stronghold-command-bar {
   position: relative; z-index: 6; height: var(--header-height); padding: 6px 12px;
-  display: grid; grid-template-columns: minmax(0, 1fr) 84px minmax(0, 1fr); grid-template-rows: 28px 24px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1fr); grid-template-rows: 28px 24px;
   grid-template-areas: "navigation . status" "utilities . status"; gap: 3px 12px;
   border-bottom: 2px solid #b29a5a; color: #f5ecd4;
   background: radial-gradient(ellipse at top, #50665a66, transparent 70%), linear-gradient(#304b40, #1c332b);
   box-shadow: inset 0 1px #f5e5b34d, 0 3px 8px #10251b40;
 }
 .stronghold-utilities { grid-area: utilities; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.stronghold-match-clock { font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .stronghold-map-unit { cursor: pointer; }
 .stronghold-map-toolbar { grid-area: navigation; display: flex; gap: 5px; align-items: center; min-width: 0; }
 .stronghold-map-toolbar .menu-navigation { width: auto; margin: 0; }
@@ -138,11 +157,11 @@
 .stronghold-symbol--builder { background: #a64caf; clip-path: polygon(50% 0, 100% 100%, 0 100%); position: relative; }
 .stronghold-symbol--builder::after { content: ''; position: absolute; inset: 5px 4px 3px; background: #cec0df; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
 .stronghold-symbol--tower { background: #ffd500; clip-path: polygon(0 0, 100% 0, 100% 30%, 65% 30%, 65% 100%, 35% 100%, 35% 30%, 0 30%); }
-.stronghold-tier-mount { position: absolute; top: calc(var(--header-height) - 50.4px); left: 50%; transform: translateX(-50%); width: 84px; height: 84px; filter: drop-shadow(0 4px 0 #574b25) drop-shadow(0 6px 4px #14271d66); }
+.stronghold-tier-mount { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 58px; height: 58px; filter: drop-shadow(0 2px 0 #574b25); }
 .stronghold-tier {
-  position: relative; width: 84px; height: 84px;
+  position: relative; width: 58px; height: 58px;
   z-index: 5; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
-  background: #9b7d34; border: none; border-radius: 0; padding: 16px 5px; font: var(--stronghold-font-weight) 16px/1.2 var(--stronghold-font); color: #382b12;
+  background: #9b7d34; border: none; border-radius: 0; padding: 10px 2px; font: var(--stronghold-font-weight) 12px/1.2 var(--stronghold-font); color: #382b12;
 }
 .stronghold-tier::before { content: ''; position: absolute; inset: 2px; background: linear-gradient(#fff6bd, #dfaf43); clip-path: inherit; }
 .stronghold-tier:not(:disabled):hover::before { background: #fff6ba; }
@@ -195,10 +214,14 @@
 .stronghold-squad { position: absolute; left: var(--squad-inset); right: var(--squad-inset); bottom: 7px; height: calc(var(--deck-height) - 7px); z-index: 3; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); gap: 6px; }
 .stronghold-player { --player-color: #ff1726; --player-fill: #ffb3c9; --player-text: #711e2b; color: var(--player-text); min-width: 0; min-height: 0; height: 100%; display: flex; flex-direction: column; }
 .stronghold-player-frame { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; border: 3px solid var(--player-color); border-radius: 0; padding: 5px; background: #e3e6e3; box-shadow: none; }
-.stronghold-player header { display: flex; justify-content: space-between; gap: 4px; align-items: center; }
+.stronghold-player header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px; align-items: center; }
 .stronghold-player h3 { color: var(--player-text); font: var(--stronghold-font-weight) clamp(12px, 1.25vw, 18px)/1.2 var(--stronghold-font); margin: 0; white-space: nowrap; }
-.stronghold-role-select { width: 60%; min-width: 0; min-height: 26px; height: 26px; border: 1px solid #8f9c93; border-radius: 0; background: #f2f4f2; color: var(--player-text); font: var(--stronghold-font-weight) 12px var(--stronghold-font); padding: 2px; }
-.stronghold-role-select:disabled { opacity: 1; color: var(--player-text); }
+.stronghold-role-buttons { display: flex; gap: 3px; }
+.stronghold-role-buttons button { display: grid; place-items: center; width: 26px; height: 26px; min-height: 26px; padding: 3px; border: 1px solid #8f9c93; border-radius: 1px; background: #f2f4f2; color: var(--player-text); box-shadow: none; transform: none; }
+.stronghold-role-buttons svg { width: 18px; height: 18px; }
+.stronghold-role-buttons button[aria-pressed="true"] { border-color: var(--player-bold); background: var(--player-fill); outline: 1px solid var(--player-bold); }
+.stronghold-role-buttons button:disabled { opacity: .5; }
+.stronghold-role-buttons button[aria-pressed="true"]:disabled { opacity: 1; }
 .stronghold-player-progress { position: relative; height: 20px; flex: 0 0 20px; align-self: stretch; min-width: 0; max-width: 100%; border: 2px solid var(--player-color); padding: 1px 0; margin: 4px 0; background: white; overflow: hidden; }
 .stronghold-progress-label { position: absolute; inset: 0; display: grid; place-items: center; color: var(--player-text); font-size: 11px; line-height: 1; text-shadow: 0 1px #fff; pointer-events: none; }
 .stronghold-task-progress { display: block; width: min(90px, calc(100% - 8px)); height: 10px; margin: 3px auto 0; border: 2px solid var(--player-color); background: white; overflow: hidden; }
@@ -239,13 +262,16 @@
 .stronghold-typing .progress-track { height: 4px; margin: 0; background: #dfd7bc; }
 .stronghold-typing .progress-track > div { background: var(--player-bold); transition: none; }
 .stronghold-typing .char.correct { color: var(--player-bold); background: transparent; }
-.stronghold-typing .char.error-highlight { color: var(--typing-error-ink); background: var(--typing-error-surface); }
+.stronghold-typing .char.error-highlight, .stronghold-typed-area .typed-letter.incorrect { color: #a00028; background: #ff9eb9; text-decoration: line-through; text-decoration-color: #e0003b; text-decoration-thickness: 2px; box-shadow: inset 0 -3px #ff1744, 0 0 0 1px #ff1744; }
 .stronghold-typed-area { grid-area: input; justify-self: stretch; margin: 0; position: relative; width: 100%; min-width: 0; }
-.stronghold-typed-area .typing-input { min-height: 30px; height: 30px; border: 1px solid var(--player-bold); border-radius: 0; padding: 2px 8px; background: var(--player-fill); color: var(--player-text); caret-color: var(--player-bold); font: var(--stronghold-font-weight) 16px var(--stronghold-font); box-shadow: none; }
+.stronghold-typed-area .typing-input { min-height: 30px; height: 30px; border: 1px solid var(--player-bold); border-radius: 0; padding: 2px 8px; background: var(--player-fill); color: transparent; caret-color: var(--player-bold); font: var(--stronghold-font-weight) 16px/24px var(--stronghold-font); box-shadow: none; }
+.stronghold-typed-area .typing-input::selection { color: var(--player-text); }
 .stronghold-typed-area .typing-input:focus { outline: 2px solid #b49b4e; outline-offset: 2px; }
 .stronghold-typed-area .typing-input::placeholder { color: var(--player-text); opacity: 1; }
 .stronghold-typing .floating-caret { width: 3px; background: var(--player-bold); border-radius: 0; box-shadow: none; animation: none; }
-.stronghold-typed-area .typed-bar { display: none; }
+.stronghold-typed-area .typed-bar { display: block; position: absolute; inset: 0; z-index: 1; padding: 3px 9px; overflow: hidden; pointer-events: none; white-space: pre; color: var(--player-text); font: var(--stronghold-font-weight) 16px/24px var(--stronghold-font); }
+.stronghold-typed-area .typed-word.incorrect { color: inherit; background: transparent; box-shadow: none; }
+.stronghold-typed-area .typed-hint { display: none; }
 .stronghold-army-orders { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 12px; }
 .stronghold-army-orders button, .stronghold-placement button { min-height: 30px; border: 1px solid #89978c; border-radius: 0; background: var(--player-fill); color: var(--player-text); font: var(--stronghold-font-weight) 12px var(--stronghold-font); padding: 3px; }
 .stronghold-army-orders p { grid-column: 1 / -1; margin: 3px 0; font-size: 11px; }
@@ -282,7 +308,8 @@
   .stronghold-screen { --header-height: 112px; --deck-height: clamp(280px, 40dvh, 360px); --squad-inset: 8px; }
   .stronghold-command-bar { grid-template-columns: minmax(0, 1fr); grid-template-rows: 28px 28px 36px; grid-template-areas: "navigation" "utilities" "status"; gap: 3px 8px; padding: 6px 8px; }
   .stronghold-tier-mount { left: auto; right: 8px; transform: none; }
-  .stronghold-hud { gap: 12px; padding: 3px 92px 3px 6px; }
+  .stronghold-map-toolbar, .stronghold-utilities { padding-right: 66px; }
+  .stronghold-hud { gap: 12px; padding: 3px 6px; }
   .stronghold-populations { flex: 1; gap: 5px; }
   .stronghold-populations > span { font-size: 11px; gap: 3px; }
   .stronghold-populations > .stronghold-supplies { font-size: 14px; padding-right: 6px; }
