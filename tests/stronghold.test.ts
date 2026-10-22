@@ -4,7 +4,7 @@ import { updateCombat, spawnWave } from '../src/stronghold/domain/combat.ts';
 import { connectedRelays, updateLogistics } from '../src/stronghold/domain/logistics.ts';
 import { addBuilding, addUnit, createStronghold } from './stronghold-fixtures.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
-import { TEXT_LENGTH_RANGES, TIER_CHARACTER_GOAL } from '../src/stronghold/domain/rules.ts';
+import { TEXT_LENGTH_RANGES, TIER_CHARACTER_GOAL, TIER_COSTS } from '../src/stronghold/domain/rules.ts';
 import { LocalStrongholdConnection } from '../src/stronghold/infrastructure/local-connection.ts';
 import { themeForWorkspace } from '../src/ui/page-theme.ts';
 import type { Participant, StrongholdState } from '../src/stronghold/domain/types.ts';
@@ -72,6 +72,7 @@ test('Stronghold role selection joins teammates without displacing them', () => 
 
 test('Stronghold tier-up waits for readiness, pauses battle and accepts unequal shared contributions', () => {
   const state = createStronghold();
+  state.resources = 300;
   noBots(state);
   executeCommand(state, self(state), { type: 'READY', ready: true });
   equal(state.phase, 'playing');
@@ -94,6 +95,7 @@ test('Stronghold tier-up waits for readiness, pauses battle and accepts unequal 
 
 test('Stronghold simulated teammates ready up and finish their own tier phrases', () => {
   const state = createStronghold();
+  state.resources = 300;
   executeCommand(state, self(state), { type: 'READY', ready: true });
   advanceStronghold(state, .25);
   equal(state.phase, 'tier-up');
@@ -104,7 +106,7 @@ test('Stronghold simulated teammates ready up and finish their own tier phrases'
 });
 
 test('Stronghold each shared challenge advances exactly one tier without chaining or accepting the final phrase twice', () => {
-  const state = createStronghold({ resources: 50, length: 'medium', computersPaused: true });
+  const state = createStronghold({ resources: 3000, length: 'medium', computersPaused: true });
   state.waveIn = 10000;
   const player = self(state);
   equal(state.tier, 0);
@@ -396,10 +398,11 @@ test('Stronghold later waves introduce ranged and siege enemy formations', () =>
 test('Stronghold can win a complete match with human supply typing and a simulated squad', () => {
   const state = createStronghold();
   const player = self(state);
+  executeCommand(state, player, { type: 'ACTION', action: 'resources' });
   for (let step = 0; step < 2400 && state.phase !== 'won' && state.phase !== 'lost'; step++) {
-    if (state.phase === 'playing' && state.tier < 3 && !player.ready) executeCommand(state, player, { type: 'READY', ready: true });
+    if (state.phase === 'playing' && state.tier < 3 && !player.ready && state.resources >= TIER_COSTS[state.tier]!) executeCommand(state, player, { type: 'READY', ready: true });
     if (state.phase === 'tier-up' && player.contribution < TIER_CHARACTER_GOAL / 4 && step % 10 === 0) finish(state);
-    if (state.phase === 'playing' && state.tier === 3 && step % 16 === 0) finish(state);
+    if (state.phase === 'playing' && step % 4 === 0) finish(state);
     advanceStronghold(state, .25);
   }
   equal(state.phase, 'won');
@@ -426,7 +429,7 @@ test('Stronghold local transport publishes detached snapshots, reports rejection
   equal(resources, 50);
   equal(emissions, 3);
   unsubscribe();
-  await connection.send({ type: 'READY', ready: true });
+  await connection.send({ type: 'COMPUTERS', paused: true });
   equal(emissions, 3);
   connection.dispose();
   equal(themeForWorkspace('stronghold'), 'stronghold');

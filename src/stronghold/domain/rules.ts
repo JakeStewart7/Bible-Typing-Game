@@ -55,6 +55,7 @@ export const EVENT_LABELS: Record<WorldEvent, string> = {
   numbers: 'Number siege', symbols: 'Symbol storm', code: 'Code formation'
 };
 export const TIER_MAX = 3;
+export const TIER_COSTS = [300, 600, 1500] as const;
 export const RELAY_RANGE = 155;
 export const TIER_CHARACTER_GOAL = 500;
 export const BASE: Point = { x: 500, y: 595 };

@@ -2,10 +2,11 @@ import { BASE, CATAPULT_WINDUP_SECONDS, ENEMY_BASE, TOWER_STRENGTH_MULTIPLIER, U
 import { assignPhrase } from './phrases.ts';
 import { unitUpgrade } from './technology.ts';
 import { createRoleTasks } from './tasks.ts';
-import { DEFAULT_MATCH_OPTIONS, validateMatchOptions } from './options.ts';
+import { DEFAULT_MATCH_OPTIONS, DEFAULT_STARTING_COUNTS, validateMatchOptions } from './options.ts';
 import type { ArmyUnitKind, Building, BuildingKind, Participant, Point, Season, StrongholdMatchOptions, StrongholdState, Unit, UnitKind } from './types.ts';
 import { DAY_SECONDS, randomSeason, seasonalNodes } from './environment.ts';
-import { PLAYER_COLORS } from './types.ts';
+import { PLAYER_COLORS, STARTING_ENTITIES } from './types.ts';
+import { unitRadius, unitSpawnClear } from './navigation.ts';
 
 export function addUnit(state: StrongholdState, kind: UnitKind, point: Point, formation: ArmyUnitKind | null = null): Unit {
   const hp = ((formation ? UNIT_RULES[formation].hp : UNIT_RULES[kind].hp)
@@ -64,11 +65,25 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
   addBuilding(state, 'enemy-base', ENEMY_BASE, true, true);
   addBuilding(state, 'tower', { x: 420, y: 125 }, true, true);
   addBuilding(state, 'tower', { x: 580, y: 125 }, true, true);
-  addUnit(state, 'worker', { x: 440, y: 560 });
-  addUnit(state, 'worker', { x: 560, y: 560 });
-  addUnit(state, 'builder', { x: 500, y: 540 });
-  addUnit(state, 'warrior', { x: 480, y: 465 });
-  addUnit(state, 'warrior', { x: 520, y: 465 });
+  const counts = { ...DEFAULT_STARTING_COUNTS, ...options.startingCounts };
+  for (let index = 0; index < counts.tower; index++) {
+    addBuilding(state, 'tower', { x: 340 + index % 4 * 100, y: 390 - Math.floor(index / 4) * 80 }, true);
+  }
+  const original: Partial<Record<UnitKind, Point[]>> = {
+    worker: [{ x: 440, y: 560 }, { x: 560, y: 560 }], builder: [{ x: 500, y: 540 }],
+    warrior: [{ x: 480, y: 465 }, { x: 520, y: 465 }]
+  };
+  const sites = Array.from({ length: 96 }, (_, index) => ({ x: 120 + index % 16 * 48, y: 360 + Math.floor(index / 16) * 48 }));
+  for (const kind of STARTING_ENTITIES) {
+    if (kind === 'tower') continue;
+    for (let index = 0; index < counts[kind]; index++) {
+      const radius = unitRadius({ kind });
+      const preferred = original[kind]?.[index];
+      const point = preferred && unitSpawnClear(state, preferred, radius) ? preferred : sites.find(point => unitSpawnClear(state, point, radius));
+      if (!point) throw new Error(`Not enough space for starting ${kind}s.`);
+      addUnit(state, kind, point);
+    }
+  }
   state.players.forEach(player => assignPhrase(state, player));
   return state;
 }

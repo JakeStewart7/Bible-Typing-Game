@@ -324,7 +324,7 @@ test('Stronghold fall adds fifteen percent to every completed typing task, inclu
 });
 
 test('Stronghold fall boosts completed tier phrases without partial credit, rounding drift or duplicate unlocks', () => {
-  const state = createStronghold({ resources: 0, length: 'medium', computersPaused: true }, 'fall');
+  const state = createStronghold({ resources: 300, length: 'medium', computersPaused: true }, 'fall');
   const player = state.players[0]!;
   executeCommand(state, player, { type: 'READY', ready: true });
   player.phrase = 'abcdef';

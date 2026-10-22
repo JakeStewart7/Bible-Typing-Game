@@ -1,7 +1,8 @@
 import { menuNavigationMarkup } from '../../ui/menu-navigation.ts';
 import { ACTION_LABELS, COSTS, isTypingAction, LENGTH_LABELS, MIN_TIER, ROLE_LABELS, TEXT_LENGTH_BONUSES } from '../domain/rules.ts';
 import { UPGRADE_OPTIONS } from '../domain/technology.ts';
-import { PHRASE_LENGTHS, PLAYER_COLORS, ROLES, SEASONS, type Action, type Role, type UpgradeTarget } from '../domain/types.ts';
+import { PHRASE_LENGTHS, PLAYER_COLORS, ROLES, SEASONS, STARTING_ENTITIES, type Action, type Role, type UpgradeTarget } from '../domain/types.ts';
+import { STARTING_LIMITS } from '../domain/options.ts';
 import { SEASON_LABELS } from '../domain/environment.ts';
 import { taskShortcut } from './keyboard.ts';
 import { weatherMarkup } from './environment.ts';
@@ -17,14 +18,17 @@ const ROLE_ICONS: Record<Role, string> = {
   defenses: '<path d="M3 21V5h4v4h3V3h4v6h3V5h4v16ZM10 21v-6h4v6"/>'
 };
 const LOCK_ICON = '<svg class="stronghold-lock is-hidden" data-tier-lock viewBox="0 0 16 18" aria-hidden="true"><path d="M4 8V5a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2"/><rect x="2" y="7" width="12" height="10" rx="1" fill="currentColor"/></svg>';
+function costMarkup(value: number, id?: string): string {
+  return `<span class="stronghold-cost"${id ? ` id="${id}"` : ''}><i class="stronghold-symbol stronghold-symbol--resource" aria-hidden="true"></i><span${id ? ' id="stronghold-tier-price"' : ''}>${value}</span><span class="sr-only"> supplies</span></span>`;
+}
 function tile(action: Action, label: string, tier: number | undefined, shortcut: string): string {
   return `<button type="button" class="stronghold-build-tile${COSTS[action] > 0 ? ' has-cost' : ''}" data-action="${action}"${tier ? ` data-tier="${tier}"` : ''} data-min-tier="${tier ?? MIN_TIER[action]}" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}">
-    ${LOCK_ICON}<span class="stronghold-action-label">${label}</span>${COSTS[action] > 0 ? `<span class="stronghold-cost">${COSTS[action] * (tier ?? 1)}<span class="sr-only"> supplies</span></span>` : ''}${action === 'worker' || action === 'builder' || isArmyUnit(action) ? '<small data-unit-population></small>' : ''}${isArmyUnit(action) ? '<small data-training-queued>0 queued</small>' : ''}${isTypingAction(action) ? `<span class="stronghold-task-progress" data-task-progress role="progressbar" aria-label="${ACTION_LABELS[action]}${tier ? ` tier ${tier}` : ''} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span data-task-fill></span></span>` : ''}</button>`;
+    ${LOCK_ICON}<span class="stronghold-action-label">${label}</span>${COSTS[action] > 0 ? costMarkup(COSTS[action] * (tier ?? 1)) : ''}${action === 'worker' || action === 'builder' || isArmyUnit(action) ? '<small data-unit-population></small>' : ''}${isArmyUnit(action) ? '<small data-training-queued>0 queued</small>' : ''}${isTypingAction(action) ? `<span class="stronghold-task-progress" data-task-progress role="progressbar" aria-label="${ACTION_LABELS[action]}${tier ? ` tier ${tier}` : ''} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span data-task-fill></span></span>` : ''}</button>`;
 }
 function upgrade(target: UpgradeTarget, shortcut: string): string {
   const option = UPGRADE_OPTIONS[target];
   return `<button type="button" class="stronghold-upgrade-tile has-cost" data-action="upgrade" data-stronghold-upgrade="${target}" data-min-tier="${option.tier}" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}">
-    ${LOCK_ICON}<span class="stronghold-action-label">Upgrade <span class="stronghold-upgrade-kind">${option.label}</span></span><span class="stronghold-cost">${option.cost}<span class="sr-only"> supplies</span></span><small data-upgrade-level="${target}">Level 0</small></button>`;
+    ${LOCK_ICON}<span class="stronghold-action-label">Upgrade <span class="stronghold-upgrade-kind">${option.label}</span></span>${costMarkup(option.cost)}<small data-upgrade-level="${target}">Level 0</small></button>`;
 }
 function roleActions(role: Role): string {
   let index = 0;
@@ -66,7 +70,7 @@ export function strongholdWorkspaceMarkup(): string {
         <button id="stronghold-pause" type="button">Pause</button><button id="stronghold-restart" type="button">New game</button>
         <button id="stronghold-computers" type="button" aria-pressed="false">Stop computers</button>
       </nav>
-      <div class="stronghold-tier-mount"><button id="stronghold-ready" class="stronghold-tier" type="button"><span id="stronghold-tier-label">Tier 0</span><strong id="stronghold-tier-action">Tier Up</strong></button></div>
+      <div class="stronghold-tier-mount"><button id="stronghold-ready" class="stronghold-tier" type="button"><span id="stronghold-tier-label">Tier 0</span><strong id="stronghold-tier-action">Tier Up</strong>${costMarkup(300, 'stronghold-tier-cost')}</button></div>
       <aside class="stronghold-hud" aria-label="Kingdom status">
         <div class="stronghold-populations">
           <span class="stronghold-supplies" title="Shared supplies"><span class="sr-only">Shared supplies: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--resource"></i><b id="stronghold-resources">50</b></span>
@@ -98,7 +102,7 @@ export function strongholdWorkspaceMarkup(): string {
         <p>The map starts zoomed toward the home base. Scroll to zoom; Alt-drag, middle-drag or arrow keys pan. Moving the pointer to a map edge does not scroll. Right-click moves units or cancels placement, never pans. Shift-drag still adds troops to your selection.</p>
         <p>Stop computers pauses simulated teammates and their barracks, not the battlefield. Resume them to finish a shared tier challenge.</p>
         <p>World events begin at 1, 3, 5 and subsequent odd minutes of battle time, last 35 seconds, and leave normal typing between events.</p>
-        <p>Tier Up fills one shared bar by completing phrases. Only fully correct phrases add progress; partial or incorrect entries do not count. The first challenge uses letters, the next letters and numbers, and the last adds symbols and punctuation. Anyone can contribute, even with computers stopped. Light player colors show contributions in the shared bar; player boxes show their current text. Pause challenge keeps your progress; Resume challenge continues it.</p>
+        <p>Tier Up costs 300, 600, then 1500 shared supplies, paid once when each challenge starts. It is unavailable until the team can afford it. Complete correct phrases to fill the shared bar; partial or incorrect entries do not count. The first challenge uses letters, the next letters and numbers, and the last adds symbols and punctuation. Anyone can contribute, even with computers stopped. Pause challenge keeps your progress; Resume challenge continues it.</p>
         <p>Summer makes all friendly and enemy units 15% faster. Winter makes all units 15% slower and both gathered and typed supplies worth 20% less. Spring makes both resource sources worth 20% more. Fall adds 15% to every completed typing task, including world events and Tier Up. Bonuses apply immediately; partial phrases still add no work.</p>
         <p>Queue Warriors at completed T1 Barracks, Archers at T2 and Catapults at T3. Supplies are paid when queued; each unit trains for 12 seconds at its barracks before heading to the rally point. Empty barracks do not train automatically. Queues count toward population caps. Destroy the enemy base to win.</p>
         </div>
@@ -118,6 +122,10 @@ export function strongholdWorkspaceMarkup(): string {
           </label>
           <label>Supplies <input id="stronghold-dev-resources" type="number" min="0" max="10000" step="1" required></label>
           <label>Tier <select id="stronghold-dev-tier">${[0, 1, 2, 3].map(tier => `<option value="${tier}">Tier ${tier}</option>`).join('')}</select></label>
+          <fieldset class="stronghold-dev-counts"><legend class="sr-only">Starting forces</legend>${STARTING_ENTITIES.map(kind => {
+            const labels = { worker: 'Gatherers', builder: 'Builders', warrior: 'Warriors', tower: 'Towers', archer: 'Archers', catapult: 'Catapults' };
+            return `<label>${labels[kind]} <input id="stronghold-dev-${kind}" type="number" min="0" max="${STARTING_LIMITS[kind]}" step="1" required></label>`;
+          }).join('')}</fieldset>
           <label>Season <select id="stronghold-dev-starting-season"><option value="random">Random each game</option>${SEASONS.map(season => `<option value="${season}">${SEASON_LABELS[season]}</option>`).join('')}</select></label>
           <label>Time <select id="stronghold-dev-period"><option value="day">Day</option><option value="night">Night</option></select></label>
           <button type="submit">Apply &amp; new game</button>

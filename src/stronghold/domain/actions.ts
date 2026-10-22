@@ -1,6 +1,6 @@
 import { assignPhrase, copyRoleTask } from './phrases.ts';
 import { addBuilding, addUnit } from './state.ts';
-import { ACTION_LABELS, BASE, BUILDING_CAPS, distance, isTypingAction, MIN_TIER, ROLE_ACTIONS, ROLE_LABELS, TIER_MAX, UNIT_CAPS, validPoint, WALL_ROTATION_STEP } from './rules.ts';
+import { ACTION_LABELS, BASE, BUILDING_CAPS, distance, isTypingAction, MIN_TIER, ROLE_ACTIONS, ROLE_LABELS, TIER_COSTS, TIER_MAX, UNIT_CAPS, validPoint, WALL_ROTATION_STEP } from './rules.ts';
 import { applyUpgrade, phraseWork, taskCost, taskWork, upgradeLimit, UPGRADE_OPTIONS } from './technology.ts';
 import { ENTITY_LABELS, playerEvent, recordEvent } from './events.ts';
 import { PHRASE_LENGTHS, SEASONS, type Action, type BuildingKind, type Participant, type Point, type StrongholdCommand, type StrongholdState } from './types.ts';
@@ -208,10 +208,14 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
   }
   if (command.type === 'READY') {
     if (state.phase !== 'playing' || state.tier >= TIER_MAX) throw new Error('Tier-up is not available right now.');
+    const cost = TIER_COSTS[state.tier];
+    if (cost === undefined) throw new Error('No further tier challenge is available.');
+    if (command.ready && state.resources < cost) throw new Error(`Need ${cost} shared supplies to tier up.`);
     player.ready = command.ready;
     if (!player.simulated) state.players.filter(other => other.simulated).forEach(other => { other.ready = command.ready; });
     playerEvent(state, player, command.ready ? 'is ready' : 'cancelled ready');
     if (state.players.every(other => other.ready)) {
+      state.resources -= cost;
       state.phase = 'tier-up';
       state.message = 'Complete phrases together to fill the shared progress bar. Anyone can contribute; the battlefield is paused.';
       recordEvent(state, 'Tier challenge started');

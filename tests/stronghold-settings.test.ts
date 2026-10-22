@@ -1,14 +1,16 @@
 import { executeCommand } from '../src/stronghold/domain/actions.ts';
 import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
-import { TIER_CHARACTER_GOAL } from '../src/stronghold/domain/rules.ts';
+import { TIER_CHARACTER_GOAL, TIER_COSTS } from '../src/stronghold/domain/rules.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { addBuilding, createStronghold } from './stronghold-fixtures.ts';
-import { PLAYER_COLORS, SEASONS, type Participant, type StrongholdCommand, type StrongholdState } from '../src/stronghold/domain/types.ts';
+import { PLAYER_COLORS, SEASONS, STARTING_ENTITIES, type Participant, type StrongholdCommand, type StrongholdState } from '../src/stronghold/domain/types.ts';
 import { DAY_SECONDS, daylight, seasonalNodes } from '../src/stronghold/domain/environment.ts';
 import { equal, test } from './harness.ts';
 import { AppStorage } from '../src/persistence/storage.ts';
 import { DEFAULT_DEVELOPER_OPTIONS, readDeveloperOptions, writeDeveloperOptions } from '../src/stronghold/infrastructure/developer-options.ts';
-import { isMatchOptions } from '../src/stronghold/domain/options.ts';
+import { DEFAULT_STARTING_COUNTS, isMatchOptions, STARTING_LIMITS } from '../src/stronghold/domain/options.ts';
+import { distance } from '../src/stronghold/domain/rules.ts';
+import { unitRadius } from '../src/stronghold/domain/navigation.ts';
 import { phraseWork, taskWork } from '../src/stronghold/domain/technology.ts';
 import { readyBuilding } from '../src/stronghold/ui/map-controls.ts';
 
@@ -32,6 +34,71 @@ function quietMatch(): StrongholdState {
   state.waveIn = 10000;
   return state;
 }
+
+test('Stronghold tier challenges require 300, 600 and 1500 supplies and charge exactly once', () => {
+  equal(TIER_COSTS, [300, 600, 1500]);
+  for (const [tier, cost] of TIER_COSTS.entries()) {
+    const state = createStronghold({ resources: cost - 1, length: 'long', computersPaused: true, tier });
+    const before = structuredClone(state);
+    let rejected = false;
+    try { send(state, { type: 'READY', ready: true }); }
+    catch (error) { rejected = error instanceof Error && error.message.includes(`${cost} shared supplies`); }
+    equal(rejected, true);
+    equal(state, before);
+    state.resources = cost + 17;
+    send(state, { type: 'READY', ready: true });
+    equal(state.resources, 17);
+    equal(state.phase, 'tier-up');
+    for (let entryIndex = 0; state.phase === 'tier-up' && entryIndex < 200; entryIndex++) entry(state);
+    equal(state.tier, tier + 1);
+    equal(state.resources, 17);
+    equal(state.events.filter(event => event.text === 'Tier challenge started').length, 1);
+  }
+});
+
+test('Stronghold starting forces honor zero and maximum counts with clear spawn positions', () => {
+  const none = { worker: 0, builder: 0, warrior: 0, tower: 0, archer: 0, catapult: 0 };
+  for (const startingCounts of [none, DEFAULT_STARTING_COUNTS, STARTING_LIMITS]) {
+    const state = createStronghold({ ...DEFAULT_DEVELOPER_OPTIONS, tier: 3, startingCounts });
+    for (const kind of STARTING_ENTITIES) {
+      equal(kind === 'tower' ? state.buildings.filter(building => building.kind === kind && !building.enemy).length
+        : state.units.filter(unit => unit.kind === kind).length, startingCounts[kind]);
+    }
+    for (const unit of state.units) {
+      equal(state.units.every(other => other === unit || distance(unit, other) >= unitRadius(unit) + unitRadius(other)), true);
+      equal(unit.hp, unit.maxHp);
+    }
+    equal(state.buildings.filter(building => building.kind === 'tower' && building.enemy).length, 2);
+  }
+  for (const value of [null, [], { worker: -1 }, { builder: 5 }, { tower: 9 }, { warrior: 19 }, { archer: 1.5 }, { catapult: '2' }, { unknown: 1 }]) {
+    equal(isMatchOptions({ ...DEFAULT_DEVELOPER_OPTIONS, startingCounts: value }), false);
+  }
+});
+
+test('Stronghold starting forces persist across storage, refresh and reset without mutable option aliases', () => {
+  const values = new Map<string, string>();
+  const storage = new AppStorage({
+    getItem: key => values.get(key) ?? null, setItem: (key, value) => { values.set(key, value); }, removeItem: key => { values.delete(key); }
+  });
+  const options = { ...DEFAULT_DEVELOPER_OPTIONS, startingCounts: { worker: 3, builder: 2, warrior: 4, tower: 2, archer: 3, catapult: 2 } };
+  writeDeveloperOptions(storage, options);
+  const loaded = readDeveloperOptions(storage), engine = new StrongholdEngine(loaded);
+  loaded.startingCounts.worker = 0;
+  options.startingCounts.warrior = 0;
+  const expected = engine.snapshot('you');
+  engine.advance(1);
+  engine.restart();
+  equal(engine.snapshot('you').units, expected.units);
+  equal(engine.snapshot('you').buildings, expected.buildings);
+  const fresh = new StrongholdEngine(readDeveloperOptions(storage)).snapshot('you');
+  equal(fresh.units, expected.units);
+  equal(fresh.buildings, expected.buildings);
+  const defaults = readDeveloperOptions(new AppStorage({
+    getItem: () => null, setItem: () => {}, removeItem: () => {}
+  }));
+  defaults.startingCounts.worker = 0;
+  equal(DEFAULT_DEVELOPER_OPTIONS.startingCounts.worker, 2);
+});
 
 test('Stronghold developer defaults are validated, copied and reused by new matches', () => {
   const options = { resources: 175, length: 'short' as const, computersPaused: true };
@@ -186,7 +253,7 @@ test('Stronghold starts with 50 supplies, Medium text and running computers, and
 });
 
 test('Stronghold restart replaces the entire progressed match with a fresh initial state', () => {
-  const engine = new StrongholdEngine({ resources: 75, length: 'long', computersPaused: true });
+  const engine = new StrongholdEngine({ resources: 375, length: 'long', computersPaused: true });
   const initial = engine.snapshot('you');
   engine.send('you', { type: 'ROLE', role: 'army' });
   const unit = engine.snapshot('you').units.find(unit => unit.kind === 'warrior')!;
@@ -330,7 +397,7 @@ test('Stronghold construction tiers keep independent bars and instant upgrades l
 });
 
 test('Stronghold Army cannot prepare locked Barracks and unlocks each building tier independently', () => {
-  const engine = new StrongholdEngine({ resources: 50, length: 'medium', computersPaused: false });
+  const engine = new StrongholdEngine({ resources: 300, length: 'medium', computersPaused: false });
   const self = () => engine.snapshot('you').players.find(player => player.id === 'you')!;
   engine.send('you', { type: 'ROLE', role: 'production' });
   equal(self().action, 'resources');
@@ -456,6 +523,7 @@ test('Stronghold all three Barracks selections preserve independent shared progr
 
 test('Stronghold shared tier challenges preserve normal task banks and the chosen text length', () => {
   const state = quietMatch();
+  state.resources = 300;
   const player = human(state);
   const suppliesWork = entry(state);
   send(state, { type: 'ACTION', action: 'worker' });
@@ -512,6 +580,7 @@ test('Stronghold stopping computers freezes their decisions and barracks, but no
 
 test('Stronghold stopped computers do not block a solo shared tier challenge', () => {
   const state = quietMatch();
+  state.resources = 300;
   send(state, { type: 'READY', ready: true });
   for (let index = 0; index < 10; index++) advanceStronghold(state, .25);
   equal(state.phase, 'tier-up');

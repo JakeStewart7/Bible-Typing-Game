@@ -314,7 +314,7 @@ test('Stronghold tier drills progress from letters to numbers to punctuation at 
     equal(pool.every(phrase => phrase.length >= min && phrase.length <= max && /[a-z]/i.test(phrase)), true);
     equal(pool.every(phrase => tier === 0 ? /^[a-z ]+$/i.test(phrase) : /\d/.test(phrase)), true);
     equal(pool.every(phrase => tier < 2 ? /^[a-z0-9 ]+$/i.test(phrase) : /[^a-z0-9 ]/i.test(phrase)), true);
-    const state = createStronghold({ resources: 50, length, computersPaused: true });
+    const state = createStronghold({ resources: 1500, length, computersPaused: true });
     state.tier = tier;
     executeCommand(state, state.players[0]!, { type: 'READY', ready: true });
     equal(state.players.every(player => pool.includes(player.phrase)), true);
@@ -323,7 +323,7 @@ test('Stronghold tier drills progress from letters to numbers to punctuation at 
 });
 
 test('Stronghold tier progress counts only completed correct phrases without length bonuses or duplicate credit', () => {
-  const state = createStronghold({ resources: 50, length: 'long', computersPaused: true }), player = state.players[0]!;
+  const state = createStronghold({ resources: 300, length: 'long', computersPaused: true }), player = state.players[0]!;
   executeCommand(state, player, { type: 'READY', ready: true });
   const phraseId = player.phraseId, prefix = player.phrase.slice(0, 3);
   const type = (text: string) => executeCommand(state, player, { type: 'TYPE', phraseId, text });

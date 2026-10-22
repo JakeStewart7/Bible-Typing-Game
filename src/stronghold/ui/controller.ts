@@ -1,7 +1,7 @@
 import { createGame, type Game } from '../../game/state.ts';
 import { requireElement } from '../../shared/dom.ts';
 import { renderTypingExperience, updateTypingInput } from '../../typing/session.ts';
-import { PHRASE_LENGTHS, ROLES, SEASONS, type Point, type StrongholdCommand, type StrongholdConnection, type StrongholdSnapshot } from '../domain/types.ts';
+import { PHRASE_LENGTHS, ROLES, SEASONS, STARTING_ENTITIES, type Point, type StrongholdCommand, type StrongholdConnection, type StrongholdSnapshot } from '../domain/types.ts';
 import { distance, WALL_ROTATION_STEP } from '../domain/rules.ts';
 import { renderStronghold, strongholdElements } from './view.ts';
 import { mapPoint, readyBuilding, troopsInRectangle, type PlacementKind } from './map-controls.ts';
@@ -41,6 +41,12 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   const startingTier = requireElement('stronghold-dev-tier', HTMLSelectElement);
   const startingSeason = requireElement('stronghold-dev-starting-season', HTMLSelectElement);
   const startingPeriod = requireElement('stronghold-dev-period', HTMLSelectElement);
+  const startingCounts = {
+    worker: requireElement('stronghold-dev-worker', HTMLInputElement), builder: requireElement('stronghold-dev-builder', HTMLInputElement),
+    warrior: requireElement('stronghold-dev-warrior', HTMLInputElement), tower: requireElement('stronghold-dev-tower', HTMLInputElement),
+    archer: requireElement('stronghold-dev-archer', HTMLInputElement), catapult: requireElement('stronghold-dev-catapult', HTMLInputElement)
+  };
+  for (const kind of STARTING_ENTITIES) startingCounts[kind].value = String(defaults.startingCounts[kind]);
   startingComputers.value = defaults.computersPaused ? 'stopped' : 'started';
   startingLength.value = defaults.length;
   startingColor.value = defaults.playerColor;
@@ -178,7 +184,12 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     }
     return saveDefaults({
       resources: startingResources.valueAsNumber, length, computersPaused: startingComputers.value === 'stopped',
-      tier: Number(startingTier.value), playerColor, season, period
+      tier: Number(startingTier.value), playerColor, season, period,
+      startingCounts: {
+        worker: startingCounts.worker.valueAsNumber, builder: startingCounts.builder.valueAsNumber,
+        warrior: startingCounts.warrior.valueAsNumber, tower: startingCounts.tower.valueAsNumber,
+        archer: startingCounts.archer.valueAsNumber, catapult: startingCounts.catapult.valueAsNumber
+      }
     });
   }
   const unsubscribe = connection.subscribe(next => {
@@ -469,7 +480,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   requireElement('stronghold-close-credits', HTMLButtonElement).addEventListener('click', () => credits.close());
   const creditsClosed = (): void => { connection.setActive(running()); display(); focusTyping(); };
   credits.addEventListener('close', creditsClosed);
-  for (const field of [startingComputers, startingLength, startingColor, startingResources, startingTier, startingSeason, startingPeriod]) {
+  for (const field of [startingComputers, startingLength, startingColor, startingResources, startingTier, startingSeason, startingPeriod, ...Object.values(startingCounts)]) {
     field.addEventListener('change', saveDefaultForm);
   }
   developerForm.addEventListener('submit', event => {

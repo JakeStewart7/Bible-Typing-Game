@@ -6,9 +6,11 @@ export const SEASONS = ['spring', 'summer', 'fall', 'winter'] as const;
 export type Season = typeof SEASONS[number];
 export const PLAYER_COLORS = { Red: '#ff1726', Blue: '#00aeef', Yellow: '#ead500', Green: '#18b644' } as const;
 export type PlayerColor = typeof PLAYER_COLORS[keyof typeof PLAYER_COLORS];
+export const STARTING_ENTITIES = ['worker', 'builder', 'warrior', 'tower', 'archer', 'catapult'] as const;
+export type StartingCounts = Record<typeof STARTING_ENTITIES[number], number>;
 export type StrongholdMatchOptions = {
   resources: number; length: PhraseLength; computersPaused: boolean; playerColor?: PlayerColor;
-  season?: Season | 'random'; period?: 'day' | 'night'; tier?: number;
+  season?: Season | 'random'; period?: 'day' | 'night'; tier?: number; startingCounts?: Partial<StartingCounts>;
 };
 export type Point = { x: number; y: number };
 export type UnitKind = 'worker' | 'builder' | 'warrior' | 'archer' | 'catapult' | 'invader';

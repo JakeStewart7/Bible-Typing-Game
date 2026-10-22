@@ -1,5 +1,5 @@
 import { requireElement } from '../../shared/dom.ts';
-import { BUILDING_CAPS, EVENT_LABELS, ROLE_ACTIONS, TIER_MAX, UNIT_CAPS } from '../domain/rules.ts';
+import { BUILDING_CAPS, EVENT_LABELS, ROLE_ACTIONS, TIER_COSTS, TIER_MAX, UNIT_CAPS } from '../domain/rules.ts';
 import { tierProgress } from '../domain/tier-progress.ts';
 import { taskCost, taskWork, upgradeLimit } from '../domain/technology.ts';
 import { actionProblem, actionUnlockProblem } from '../domain/actions.ts';
@@ -115,9 +115,12 @@ export function renderStronghold(
   text('stronghold-tier-label', `Tier ${snapshot.tier}`);
   text('stronghold-tier-action', self.ready ? 'Ready!' : snapshot.tier === TIER_MAX ? 'Max Tier' : 'Tier Up');
   const ready = requireElement('stronghold-ready', HTMLButtonElement);
-  const readyDisabled = terminal || challenge || snapshot.tier >= TIER_MAX;
+  const tierCost = TIER_COSTS[snapshot.tier] ?? 0;
+  text('stronghold-tier-price', String(tierCost));
+  requireElement('stronghold-tier-cost', HTMLElement).classList.toggle('is-hidden', snapshot.tier >= TIER_MAX);
+  const readyDisabled = terminal || challenge || snapshot.tier >= TIER_MAX || (!self.ready && snapshot.resources < tierCost);
   if (ready.disabled !== readyDisabled) ready.disabled = readyDisabled;
-  ready.setAttribute('aria-label', `Tier ${snapshot.tier}. ${self.ready ? 'Cancel ready' : 'Ready up for the next tier'}`);
+  ready.setAttribute('aria-label', `Tier ${snapshot.tier}. ${self.ready ? 'Cancel ready' : `Ready up for ${tierCost} shared supplies`}`);
   text('stronghold-pause', paused ? 'Resume' : 'Pause');
   text('stronghold-tier-pause', paused ? 'Resume challenge' : 'Pause challenge');
   elements.renderBattlefield(snapshot, selected);

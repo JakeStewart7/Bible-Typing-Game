@@ -98,8 +98,11 @@ the building's required tier.
 
 **Dev options** sets the starting computer state, default text length, default player
 color (red, blue, yellow or green), starting
-supplies (0-10,000), starting tier (0-3), starting season (or Random each
-game), and starting day/night. Valid field changes save automatically in this
+supplies (0-10,000), starting tier (0-3), and starting counts for Gatherers, Builders,
+Warriors, Towers, Archers and Catapults, from zero up to their normal population
+limits. Starting towers use the selected starting tier (at least T1); starting
+troops may be supplied before their normal recruitment unlock. You can also choose
+the starting season (or Random each game) and day/night. Valid field changes save automatically in this
 browser, even without pressing Apply. **Apply & new game** starts a fresh match.
 Subsequent **New game**, **Build again** and page reloads use the saved defaults;
 changing them does not save an ongoing match.
@@ -319,8 +322,11 @@ hidden between events.
 Matches start at **Tier 0**, with T1 starting units and buildings.
 The first challenge advances to Tier 1, unlocking T1 barracks, warrior training
 and tower construction; prepared construction work is preserved.
-The gold **Tier Up** hexagon is top-aligned inside the command bar with a subtle
-depth shadow. It pauses the battle for one shared challenge:
+The **Tier Up** hexagon is top-aligned inside the command bar with solid fill and
+beveled edges, not a gradient. It shows a resource-symbol price and stays gray and
+disabled until the team can afford **300 / 600 / 1,500 supplies** for T1/T2/T3.
+The cost is charged once when the shared challenge starts, not per player or phrase.
+It pauses the battle for one shared challenge:
 500 correct characters shared by the squad, credited only when a whole phrase
 is completed correctly. Partial and incorrect input add no progress, and length
 bonuses do not apply. The first challenge uses letters, the next adds numbers, and the last
@@ -334,13 +340,15 @@ readiness or solo completion. Tier 2 adds archers, and Tier 3 adds catapults.
 
 Paid options use higher prices, while typing-only recruits and construction
 remain free of supply costs. Unaffordable buttons and prices turn gray without
-price boxes or strikethroughs; affordable prices stand out at the top-left.
+strikethroughs; centered cream-colored cost badges use the same round resource
+symbol as the HUD, with the symbol and number vertically aligned.
 Upgrade levels are centered. Instant styled tooltips report the available amount
 and shortage. The state updates as supplies arrive.
 
 | Purchase | Supplies |
 | --- | ---: |
 | Relay | 30 |
+| Tier 1 / Tier 2 / Tier 3 challenge | 300 / 600 / 1,500 |
 | Warrior / Archer / Catapult | 25 / 45 / 80 |
 | Economy upgrade | 120 |
 | Warrior / Archer / Catapult upgrade | 60 / 100 / 160 |
