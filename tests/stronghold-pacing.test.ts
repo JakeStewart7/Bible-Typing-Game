@@ -148,9 +148,9 @@ test('Stronghold gatherers and builders follow move orders then resume nearest w
     if (kind === 'builder') {
       equal(project.progress > 0, true);
       equal(unit.attackTarget, { x: project.x, y: project.y });
-      equal(unitMotionTransform(unit, unit, .1).startsWith('translate(0 '), true);
+      equal(unitMotionTransform(unit, unit, .1), '');
       equal(unitMotionTransform(unit, unit, .1, true), '');
-      equal(unitMotionTransform(unit, unit, .1) !== unitMotionTransform(unit, unit, .2), true);
+      equal(unitMotionTransform(unit, unit, .1), unitMotionTransform(unit, unit, .2));
     } else equal(state.nodes[0]?.remaining < 100, true);
   }
 });
@@ -360,6 +360,7 @@ test('Stronghold role members keep private text and share completed work and pla
   executeCommand(state, teammate, { type: 'ROLE', role: 'defenses' });
   executeCommand(state, you, { type: 'LENGTH', length: 'medium' });
   executeCommand(state, you, { type: 'ACTION', action: 'tower', tier: 2 });
+  executeCommand(state, teammate, { type: 'ACTION', action: 'tower', tier: 2 });
   let towerWork = phraseWork(you);
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
   equal(teammate.actionPhrases, 1);
@@ -394,6 +395,7 @@ test('Stronghold simulated role mates contribute work without editing human text
   const phrase = you.phrase;
   const phraseId = you.phraseId;
   const partner = state.players.find(player => player.simulated && player.role === 'defenses')!;
+  executeCommand(state, partner, { type: 'ACTION', action: 'wall' });
   const points = phraseWork(partner);
   const completed = partner.completed;
   for (let frame = 0; frame < 40 && partner.completed === completed; frame++) advanceStronghold(state, .1);

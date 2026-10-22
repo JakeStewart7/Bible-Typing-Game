@@ -88,8 +88,8 @@ test('Stronghold builders bob quickly only while actively building or repairing'
   builder.id = 0;
   equal(unitMotionTransform(builder, builder, Math.PI / 48), '');
   builder.attackTarget = { x: 110, y: 100 }; builder.cooldown = 1;
-  equal(unitMotionTransform(builder, builder, Math.PI / 48), 'translate(0 1.25)');
-  equal(unitMotionTransform(builder, builder, 3 * Math.PI / 48), 'translate(0 -1.25)');
+  equal(unitMotionTransform(builder, builder, Math.PI / 48), '');
+  equal(unitMotionTransform(builder, builder, 3 * Math.PI / 48), '');
   equal(unitMotionTransform(builder, builder, Math.PI / 48, true), '');
   builder.attackTarget = null;
   equal(unitMotionTransform(builder, builder, Math.PI / 48), '');

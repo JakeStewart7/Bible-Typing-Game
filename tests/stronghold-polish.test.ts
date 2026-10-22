@@ -404,7 +404,7 @@ test('Stronghold navigation reroutes after wall rotation and destruction and bui
   equal({ x: unit.x, y: unit.y }, target);
 });
 
-test('Stronghold enemies attack an enclosing wall when no route to their target exists', () => {
+test('Stronghold units can cross enclosing structures when no route exists', () => {
   const state = createStronghold();
   state.units = []; state.buildings = [];
   for (const point of [{ x: 500, y: 320 }, { x: 500, y: 380 }, { x: 470, y: 350 }, { x: 530, y: 350 }]) {
@@ -412,13 +412,15 @@ test('Stronghold enemies attack an enclosing wall when no route to their target 
     if (point.x !== 500) wall.rotation = 90;
   }
   const invader = addUnit(state, 'invader', { x: 410, y: 350 });
-  addUnit(state, 'worker', { x: 500, y: 350 });
+  const target = { x: 500, y: 350 };
+  let crossed = false;
   for (let frame = 0; frame < 120; frame++) {
     const before = { x: invader.x, y: invader.y };
-    updateCombat(state, .1);
-    equal(wallBetween(state, before, invader), undefined);
+    moveUnitToward(state, invader, target, 1);
+    if (wallBetween(state, before, invader)) crossed = true;
   }
-  equal(state.buildings.some(wall => wall.hp < wall.maxHp), true);
+  equal(crossed, true);
+  equal({ x: invader.x, y: invader.y }, target);
 });
 
 test('Stronghold thicker walls block the added edge area at every wall angle', () => {
@@ -434,7 +436,7 @@ test('Stronghold thicker walls block the added edge area at every wall angle', (
   }
 });
 
-test('Stronghold wall placement and existing rotation preserve angle, reject unit overlap and leave typing work untouched on failure', () => {
+test('Stronghold wall placement and rotation allow unit overlap but reject invalid angles and bounds', () => {
   const state = createStronghold();
   const player = state.players[0]!;
   executeCommand(state, player, { type: 'ROLE', role: 'defenses' });
@@ -451,8 +453,8 @@ test('Stronghold wall placement and existing rotation preserve angle, reject uni
   equal(player.work, 32);
   rejects(() => executeCommand(state, player, { type: 'PLACE', kind: 'wall', point: { x: 21, y: 400 }, rotation: 0 }), 'entire wall');
   addUnit(state, 'worker', { x: 280, y: 420 });
-  rejects(() => executeCommand(state, player, { type: 'ROTATE_WALL', id: wall.id }), 'space for units');
-  equal(wall.rotation, 112.5);
+  executeCommand(state, player, { type: 'ROTATE_WALL', id: wall.id });
+  equal(wall.rotation, 135);
 });
 
 test('Stronghold warriors and opposing formations have identical base health, damage, range and speed even in later waves', () => {
@@ -587,24 +589,28 @@ test('Stronghold walls rotate forward and backwards through exactly sixteen lega
   equal(player.work, 0);
 });
 
-test('Stronghold placement identifies blocking buildings and units using tier-scaled footprints', () => {
+test('Stronghold placement identifies buildings but allows units inside tier-scaled footprints', () => {
   const state = createStronghold(), player = state.players[0]!;
   state.tier = 3;
   executeCommand(state, player, { type: 'ROLE', role: 'defenses' });
   executeCommand(state, player, { type: 'ACTION', action: 'tower', tier: 3 });
   player.work = 75;
   const point = { x: 300, y: 400 };
-  const wall = addBuilding(state, 'wall', { x: 350, y: 400 }, true);
+  const wall = addBuilding(state, 'wall', { x: 345, y: 400 }, true);
   const unit = addUnit(state, 'worker', point);
   const blockers = placementBlockers(state, player, 'tower', point);
   equal(blockers.buildings, [wall.id]);
-  equal(blockers.units, [unit.id]);
-  equal(placementProblem(state, player, 'tower', point)?.includes('units'), true);
-  unit.hp = 0; wall.hp = 0;
+  equal(blockers.units, []);
+  equal(placementProblem(state, player, 'tower', point)?.includes('buildings'), true);
+  wall.hp = 0;
   equal(placementBlockers(state, player, 'tower', point), { buildings: [], units: [] });
   equal(placementProblem(state, player, 'tower', point), null);
   const box = buildingFootprint(state, { ...point, kind: 'tower', tier: 3, enemy: false });
-  equal(box.halfY, 33 * 1.24);
+  equal(box.halfY, 27 * 1.24);
+  executeCommand(state, player, { type: 'PLACE', kind: 'tower', point });
+  const before = { x: unit.x, y: unit.y };
+  moveUnitToward(state, unit, { x: 400, y: 450 }, 10);
+  equal(distance(unit, before) > 0, true);
   equal(footprintCorners(box).length, 4);
 });
 
@@ -662,7 +668,7 @@ test('Stronghold relay previews include the base at exactly 155 units and exclud
   equal(pending.includes(`data-relay-connection="${incomplete.id}"`), false);
 });
 
-test('Stronghold towers gain battlements, weapon arms and a heavy crown with each tier', () => {
+test('Stronghold towers retain a simple T silhouette with subtly increasing size and darker tiers', () => {
   const state = createStronghold();
   const towers = [1, 2, 3].map(tier => buildingMarkup(addBuilding(state, 'tower', { x: 400, y: 300 }, true, false, tier)));
   for (const [index, markup] of towers.entries()) {
@@ -672,9 +678,44 @@ test('Stronghold towers gain battlements, weapon arms and a heavy crown with eac
     equal(markup.includes('M-7 5L6 -6'), false);
   }
   equal(towers[0]!.includes('M-16 -10L-26 -18'), false);
-  equal(towers[1]!.includes('M-16 -10L-26 -18'), true);
-  equal(towers[2]!.includes('L0 -31'), true);
-  equal(towers[2]!.includes('r="5" fill="#ffb22e"'), true);
+  equal(towers[1]!.includes('M-16 -10L-26 -18'), false);
+  equal(towers[2]!.includes('L0 -31'), false);
+  equal(towers[2]!.includes('scale(1.3)'), true);
+  equal(towers.every(markup => markup.includes('M-13 -18H13V-9H6V19H-6V-9H-13Z')), true);
+});
+
+test('Stronghold units prefer paths around ordinary buildings and escape buildings placed over them', () => {
+  const state = createStronghold();
+  state.units = []; state.buildings = [];
+  addBuilding(state, 'barracks', { x: 400, y: 400 }, true);
+  const unit = addUnit(state, 'warrior', { x: 340, y: 400 });
+  const target = { x: 460, y: 400 };
+  let detoured = false;
+  for (let step = 0; step < 160; step++) {
+    moveUnitToward(state, unit, target, 1);
+    if (Math.abs(unit.y - 400) > 20) detoured = true;
+    equal(Math.abs(unit.x - 400) < 25 && Math.abs(unit.y - 400) < 25, false);
+  }
+  equal(detoured, true);
+  equal({ x: unit.x, y: unit.y }, target);
+  addBuilding(state, 'tower', target, false);
+  for (let step = 0; step < 100; step++) moveUnitToward(state, unit, { x: 550, y: 400 }, 1);
+  equal({ x: unit.x, y: unit.y }, { x: 550, y: 400 });
+});
+
+test('Stronghold builders stay still within construction and repair range', () => {
+  const state = createStronghold();
+  state.units = []; state.buildings = [];
+  const project = addBuilding(state, 'barracks', { x: 400, y: 400 });
+  const builder = addUnit(state, 'builder', { x: 380, y: 400 });
+  for (let step = 0; step < 10; step++) updateLogistics(state, .5);
+  equal({ x: builder.x, y: builder.y }, { x: 380, y: 400 });
+  equal(project.progress > 0, true);
+  project.progress = 1; project.hp -= 100;
+  const hp = project.hp;
+  for (let step = 0; step < 10; step++) updateLogistics(state, .5);
+  equal({ x: builder.x, y: builder.y }, { x: 380, y: 400 });
+  equal(project.hp > hp, true);
 });
 
 test('Stronghold relay previews distinguish castle-connected extensions from disconnected relay groups', () => {

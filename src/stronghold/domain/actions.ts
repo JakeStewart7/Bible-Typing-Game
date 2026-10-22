@@ -8,7 +8,7 @@ import { restoreRoleTask, saveRoleTask, taskKey } from './tasks.ts';
 import { spawnWave } from './combat.ts';
 import { creditResources, daylight, DAY_SECONDS, NIGHT_SECONDS, SEASON_BONUSES, SEASON_LABELS, seasonalNodes } from './environment.ts';
 import { tierProgress } from './tier-progress.ts';
-import { buildingFootprint, footprintCorners, footprintsOverlap, unitRadius, unitSpawnPoint } from './navigation.ts';
+import { buildingFootprint, footprintCorners, footprintsOverlap, unitSpawnPoint } from './navigation.ts';
 import { isArmyUnit, queuedUnits, trainingBarracks, TRAINING_SECONDS } from './training.ts';
 
 type ActionWorld = Pick<StrongholdState, 'tier' | 'resources' | 'units' | 'technology' | 'buildings'>;
@@ -46,7 +46,6 @@ export function placementProblem(
   const footprint = buildingFootprint(state, { ...point, kind, rotation, tier: player.constructionTier, enemy: false });
   if (footprintCorners(footprint).some(corner => !validPoint(corner) || corner.y < 130)) return `Keep the entire ${kind} inside the construction area.`;
   const blockers = placementBlockers(state, player, kind, point, rotation);
-  if (blockers.units.length) return 'Leave space for units before placing or rotating a building.';
   if (kind !== 'relay' && (player.action !== kind || player.work < taskWork(player))) return 'Complete the construction work first.';
   const problem = actionProblem(state, player, kind);
   if (problem) return problem;
@@ -62,7 +61,7 @@ export function placementBlockers(state: ActionWorld, player: Pick<Participant, 
   return {
     buildings: state.buildings.filter(building => building.hp > 0 && (distance(point, building) < 38
       || footprintsOverlap(footprint, buildingFootprint(state, building)))).map(building => building.id),
-    units: state.units.filter(unit => unit.hp > 0 && footprintsOverlap(footprint, { ...unit, halfX: unitRadius(unit), halfY: unitRadius(unit), rotation: 0 }, 0)).map(unit => unit.id)
+    units: []
   };
 }
 
@@ -104,7 +103,7 @@ export function completePhrase(state: StrongholdState, player: Participant): voi
       state.phase = 'playing';
       state.message = `Tier ${state.tier} unlocked! New units, defenses and upgrades are available.`;
       recordEvent(state, `Tier ${state.tier} unlocked`);
-      state.players.forEach(other => { other.ready = false; restoreRoleTask(state, other); assignPhrase(state, other); });
+      state.players.forEach(other => { other.ready = false; restoreRoleTask(state, other, other); assignPhrase(state, other); });
       return;
     }
   } else {

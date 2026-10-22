@@ -72,6 +72,28 @@ test('Stronghold role mates have private text lengths and contribute their own c
   equal(state.resources, 50 + rewards * 18);
 });
 
+test('Stronghold role mates keep independent task choices and private input while sharing matching work', () => {
+  const state = createStronghold({ resources: 10000, length: 'medium', computersPaused: true });
+  const [you, teammate] = state.players;
+  if (!you || !teammate) throw new Error('Missing players.');
+  executeCommand(state, teammate, { type: 'ROLE', role: 'economy' });
+  const phrase = teammate.phrase, phraseId = teammate.phraseId;
+  executeCommand(state, teammate, { type: 'TYPE', phraseId, text: phrase.slice(0, 2) });
+  executeCommand(state, you, { type: 'ACTION', action: 'resources' });
+  equal(teammate.action, 'worker');
+  equal([teammate.phrase, teammate.phraseId, teammate.typed], [phrase, phraseId, phrase.slice(0, 2)]);
+  executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
+  equal(teammate.work, 0);
+  executeCommand(state, teammate, { type: 'ACTION', action: 'resources' });
+  equal(teammate.work, you.work);
+  executeCommand(state, teammate, { type: 'ACTION', action: 'worker' });
+  executeCommand(state, you, { type: 'READY', ready: true });
+  for (let step = 0; state.phase === 'tier-up' && step < 200; step++) {
+    executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
+  }
+  equal([you.action, teammate.action], ['resources', 'worker']);
+});
+
 test('Stronghold text length selections never add event log entries', () => {
   const state = createStronghold();
   const events = structuredClone(state.events);

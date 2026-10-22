@@ -259,8 +259,11 @@ test('Stronghold restored task work remains shared when teammates select tasks a
   let suppliesWork = entry(state);
   executeCommand(state, teammate, { type: 'ACTION', action: 'worker' });
   let workerWork = entry(state, teammate);
-  equal(you.work, workerWork);
+  equal(you.work, suppliesWork);
   send(state, { type: 'ACTION', action: 'resources' });
+  equal(teammate.work, workerWork);
+  equal(teammate.action, 'worker');
+  executeCommand(state, teammate, { type: 'ACTION', action: 'resources' });
   equal(teammate.work, suppliesWork);
   equal(teammate.action, 'resources');
   suppliesWork = Math.round((suppliesWork + entry(state, teammate)) * 100) / 100;
@@ -273,7 +276,8 @@ test('Stronghold restored task work remains shared when teammates select tasks a
   equal(you.phrase !== teammate.phrase, true);
   send(state, { type: 'ACTION', action: 'resources' });
   equal(you.work, suppliesWork);
-  equal(teammate.work, suppliesWork);
+  equal(teammate.work, workerWork);
+  equal(teammate.action, 'worker');
 });
 
 test('Stronghold construction tiers keep independent bars and instant upgrades leave typing progress untouched', () => {
@@ -381,6 +385,7 @@ test('Stronghold running computers contribute to each selected Barracks tier wit
   const partner = state.players.find(other => other.simulated && other.role === 'production')!;
   for (const tier of [1, 2, 3]) {
     send(state, { type: 'ACTION', action: 'barracks', tier });
+    executeCommand(state, partner, { type: 'ACTION', action: 'barracks', tier });
     send(state, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase.slice(0, 2) });
     const privateInput = { phraseId: player.phraseId, phrase: player.phrase, typed: player.typed };
     const work = player.work, reward = phraseWork(partner), completed = partner.completed;
@@ -403,6 +408,7 @@ test('Stronghold all three Barracks selections preserve independent shared progr
   const banks = new Map<number, number>();
   for (const tier of [1, 2, 3]) {
     send(state, { type: 'ACTION', action: 'barracks', tier });
+    executeCommand(state, partner, { type: 'ACTION', action: 'barracks', tier });
     equal([player.action, partner.action], ['barracks', 'barracks']);
     equal([player.constructionTier, partner.constructionTier], [tier, tier]);
     equal([player.work, partner.work], [0, 0]);
@@ -423,6 +429,7 @@ test('Stronghold all three Barracks selections preserve independent shared progr
   equal(player.work, banks.get(2));
   for (const tier of [1, 2, 3]) {
     send(state, { type: 'ACTION', action: 'barracks', tier });
+    executeCommand(state, partner, { type: 'ACTION', action: 'barracks', tier });
     let expected = banks.get(tier)!;
     equal([player.work, partner.work], [expected, expected]);
     for (let entries = 0; expected < 40 * tier && entries < 40 * tier; entries++) {
@@ -442,6 +449,7 @@ test('Stronghold all three Barracks selections preserve independent shared progr
   equal(state.buildings.filter(building => building.kind === 'barracks').map(building => building.tier), [1, 2, 3]);
   for (const tier of [3, 1, 2]) {
     send(state, { type: 'ACTION', action: 'barracks', tier });
+    executeCommand(state, partner, { type: 'ACTION', action: 'barracks', tier });
     equal([player.work, partner.work], [banks.get(tier), banks.get(tier)]);
   }
 });

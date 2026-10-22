@@ -31,7 +31,7 @@ export function unitMotionTransform(unit: Unit, previous: Point | undefined, ela
   const active = actionActive(unit);
   const archer = unit.kind === 'archer' || (unit.kind === 'invader' && unit.formation === 'archer');
   const bob = archer ? `translate(0 ${Math.sin(elapsed * 2.75 + unit.id) * 2.5})` : '';
-  if (active && unit.kind === 'builder') return `translate(0 ${Math.sin(elapsed * 24 + unit.id) * 1.25})`;
+  if (active && unit.kind === 'builder') return '';
   if (active && unit.kind === 'worker') return 'scale(1.04)';
   if (active) return `${bob ? bob + ' ' : ''}scale(1.15)`;
   if (archer) return bob;
@@ -67,13 +67,8 @@ export function buildingMarkup(building: Building): string {
 function towerMarkup(building: Building): string {
   const outline = building.enemy ? '#ff1726' : '#cf9700';
   const fill = building.enemy ? '#870018' : building.tier === 1 ? '#fff8dc' : building.tier === 2 ? '#d6dce3' : '#677584';
-  const crown = building.tier === 1 ? 'M-13 -18H13V-9H6V19H-6V-9H-13Z'
-    : building.tier === 2 ? 'M-17 -23H-10V-17H-4V-23H4V-17H10V-23H17V-6H9V19H-9V-6H-17Z'
-    : 'M-20 -21L-15 -30L-10 -21H-5L0 -31L5 -21H10L15 -30L20 -21V-5H11V18H17V22H-17V18H-11V-5H-20Z';
-  return `<g data-tower-tier="${building.tier}"><path d="${crown}" fill="${fill}" stroke="${outline}" stroke-width="2.5" stroke-linejoin="round"/>
-    <path d="M0 -2V8" stroke="#263442" stroke-width="4"/>
-    ${building.tier >= 2 ? `<path d="M-16 -10L-26 -18M16 -10L26 -18" stroke="${outline}" stroke-width="${building.tier === 3 ? 5 : 3}" stroke-linecap="round"/>` : ''}
-    ${building.tier >= 3 ? '<circle cy="-14" r="5" fill="#ffb22e" stroke="#fff0b0" stroke-width="2"/><path d="M-7 13H7" stroke="#ffb22e" stroke-width="3"/>' : ''}</g>`;
+  return `<g data-tower-tier="${building.tier}" transform="scale(${1 + (building.tier - 1) * .15})"><path d="M-13 -18H13V-9H6V19H-6V-9H-13Z" fill="${fill}" stroke="${outline}" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M0 -2V8" stroke="#263442" stroke-width="4"/></g>`;
 }
 export function relayPreviewMarkup(snapshot: Pick<StrongholdSnapshot, 'buildings'>, point: Point, sourceId?: number): string {
   const connected = connectedRelays(snapshot);

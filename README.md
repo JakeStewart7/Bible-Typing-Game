@@ -9,7 +9,8 @@ follows the Paint design: borderless bright-green map, gray castle, colored shap
 units, upper-right population/resource HUD, central hexagonal **Tier Up** button,
 and four colored player panels along the bottom. Switch Player 1's role with the
 coin (Economy), sword (Army), cursor (Unit Control), and castle (Defenses) buttons.
-Players on the same role contribute completed entries to a shared task work bar;
+Players on the same role choose their tasks independently. Players working on the
+same task contribute completed entries to its shared work bar;
 each finished task costs and rewards supplies only once. Each player keeps an
 independent phrase, text box, display, length setting and typing progress.
 Teammates completing entries, changing length or placing buildings never replace
@@ -31,7 +32,8 @@ limit. Recruitment resumes when a slot opens; new recruits and trained troops
 spawn at clear, unoccupied positions rather than inside walls or other units.
 After reaching a manual destination, gatherers and builders wait two seconds,
 then automatically resume the nearest resource, construction or repair job.
-Builders bob quickly and show silver-white pulsing sparks while building or repairing.
+Builders stop within work range and stand still, showing silver-white pulsing
+sparks while building or repairing.
 Each new construction job takes the nearest available living builder, not the
 first builder in the unit list. Busy builders keep their current job; manually
 moving builders and those in their two-second idle wait are unavailable.
@@ -89,7 +91,8 @@ Joining **Army** after Tier 1 unlocks selects its saved Barracks work rather tha
 an invisible Supplies task. At Tier 0, Army types for supplies until construction
 unlocks. Locked building tiles cannot be selected, cycled to, or typed for by
 humans or simulated teammates.
-Simulated teammates help with that selected work without switching your task.
+Simulated teammates keep their own task selection; matching tasks share work
+without switching anyone else's task or replacing their input.
 Ready work is preserved through tier challenges, and placement unlocks only at
 the building's required tier.
 
@@ -255,19 +258,21 @@ castle itself. A green preview reaches the castle network; amber dashed links
 are disconnected or planned. Radius rings use world units
 and remain accurate while zooming. Unfinished relays can preview potential
 connections but do not deliver resources until construction finishes.
-Towers gain battlements, weapon arms and a heavy spiked crown across T1/T2/T3.
+Towers retain the simple T1 silhouette, growing subtly larger and darker at T2/T3.
 Attack impacts retain their explosion without the extra crossing slash lines.
 
-Walls block travel for friendly and enemy units, including while being built.
+Units prefer routes around all living buildings, including unfinished structures.
+Buildings may be placed over units; those units can move out, and units may pass
+through buildings when no route around exists rather than becoming trapped.
 Walls are 25% thicker, with matching collision bounds and placement previews.
 The **scroll wheel** rotates a wall placement preview or selected wall in
 22.5-degree steps through sixteen orientations, instead of zooming. No rotation
 button, Alt+R or Shift-click shortcut is used. **Done**, Escape or clicking empty
-ground finishes editing. Rotation and placement cannot overlap units or leave
+ground finishes editing. Rotation and placement can overlap units but cannot leave
 the construction area. Placement outlines and actual buildings use the same
-tier/upgrade-scaled footprint. Blocking buildings or units are highlighted in
+tier/upgrade-scaled footprint. Blocking buildings are highlighted in
 red, and the preview explicitly reports insufficient supplies or other failures.
-Units route around wall ends; enemies attack a blocking wall if no route exists.
+Units route around wall ends whenever a route is available.
 
 Controls, typing and logs use consistent bold Arial-family typography and larger,
 high-contrast text; repeated captions stay out of
@@ -289,7 +294,7 @@ Movement remains slow, and troop upgrades still improve your units.
 Both bases have **4,000 HP**; enemy tier upgrades do not increase that maximum
 or heal damage. Archers on both sides bob even while standing or firing, with
 a 25% faster bobbing cycle.
-Builders bob quickly only while building or repairing. Building and gathering
+Builders remain stationary while building or repairing. Building and gathering
 use silver-white sparks and a soft shimmer; warriors use silver with a dark steel outline, and combat uses an ember-colored jagged
 strike and expanding slash burst. Enemy attacks show only the explosion, without
 overlaid beam or slash lines. Reduced-motion preferences disable bobbing,
@@ -298,7 +303,8 @@ forth on alternating lower corners while walking.
 Player progress bars are 20 pixels tall with 2-pixel colored borders and stay
 inside their padded 3-pixel panel frames, including Player 1 at full progress.
 Task bars, barracks training bars and the shared tier bar are also thicker.
-Players sharing a role show the same selected-task progress. The event
+Players choosing the same task in a role show its shared progress; other task
+selections remain independent. The event
 history aligns with Player 1's left edge above the bottom panels, starts at the
 top of a stable-height window and fills downward, with a mostly transparent background,
 player-colored action text and gray world events. Dark text outlines keep entries
