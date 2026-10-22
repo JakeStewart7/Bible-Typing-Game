@@ -8,7 +8,7 @@ typing strategy game with three simulated teammates. The full-screen battlefield
 follows the Paint design: borderless bright-green map, gray castle, colored shape-coded
 units, upper-right population/resource HUD, central hexagonal **Tier Up** button,
 and four colored player panels along the bottom. Switch Player 1's role with the
-coin (Economy), sword (Army), cursor (Unit Control), and castle (Defenses) buttons.
+supply bag (Economy), outline sword (Army), cursor (Unit Control), and castle (Defenses) buttons.
 Players on the same role choose their tasks independently. Players working on the
 same task contribute completed entries to its shared work bar;
 each finished task costs and rewards supplies only once. Each player keeps an
@@ -22,9 +22,12 @@ changes, map gestures and new entries, without interrupting an open dropdown.
 Unit Control can also type for supplies, and typing stays available while a
 building is ready for placement or your tier contribution is finished.
 Pause, hidden/inactive gameplay, a finished match, or a tier-locked task disable the input.
-Mistyped letters in both the prompt and input have vibrant pink-red highlighting
-and a strike-through; correct letters remain unmarked in the input.
+Mistyped letters in both the prompt and input have vibrant player-colored
+highlighting and an underline, without a strike-through obscuring the letters;
+correct letters remain unmarked in the input.
 Unit Control can select and move gatherers and builders as well as troops.
+Its four outlined command tiles show selection, defense, assault and building-rally
+icons, with numbered shortcuts and a highlighted rally-targeting state.
 Economy starts with **Gatherer** selected. Recruitment tiles show living units
 on the field separately from troop queues; the HUD includes all five friendly
 unit types. Builder and Gatherer progress clearly indicates a reached population
@@ -132,14 +135,15 @@ node positions change: every layout keeps six standard nodes, two rich nodes,
 and 7,200 total supplies, with the same bases, troops and rules. Spring uses light
 green grass and pastel flowers fading in and out along one shared, randomly chosen
 breeze direction, with a faster drift. Summer uses deep green grass and light motes
-blowing right, gently undulating and pulsing as they catch the light.
+blowing right, smoothly easing up and down and pulsing as they catch the light.
 Fall uses light brown ground and slowly falling autumn-colored triangles that sway
 back and forth; winter has blue-white ground and snow circles that fade before
 reaching the bottom. Leaves randomly use red, orange, yellow
-or brown. A fixed pool of 96 decorative particles spans the entire map in world
-coordinates, so panning and zooming keep them anchored to their map positions.
-Animation phases are staggered; spring flowers and summer motes are spread across
-both axes rather than falling from the top. Weather is clipped to the map and
+or brown. A fixed pool of 48 decorative particles stays in screen space, independent
+of map pan and zoom. Spring shows just 18 flowers and summer 32 motes, with
+randomized, well-spaced starting positions rather than regular diagonal patterns.
+Animation phases are staggered; flowers and motes are spread across both axes
+rather than falling from the top. Weather is clipped to the battlefield and
 layered underneath UI, never intercepts clicks, and
 is hidden for reduced-motion preferences.
 Days and nights each last three minutes of battle time, with fifteen-second
@@ -196,9 +200,10 @@ dark command board. Subdued map texture and a soft battlefield vignette add dept
 without obscuring text or intercepting clicks. The faded length reel sits to the
 left of typing, with its **PgUp / PgDn** indicator on the reel's left and a thin
 dark player-colored divider between the keys.
-Expanded length choices use a darker gray background. Stronghold typing uses a
-the same Arial-family font as the controls and a thin neutral caret. Mistakes retain a vivid highlight,
-outline and strikethrough, all matching the selected player color.
+The length reel stays clipped while keeping its neighboring choices clickable.
+Stronghold typing uses the same Arial-family font as the controls and a thin
+neutral caret. Mistakes retain a vivid highlight, outline and underline matching
+the selected player color, without a strike-through.
 The larger Tier Up badge aligns with the top controls and hangs below the bar.
 Economy places Gatherer and Supplies together, Relay beneath, and its upgrade last.
 Unit Control's role button reuses the actual player cursor.

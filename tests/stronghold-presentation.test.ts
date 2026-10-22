@@ -4,6 +4,25 @@ import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
 import { equal, test } from './harness.ts';
 import { PLAYER_COLORS } from '../src/stronghold/domain/types.ts';
 
+test('Stronghold role and order icons are outlined and cost badges reuse the resource symbol', () => {
+  const markup = strongholdWorkspaceMarkup();
+  const sword = /id="stronghold-role-you-production"[\s\S]*?<\/button>/.exec(markup)?.[0];
+  const economy = /id="stronghold-role-you-economy"[\s\S]*?<\/button>/.exec(markup)?.[0];
+  if (!sword || !economy) throw new Error('Missing role icons.');
+  equal(sword.includes('fill="none"'), true);
+  equal(sword.includes('fill="currentColor"'), false);
+  equal(economy.includes('cx="12" cy="16" r="3"'), true);
+  equal(markup.includes('id="stronghold-tier-price">300</span>'), true);
+  const prices = [...markup.matchAll(/class="stronghold-cost"[^>]*>([\s\S]*?)<\/i>/g)];
+  equal(prices.length > 10, true);
+  equal(prices.every(price => price[1]?.includes('stronghold-symbol--resource')), true);
+  for (const id of ['select-army', 'defend', 'assault', 'rally']) {
+    const button = new RegExp(`id="stronghold-${id}"[\\s\\S]*?<\\/button>`).exec(markup)?.[0];
+    equal(button?.includes('<svg'), true);
+    equal(button?.includes('<kbd aria-hidden="true">'), true);
+  }
+});
+
 test('Stronghold enemies use dark-red squares, diamonds and siege carts with red outlines', () => {
   const state = createStronghold();
   for (const formation of [null, 'warrior', 'archer', 'catapult'] as const) {

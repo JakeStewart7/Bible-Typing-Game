@@ -130,6 +130,8 @@ export function renderStronghold(
   text('stronghold-outcome-copy', snapshot.message);
   if (elements.orders.parentElement !== ownCard.actions) ownCard.actions.append(elements.orders);
   elements.orders.classList.toggle('is-hidden', !army || terminal);
+  for (const button of elements.orders.querySelectorAll<HTMLButtonElement>('button')) button.disabled = !running || !army || terminal;
+  setAttribute(requireElement('stronghold-rally', HTMLButtonElement), 'aria-pressed', String(rallyPlacement));
   elements.privateTyping.classList.toggle('is-hidden', terminal);
   const placing = running && !challenge && !placementCancelled && (relayPlacement || readyBuilding(snapshot) !== null);
   const cursorMode = running && !terminal && !challenge && (placing || rallyPlacement) ? 'placement' : 'default';

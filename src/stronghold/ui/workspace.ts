@@ -12,14 +12,17 @@ import { PLAYER_CURSOR_SHAPE } from './player-theme.ts';
 
 export const PLAYER_IDS = ['you', 'bot-1', 'bot-2', 'bot-3'] as const;
 const ROLE_ICONS: Record<Role, string> = {
-  economy: '<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 4 16 4 16 0V6M4 12v6c0 4 16 4 16 0v-6"/>',
-  production: '<path d="M8 16L18 3L21 2L20 6L10 18Z" fill="currentColor"/><path d="M4 13L13 22M4 22L8 18" stroke-width="3"/>',
+  economy: '<path d="M8 3h8l-2 5c2 2 6 6 6 10 0 3-3 4-8 4s-8-1-8-4c0-4 4-8 6-10ZM8 8h8"/><circle cx="12" cy="16" r="3"/>',
+  production: '<path d="M8 16L18 3L21 2L20 6L10 18Z"/><path d="M4 13L13 22M4 22L8 18"/>',
   army: PLAYER_CURSOR_SHAPE,
   defenses: '<path d="M3 21V5h4v4h3V3h4v6h3V5h4v16ZM10 21v-6h4v6"/>'
 };
 const LOCK_ICON = '<svg class="stronghold-lock is-hidden" data-tier-lock viewBox="0 0 16 18" aria-hidden="true"><path d="M4 8V5a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2"/><rect x="2" y="7" width="12" height="10" rx="1" fill="currentColor"/></svg>';
 function costMarkup(value: number, id?: string): string {
   return `<span class="stronghold-cost"${id ? ` id="${id}"` : ''}><i class="stronghold-symbol stronghold-symbol--resource" aria-hidden="true"></i><span${id ? ' id="stronghold-tier-price"' : ''}>${value}</span><span class="sr-only"> supplies</span></span>`;
+}
+function orderButton(id: string, label: string, shortcut: number, icon: string): string {
+  return `<button id="stronghold-${id}" type="button" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}" data-tooltip="${label} (Alt+${shortcut})"${id === 'rally' ? ' aria-pressed="false"' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true">${icon}</svg><span>${label}</span><kbd aria-hidden="true">${shortcut}</kbd></button>`;
 }
 function tile(action: Action, label: string, tier: number | undefined, shortcut: string): string {
   return `<button type="button" class="stronghold-build-tile${COSTS[action] > 0 ? ' has-cost' : ''}" data-action="${action}"${tier ? ` data-tier="${tier}"` : ''} data-min-tier="${tier ?? MIN_TIER[action]}" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}">
@@ -96,7 +99,7 @@ export function strongholdWorkspaceMarkup(): string {
         <p>Supplies, Gatherers, Barracks, Builders, Walls and Towers need typing, not supplies. Each typing option has a small progress bar; select it to show its progress in the main player-colored bar. More expensive buildings fill more slowly. Excess progress from a completed entry carries into the next bar. Once construction is ready, further entries do not bank more completions. Troops, upgrades and relays cost supplies without typing.</p>
         <p>Matches normally start at Tier 0, with T1 starting units and buildings. Complete the first shared tier challenge to unlock T1 Barracks and towers. Locked tasks cannot be selected or typed for. Army types for supplies at Tier 0 and selects Barracks work when you join after unlocking T1. Fill the work bar, then click the map to place. Each player chooses tasks independently; matching tasks share work, and prepared work survives tier challenges. Unit Control can type for supplies while issuing orders.</p>
         <p>Each typing task keeps its progress when you switch tasks or roles. Building tiers keep separate progress. Dev options automatically saves defaults in this browser for new matches and refreshes.</p>
-        <p>Use the coin, sword, cursor and castle buttons, or Ctrl+Tab / Ctrl+Shift+Tab, to switch roles. Tab selects the next unlocked task; Shift+Tab selects the previous one. Click friendly buildings to select; right-click sets their rally points. Unit Control can set all building rally points at once.</p>
+        <p>Use the supply bag, sword, cursor and castle buttons, or Ctrl+Tab / Ctrl+Shift+Tab, to switch roles. Tab selects the next unlocked task; Shift+Tab selects the previous one. Click friendly buildings to select; right-click sets their rally points. Unit Control can set all building rally points at once.</p>
         <p>The command bar timer shows battle time, stopping during pauses, tier challenges and the match outcome. Build again and New game reset the battlefield, timer, typing, selections and camera using your saved new-match defaults.</p>
         <p>Arrow keys pan the map. Page Up selects longer text and Page Down shorter text, or click a length option. Shift+arrows still selects typed text. Alt+number chooses the matching displayed option in your current role.</p>
         <p>The map starts zoomed toward the home base. Scroll to zoom; Alt-drag, middle-drag or arrow keys pan. Moving the pointer to a map edge does not scroll. Right-click moves units or cancels placement, never pans. Shift-drag still adds troops to your selection.</p>
@@ -169,8 +172,10 @@ export function strongholdWorkspaceMarkup(): string {
         </section>
       </div>
       <section id="stronghold-army-orders" class="stronghold-army-orders is-hidden">
-        <button id="stronghold-select-army" type="button" data-shortcut="1" aria-keyshortcuts="Alt+1" data-tooltip="Select all troops (Alt+1)">Select all troops</button><button id="stronghold-defend" type="button" data-shortcut="2" aria-keyshortcuts="Alt+2" data-tooltip="Defend (Alt+2)">Defend</button><button id="stronghold-assault" type="button" data-shortcut="3" aria-keyshortcuts="Alt+3" data-tooltip="Assault base (Alt+3)">Assault base</button>
-        <button id="stronghold-rally" type="button" data-shortcut="4" aria-keyshortcuts="Alt+4" data-tooltip="Set all building rally points (Alt+4)">Rally all buildings</button><p id="stronghold-selection"></p>
+        ${orderButton('select-army', 'Select all troops', 1, '<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/><rect x="7" y="7" width="4" height="4"/><rect x="13" y="13" width="4" height="4"/>')}
+        ${orderButton('defend', 'Defend', 2, '<path d="M12 2L3 6v6c0 5 9 10 9 10s9-5 9-10V6Z"/><path d="M8 12l3 3 5-6"/>')}
+        ${orderButton('assault', 'Assault base', 3, ROLE_ICONS.production)}
+        ${orderButton('rally', 'Rally all buildings', 4, '<path d="M5 22V3l14 5-14 5"/><path d="M2 22h6"/>')}<p id="stronghold-selection"></p>
       </section>
       <div id="stronghold-placement" class="stronghold-placement is-hidden"><span id="stronghold-placement-label">Click the map to place.</span><button id="stronghold-cancel-placement" type="button">Cancel</button></div>
     </div>
