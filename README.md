@@ -183,8 +183,12 @@ dark command board. Subdued map texture and a soft battlefield vignette add dept
 without obscuring text or intercepting clicks. The faded length reel sits to the
 left of typing, with its **PgUp / PgDn** indicator on the reel's left and a thin
 dark player-colored divider between the keys.
-Expanded length choices use a darker gray background. Typing mistakes use the
-same neutral silver-gray highlight in every game mode, independent of player color.
+Expanded length choices use a darker gray background. Stronghold typing uses a
+fixed-width font and a thin neutral caret. Mistakes retain a vivid highlight,
+outline and strikethrough, all matching the selected player color.
+The larger Tier Up badge aligns with the top controls and hangs below the bar.
+Economy places Gatherer and Supplies together, Relay beneath, and its upgrade last.
+Unit Control's role button reuses the actual player cursor.
 Hover descriptions appear immediately in dark styled tooltips, including disabled
 controls and map entities. The custom player cursor remains visible while typing,
 over controls and dialogs, with the native custom cursor as a fallback.
@@ -238,11 +242,14 @@ color while carried, regardless of mining upgrades, and sit ahead of the gathere
 in its movement direction, retaining that facing while stopped. Active relay deliveries use
 neutral-colored glowing chunks and muted links; disconnected cargo does not glow.
 Faint radius rings mark friendly relays, including unfinished ones, and the castle.
-Hover a relay or the castle, or preview a new relay, to highlight completed living connections
-within 155 map units, including the castle itself. A green preview reaches the
-castle network; an amber preview is disconnected. Radius rings use world units
+Hover a relay or the castle, or preview a new relay, to highlight the full ranges
+of nearby completed and unfinished relays within 155 map units, including the
+castle itself. A green preview reaches the castle network; amber dashed links
+are disconnected or planned. Radius rings use world units
 and remain accurate while zooming. Unfinished relays can preview potential
 connections but do not deliver resources until construction finishes.
+Towers gain battlements, weapon arms and a heavy spiked crown across T1/T2/T3.
+Attack impacts retain their explosion without the extra crossing slash lines.
 
 Walls block travel for friendly and enemy units, including while being built.
 Walls are 25% thicker, with matching collision bounds and placement previews.

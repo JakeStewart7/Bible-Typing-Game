@@ -11,7 +11,7 @@ import { addBuilding, addUnit, createStronghold } from './stronghold-fixtures.ts
 import { queuedUnits, TRAINING_SECONDS } from '../src/stronghold/domain/training.ts';
 import { PHRASE_LENGTHS } from '../src/stronghold/domain/types.ts';
 import { wheelZoom } from '../src/stronghold/ui/map-camera.ts';
-import { carriedResourcePosition, relayPreviewMarkup, resourceChunkMarkup } from '../src/stronghold/ui/battlefield.ts';
+import { buildingMarkup, carriedResourcePosition, relayPreviewMarkup, resourceChunkMarkup } from '../src/stronghold/ui/battlefield.ts';
 import { formatBattleTime } from '../src/stronghold/ui/view.ts';
 import { phraseWork, taskCost, taskWork, UPGRADE_OPTIONS } from '../src/stronghold/domain/technology.ts';
 import { UPGRADE_TARGETS } from '../src/stronghold/domain/types.ts';
@@ -488,10 +488,28 @@ test('Stronghold relay previews include the base at exactly 155 units and exclud
   for (const building of [castle, neighbor]) equal(markup.includes(`data-relay-connection="${building.id}"`), true);
   equal(markup.includes(`data-relay-connection="${source.id}"`), false);
   equal(markup.includes('stroke="#65eb98"'), true);
+  equal(markup.includes(`data-relay-connection="${incomplete.id}" data-powered="false" data-planned="true"`), true);
+  equal((markup.match(/data-relay-neighbor-radius/g) ?? []).length, 3);
+  for (const building of [destroyed, enemy]) equal(markup.includes(`data-relay-connection="${building.id}"`), false);
   const pending = relayPreviewMarkup(state, incomplete, incomplete.id);
   equal(pending.includes('r="155"'), true);
   equal(pending.includes(`data-relay-connection="${castle.id}"`), true);
   equal(pending.includes(`data-relay-connection="${incomplete.id}"`), false);
+});
+
+test('Stronghold towers gain battlements, weapon arms and a heavy crown with each tier', () => {
+  const state = createStronghold();
+  const towers = [1, 2, 3].map(tier => buildingMarkup(addBuilding(state, 'tower', { x: 400, y: 300 }, true, false, tier)));
+  for (const [index, markup] of towers.entries()) {
+    equal(markup.includes(`data-tower-tier="${index + 1}"`), true);
+    equal(markup.includes('data-health'), true);
+    equal(markup.includes('data-attack'), true);
+    equal(markup.includes('M-7 5L6 -6'), false);
+  }
+  equal(towers[0]!.includes('M-16 -10L-26 -18'), false);
+  equal(towers[1]!.includes('M-16 -10L-26 -18'), true);
+  equal(towers[2]!.includes('L0 -31'), true);
+  equal(towers[2]!.includes('r="5" fill="#ffb22e"'), true);
 });
 
 test('Stronghold relay previews distinguish castle-connected extensions from disconnected relay groups', () => {

@@ -419,7 +419,7 @@ test('Stronghold simulated role mates contribute work without editing human text
   equal(you.phraseId, armyId);
 });
 
-test('Stronghold square castle, T towers and basic animations preserve health and selection markup', () => {
+test('Stronghold square castle, tiered towers and basic animations preserve health and selection markup', () => {
   const state = createStronghold();
   const castle = state.buildings.find(building => building.kind === 'castle');
   const tower = state.buildings.find(building => building.kind === 'tower');
@@ -427,7 +427,7 @@ test('Stronghold square castle, T towers and basic animations preserve health an
   if (!castle || !tower || !worker) throw new Error('Missing entities.');
   equal(buildingMarkup(castle).includes('v-10 h10'), false);
   equal(buildingMarkup(castle).includes('width="68" height="68"'), true);
-  equal(buildingMarkup(tower).includes('M-16 -20 H16 V-10 H5 V20 H-5 V-10 H-16 Z'), true);
+  equal(buildingMarkup(tower).includes('data-tower-tier="1"'), true);
   equal(unitMotionTransform(worker, { x: worker.x - 1, y: worker.y }, 1).includes('rotate'), true);
   equal(unitMotionTransform(worker, worker, 1), '');
   worker.attackTarget = { x: 100, y: 100 }; worker.cooldown = 3;

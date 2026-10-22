@@ -29,7 +29,7 @@ test('Stronghold task cycling wraps forwards and backwards without treating paid
   const markup = strongholdWorkspaceMarkup();
   const economy = /data-role="economy">([\s\S]*?)data-role="production"/.exec(markup)?.[1];
   if (!economy) throw new Error('Missing economy tasks.');
-  equal([...economy.matchAll(/data-action="([^"]+)"/g)].map(match => match[1]), ['worker', 'relay', 'resources', 'upgrade']);
+  equal([...economy.matchAll(/data-action="([^"]+)"/g)].map(match => match[1]), ['worker', 'resources', 'relay', 'upgrade']);
   equal([...economy.matchAll(/data-shortcut="([^"]+)"/g)].map(match => match[1]), ['1', '2', '3', '4']);
   equal(markup.includes('aria-keyshortcuts="PageUp PageDown"'), true);
   equal(markup.includes('Command desk'), false);
@@ -130,7 +130,7 @@ test('Stronghold enemy attacks retain the explosion without beam, trail or slash
   const friendly = unitMarkup(addUnit(state, 'warrior', { x: 300, y: 100 }), false);
   equal(friendly.includes('data-beam'), true);
   equal(friendly.includes('data-trail'), true);
-  equal(friendly.includes('#fff1d2'), true);
+  equal(friendly.includes('#fff1d2'), false);
 });
 
 test('Stronghold wall visuals are 25 percent thicker and match collision thickness including their border', () => {

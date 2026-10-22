@@ -7,12 +7,13 @@ import { taskShortcut } from './keyboard.ts';
 import { weatherMarkup } from './environment.ts';
 import { creditsMarkup } from './credits.ts';
 import { isArmyUnit } from '../domain/training.ts';
+import { PLAYER_CURSOR_SHAPE } from './player-theme.ts';
 
 export const PLAYER_IDS = ['you', 'bot-1', 'bot-2', 'bot-3'] as const;
 const ROLE_ICONS: Record<Role, string> = {
   economy: '<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 4 16 4 16 0V6M4 12v6c0 4 16 4 16 0v-6"/>',
   production: '<path d="m15 3 6 0 0 6-10 10-6-6Z M4 12l8 8 M3 21l5-5"/>',
-  army: '<path d="m5 3 15 10-7 1-3 7Z"/>',
+  army: PLAYER_CURSOR_SHAPE,
   defenses: '<path d="M3 21V5h4v4h3V3h4v6h3V5h4v16ZM10 21v-6h4v6"/>'
 };
 const LOCK_ICON = '<svg class="stronghold-lock is-hidden" data-tier-lock viewBox="0 0 16 18" aria-hidden="true"><path d="M4 8V5a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2"/><rect x="2" y="7" width="12" height="10" rx="1" fill="currentColor"/></svg>';
@@ -29,7 +30,9 @@ function roleActions(role: Role): string {
   let index = 0;
   const task = (action: Action, label = ACTION_LABELS[action], tier?: number) => tile(action, label, tier, taskShortcut(index++));
   const improvement = (target: UpgradeTarget) => upgrade(target, taskShortcut(index++));
-  if (role === 'economy') return `<div class="stronghold-build-row">${task('worker', 'Gatherer')}${task('relay', 'Relay')}${task('resources', 'Supplies')}</div>${improvement('economy')}`;
+  if (role === 'economy') return `<div class="stronghold-build-row">${task('worker', 'Gatherer')}${task('resources', 'Supplies')}</div>
+    <div class="stronghold-build-row">${task('relay', 'Relay')}</div>
+    <div class="stronghold-build-row">${improvement('economy')}</div>`;
   if (role === 'production') return `<div class="stronghold-build-row">${[1, 2, 3].map(tier => task('barracks', `Barracks T${tier}`, tier)).join('')}</div>
     <div class="stronghold-build-row">${task('warrior', 'Warrior')}${task('archer', 'Archer')}${task('catapult', 'Catapult')}</div>
     <div class="stronghold-build-row">${improvement('warrior')}${improvement('archer')}${improvement('catapult')}</div>`;
@@ -42,7 +45,7 @@ function playerCard(id: string, index: number): string {
   return `<section class="stronghold-player" data-player="${id}">
     <div class="stronghold-player-frame">
       <header><h3>Player ${index + 1}</h3>
-      <div class="stronghold-role-buttons" role="group" aria-label="Player ${index + 1} role">${ROLES.map(role => `<button id="stronghold-role-${id}-${role}" type="button" data-role-button="${role}" aria-label="${ROLE_LABELS[role]}" aria-pressed="false" data-tooltip="${ROLE_LABELS[role]}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">${ROLE_ICONS[role]}</svg></button>`).join('')}</div></header>
+      <div class="stronghold-role-buttons" role="group" aria-label="Player ${index + 1} role">${ROLES.map(role => `<button id="stronghold-role-${id}-${role}" type="button" data-role-button="${role}" aria-label="${ROLE_LABELS[role]}" aria-pressed="false" data-tooltip="${ROLE_LABELS[role]}"><svg viewBox="0 0 24 ${role === 'army' ? 30 : 24}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">${ROLE_ICONS[role]}</svg></button>`).join('')}</div></header>
       <small id="stronghold-name-${id}" class="sr-only"></small>
       <div class="stronghold-player-progress" role="progressbar" aria-label="Player ${index + 1} selected task progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="stronghold-work-track"><div id="stronghold-progress-${id}"></div></div><span id="stronghold-progress-label-${id}" class="stronghold-progress-label">0%</span></div>
       <div class="stronghold-player-actions" id="stronghold-player-actions-${id}">${ROLES.map(role => `<div class="stronghold-actions" data-role="${role}">${roleActions(role)}</div>`).join('')}</div>
@@ -83,7 +86,7 @@ export function strongholdWorkspaceMarkup(): string {
         <p>Completed characters, including spaces, advance your selected free task. Short is 1-5 characters at 1x, Medium 6-11 at 1.1x, Long 12-24 at 1.25x, and Extra Long 25-40 at 1.5x. All lengths use normal words or word groups.</p>
         <p>Relays need no typing: select Relay and click the map to place its shadow. Other buildings need a full work bar first. Escape cancels placement. Builders construct and repair automatically.</p>
         <p>Use Rotate or Alt+R before placing a wall to turn it 45 degrees. In Defenses, click an existing friendly wall to show its angle and Rotate button; Done or Escape finishes editing. Shift-click also rotates immediately. Walls block all units; enemies go around them or attack a wall if there is no route.</p>
-        <p>Gatherers carry blue or purple chunks matching their resource node to the nearest relay or castle. Neutral glowing chunks travel through completed relay links. Faint rings show relay and castle range, including relays still under construction. Hover either, or place a relay, to highlight nearby completed connections within 155 map units, including the castle. Green previews reach the castle network; amber previews are disconnected. Purple nodes yield twice as much. Broken connections stop relay deliveries.</p>
+        <p>Gatherers carry blue or purple chunks matching their resource node to the nearest relay or castle. Neutral glowing chunks travel through completed relay links. Hover a relay or castle, or place a relay, to see the 155-unit ranges of nearby completed and unfinished relays. Green previews reach the castle network; amber previews are disconnected or planned. Unfinished relays never transport supplies. Purple nodes yield twice as much. Broken connections stop relay deliveries.</p>
         <p>In Unit Control, left-click or drag to select friendly units, right-click to move, and left-click empty ground to deselect. Shift adds units. Manual move orders take priority over combat and automatic rally orders until arrival; units then resume fighting. Right-click cancels placement or rally targeting; left-click places the building or rally point. A plus badge on the cursor shows targeting mode.</p>
         <p>Gatherers and builders resume nearest work after two idle seconds at their destination. Builders and walls cost no supplies, only typing work.</p>
         <p>Supplies, Gatherers, Barracks, Builders, Walls and Towers need typing, not supplies. Each typing option has a small progress bar; select it to show its progress in the main player-colored bar. More expensive buildings fill more slowly. Excess progress from a completed entry carries into the next bar. Once construction is ready, further entries do not bank more completions. Troops, upgrades and relays cost supplies without typing.</p>
