@@ -1,29 +1,45 @@
 import { menuNavigationMarkup } from '../../ui/menu-navigation.ts';
 import { ACTION_LABELS, COSTS, isTypingAction, LENGTH_LABELS, MIN_TIER, ROLE_LABELS, TEXT_LENGTH_BONUSES } from '../domain/rules.ts';
 import { UPGRADE_OPTIONS } from '../domain/technology.ts';
-import { PHRASE_LENGTHS, PLAYER_COLORS, ROLES, SEASONS, type Action, type Role, type UpgradeTarget } from '../domain/types.ts';
+import { PHRASE_LENGTHS, PLAYER_COLORS, ROLES, SEASONS, STARTING_ENTITIES, type Action, type Role, type UpgradeTarget } from '../domain/types.ts';
+import { STARTING_LIMITS } from '../domain/options.ts';
 import { SEASON_LABELS } from '../domain/environment.ts';
 import { taskShortcut } from './keyboard.ts';
 import { weatherMarkup } from './environment.ts';
 import { creditsMarkup } from './credits.ts';
 import { isArmyUnit } from '../domain/training.ts';
+import { PLAYER_CURSOR_SHAPE } from './player-theme.ts';
 
 export const PLAYER_IDS = ['you', 'bot-1', 'bot-2', 'bot-3'] as const;
+const ROLE_ICONS: Record<Role, string> = {
+  economy: '<path d="M8 3h8l-2 5c2 2 6 6 6 10 0 3-3 4-8 4s-8-1-8-4c0-4 4-8 6-10ZM8 8h8"/><circle cx="12" cy="16" r="3"/>',
+  production: '<path d="M8 16L18 3L21 2L20 6L10 18Z"/><path d="M4 13L13 22M4 22L8 18"/>',
+  army: PLAYER_CURSOR_SHAPE,
+  defenses: '<path d="M3 21V5h4v4h3V3h4v6h3V5h4v16ZM10 21v-6h4v6"/>'
+};
 const LOCK_ICON = '<svg class="stronghold-lock is-hidden" data-tier-lock viewBox="0 0 16 18" aria-hidden="true"><path d="M4 8V5a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2"/><rect x="2" y="7" width="12" height="10" rx="1" fill="currentColor"/></svg>';
+function costMarkup(value: number, id?: string): string {
+  return `<span class="stronghold-cost"${id ? ` id="${id}"` : ''}><i class="stronghold-symbol stronghold-symbol--resource" aria-hidden="true"></i><span${id ? ' id="stronghold-tier-price"' : ''}>${value}</span><span class="sr-only"> supplies</span></span>`;
+}
+function orderButton(id: string, label: string, shortcut: number, icon: string): string {
+  return `<button id="stronghold-${id}" type="button" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}" data-tooltip="${label} (Alt+${shortcut})"${id === 'rally' ? ' aria-pressed="false"' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true">${icon}</svg><span>${label}</span><kbd aria-hidden="true">${shortcut}</kbd></button>`;
+}
 function tile(action: Action, label: string, tier: number | undefined, shortcut: string): string {
   return `<button type="button" class="stronghold-build-tile${COSTS[action] > 0 ? ' has-cost' : ''}" data-action="${action}"${tier ? ` data-tier="${tier}"` : ''} data-min-tier="${tier ?? MIN_TIER[action]}" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}">
-    ${LOCK_ICON}<span class="stronghold-action-label">${label}</span>${COSTS[action] > 0 ? `<span class="stronghold-cost">${COSTS[action] * (tier ?? 1)}<span class="sr-only"> supplies</span></span>` : ''}${isArmyUnit(action) ? '<small data-training-queued>0 queued</small>' : ''}${isTypingAction(action) ? `<span class="stronghold-task-progress" data-task-progress role="progressbar" aria-label="${ACTION_LABELS[action]}${tier ? ` tier ${tier}` : ''} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span data-task-fill></span></span>` : ''}</button>`;
+    ${LOCK_ICON}<span class="stronghold-action-label">${label}</span>${COSTS[action] > 0 ? costMarkup(COSTS[action] * (tier ?? 1)) : ''}${action === 'worker' || action === 'builder' || isArmyUnit(action) ? '<small data-unit-population></small>' : ''}${isArmyUnit(action) ? '<small data-training-queued>0 queued</small>' : ''}${isTypingAction(action) ? `<span class="stronghold-task-progress" data-task-progress role="progressbar" aria-label="${ACTION_LABELS[action]}${tier ? ` tier ${tier}` : ''} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span data-task-fill></span></span>` : ''}</button>`;
 }
 function upgrade(target: UpgradeTarget, shortcut: string): string {
   const option = UPGRADE_OPTIONS[target];
   return `<button type="button" class="stronghold-upgrade-tile has-cost" data-action="upgrade" data-stronghold-upgrade="${target}" data-min-tier="${option.tier}" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}">
-    ${LOCK_ICON}<span class="stronghold-action-label">Upgrade <span class="stronghold-upgrade-kind">${option.label}</span></span><span class="stronghold-cost">${option.cost}<span class="sr-only"> supplies</span></span><small data-upgrade-level="${target}">Level 0</small></button>`;
+    ${LOCK_ICON}<span class="stronghold-action-label">Upgrade <span class="stronghold-upgrade-kind">${option.label}</span></span>${costMarkup(option.cost)}<small data-upgrade-level="${target}">Level 0</small></button>`;
 }
 function roleActions(role: Role): string {
   let index = 0;
   const task = (action: Action, label = ACTION_LABELS[action], tier?: number) => tile(action, label, tier, taskShortcut(index++));
   const improvement = (target: UpgradeTarget) => upgrade(target, taskShortcut(index++));
-  if (role === 'economy') return `<div class="stronghold-build-row">${task('worker', 'Gatherer')}${task('relay', 'Relay')}${task('resources', 'Supplies')}</div>${improvement('economy')}`;
+  if (role === 'economy') return `<div class="stronghold-build-row">${task('worker', 'Gatherer')}${task('resources', 'Supplies')}</div>
+    <div class="stronghold-build-row">${task('relay', 'Relay')}</div>
+    <div class="stronghold-build-row">${improvement('economy')}</div>`;
   if (role === 'production') return `<div class="stronghold-build-row">${[1, 2, 3].map(tier => task('barracks', `Barracks T${tier}`, tier)).join('')}</div>
     <div class="stronghold-build-row">${task('warrior', 'Warrior')}${task('archer', 'Archer')}${task('catapult', 'Catapult')}</div>
     <div class="stronghold-build-row">${improvement('warrior')}${improvement('archer')}${improvement('catapult')}</div>`;
@@ -35,8 +51,8 @@ function roleActions(role: Role): string {
 function playerCard(id: string, index: number): string {
   return `<section class="stronghold-player" data-player="${id}">
     <div class="stronghold-player-frame">
-      <header><h3>Player ${index + 1}</h3><label class="sr-only" for="stronghold-role-${id}">Player ${index + 1} role</label>
-      <select id="stronghold-role-${id}" class="stronghold-role-select" data-player="${id}">${ROLES.map(role => `<option value="${role}">${ROLE_LABELS[role]}</option>`).join('')}</select></header>
+      <header><h3>Player ${index + 1}</h3>
+      <div class="stronghold-role-buttons" role="group" aria-label="Player ${index + 1} role">${ROLES.map(role => `<button id="stronghold-role-${id}-${role}" type="button" data-role-button="${role}" aria-label="${ROLE_LABELS[role]}" aria-pressed="false" data-tooltip="${ROLE_LABELS[role]}"><svg viewBox="0 0 24 ${role === 'army' ? 30 : 24}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">${ROLE_ICONS[role]}</svg></button>`).join('')}</div></header>
       <small id="stronghold-name-${id}" class="sr-only"></small>
       <div class="stronghold-player-progress" role="progressbar" aria-label="Player ${index + 1} selected task progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="stronghold-work-track"><div id="stronghold-progress-${id}"></div></div><span id="stronghold-progress-label-${id}" class="stronghold-progress-label">0%</span></div>
       <div class="stronghold-player-actions" id="stronghold-player-actions-${id}">${ROLES.map(role => `<div class="stronghold-actions" data-role="${role}">${roleActions(role)}</div>`).join('')}</div>
@@ -57,35 +73,39 @@ export function strongholdWorkspaceMarkup(): string {
         <button id="stronghold-pause" type="button">Pause</button><button id="stronghold-restart" type="button">New game</button>
         <button id="stronghold-computers" type="button" aria-pressed="false">Stop computers</button>
       </nav>
-      <div class="stronghold-tier-mount"><button id="stronghold-ready" class="stronghold-tier" type="button"><span id="stronghold-tier-label">Tier 0</span><strong id="stronghold-tier-action">Tier Up</strong></button></div>
+      <div class="stronghold-tier-mount"><button id="stronghold-ready" class="stronghold-tier" type="button"><span id="stronghold-tier-label">Tier 0</span><strong id="stronghold-tier-action">Tier Up</strong>${costMarkup(300, 'stronghold-tier-cost')}</button></div>
       <aside class="stronghold-hud" aria-label="Kingdom status">
         <div class="stronghold-populations">
           <span class="stronghold-supplies" title="Shared supplies"><span class="sr-only">Shared supplies: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--resource"></i><b id="stronghold-resources">50</b></span>
           <span title="Towers"><span class="sr-only">Towers: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--tower"></i><b id="stronghold-tower-count">0/8</b></span>
           <span title="Warriors"><span class="sr-only">Warriors: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--warrior"></i><b id="stronghold-warrior-count">2/18</b></span>
+          <span title="Archers"><span class="sr-only">Archers: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--archer"></i><b id="stronghold-archer-count">0/12</b></span>
+          <span title="Catapults"><span class="sr-only">Catapults: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--catapult"></i><b id="stronghold-catapult-count">0/6</b></span>
           <span title="Builders"><span class="sr-only">Builders: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--builder"></i><b id="stronghold-builder-count">1/4</b></span>
           <span title="Gatherers"><span class="sr-only">Gatherers: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--worker"></i><b id="stronghold-worker-count">2/12</b></span>
         </div>
       </aside>
       <div class="stronghold-utilities">
+      <span class="stronghold-match-clock" title="Battle time; pauses during tier challenges"><span class="sr-only">Battle time: </span><time id="stronghold-timer" datetime="PT0S">0:00</time></span>
       <details class="stronghold-guide"><summary>Help</summary>
         <div class="stronghold-guide-content">
         <div class="stronghold-legend"><span>Dark red: enemies</span><span>□ Warrior</span><span>◇ Archer</span><span>▲ Catapult</span><span>△ Builder</span><span>○ Gatherer</span></div>
         <p>Completed characters, including spaces, advance your selected free task. Short is 1-5 characters at 1x, Medium 6-11 at 1.1x, Long 12-24 at 1.25x, and Extra Long 25-40 at 1.5x. All lengths use normal words or word groups.</p>
         <p>Relays need no typing: select Relay and click the map to place its shadow. Other buildings need a full work bar first. Escape cancels placement. Builders construct and repair automatically.</p>
-        <p>Use Rotate or Alt+R before placing a wall to turn it 45 degrees. In Defenses, click an existing friendly wall to show its angle and Rotate button; Done or Escape finishes editing. Shift-click also rotates immediately. Walls block all units; enemies go around them or attack a wall if there is no route.</p>
-        <p>Gatherers carry blue or purple chunks matching their resource node to the nearest relay or castle. Neutral glowing chunks travel through completed relay links. Faint rings show relay and castle range, including relays still under construction. Hover either, or place a relay, to highlight nearby completed connections within 155 map units, including the castle. Green previews reach the castle network; amber previews are disconnected. Purple nodes yield twice as much. Broken connections stop relay deliveries.</p>
-        <p>In Unit Control, left-click or drag to select friendly units, right-click to move, and left-click empty ground to deselect. Shift adds units. Right-click cancels placement or rally targeting; left-click places the building or rally point. A plus badge on the cursor shows targeting mode.</p>
+        <p>Scroll while placing or selecting a wall to rotate through 16 angles, 22.5 degrees apart, without zooming. Done or Escape finishes editing. Units prefer routes around buildings, but can escape buildings placed over them or pass through when no route exists.</p>
+        <p>Gatherers carry blue or purple chunks matching their resource node to the nearest relay or castle. Neutral glowing chunks travel through completed relay links. Hover a relay or castle, or place a relay, to see the 155-unit ranges of nearby completed and unfinished relays. Green previews reach the castle network; amber previews are disconnected or planned. Unfinished relays never transport supplies. Purple nodes yield twice as much. Broken connections stop relay deliveries.</p>
+        <p>In Unit Control, left-click or drag to select friendly units, right-click to move, and left-click empty ground to deselect. Shift adds units. Manual move orders take priority over combat and automatic rally orders until arrival; units then resume fighting. Right-click cancels placement or rally targeting; left-click places the building or rally point. A plus badge on the cursor shows targeting mode.</p>
         <p>Gatherers and builders resume nearest work after two idle seconds at their destination. Builders and walls cost no supplies, only typing work.</p>
         <p>Supplies, Gatherers, Barracks, Builders, Walls and Towers need typing, not supplies. Each typing option has a small progress bar; select it to show its progress in the main player-colored bar. More expensive buildings fill more slowly. Excess progress from a completed entry carries into the next bar. Once construction is ready, further entries do not bank more completions. Troops, upgrades and relays cost supplies without typing.</p>
-        <p>Every match starts at Tier 0, with T1 starting units and buildings. Complete the first shared tier challenge to unlock T1 Barracks and towers. Army selects Barracks work when you join. Fill the work bar, then click the map to place once its tier is unlocked. Teammates help with the same selected work, and prepared work survives tier challenges. Unit Control can type for supplies while issuing orders.</p>
-        <p>Each typing task keeps its progress when you switch tasks or roles. Building tiers keep separate progress. Dev options sets the defaults for new matches.</p>
-        <p>Tab selects the next typing or placement task; Shift+Tab selects the previous one, wrapping through your role's tasks without buying troops or upgrades. In menus and dropdowns, Tab keeps its normal focus behavior.</p>
+        <p>Matches normally start at Tier 0, with T1 starting units and buildings. Complete the first shared tier challenge to unlock T1 Barracks and towers. Locked tasks cannot be selected or typed for. Army types for supplies at Tier 0 and selects Barracks work when you join after unlocking T1. Fill the work bar, then click the map to place. Each player chooses tasks independently; matching tasks share work, and prepared work survives tier challenges. Unit Control can type for supplies while issuing orders.</p>
+        <p>Each typing task keeps its progress when you switch tasks or roles. Building tiers keep separate progress. Dev options automatically saves defaults in this browser for new matches and refreshes.</p>
+        <p>Use the supply bag, sword, cursor and castle buttons, or Ctrl+Tab / Ctrl+Shift+Tab, to switch roles. Tab selects the next unlocked task; Shift+Tab selects the previous one. Click friendly buildings to select; right-click sets their rally points. Unit Control can set all building rally points at once.</p>
+        <p>The command bar timer shows battle time, stopping during pauses, tier challenges and the match outcome. Build again and New game reset the battlefield, timer, typing, selections and camera using your saved new-match defaults.</p>
         <p>Arrow keys pan the map. Page Up selects longer text and Page Down shorter text, or click a length option. Shift+arrows still selects typed text. Alt+number chooses the matching displayed option in your current role.</p>
         <p>The map starts zoomed toward the home base. Scroll to zoom; Alt-drag, middle-drag or arrow keys pan. Moving the pointer to a map edge does not scroll. Right-click moves units or cancels placement, never pans. Shift-drag still adds troops to your selection.</p>
         <p>Stop computers pauses simulated teammates and their barracks, not the battlefield. Resume them to finish a shared tier challenge.</p>
         <p>World events begin at 1, 3, 5 and subsequent odd minutes of battle time, last 35 seconds, and leave normal typing between events.</p>
-        <p>Tier Up fills one shared bar by completing phrases. Only fully correct phrases add progress; partial or incorrect entries do not count. The first challenge uses letters, the next letters and numbers, and the last adds symbols and punctuation. Anyone can contribute, even with computers stopped. Light player colors show contributions in the shared bar; player boxes show their current text. Pause challenge keeps your progress; Resume challenge continues it.</p>
+        <p>Tier Up costs 300, 600, then 1500 shared supplies, paid once when each challenge starts. It is unavailable until the team can afford it. Complete correct phrases to fill the shared bar; partial or incorrect entries do not count. The first challenge uses letters, the next letters and numbers, and the last adds symbols and punctuation. Anyone can contribute, even with computers stopped. Pause challenge keeps your progress; Resume challenge continues it.</p>
         <p>Summer makes all friendly and enemy units 15% faster. Winter makes all units 15% slower and both gathered and typed supplies worth 20% less. Spring makes both resource sources worth 20% more. Fall adds 15% to every completed typing task, including world events and Tier Up. Bonuses apply immediately; partial phrases still add no work.</p>
         <p>Queue Warriors at completed T1 Barracks, Archers at T2 and Catapults at T3. Supplies are paid when queued; each unit trains for 12 seconds at its barracks before heading to the rally point. Empty barracks do not train automatically. Queues count toward population caps. Destroy the enemy base to win.</p>
         </div>
@@ -93,26 +113,29 @@ export function strongholdWorkspaceMarkup(): string {
       <details id="stronghold-dev-options" class="stronghold-dev-options">
         <summary>Dev options</summary>
         <form id="stronghold-dev-form" class="stronghold-dev-panel">
-          <h3>New match defaults</h3>
-          <label>Computers start
+          <h3>New game</h3>
+          <label>Computers
             <select id="stronghold-dev-computers"><option value="started">Started</option><option value="stopped">Stopped</option></select>
           </label>
-          <label>Default text length
+          <label>Text length
             <select id="stronghold-dev-length">${PHRASE_LENGTHS.map(length => `<option value="${length}">${LENGTH_LABELS[length]}</option>`).join('')}</select>
           </label>
-          <label>Default player color
+          <label>Player color
             <select id="stronghold-dev-color">${Object.entries(PLAYER_COLORS).map(([name, color]) => `<option value="${color}">${name}</option>`).join('')}</select>
           </label>
-          <label>Starting supplies <input id="stronghold-dev-resources" type="number" min="0" max="10000" step="1" required></label>
-          <label>Starting map zoom <input id="stronghold-dev-zoom" type="number" min="1" max="2" step="0.1" required></label>
-          <p>Saved on this device. Applying starts a new match; New game uses these defaults.</p>
+          <label>Supplies <input id="stronghold-dev-resources" type="number" min="0" max="10000" step="1" required></label>
+          <label>Tier <select id="stronghold-dev-tier">${[0, 1, 2, 3].map(tier => `<option value="${tier}">Tier ${tier}</option>`).join('')}</select></label>
+          <fieldset class="stronghold-dev-counts"><legend class="sr-only">Starting forces</legend>${STARTING_ENTITIES.map(kind => {
+            const labels = { worker: 'Gatherers', builder: 'Builders', warrior: 'Warriors', tower: 'Towers', archer: 'Archers', catapult: 'Catapults' };
+            return `<label>${labels[kind]} <input id="stronghold-dev-${kind}" type="number" min="0" max="${STARTING_LIMITS[kind]}" step="1" required></label>`;
+          }).join('')}</fieldset>
+          <label>Season <select id="stronghold-dev-starting-season"><option value="random">Random each game</option>${SEASONS.map(season => `<option value="${season}">${SEASON_LABELS[season]}</option>`).join('')}</select></label>
+          <label>Time <select id="stronghold-dev-period"><option value="day">Day</option><option value="night">Night</option></select></label>
           <button type="submit">Apply &amp; new game</button>
           <h3>Current match</h3>
           <label>Season <select id="stronghold-dev-season">${SEASONS.map(season => `<option value="${season}">${SEASON_LABELS[season]}</option>`).join('')}</select></label>
           <div class="stronghold-dev-time"><button id="stronghold-next-night" type="button">Skip to Night</button><button id="stronghold-next-day" type="button">Skip to Day</button></div>
-          <p>Preview the season or time of day without restarting or advancing battle time. Existing resource supplies are preserved.</p>
           <button id="stronghold-next-wave" type="button">Next Wave</button>
-          <p>Spawn the next wave now and reset its countdown without restarting the match.</p>
         </form>
       </details>
       <div class="stronghold-atmosphere-controls" role="group" aria-label="Soundtrack and credits">
@@ -149,10 +172,12 @@ export function strongholdWorkspaceMarkup(): string {
         </section>
       </div>
       <section id="stronghold-army-orders" class="stronghold-army-orders is-hidden">
-        <button id="stronghold-select-army" type="button" data-shortcut="1" aria-keyshortcuts="Alt+1" data-tooltip="Select all troops (Alt+1)">Select all troops</button><button id="stronghold-defend" type="button" data-shortcut="2" aria-keyshortcuts="Alt+2" data-tooltip="Defend (Alt+2)">Defend</button><button id="stronghold-assault" type="button" data-shortcut="3" aria-keyshortcuts="Alt+3" data-tooltip="Assault base (Alt+3)">Assault base</button>
-        <button id="stronghold-rally" type="button" data-shortcut="4" aria-keyshortcuts="Alt+4" data-tooltip="Set rally on map (Alt+4)">Set rally on map</button><p id="stronghold-selection"></p>
+        ${orderButton('select-army', 'Select all troops', 1, '<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/><rect x="7" y="7" width="4" height="4"/><rect x="13" y="13" width="4" height="4"/>')}
+        ${orderButton('defend', 'Defend', 2, '<path d="M12 2L3 6v6c0 5 9 10 9 10s9-5 9-10V6Z"/><path d="M8 12l3 3 5-6"/>')}
+        ${orderButton('assault', 'Assault base', 3, ROLE_ICONS.production)}
+        ${orderButton('rally', 'Rally all buildings', 4, '<path d="M5 22V3l14 5-14 5"/><path d="M2 22h6"/>')}<p id="stronghold-selection"></p>
       </section>
-      <div id="stronghold-placement" class="stronghold-placement is-hidden"><span id="stronghold-placement-label">Click the map to place.</span><button id="stronghold-rotate-wall" type="button" class="is-hidden" aria-keyshortcuts="Alt+R">Rotate +45 deg (Alt+R)</button><button id="stronghold-cancel-placement" type="button">Cancel</button></div>
+      <div id="stronghold-placement" class="stronghold-placement is-hidden"><span id="stronghold-placement-label">Click the map to place.</span><button id="stronghold-cancel-placement" type="button">Cancel</button></div>
     </div>
     ${creditsMarkup()}
     <dialog id="stronghold-tier-dialog" class="stronghold-tier-dialog">

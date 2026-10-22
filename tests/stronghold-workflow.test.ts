@@ -39,6 +39,7 @@ test('Stronghold completed entries, not partial typing, fill the shared task bar
 
 test('Stronghold role mates have private text lengths and contribute their own character counts to shared work', () => {
   const state = createStronghold();
+  executeCommand(state, state.players[0]!, { type: 'ACTION', action: 'resources' });
   const [you, teammate] = state.players;
   if (!you || !teammate) throw new Error('Missing players.');
   executeCommand(state, teammate, { type: 'ROLE', role: 'economy' });
@@ -71,6 +72,28 @@ test('Stronghold role mates have private text lengths and contribute their own c
   equal(state.resources, 50 + rewards * 18);
 });
 
+test('Stronghold role mates keep independent task choices and private input while sharing matching work', () => {
+  const state = createStronghold({ resources: 10000, length: 'medium', computersPaused: true });
+  const [you, teammate] = state.players;
+  if (!you || !teammate) throw new Error('Missing players.');
+  executeCommand(state, teammate, { type: 'ROLE', role: 'economy' });
+  const phrase = teammate.phrase, phraseId = teammate.phraseId;
+  executeCommand(state, teammate, { type: 'TYPE', phraseId, text: phrase.slice(0, 2) });
+  executeCommand(state, you, { type: 'ACTION', action: 'resources' });
+  equal(teammate.action, 'worker');
+  equal([teammate.phrase, teammate.phraseId, teammate.typed], [phrase, phraseId, phrase.slice(0, 2)]);
+  executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
+  equal(teammate.work, 0);
+  executeCommand(state, teammate, { type: 'ACTION', action: 'resources' });
+  equal(teammate.work, you.work);
+  executeCommand(state, teammate, { type: 'ACTION', action: 'worker' });
+  executeCommand(state, you, { type: 'READY', ready: true });
+  for (let step = 0; state.phase === 'tier-up' && step < 200; step++) {
+    executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
+  }
+  equal([you.action, teammate.action], ['resources', 'worker']);
+});
+
 test('Stronghold text length selections never add event log entries', () => {
   const state = createStronghold();
   const events = structuredClone(state.events);
@@ -86,6 +109,7 @@ test('Stronghold text length selections never add event log entries', () => {
 test('Stronghold four players on one role keep unique phrases and private typing state for every length', () => {
   for (const length of PHRASE_LENGTHS) {
     const state = createStronghold({ resources: 50, length, computersPaused: true });
+    executeCommand(state, state.players[0]!, { type: 'ACTION', action: 'resources' });
     for (const player of state.players) {
       executeCommand(state, player, { type: 'ROLE', role: 'economy' });
       executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase.slice(0, Math.min(2, player.phrase.length - 1)) });
@@ -386,21 +410,23 @@ test('Stronghold central private typing, length controls and distinct costs repl
   equal(markup.includes('stronghold-build-x'), false);
   equal(markup.includes('stronghold-order-x'), false);
   for (const length of PHRASE_LENGTHS) equal(markup.includes(`value="${length}"`), true);
-  equal(markup.includes('>Army</option>'), true);
-  equal(markup.includes('>Unit Control</option>'), true);
+  equal(markup.includes('aria-label="Army"'), true);
+  equal(markup.includes('aria-label="Unit Control"'), true);
   equal(markup.includes('Army production'), false);
   equal(markup.includes('Army control'), false);
   equal(markup.includes('id="stronghold-world-event" class="stronghold-world-event is-hidden"'), true);
   equal(markup.includes('class="stronghold-work-track"'), true);
 });
 
-test('Stronghold Army bot prepares Tier 1 barracks before unlocking and trains units after the first challenge', () => {
+test('Stronghold Army bot waits for Tier 1 before preparing barracks and training units', () => {
   const state = createStronghold();
   state.resources = 1000;
   state.waveIn = 10000;
   for (let step = 0; step < 100; step++) advanceStronghold(state, .25);
   equal(state.tier, 0);
   equal(state.buildings.some(building => building.kind === 'barracks'), false);
+  equal(state.players.find(player => player.role === 'production')?.action, 'resources');
+  equal(state.roleTasks.production.progress['barracks:1'], undefined);
   const player = state.players[0]!;
   executeCommand(state, player, { type: 'READY', ready: true });
   for (let entry = 0; state.phase === 'tier-up' && entry < TIER_CHARACTER_GOAL; entry++) {
@@ -417,7 +443,8 @@ test('Stronghold player themes pair light highlights and dark basic cursors for 
     const theme = playerTheme(player.color);
     equal(theme.color, player.color);
     equal(theme.light !== theme.bold, true);
-    equal(decodeURIComponent(playerCursor(player.color)).includes(`fill="${theme.bold}"`), true);
+    equal(decodeURIComponent(playerCursor(player.color)).includes(`color="${theme.bold}"`), true);
+    equal(decodeURIComponent(playerCursor(player.color)).includes('fill="currentColor"'), true);
     const placementCursor = decodeURIComponent(playerCursor(player.color, true));
     equal(placementCursor.includes('M20 23.5h7m-3.5-3.5v7'), true);
     equal(placementCursor.includes(`stroke="${theme.bold}"`), true);

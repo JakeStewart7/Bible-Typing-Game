@@ -1,13 +1,16 @@
 import { executeCommand } from '../src/stronghold/domain/actions.ts';
 import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
-import { TIER_CHARACTER_GOAL } from '../src/stronghold/domain/rules.ts';
+import { TIER_CHARACTER_GOAL, TIER_COSTS } from '../src/stronghold/domain/rules.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { addBuilding, createStronghold } from './stronghold-fixtures.ts';
-import { PLAYER_COLORS, type Participant, type StrongholdCommand, type StrongholdState } from '../src/stronghold/domain/types.ts';
+import { PLAYER_COLORS, SEASONS, STARTING_ENTITIES, type Participant, type StrongholdCommand, type StrongholdState } from '../src/stronghold/domain/types.ts';
+import { DAY_SECONDS, daylight, seasonalNodes } from '../src/stronghold/domain/environment.ts';
 import { equal, test } from './harness.ts';
 import { AppStorage } from '../src/persistence/storage.ts';
 import { DEFAULT_DEVELOPER_OPTIONS, readDeveloperOptions, writeDeveloperOptions } from '../src/stronghold/infrastructure/developer-options.ts';
-import { isMatchOptions } from '../src/stronghold/domain/options.ts';
+import { DEFAULT_STARTING_COUNTS, isMatchOptions, STARTING_LIMITS } from '../src/stronghold/domain/options.ts';
+import { distance } from '../src/stronghold/domain/rules.ts';
+import { unitRadius } from '../src/stronghold/domain/navigation.ts';
 import { phraseWork, taskWork } from '../src/stronghold/domain/technology.ts';
 import { readyBuilding } from '../src/stronghold/ui/map-controls.ts';
 
@@ -26,10 +29,76 @@ function entry(state: StrongholdState, player = human(state)): number {
 }
 function quietMatch(): StrongholdState {
   const state = createStronghold();
+  send(state, { type: 'ACTION', action: 'resources' });
   send(state, { type: 'COMPUTERS', paused: true });
   state.waveIn = 10000;
   return state;
 }
+
+test('Stronghold tier challenges require 300, 600 and 1500 supplies and charge exactly once', () => {
+  equal(TIER_COSTS, [300, 600, 1500]);
+  for (const [tier, cost] of TIER_COSTS.entries()) {
+    const state = createStronghold({ resources: cost - 1, length: 'long', computersPaused: true, tier });
+    const before = structuredClone(state);
+    let rejected = false;
+    try { send(state, { type: 'READY', ready: true }); }
+    catch (error) { rejected = error instanceof Error && error.message.includes(`${cost} shared supplies`); }
+    equal(rejected, true);
+    equal(state, before);
+    state.resources = cost + 17;
+    send(state, { type: 'READY', ready: true });
+    equal(state.resources, 17);
+    equal(state.phase, 'tier-up');
+    for (let entryIndex = 0; state.phase === 'tier-up' && entryIndex < 200; entryIndex++) entry(state);
+    equal(state.tier, tier + 1);
+    equal(state.resources, 17);
+    equal(state.events.filter(event => event.text === 'Tier challenge started').length, 1);
+  }
+});
+
+test('Stronghold starting forces honor zero and maximum counts with clear spawn positions', () => {
+  const none = { worker: 0, builder: 0, warrior: 0, tower: 0, archer: 0, catapult: 0 };
+  for (const startingCounts of [none, DEFAULT_STARTING_COUNTS, STARTING_LIMITS]) {
+    const state = createStronghold({ ...DEFAULT_DEVELOPER_OPTIONS, tier: 3, startingCounts });
+    for (const kind of STARTING_ENTITIES) {
+      equal(kind === 'tower' ? state.buildings.filter(building => building.kind === kind && !building.enemy).length
+        : state.units.filter(unit => unit.kind === kind).length, startingCounts[kind]);
+    }
+    for (const unit of state.units) {
+      equal(state.units.every(other => other === unit || distance(unit, other) >= unitRadius(unit) + unitRadius(other)), true);
+      equal(unit.hp, unit.maxHp);
+    }
+    equal(state.buildings.filter(building => building.kind === 'tower' && building.enemy).length, 2);
+  }
+  for (const value of [null, [], { worker: -1 }, { builder: 5 }, { tower: 9 }, { warrior: 19 }, { archer: 1.5 }, { catapult: '2' }, { unknown: 1 }]) {
+    equal(isMatchOptions({ ...DEFAULT_DEVELOPER_OPTIONS, startingCounts: value }), false);
+  }
+});
+
+test('Stronghold starting forces persist across storage, refresh and reset without mutable option aliases', () => {
+  const values = new Map<string, string>();
+  const storage = new AppStorage({
+    getItem: key => values.get(key) ?? null, setItem: (key, value) => { values.set(key, value); }, removeItem: key => { values.delete(key); }
+  });
+  const options = { ...DEFAULT_DEVELOPER_OPTIONS, startingCounts: { worker: 3, builder: 2, warrior: 4, tower: 2, archer: 3, catapult: 2 } };
+  writeDeveloperOptions(storage, options);
+  const loaded = readDeveloperOptions(storage), engine = new StrongholdEngine(loaded);
+  loaded.startingCounts.worker = 0;
+  options.startingCounts.warrior = 0;
+  const expected = engine.snapshot('you');
+  engine.advance(1);
+  engine.restart();
+  equal(engine.snapshot('you').units, expected.units);
+  equal(engine.snapshot('you').buildings, expected.buildings);
+  const fresh = new StrongholdEngine(readDeveloperOptions(storage)).snapshot('you');
+  equal(fresh.units, expected.units);
+  equal(fresh.buildings, expected.buildings);
+  const defaults = readDeveloperOptions(new AppStorage({
+    getItem: () => null, setItem: () => {}, removeItem: () => {}
+  }));
+  defaults.startingCounts.worker = 0;
+  equal(DEFAULT_DEVELOPER_OPTIONS.startingCounts.worker, 2);
+});
 
 test('Stronghold developer defaults are validated, copied and reused by new matches', () => {
   const options = { resources: 175, length: 'short' as const, computersPaused: true };
@@ -59,6 +128,21 @@ test('Stronghold developer defaults are validated, copied and reused by new matc
     { resources: 50, length: 'short', computersPaused: 'true' }]) equal(isMatchOptions(value), false);
 });
 
+test('Stronghold starting tiers persist and restart with unlocked tasks but no carried battle progress', () => {
+  for (const tier of [0, 1, 2, 3]) {
+    const engine = new StrongholdEngine({ ...DEFAULT_DEVELOPER_OPTIONS, tier });
+    engine.advance(1);
+    engine.restart();
+    equal(engine.snapshot('you').tier, tier);
+    equal(engine.snapshot('you').elapsed, 0);
+    engine.send('you', { type: 'ROLE', role: 'defenses' });
+    if (tier > 0) {
+      engine.send('you', { type: 'ACTION', action: 'tower', tier });
+      equal(engine.snapshot('you').players[0]!.constructionTier, tier);
+    }
+  }
+});
+
 test('Stronghold developer defaults persist independently of the current match and tolerate obsolete stored data', () => {
   const values = new Map<string, string>();
   const storage = new AppStorage({
@@ -67,18 +151,59 @@ test('Stronghold developer defaults persist independently of the current match a
     removeItem: key => { values.delete(key); }
   });
   equal(readDeveloperOptions(storage), DEFAULT_DEVELOPER_OPTIONS);
-  const options = { resources: 25, length: 'long' as const, computersPaused: true, mapZoom: 1.5, playerColor: PLAYER_COLORS.Green };
+  const options = { ...DEFAULT_DEVELOPER_OPTIONS, resources: 25, length: 'long' as const, computersPaused: true, playerColor: PLAYER_COLORS.Green, season: 'fall' as const, period: 'night' as const };
   writeDeveloperOptions(storage, options);
   equal(readDeveloperOptions(storage), options);
   const saved = readDeveloperOptions(storage);
   saved.resources = 100;
   equal(readDeveloperOptions(storage).resources, 25);
   values.set('stronghold-developer-options', '{"resources":25,"length":"long","computersPaused":true}');
-  equal(readDeveloperOptions(storage), { ...options, mapZoom: 1.2, playerColor: PLAYER_COLORS.Red });
+  equal(readDeveloperOptions(storage), { ...options, playerColor: PLAYER_COLORS.Red, season: 'random', period: 'day' });
+  values.set('stronghold-developer-options', JSON.stringify({ ...options, mapZoom: 1.2 }));
+  equal(readDeveloperOptions(storage), options);
   values.set('stronghold-developer-options', JSON.stringify({ ...options, playerColor: 'invalid' }));
   equal(readDeveloperOptions(storage), DEFAULT_DEVELOPER_OPTIONS);
   values.set('stronghold-developer-options', '{"length":"obsolete"}');
   equal(readDeveloperOptions(storage), DEFAULT_DEVELOPER_OPTIONS);
+});
+
+test('Stronghold saved seasons and day/night initialize every fresh game without carrying battle progress', () => {
+  for (const season of SEASONS) for (const period of ['day', 'night'] as const) {
+    const options = { ...DEFAULT_DEVELOPER_OPTIONS, season, period };
+    const engine = new StrongholdEngine(options);
+    for (let restart = 0; restart < 3; restart++) {
+      const snapshot = engine.snapshot('you');
+      equal(snapshot.season, season);
+      equal(snapshot.nodes, seasonalNodes(season));
+      equal(snapshot.environmentElapsed, period === 'night' ? DAY_SECONDS : 0);
+      equal(daylight(snapshot.environmentElapsed).period, period);
+      equal(snapshot.elapsed, 0);
+      equal(snapshot.tier, 0);
+      engine.advance(1);
+      engine.send('you', { type: 'SET_SEASON', season: season === 'winter' ? 'summer' : 'winter' });
+      engine.restart();
+    }
+    const fresh = new StrongholdEngine(JSON.parse(JSON.stringify(options)));
+    equal(fresh.snapshot('you').season, season);
+    equal(daylight(fresh.snapshot('you').environmentElapsed).period, period);
+  }
+});
+
+test('Stronghold rejects invalid saved environment preferences atomically and accepts random new-match seasons', () => {
+  const options = { ...DEFAULT_DEVELOPER_OPTIONS, season: 'random' as const };
+  equal(isMatchOptions(options), true);
+  for (const invalid of [{ ...options, season: 'rain' }, { ...options, season: null }, { ...options, period: 'sunset' }, { ...options, period: null }]) {
+    equal(isMatchOptions(invalid), false);
+    const values = new Map([['stronghold-developer-options', JSON.stringify(invalid)]]);
+    const storage = new AppStorage({
+      getItem: key => values.get(key) ?? null,
+      setItem: (key, value) => { values.set(key, value); },
+      removeItem: key => { values.delete(key); }
+    });
+    equal(readDeveloperOptions(storage), DEFAULT_DEVELOPER_OPTIONS);
+  }
+  const engine = new StrongholdEngine(options);
+  equal(SEASONS.includes(engine.snapshot('you').season), true);
 });
 
 test('Stronghold saved player colors survive restarts and keep teammate colors distinct', () => {
@@ -110,10 +235,11 @@ test('Stronghold starts with 50 supplies, Medium text and running computers, and
   const points = phraseWork(player);
   engine.send('you', { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
   const snapshot = engine.snapshot('you');
-  equal(snapshot.roleTasks.economy.progress.resources?.work, points);
-  if (!snapshot.roleTasks.economy.progress.resources) throw new Error('Missing saved work.');
-  snapshot.roleTasks.economy.progress.resources.work = 500;
-  equal(engine.snapshot('you').roleTasks.economy.progress.resources?.work, points);
+  equal(snapshot.players[0]!.action, 'worker');
+  equal(snapshot.roleTasks.economy.progress.worker?.work, points);
+  if (!snapshot.roleTasks.economy.progress.worker) throw new Error('Missing saved work.');
+  snapshot.roleTasks.economy.progress.worker.work = 500;
+  equal(engine.snapshot('you').roleTasks.economy.progress.worker?.work, points);
   equal(JSON.stringify(snapshot.roleTasks).includes('phrase'), false);
   engine.send('you', { type: 'COMPUTERS', paused: true });
   engine.restart();
@@ -121,8 +247,36 @@ test('Stronghold starts with 50 supplies, Medium text and running computers, and
   equal(restarted.tier, 0);
   equal(restarted.buildings.every(building => building.tier === 1), true);
   equal(restarted.computersPaused, false);
-  equal(restarted.roleTasks.economy.progress.resources?.work, 0);
+  equal(restarted.roleTasks.economy.progress.worker?.work, 0);
+  equal(restarted.players[0]!.action, 'worker');
   equal(restarted.players.every(player => player.work === 0 && player.length === 'medium'), true);
+});
+
+test('Stronghold restart replaces the entire progressed match with a fresh initial state', () => {
+  const engine = new StrongholdEngine({ resources: 375, length: 'long', computersPaused: true });
+  const initial = engine.snapshot('you');
+  engine.send('you', { type: 'ROLE', role: 'army' });
+  const unit = engine.snapshot('you').units.find(unit => unit.kind === 'warrior')!;
+  engine.send('you', { type: 'MOVE', ids: [unit.id], point: { x: 800, y: 450 } });
+  engine.send('you', { type: 'RALLY', point: { x: 700, y: 400 } });
+  engine.send('you', { type: 'LENGTH', length: 'short' });
+  engine.send('you', { type: 'SET_SEASON', season: 'winter' });
+  engine.send('you', { type: 'TIME_OF_DAY', period: 'night' });
+  engine.send('you', { type: 'NEXT_WAVE' });
+  for (let second = 0; second < 20; second++) engine.advance(1);
+  engine.send('you', { type: 'READY', ready: true });
+  const player = engine.snapshot('you').players[0]!;
+  engine.send('you', { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+  equal(engine.snapshot('you').phase, 'tier-up');
+  equal(engine.snapshot('you').players[0]!.contribution > 0, true);
+  engine.restart();
+  const restarted = engine.snapshot('you');
+  const normalize = (snapshot: typeof initial) => ({
+    ...snapshot, season: 'random',
+    nodes: snapshot.nodes.map(({ x: _x, y: _y, id: _id, ...node }) => node),
+    players: snapshot.players.map(player => ({ ...player, phrase: '' }))
+  });
+  equal(normalize(restarted), normalize(initial));
 });
 
 test('Stronghold each task retains completed work across task changes and a vacant role', () => {
@@ -172,8 +326,11 @@ test('Stronghold restored task work remains shared when teammates select tasks a
   let suppliesWork = entry(state);
   executeCommand(state, teammate, { type: 'ACTION', action: 'worker' });
   let workerWork = entry(state, teammate);
-  equal(you.work, workerWork);
+  equal(you.work, suppliesWork);
   send(state, { type: 'ACTION', action: 'resources' });
+  equal(teammate.work, workerWork);
+  equal(teammate.action, 'worker');
+  executeCommand(state, teammate, { type: 'ACTION', action: 'resources' });
   equal(teammate.work, suppliesWork);
   equal(teammate.action, 'resources');
   suppliesWork = Math.round((suppliesWork + entry(state, teammate)) * 100) / 100;
@@ -186,7 +343,8 @@ test('Stronghold restored task work remains shared when teammates select tasks a
   equal(you.phrase !== teammate.phrase, true);
   send(state, { type: 'ACTION', action: 'resources' });
   equal(you.work, suppliesWork);
-  equal(teammate.work, suppliesWork);
+  equal(teammate.work, workerWork);
+  equal(teammate.action, 'worker');
 });
 
 test('Stronghold construction tiers keep independent bars and instant upgrades leave typing progress untouched', () => {
@@ -238,50 +396,51 @@ test('Stronghold construction tiers keep independent bars and instant upgrades l
   equal(player.work, barracks3Work);
 });
 
-test('Stronghold Army prepares Barracks at Tier 0 and places them after the first shared challenge', () => {
-  const engine = new StrongholdEngine({ resources: 50, length: 'medium', computersPaused: false });
+test('Stronghold Army cannot prepare locked Barracks and unlocks each building tier independently', () => {
+  const engine = new StrongholdEngine({ resources: 300, length: 'medium', computersPaused: false });
   const self = () => engine.snapshot('you').players.find(player => player.id === 'you')!;
   engine.send('you', { type: 'ROLE', role: 'production' });
-  equal(self().action, 'barracks');
+  equal(self().action, 'resources');
   equal(self().constructionTier, 1);
+  const before = engine.snapshot('you');
+  let locked = false;
+  try { engine.send('you', { type: 'ACTION', action: 'barracks', tier: 1 }); }
+  catch (error) { locked = error instanceof Error && error.message.includes('tier 1'); }
+  equal(locked, true);
+  equal(engine.snapshot('you'), before);
   const phrase = self().phrase;
   engine.send('you', { type: 'TYPE', phraseId: self().phraseId, text: phrase.slice(0, 2) });
   for (let second = 0; second < 15; second++) engine.advance(1);
-  equal(self().work >= 40, true);
+  equal(engine.snapshot('you').roleTasks.production.progress['barracks:1'], undefined);
   equal(self().phrase, phrase);
   equal(self().typed, phrase.slice(0, 2));
-  equal(engine.snapshot('you').events.some(event => event.playerId === 'bot-1' && event.text.includes('gathered Supplies')), false);
   equal(engine.snapshot('you').tier, 0);
   equal(readyBuilding(engine.snapshot('you')), null);
-  let locked = false;
-  try { engine.send('you', { type: 'PLACE', kind: 'barracks', point: { x: 620, y: 570 } }); }
-  catch (error) { locked = error instanceof Error && error.message.includes('tier 1'); }
-  equal(locked, true);
-  const preparedWork = self().work;
   engine.send('you', { type: 'COMPUTERS', paused: true });
   engine.send('you', { type: 'READY', ready: true });
   for (let index = 0; engine.snapshot('you').phase === 'tier-up' && index < TIER_CHARACTER_GOAL; index++) {
     engine.send('you', { type: 'TYPE', phraseId: self().phraseId, text: self().phrase });
   }
   equal(engine.snapshot('you').tier, 1);
-  equal(self().work, preparedWork);
-  equal(readyBuilding(engine.snapshot('you')), 'barracks');
-  const supplies = engine.snapshot('you').resources;
-  const work = self().work;
-  engine.send('you', { type: 'PLACE', kind: 'barracks', point: { x: 620, y: 570 } });
-  equal(self().work, Math.round((work - 40) * 100) / 100);
-  equal(engine.snapshot('you').resources, supplies);
-  equal(engine.snapshot('you').buildings.some(building => building.kind === 'barracks' && building.tier === 1), true);
-  engine.send('you', { type: 'ACTION', action: 'barracks', tier: 2 });
-  for (let count = 0; self().work < 80; count++) {
+  engine.send('you', { type: 'ACTION', action: 'barracks', tier: 1 });
+  equal(self().work, 0);
+  for (let count = 0; self().work < 40; count++) {
     if (count > 20) throw new Error('Barracks task did not fill.');
     engine.send('you', { type: 'TYPE', phraseId: self().phraseId, text: self().phrase });
   }
-  equal(readyBuilding(engine.snapshot('you')), null);
+  equal(readyBuilding(engine.snapshot('you')), 'barracks');
+  const supplies = engine.snapshot('you').resources;
+  const work = self().work;
+  engine.send('you', { type: 'PLACE', kind: 'barracks', point: { x: 800, y: 570 } });
+  equal(self().work, Math.round((work - 40) * 100) / 100);
+  equal(engine.snapshot('you').resources, supplies);
+  equal(engine.snapshot('you').buildings.some(building => building.kind === 'barracks' && building.tier === 1), true);
+  const afterPlacement = engine.snapshot('you');
   let rejected = false;
-  try { engine.send('you', { type: 'PLACE', kind: 'barracks', point: { x: 750, y: 570 } }); }
+  try { engine.send('you', { type: 'ACTION', action: 'barracks', tier: 2 }); }
   catch (error) { rejected = error instanceof Error && error.message.includes('tier 2'); }
   equal(rejected, true);
+  equal(engine.snapshot('you'), afterPlacement);
 });
 
 test('Stronghold running computers contribute to each selected Barracks tier without replacing human selection or input', () => {
@@ -293,6 +452,7 @@ test('Stronghold running computers contribute to each selected Barracks tier wit
   const partner = state.players.find(other => other.simulated && other.role === 'production')!;
   for (const tier of [1, 2, 3]) {
     send(state, { type: 'ACTION', action: 'barracks', tier });
+    executeCommand(state, partner, { type: 'ACTION', action: 'barracks', tier });
     send(state, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase.slice(0, 2) });
     const privateInput = { phraseId: player.phraseId, phrase: player.phrase, typed: player.typed };
     const work = player.work, reward = phraseWork(partner), completed = partner.completed;
@@ -315,6 +475,7 @@ test('Stronghold all three Barracks selections preserve independent shared progr
   const banks = new Map<number, number>();
   for (const tier of [1, 2, 3]) {
     send(state, { type: 'ACTION', action: 'barracks', tier });
+    executeCommand(state, partner, { type: 'ACTION', action: 'barracks', tier });
     equal([player.action, partner.action], ['barracks', 'barracks']);
     equal([player.constructionTier, partner.constructionTier], [tier, tier]);
     equal([player.work, partner.work], [0, 0]);
@@ -335,6 +496,7 @@ test('Stronghold all three Barracks selections preserve independent shared progr
   equal(player.work, banks.get(2));
   for (const tier of [1, 2, 3]) {
     send(state, { type: 'ACTION', action: 'barracks', tier });
+    executeCommand(state, partner, { type: 'ACTION', action: 'barracks', tier });
     let expected = banks.get(tier)!;
     equal([player.work, partner.work], [expected, expected]);
     for (let entries = 0; expected < 40 * tier && entries < 40 * tier; entries++) {
@@ -354,12 +516,14 @@ test('Stronghold all three Barracks selections preserve independent shared progr
   equal(state.buildings.filter(building => building.kind === 'barracks').map(building => building.tier), [1, 2, 3]);
   for (const tier of [3, 1, 2]) {
     send(state, { type: 'ACTION', action: 'barracks', tier });
+    executeCommand(state, partner, { type: 'ACTION', action: 'barracks', tier });
     equal([player.work, partner.work], [banks.get(tier), banks.get(tier)]);
   }
 });
 
 test('Stronghold shared tier challenges preserve normal task banks and the chosen text length', () => {
   const state = quietMatch();
+  state.resources = 300;
   const player = human(state);
   const suppliesWork = entry(state);
   send(state, { type: 'ACTION', action: 'worker' });
@@ -416,6 +580,7 @@ test('Stronghold stopping computers freezes their decisions and barracks, but no
 
 test('Stronghold stopped computers do not block a solo shared tier challenge', () => {
   const state = quietMatch();
+  state.resources = 300;
   send(state, { type: 'READY', ready: true });
   for (let index = 0; index < 10; index++) advanceStronghold(state, .25);
   equal(state.phase, 'tier-up');

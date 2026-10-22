@@ -71,7 +71,7 @@ test('Stronghold free towers retain their tier and paid troops are purchased wit
   finish(state);
   executeCommand(state, self(state), { type: 'PLACE', kind: 'tower', point: { x: 360, y: 425 } });
   equal(state.buildings.find(building => building.kind === 'tower' && !building.enemy)?.tier, 2);
-  equal(state.buildings.find(building => building.kind === 'tower' && !building.enemy)?.maxHp, 330);
+  equal(state.buildings.find(building => building.kind === 'tower' && !building.enemy)?.maxHp, 660);
   equal(state.resources, 500);
   executeCommand(state, self(state), { type: 'ROLE', role: 'production' });
   addBuilding(state, 'barracks', { x: 650, y: 570 }, true, false, 3);
@@ -119,7 +119,7 @@ test('Stronghold rejects invalid construction tiers and upgrades from the wrong 
   rejects(() => executeCommand(state, self(state), { type: 'ACTION', action: 'relay', tier: 4 }));
   rejects(() => executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade', upgrade: 'catapult' }));
   equal(self(state).phraseId, phraseId);
-  equal(self(state).action, 'resources');
+  equal(self(state).action, 'worker');
   equal(state.resources, 50);
 });
 
@@ -128,7 +128,7 @@ test('Stronghold sketch controls do not collide with Arcade upgrade selectors', 
   equal(markup.includes(' data-upgrade='), false);
   equal(markup.includes(' data-stronghold-upgrade="warrior"'), true);
   equal(markup.includes('data-tier="3"'), true);
-  equal(markup.includes('id="stronghold-role-you"'), true);
+  equal(markup.includes('id="stronghold-role-you-production"'), true);
 });
 
 test('Stronghold completed construction holds one bar and requires refilling after every free wall', () => {
@@ -148,7 +148,7 @@ test('Stronghold completed construction holds one bar and requires refilling aft
   equal(self(state).work, Math.round((readyWork - 32) * 100) / 100);
   rejects(() => executeCommand(state, self(state), { type: 'PLACE', kind: 'wall', point: { x: 410, y: 540 } }));
   const secondReadyWork = finish(state);
-  executeCommand(state, self(state), { type: 'PLACE', kind: 'wall', point: { x: 410, y: 540 } });
+  executeCommand(state, self(state), { type: 'PLACE', kind: 'wall', point: { x: 420, y: 540 } });
   equal(self(state).work, Math.round((secondReadyWork - 32) * 100) / 100);
   equal(state.resources, 50);
 });

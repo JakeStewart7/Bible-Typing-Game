@@ -37,6 +37,7 @@ export function createMapCamera(map: SVGSVGElement) {
   return {
     get zoom(): number { return zoom; },
     get center(): Point { return { ...center }; },
+    refresh: draw,
     setZoom,
     panTo(point: Point): void { cameraBounds(zoom, point); center = { ...point }; draw(); },
     reset(value = DEFAULT_MAP_ZOOM): void { setZoom(value, BASE); }

@@ -4,13 +4,32 @@ import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
 import { equal, test } from './harness.ts';
 import { PLAYER_COLORS } from '../src/stronghold/domain/types.ts';
 
-test('Stronghold enemies use dark-red squares, diamonds and triangles with red outlines', () => {
+test('Stronghold role and order icons are outlined and cost badges reuse the resource symbol', () => {
+  const markup = strongholdWorkspaceMarkup();
+  const sword = /id="stronghold-role-you-production"[\s\S]*?<\/button>/.exec(markup)?.[0];
+  const economy = /id="stronghold-role-you-economy"[\s\S]*?<\/button>/.exec(markup)?.[0];
+  if (!sword || !economy) throw new Error('Missing role icons.');
+  equal(sword.includes('fill="none"'), true);
+  equal(sword.includes('fill="currentColor"'), false);
+  equal(economy.includes('cx="12" cy="16" r="3"'), true);
+  equal(markup.includes('id="stronghold-tier-price">300</span>'), true);
+  const prices = [...markup.matchAll(/class="stronghold-cost"[^>]*>([\s\S]*?)<\/i>/g)];
+  equal(prices.length > 10, true);
+  equal(prices.every(price => price[1]?.includes('stronghold-symbol--resource')), true);
+  for (const id of ['select-army', 'defend', 'assault', 'rally']) {
+    const button = new RegExp(`id="stronghold-${id}"[\\s\\S]*?<\\/button>`).exec(markup)?.[0];
+    equal(button?.includes('<svg'), true);
+    equal(button?.includes('<kbd aria-hidden="true">'), true);
+  }
+});
+
+test('Stronghold enemies use dark-red squares, diamonds and siege carts with red outlines', () => {
   const state = createStronghold();
   for (const formation of [null, 'warrior', 'archer', 'catapult'] as const) {
     const markup = unitMarkup(addUnit(state, 'invader', { x: 500, y: 100 }, formation), false);
     equal(markup.includes('fill="#870018" stroke="#ff1726" stroke-width="2"'), true);
     equal(markup.includes(formation === 'archer' ? 'M0 -10 L8 0 L0 10 L-8 0 Z'
-      : formation === 'catapult' ? 'M0 -12 L10 9 L-10 9 Z' : '<rect x="-8" y="-8" width="16" height="16"'), true);
+      : formation === 'catapult' ? 'data-catapult' : '<rect x="-8" y="-8" width="16" height="16"'), true);
     equal(markup.includes('#91a8b7'), false);
   }
   equal(unitMarkup(addUnit(state, 'warrior', { x: 500, y: 500 }), false).includes('fill="#dce2e8" stroke="#65727e"'), true);
@@ -28,7 +47,8 @@ test('Stronghold concise controls retain accessible labels and essential costs',
   equal(markup.indexOf('id="stronghold-resources"') < markup.indexOf('id="stronghold-tower-count"'), true);
   equal(markup.includes('<span class="sr-only"> supplies</span>'), true);
   equal(markup.includes('for="stronghold-input"'), true);
-  equal(markup.includes('for="stronghold-role-you"'), true);
+  equal(markup.includes('role="group" aria-label="Player 1 role"'), true);
+  equal(markup.includes('class="stronghold-role-select"'), false);
   for (const id of ['stronghold-castle', 'stronghold-enemy', 'stronghold-wave', 'stronghold-season']) {
     equal(markup.includes(`id="${id}"`), false);
   }

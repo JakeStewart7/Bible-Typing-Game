@@ -4,7 +4,7 @@ import { buildingMarkup, unitMarkup, unitMotionTransform } from '../src/strongho
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
 import { addBuilding, addUnit, createStronghold } from './stronghold-fixtures.ts';
 import { PHRASE_LENGTHS, PLAYER_COLORS, ROLES } from '../src/stronghold/domain/types.ts';
-import { validateDeveloperOptions } from '../src/stronghold/infrastructure/developer-options.ts';
+import { DEFAULT_DEVELOPER_OPTIONS, DEFAULT_MAP_ZOOM, validateDeveloperOptions } from '../src/stronghold/infrastructure/developer-options.ts';
 import { WALL_HALF_WIDTH } from '../src/stronghold/domain/navigation.ts';
 import { equal, test } from './harness.ts';
 
@@ -29,7 +29,7 @@ test('Stronghold task cycling wraps forwards and backwards without treating paid
   const markup = strongholdWorkspaceMarkup();
   const economy = /data-role="economy">([\s\S]*?)data-role="production"/.exec(markup)?.[1];
   if (!economy) throw new Error('Missing economy tasks.');
-  equal([...economy.matchAll(/data-action="([^"]+)"/g)].map(match => match[1]), ['worker', 'relay', 'resources', 'upgrade']);
+  equal([...economy.matchAll(/data-action="([^"]+)"/g)].map(match => match[1]), ['worker', 'resources', 'relay', 'upgrade']);
   equal([...economy.matchAll(/data-shortcut="([^"]+)"/g)].map(match => match[1]), ['1', '2', '3', '4']);
   equal(markup.includes('aria-keyshortcuts="PageUp PageDown"'), true);
   equal(markup.includes('Command desk'), false);
@@ -46,6 +46,19 @@ test('Stronghold places input before the prompt and replaces tier labels with ac
   equal(markup.includes('data-tooltip="Defend (Alt+2)"'), true);
 });
 
+test('Stronghold role icon buttons replace dropdowns and expose selected-state semantics for every player', () => {
+  const markup = strongholdWorkspaceMarkup();
+  equal(markup.includes('stronghold-role-select'), false);
+  for (const id of ['you', 'bot-1', 'bot-2', 'bot-3']) {
+    for (const role of ROLES) {
+      equal(markup.includes(`id="stronghold-role-${id}-${role}" type="button" data-role-button="${role}"`), true);
+    }
+  }
+  equal((markup.match(/data-role-button=/g) ?? []).length, 16);
+  equal((markup.match(/aria-pressed="false" data-tooltip="(?:Economy|Army|Unit Control|Defenses)"/g) ?? []).length, 16);
+  equal(markup.includes('id="stronghold-timer" datetime="PT0S">0:00</time>'), true);
+});
+
 test('Stronghold map entities retain accessible descriptions without delayed native SVG tooltips', () => {
   const state = createStronghold();
   const unit = unitMarkup(addUnit(state, 'warrior', { x: 500, y: 500 }), false);
@@ -56,17 +69,17 @@ test('Stronghold map entities retain accessible descriptions without delayed nat
   }
 });
 
-test('Stronghold friendly and enemy archers bob slowly even when standing or attacking', () => {
+test('Stronghold friendly and enemy archers bob 25 percent faster even when standing or attacking', () => {
   const state = createStronghold();
   for (const [kind, formation] of [['archer', null], ['invader', 'archer']] as const) {
     const unit = addUnit(state, kind, { x: 100, y: 100 }, formation);
     unit.id = 0;
     equal(unitMotionTransform(unit, unit, 0), 'translate(0 0)');
-    equal(unitMotionTransform(unit, unit, Math.PI / 4.4), 'translate(0 2.5)');
-    equal(unitMotionTransform(unit, unit, 3 * Math.PI / 4.4), 'translate(0 -2.5)');
+    equal(unitMotionTransform(unit, unit, Math.PI / 5.5), 'translate(0 2.5)');
+    equal(unitMotionTransform(unit, unit, 3 * Math.PI / 5.5), 'translate(0 -2.5)');
     unit.attackTarget = { x: 120, y: 100 }; unit.cooldown = 1;
-    equal(unitMotionTransform(unit, unit, Math.PI / 4.4), 'translate(0 2.5) scale(1.15)');
-    equal(unitMotionTransform(unit, unit, Math.PI / 4.4, true), '');
+    equal(unitMotionTransform(unit, unit, Math.PI / 5.5), 'translate(0 2.5) scale(1.15)');
+    equal(unitMotionTransform(unit, unit, Math.PI / 5.5, true), '');
   }
 });
 
@@ -75,8 +88,8 @@ test('Stronghold builders bob quickly only while actively building or repairing'
   builder.id = 0;
   equal(unitMotionTransform(builder, builder, Math.PI / 48), '');
   builder.attackTarget = { x: 110, y: 100 }; builder.cooldown = 1;
-  equal(unitMotionTransform(builder, builder, Math.PI / 48), 'translate(0 1.25)');
-  equal(unitMotionTransform(builder, builder, 3 * Math.PI / 48), 'translate(0 -1.25)');
+  equal(unitMotionTransform(builder, builder, Math.PI / 48), '');
+  equal(unitMotionTransform(builder, builder, 3 * Math.PI / 48), '');
   equal(unitMotionTransform(builder, builder, Math.PI / 48, true), '');
   builder.attackTarget = null;
   equal(unitMotionTransform(builder, builder, Math.PI / 48), '');
@@ -117,7 +130,7 @@ test('Stronghold enemy attacks retain the explosion without beam, trail or slash
   const friendly = unitMarkup(addUnit(state, 'warrior', { x: 300, y: 100 }), false);
   equal(friendly.includes('data-beam'), true);
   equal(friendly.includes('data-trail'), true);
-  equal(friendly.includes('#fff1d2'), true);
+  equal(friendly.includes('#fff1d2'), false);
 });
 
 test('Stronghold wall visuals are 25 percent thicker and match collision thickness including their border', () => {
@@ -173,7 +186,8 @@ test('Stronghold military panels omit Supplies and every remaining task has a ma
   for (const id of ['stronghold-zoom-fit', 'stronghold-zoom-in', 'stronghold-zoom-out', 'stronghold-zoom']) {
     equal(markup.includes(`id="${id}"`), false);
   }
-  equal(markup.includes('aria-keyshortcuts="Alt+R"'), true);
+  equal(markup.includes('aria-keyshortcuts="Alt+R"'), false);
+  equal(markup.includes('id="stronghold-rotate-wall"'), false);
   equal(markup.includes('class="stronghold-action-label">Queue '), false);
   equal(markup.includes('data-training-queued>0 queued'), true);
   equal(markup.includes('id="stronghold-next-wave" type="button">Next Wave</button>'), true);
@@ -190,10 +204,11 @@ test('Stronghold zoom camera stays within the full battlefield and minimum zoom 
   equal(zoomed.y + zoomed.height, 650);
   equal(zoomed.width < 1000 && zoomed.height < 650, true);
   equal(cameraBounds(10, { x: 500, y: 325 }).width, 500);
-  for (const mapZoom of [NaN, Infinity, .5, 2.1]) {
+  equal(DEFAULT_MAP_ZOOM, 2);
+  for (const tier of [NaN, Infinity, -.5, 1.5, 4]) {
     let rejected = false;
-    try { validateDeveloperOptions({ resources: 50, length: 'medium', computersPaused: false, mapZoom, playerColor: PLAYER_COLORS.Red }); }
-    catch (error) { rejected = error instanceof Error && error.message.includes('map zoom'); }
+    try { validateDeveloperOptions({ ...DEFAULT_DEVELOPER_OPTIONS, tier }); }
+    catch (error) { rejected = error instanceof Error; }
     equal(rejected, true);
   }
 });

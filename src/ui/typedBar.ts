@@ -11,11 +11,10 @@ export function renderTypedBar(container: HTMLElement, game: Game): void {
     const span = document.createElement('span');
     span.className = 'typed-word';
     const expectedSlice = expected.slice(pos, pos + w.length);
-    const isCorrect = w === expectedSlice;
+    const isCorrect = w === expectedSlice && (game.blockedAccuracyIndex === null || pos + w.length <= game.blockedAccuracyIndex);
 
     if (wi < words.length - 1) {
       span.classList.add('completed');
-      span.textContent = w + ' ';
     } else {
       if (w.length === 0) {
         span.classList.add('current');
@@ -23,8 +22,15 @@ export function renderTypedBar(container: HTMLElement, game: Game): void {
       } else {
         span.classList.add('current');
         if (!isCorrect) span.classList.add('incorrect');
-        span.textContent = w;
       }
+    }
+    const text = w + (wi < words.length - 1 ? ' ' : '');
+    for (let index = 0; index < text.length; index++) {
+      const letter = document.createElement('span');
+      letter.className = 'typed-letter';
+      if (game.blockedAccuracyIndex !== null && pos + index >= game.blockedAccuracyIndex) letter.classList.add('incorrect');
+      letter.textContent = text[index] ?? '';
+      span.appendChild(letter);
     }
 
     container.appendChild(span);

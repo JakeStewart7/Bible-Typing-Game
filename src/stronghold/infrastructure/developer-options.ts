@@ -1,38 +1,41 @@
 import { AppStorage, decodeJson } from '../../persistence/storage.ts';
-import { DEFAULT_MATCH_OPTIONS, isMatchOptions, validateMatchOptions } from '../domain/options.ts';
-import { PLAYER_COLORS, type PlayerColor, type StrongholdMatchOptions } from '../domain/types.ts';
-export const DEFAULT_MAP_ZOOM = 1.2;
+import { DEFAULT_MATCH_OPTIONS, DEFAULT_STARTING_COUNTS, isMatchOptions, validateMatchOptions } from '../domain/options.ts';
+import { PLAYER_COLORS, type PlayerColor, type Season, type StartingCounts, type StrongholdMatchOptions } from '../domain/types.ts';
+export const DEFAULT_MAP_ZOOM = 2;
 export const MIN_MAP_ZOOM = 1;
 export const MAX_MAP_ZOOM = 2;
 
-export type DeveloperOptions = StrongholdMatchOptions & { mapZoom: number; playerColor: PlayerColor };
-export const DEFAULT_DEVELOPER_OPTIONS: Readonly<DeveloperOptions> = {
-  ...DEFAULT_MATCH_OPTIONS, mapZoom: DEFAULT_MAP_ZOOM, playerColor: PLAYER_COLORS.Red
+export type DeveloperOptions = StrongholdMatchOptions & {
+  playerColor: PlayerColor; season: Season | 'random'; period: 'day' | 'night'; tier: number; startingCounts: StartingCounts;
 };
-function isStoredOptions(value: unknown): value is StrongholdMatchOptions & { mapZoom?: number } {
-  return isMatchOptions(value) && (!('mapZoom' in value) || (typeof value.mapZoom === 'number'
-    && Number.isFinite(value.mapZoom) && value.mapZoom >= MIN_MAP_ZOOM && value.mapZoom <= MAX_MAP_ZOOM));
+export const DEFAULT_DEVELOPER_OPTIONS: Readonly<DeveloperOptions> = {
+  ...DEFAULT_MATCH_OPTIONS, playerColor: PLAYER_COLORS.Red, season: 'random', period: 'day', tier: 0, startingCounts: { ...DEFAULT_STARTING_COUNTS }
+};
+function isStoredOptions(value: unknown): value is StrongholdMatchOptions & { mapZoom?: unknown } {
+  return isMatchOptions(value);
 }
 const decodeOptions = decodeJson(isStoredOptions);
 const storedOptions = {
   key: 'stronghold-developer-options',
   decode: (raw: string): DeveloperOptions | null => {
-    const options = decodeOptions(raw);
-    return options ? {
-      ...options, mapZoom: options.mapZoom ?? DEFAULT_MAP_ZOOM, playerColor: options.playerColor ?? PLAYER_COLORS.Red
-    } : null;
+    const stored = decodeOptions(raw);
+    if (!stored) return null;
+    const { mapZoom: _obsoleteZoom, ...options } = stored;
+    return {
+      ...options, playerColor: options.playerColor ?? PLAYER_COLORS.Red,
+      season: options.season ?? 'random', period: options.period ?? 'day', tier: options.tier ?? 0,
+      startingCounts: { ...DEFAULT_STARTING_COUNTS, ...options.startingCounts }
+    };
   }
 };
 
 export function validateDeveloperOptions(options: DeveloperOptions): void {
   validateMatchOptions(options);
-  if (!Number.isFinite(options.mapZoom) || options.mapZoom < MIN_MAP_ZOOM || options.mapZoom > MAX_MAP_ZOOM) {
-    throw new Error('Choose a starting map zoom between 100% and 200%.');
-  }
 }
 
 export function readDeveloperOptions(storage: AppStorage): DeveloperOptions {
-  return { ...storage.read(storedOptions, DEFAULT_DEVELOPER_OPTIONS) };
+  const options = storage.read(storedOptions, DEFAULT_DEVELOPER_OPTIONS);
+  return { ...options, startingCounts: { ...options.startingCounts } };
 }
 export function writeDeveloperOptions(storage: AppStorage, options: DeveloperOptions): void {
   validateDeveloperOptions(options);

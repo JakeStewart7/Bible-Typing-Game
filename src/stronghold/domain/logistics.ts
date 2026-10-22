@@ -32,6 +32,7 @@ function automaticWorkTime(state: StrongholdState, unit: Unit, seconds: number):
     moveUnitToward(state, unit, unit.destination, seconds * UNIT_RULES[unit.kind].speed);
     if (distance(unit, unit.destination) > .001) return 0;
     unit.destination = null;
+    unit.manualMove = false;
     unit.idleTime = 0;
     seconds = Math.max(0, seconds - travelTime);
   }
@@ -86,8 +87,11 @@ function updateWorker(state: StrongholdState, worker: Unit, seconds: number): vo
 
 function updateBuilder(state: StrongholdState, builder: Unit, seconds: number, project: Building): void {
   const approach = project.kind === 'wall' ? wallApproach(builder, project) : project;
-  moveUnitToward(state, builder, approach, seconds * UNIT_RULES.builder.speed);
-  if (distance(builder, approach) > (project.kind === 'wall' ? 1 : 22)) return;
+  const range = project.kind === 'wall' ? 1 : 22;
+  if (distance(builder, approach) > range) {
+    moveUnitToward(state, builder, approach, Math.min(seconds * UNIT_RULES.builder.speed, distance(builder, approach) - range));
+  }
+  if (distance(builder, approach) > range + .001) return;
   builder.attackTarget = { x: project.x, y: project.y };
   builder.cooldown = 1;
   if (project.progress < 1) {

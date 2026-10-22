@@ -1,6 +1,6 @@
 import { connectedRelays, relayNeighbors } from '../domain/logistics.ts';
 import { distance, RELAY_RANGE } from '../domain/rules.ts';
-import { towerUpgrade, unitUpgrade } from '../domain/technology.ts';
+import { buildingScale, unitUpgrade } from '../domain/technology.ts';
 import type { Building, Point, ResourceChunk, ResourceNode, StrongholdSnapshot, Unit } from '../domain/types.ts';
 import { createSvgLayer, setAttribute, setText } from './dom-updates.ts';
 import { playerTheme } from './player-theme.ts';
@@ -24,14 +24,14 @@ function actionEffectMarkup(working = false, enemy = false): string {
     <path data-beam fill="none" stroke="#ed914c" stroke-width="2" stroke-linejoin="bevel" filter="url(#stronghold-attack-glow)"/>`}
     <g data-impact filter="url(#stronghold-attack-glow)">
       <path d="M0 -11L3 -4L10 -7L6 0L11 4L4 5L0 12L-3 5L-11 7L-6 0L-11 -4L-4 -5Z" fill="#9c572d" fill-opacity=".55" stroke="#ed914c" stroke-width="1.5"/>
-      ${enemy ? '' : '<path d="M-7 5L6 -6 M-1 8L7 0" stroke="#fff1d2" stroke-width="2"/>'}</g></g>`;
+    </g></g>`;
 }
 export function unitMotionTransform(unit: Unit, previous: Point | undefined, elapsed: number, reducedMotion = false): string {
   if (reducedMotion) return '';
   const active = actionActive(unit);
   const archer = unit.kind === 'archer' || (unit.kind === 'invader' && unit.formation === 'archer');
-  const bob = archer ? `translate(0 ${Math.sin(elapsed * 2.2 + unit.id) * 2.5})` : '';
-  if (active && unit.kind === 'builder') return `translate(0 ${Math.sin(elapsed * 24 + unit.id) * 1.25})`;
+  const bob = archer ? `translate(0 ${Math.sin(elapsed * 2.75 + unit.id) * 2.5})` : '';
+  if (active && unit.kind === 'builder') return '';
   if (active && unit.kind === 'worker') return 'scale(1.04)';
   if (active) return `${bob ? bob + ' ' : ''}scale(1.15)`;
   if (archer) return bob;
@@ -44,38 +44,57 @@ export function unitMotionTransform(unit: Unit, previous: Point | undefined, ela
   return `translate(0 ${stride * 1.5}) rotate(${stride * 5})`;
 }
 export function unitMarkup(unit: Unit, selected: boolean): string {
-  const shape = unit.kind === 'worker' ? '<circle r="8" fill="#fff" stroke="#b88051" stroke-width="2"/>'
+  const siege = (unit.formation ?? unit.kind) === 'catapult';
+  const fill = unit.kind === 'invader' ? '#870018' : '#b18b45', stroke = unit.kind === 'invader' ? '#ff1726' : '#654717';
+  const shape = siege ? `<g data-catapult><rect x="-16" y="2" width="32" height="10" rx="2" fill="${fill}" stroke="${stroke}" stroke-width="2"/><circle cx="-11" cy="13" r="5" fill="#27323a" stroke="${stroke}" stroke-width="2"/><circle cx="11" cy="13" r="5" fill="#27323a" stroke="${stroke}" stroke-width="2"/><path d="M-10 2L0 -10L10 2Z" fill="${fill}" stroke="${stroke}" stroke-width="2"/><g data-catapult-arm><path d="M-9 4L13 -19" stroke="${stroke}" stroke-width="5"/><path d="M7 -21L17 -13L20 -21Z" fill="${unit.kind === 'invader' ? '#ff1726' : '#e7c76e'}" stroke="${stroke}" stroke-width="2"/></g></g>`
+    : unit.kind === 'worker' ? '<circle r="8" fill="#fff" stroke="#b88051" stroke-width="2"/>'
     : unit.kind === 'builder' ? '<path d="M0 -11 L10 8 L-10 8 Z" fill="#cec0df" stroke="#a64caf" stroke-width="2"/>'
     : unit.kind === 'warrior' ? '<rect x="-8" y="-8" width="16" height="16" fill="#dce2e8" stroke="#65727e" stroke-width="2"/>'
     : unit.kind === 'archer' ? '<path d="M0 -10 L8 0 L0 10 L-8 0 Z" fill="#9ed7e6" stroke="#00aeef" stroke-width="2"/>'
-    : unit.kind === 'catapult' ? '<path d="M0 -12 L10 9 L-10 9 Z" fill="#f0e3a7" stroke="#cfb000" stroke-width="2"/>'
     : unit.formation === 'archer' ? '<path d="M0 -10 L8 0 L0 10 L-8 0 Z" fill="#870018" stroke="#ff1726" stroke-width="2"/>'
-    : unit.formation === 'catapult' ? '<path d="M0 -12 L10 9 L-10 9 Z" fill="#870018" stroke="#ff1726" stroke-width="2"/>'
     : '<rect x="-8" y="-8" width="16" height="16" fill="#870018" stroke="#ff1726" stroke-width="2"/>';
-  return `${actionEffectMarkup(unit.kind === 'worker' || unit.kind === 'builder', unit.kind === 'invader')}<circle data-selected r="16" fill="none" stroke="#fff" stroke-width="2" visibility="${selected ? 'visible' : 'hidden'}"/><g data-visual>${shape}</g>${health(unit.hp, unit.maxHp, 13, 20)}<desc>${unit.kind}${unit.formation ? ' ' + unit.formation : ''}: ${Math.ceil(unit.hp)} HP</desc>`;
+  return `${actionEffectMarkup(unit.kind === 'worker' || unit.kind === 'builder', unit.kind === 'invader')}<circle data-selected r="${siege ? 27 : 16}" fill="none" stroke="#fff" stroke-width="2" visibility="${selected ? 'visible' : 'hidden'}"/><g data-visual>${shape}</g>${health(unit.hp, unit.maxHp, siege ? 23 : 13, siege ? 34 : 20)}<desc>${unit.kind}${unit.formation ? ' ' + unit.formation : ''}: ${Math.ceil(unit.hp)} HP</desc>`;
 }
 export function buildingMarkup(building: Building): string {
   const color = building.enemy ? '#870018' : building.kind === 'relay' ? '#b0b0b0' : '#c3c3c3';
   const size = building.kind === 'castle' || building.kind === 'enemy-base' ? 34 : 14;
-  const shape = building.kind === 'tower' ? `<path d="M-16 -20 H16 V-10 H5 V20 H-5 V-10 H-16 Z" fill="${building.enemy ? color : '#fff'}" stroke="${building.enemy ? '#ff1726' : '#ffd500'}" stroke-width="3"/>`
+  const shape = building.kind === 'tower' ? towerMarkup(building)
     : building.kind === 'relay' ? `<path d="M-4 16 L-4 -7 L-9 -12 L0 -18 L9 -12 L4 -7 L4 16 Z" fill="${color}" stroke="#7f7f7f" stroke-width="2"/>`
     : building.kind === 'wall' ? `<rect data-wall-shape transform="rotate(${building.rotation ?? 0})" x="-23" y="${-WALL_HALF_WIDTH + 1.5}" width="46" height="${WALL_HALF_WIDTH * 2 - 3}" fill="${building.enemy ? color : '#ffdb58'}" stroke="${building.enemy ? '#ff1726' : '#e8ad23'}" stroke-width="3"/>`
     : `<rect x="${-size}" y="${-size}" width="${size * 2}" height="${size * 2}" fill="${color}" stroke="${building.enemy ? '#ff1726' : '#7f7f7f'}" stroke-width="4"/>`;
   return `${actionEffectMarkup(false, building.enemy)}${shape}${health(building.hp, building.maxHp, building.kind === 'tower' ? 26 : size + 6, size * 2)}<desc></desc>${building.kind === 'barracks' ? `<text data-tier y="5" text-anchor="middle" fill="#111" font-size="16">T${building.tier}</text><g data-training><rect x="-17" y="26" width="34" height="8" fill="#23372e"/><rect x="-16" y="27" width="32" height="6" fill="#333"/><rect data-training-fill x="-16" y="27" width="0" height="6" fill="#a6ed89"/><text data-training-count y="43" text-anchor="middle" fill="#111" stroke="white" stroke-width="2" paint-order="stroke" font-size="12"></text></g>` : ''}`;
 }
+function towerMarkup(building: Building): string {
+  const outline = building.enemy ? '#ff1726' : '#cf9700';
+  const fill = building.enemy ? '#870018' : building.tier === 1 ? '#fff8dc' : building.tier === 2 ? '#d6dce3' : '#677584';
+  return `<g data-tower-tier="${building.tier}" transform="scale(${1 + (building.tier - 1) * .15})"><path d="M-13 -18H13V-9H6V19H-6V-9H-13Z" fill="${fill}" stroke="${outline}" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M0 -2V8" stroke="#263442" stroke-width="4"/></g>`;
+}
 export function relayPreviewMarkup(snapshot: Pick<StrongholdSnapshot, 'buildings'>, point: Point, sourceId?: number): string {
   const connected = connectedRelays(snapshot);
-  const neighbors = relayNeighbors(snapshot, point, sourceId);
-  const powered = connected.some(building => building.id === sourceId || neighbors.includes(building));
+  const neighbors = snapshot.buildings.filter(building => building.id !== sourceId && !building.enemy && building.hp > 0
+    && (building.kind === 'relay' || building.kind === 'castle') && distance(point, building) <= RELAY_RANGE);
+  const powered = connected.some(building => building.id === sourceId || relayNeighbors(snapshot, point, sourceId).includes(building));
   const color = powered ? '#65eb98' : '#ffd76a';
   return `<circle data-relay-preview-radius cx="${point.x}" cy="${point.y}" r="${RELAY_RANGE}" fill="${color}" fill-opacity=".1" stroke="${color}" stroke-width="2" stroke-dasharray="7 4"/>`
-    + neighbors.map(building => `<g data-relay-connection="${building.id}" data-powered="${connected.includes(building)}">
-      <line x1="${point.x}" y1="${point.y}" x2="${building.x}" y2="${building.y}" stroke="${color}" stroke-width="3" stroke-dasharray="5 4"/>
-      <circle cx="${building.x}" cy="${building.y}" r="${building.kind === 'castle' ? 43 : 25}" fill="${color}" fill-opacity=".16" stroke="${color}" stroke-width="3"/>
-    </g>`).join('');
+    + neighbors.map(building => {
+      const planned = building.progress < 1;
+      const linkColor = planned ? '#ffd76a' : color;
+      return `<g data-relay-connection="${building.id}" data-powered="${connected.includes(building)}" data-planned="${planned}">
+        <circle data-relay-neighbor-radius cx="${building.x}" cy="${building.y}" r="${RELAY_RANGE}" fill="${linkColor}" fill-opacity=".03" stroke="${linkColor}" stroke-width="1.5" stroke-dasharray="${planned ? '3 6' : '7 4'}"/>
+        <line x1="${point.x}" y1="${point.y}" x2="${building.x}" y2="${building.y}" stroke="${linkColor}" stroke-width="3" stroke-dasharray="${planned ? '2 7' : '5 4'}"/>
+        <circle cx="${building.x}" cy="${building.y}" r="${building.kind === 'castle' ? 43 : 25}" fill="${linkColor}" fill-opacity=".16" stroke="${linkColor}" stroke-width="3"/>
+      </g>`;
+    }).join('');
 }
 export function resourceChunkMarkup(chunk: Pick<ResourceChunk, 'rich'>, transporting: boolean): string {
   return `<rect x="-4" y="-4" width="8" height="8" fill="${transporting ? '#bdc9c2' : chunk.rich ? '#a64caf' : '#00aeef'}" stroke="#263c33" stroke-width="1"${transporting ? ' filter="url(#stronghold-resource-glow)"' : ''}/><desc></desc>`;
+}
+export function carriedResourcePosition(chunk: ResourceChunk, direction?: Point): Point {
+  if (chunk.carrier === null) return { x: chunk.x, y: chunk.y };
+  const length = direction ? Math.hypot(direction.x, direction.y) : 0;
+  return { x: chunk.x + (direction && length > 0 ? direction.x / length : 1) * 12,
+    y: chunk.y + (direction && length > 0 ? direction.y / length : 0) * 12 };
 }
 function relayLinks(snapshot: StrongholdSnapshot): string {
   const connected = connectedRelays(snapshot);
@@ -143,6 +162,7 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
   let elapsed = 0;
   let selectionColor = '#ffb3c9';
   const previousUnits = new Map<number, Point>();
+  const unitDirections = new Map<number, Point>();
   let connectedRelayIds = new Set<number>();
   const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
   const renderCoverage = createSvgLayer<Building>(layer('coverage'), () =>
@@ -162,13 +182,14 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     setAttribute(child(element, '[data-selected]'), 'stroke', selectionColor);
     setAttribute(child(element, '[data-selected]'), 'fill', selectionColor);
     setAttribute(child(element, '[data-selected]'), 'fill-opacity', '.2');
-    setAttribute(child(element, '[data-health]'), 'width', String(20 * Math.max(0, unit.hp / unit.maxHp)));
+    setAttribute(child(element, '[data-health]'), 'width', String(((unit.formation ?? unit.kind) === 'catapult' ? 34 : 20) * Math.max(0, unit.hp / unit.maxHp)));
+    const arm = element.querySelector('[data-catapult-arm]');
+    if (arm) setAttribute(arm, 'transform', `rotate(${-unit.attackWindup * 12})`);
     describe(element, `${unit.kind}${unit.formation ? ' ' + unit.formation : ''}: ${Math.ceil(unit.hp)} HP / upgrade ${level}`);
   }, unit => `${unit.kind}/${unit.formation}`);
   const renderBuildings = createSvgLayer<Building>(layer('buildings'), buildingMarkup, (element, building) => {
     if (!technology) throw new Error('Missing Stronghold technology snapshot.');
-    const level = building.kind === 'tower' && !building.enemy ? towerUpgrade(technology, building.tier) : 0;
-    const scale = building.kind === 'tower' || building.kind === 'enemy-base' ? 1 + Math.min(3, building.tier) * .08 + level * .05 : 1;
+    const scale = buildingScale(technology, building);
     position(element, building, scale);
     setAttribute(element, 'data-building', String(building.id));
     const wallShape = element.querySelector('[data-wall-shape]');
@@ -188,7 +209,7 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
       setText(child(training, '[data-training-count]'), order ? `${order.kind}: ${building.trainingQueue.length} queued` : '');
       if (order) describe(element, `T${building.tier} Barracks: ${order.kind}, ${Math.ceil(building.cooldown)}s remaining; ${building.trainingQueue.length} queued`);
     }
-  }, building => `${building.kind}/${building.enemy}`);
+  }, building => `${building.kind}/${building.enemy}/${building.tier}`);
   const renderNodes = createSvgLayer<ResourceNode>(layer('nodes'), node =>
     `<circle r="${node.rich ? 27 : 24}" stroke="${node.rich ? '#a64caf' : '#00aeef'}" stroke-width="3"/><desc></desc>`, (element, node) => {
     position(element, node);
@@ -197,7 +218,7 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
   }, node => String(node.rich));
   const transporting = (chunk: ResourceChunk) => chunk.carrier === null && chunk.target !== null && connectedRelayIds.has(chunk.target);
   const renderChunks = createSvgLayer<ResourceChunk>(layer('chunks'), chunk => resourceChunkMarkup(chunk, transporting(chunk)), (element, chunk) => {
-    position(element, { x: chunk.x + (chunk.carrier === null ? 0 : 12), y: chunk.y });
+    position(element, carriedResourcePosition(chunk, chunk.carrier === null ? undefined : unitDirections.get(chunk.carrier)));
     setAttribute(element, 'data-resource-chunk', String(chunk.id));
     setAttribute(element, 'data-transporting', String(transporting(chunk)));
     describe(element, `${chunk.amount} ${chunk.rich ? 'rich' : 'standard'} supplies${chunk.carrier !== null ? ', carried by gatherer' : transporting(chunk) ? ', relay delivery' : ', waiting for a relay connection'}`);
@@ -205,14 +226,21 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
   let linkSignature = '';
   const links = layer('links');
   const rally = layer('rally');
-  return (snapshot: StrongholdSnapshot, selected: ReadonlySet<number>): void => {
+  const render = (snapshot: StrongholdSnapshot, selected: ReadonlySet<number>): void => {
     selection = selected;
     technology = snapshot;
     elapsed = snapshot.elapsed;
     const self = snapshot.players.find(player => player.id === snapshot.selfId);
     if (self) selectionColor = playerTheme(self.color).light;
     const livingUnits = new Set(snapshot.units.map(unit => unit.id));
-    for (const id of previousUnits.keys()) if (!livingUnits.has(id)) previousUnits.delete(id);
+    for (const id of previousUnits.keys()) if (!livingUnits.has(id)) { previousUnits.delete(id); unitDirections.delete(id); }
+    for (const unit of snapshot.units) {
+      const previous = previousUnits.get(unit.id);
+      if (previous && distance(unit, previous) > .001) unitDirections.set(unit.id, { x: unit.x - previous.x, y: unit.y - previous.y });
+      else if (!unitDirections.has(unit.id) && unit.destination && distance(unit, unit.destination) > .001) {
+        unitDirections.set(unit.id, { x: unit.destination.x - unit.x, y: unit.destination.y - unit.y });
+      }
+    }
     const signature = snapshot.buildings.filter(building => building.kind === 'castle' || building.kind === 'relay')
       .map(building => `${building.id}:${building.x}:${building.y}:${building.hp > 0}:${building.progress === 1}`).join('|');
     if (signature !== linkSignature) {
@@ -225,4 +253,10 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     renderBuildings(snapshot.buildings); renderUnits(snapshot.units);
     position(rally, snapshot.rally);
   };
+  return Object.assign(render, { reset(): void {
+    previousUnits.clear();
+    unitDirections.clear();
+    linkSignature = '';
+    connectedRelayIds.clear();
+  } });
 }

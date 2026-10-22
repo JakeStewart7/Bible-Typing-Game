@@ -38,11 +38,13 @@ export const UNIT_RULES: Record<UnitKind, { hp: number; speed: number; damage: n
   builder: { hp: 55, speed: 15, damage: 0, range: 0 },
   warrior: { hp: 100, speed: 18.6, damage: 12, range: 26 },
   archer: { hp: 65, speed: 16.5, damage: 9, range: 120 },
-  catapult: { hp: 110, speed: 9.6, damage: 30, range: 165 },
+  catapult: { hp: 110, speed: 4.8, damage: 30, range: 165 },
   invader: { hp: 100, speed: 18.6, damage: 12, range: 26 }
 };
 export const UNIT_HEALTH_MULTIPLIER = 2;
 export const TOWER_STRENGTH_MULTIPLIER = 1.5;
+export const CATAPULT_WINDUP_SECONDS = .8;
+export const WALL_ROTATION_STEP = 22.5;
 export const TEXT_LENGTH_RANGES: Record<PhraseLength, readonly [number, number]> = {
   short: [1, 5], medium: [6, 11], long: [12, 24], 'extra-long': [25, 40]
 };
@@ -53,6 +55,7 @@ export const EVENT_LABELS: Record<WorldEvent, string> = {
   numbers: 'Number siege', symbols: 'Symbol storm', code: 'Code formation'
 };
 export const TIER_MAX = 3;
+export const TIER_COSTS = [300, 600, 1500] as const;
 export const RELAY_RANGE = 155;
 export const TIER_CHARACTER_GOAL = 500;
 export const BASE: Point = { x: 500, y: 595 };

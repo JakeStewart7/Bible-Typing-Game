@@ -1,6 +1,6 @@
 import type { Participant, PhraseLength, StrongholdState } from './types.ts';
 import { TEXT_LENGTH_RANGES } from './rules.ts';
-import { saveRoleTask } from './tasks.ts';
+import { saveRoleTask, taskKey } from './tasks.ts';
 import { WORD_POOLS } from './word-pools.ts';
 import { EVENT_WORD_POOLS } from './event-phrases.ts';
 
@@ -30,7 +30,10 @@ export function synchronizeRoleTask(state: StrongholdState, player: Participant)
   if (state.phase !== 'playing') return;
   saveRoleTask(state, player);
   for (const other of state.players) {
-    if (other !== player && other.role === player.role) copyRoleTask(player, other);
+    if (other !== player && other.role === player.role && taskKey(other) === taskKey(player)) {
+      other.work = player.work;
+      other.actionPhrases = player.actionPhrases;
+    }
   }
 }
 

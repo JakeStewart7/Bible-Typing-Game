@@ -1,10 +1,10 @@
-import { actionProblem, placementProblem } from '../domain/actions.ts';
-import { taskWork } from '../domain/technology.ts';
+import { actionProblem, placementBlockers, placementProblem } from '../domain/actions.ts';
+import { buildingScale, taskWork } from '../domain/technology.ts';
 import type { Building, BuildingKind, Point, StrongholdSnapshot, Unit } from '../domain/types.ts';
 import { buildingMarkup, relayPreviewMarkup } from './battlefield.ts';
 import { setAttribute } from './dom-updates.ts';
 import { playerTheme } from './player-theme.ts';
-import { WALL_HALF_WIDTH } from '../domain/navigation.ts';
+import { buildingFootprint, WALL_HALF_WIDTH } from '../domain/navigation.ts';
 
 export type PlacementKind = Extract<BuildingKind, 'relay' | 'barracks' | 'tower' | 'wall'>;
 const WALL_OUTLINE_HEIGHT = WALL_HALF_WIDTH * 2 + 9;
@@ -49,6 +49,12 @@ export function createMapControls(map: SVGSVGElement) {
   if (!pulse) throw new Error('Missing Stronghold movement indicator.');
   const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const ghost = document.createElementNS(namespace, 'g');
+  const obstructions = document.createElementNS(namespace, 'g');
+  obstructions.setAttribute('data-placement-blockers', '');
+  obstructions.setAttribute('pointer-events', 'none');
+  const buildingSelection = document.createElementNS(namespace, 'g');
+  buildingSelection.setAttribute('data-building-selection', '');
+  buildingSelection.setAttribute('pointer-events', 'none');
   ghost.setAttribute('data-placement-ghost', '');
   ghost.setAttribute('pointer-events', 'none');
   ghost.setAttribute('opacity', '.55');
@@ -61,14 +67,16 @@ export function createMapControls(map: SVGSVGElement) {
   selection.setAttribute('stroke', '#fff');
   selection.setAttribute('stroke-width', '2');
   selection.setAttribute('visibility', 'hidden');
-  map.append(relayPreview, wallSelection, ghost, selection, moveIndicator);
+  map.append(relayPreview, wallSelection, buildingSelection, obstructions, ghost, selection, moveIndicator);
   let signature = '';
   let relaySignature = '';
   let highlight = '#ffb3c9';
+  let ink = '#b00020';
   return {
     theme(color: string): void {
       const theme = playerTheme(color);
       highlight = theme.light;
+      ink = theme.bold;
       setAttribute(selection, 'fill', theme.light);
       setAttribute(selection, 'stroke', theme.bold);
       setAttribute(pulse, 'stroke', theme.bold);
@@ -82,6 +90,13 @@ export function createMapControls(map: SVGSVGElement) {
       setAttribute(wallSelection, 'visibility', wall ? 'visible' : 'hidden');
       if (wall) setAttribute(wallSelection, 'transform', `translate(${wall.x} ${wall.y}) rotate(${wall.rotation ?? 0})`);
     },
+    buildingSelection(snapshot: StrongholdSnapshot, ids: ReadonlySet<number>): void {
+      buildingSelection.innerHTML = snapshot.buildings.filter(building => ids.has(building.id) && !building.enemy && building.hp > 0).map(building => {
+        const box = buildingFootprint(snapshot, building), rally = building.rally ?? (building.kind === 'barracks' ? snapshot.rally : null);
+        return `<g data-selected-building="${building.id}"><rect transform="translate(${box.x} ${box.y}) rotate(${box.rotation})" x="${-box.halfX - 4}" y="${-box.halfY - 4}" width="${box.halfX * 2 + 8}" height="${box.halfY * 2 + 8}" fill="${highlight}" fill-opacity=".15" stroke="${ink}" stroke-width="2"/>
+          ${rally ? `<path d="M${building.x} ${building.y}L${rally.x} ${rally.y}" stroke="${ink}" stroke-width="2" stroke-dasharray="5 4"/><g transform="translate(${rally.x} ${rally.y})" data-building-rally="${building.id}"><path d="M0 8V-14L15 -8L0 -2" fill="${highlight}" stroke="${ink}" stroke-width="2"/></g>` : ''}</g>`;
+      }).join('');
+    },
     moveIndicator(point: Point | null): void {
       for (const animation of pulse.getAnimations()) animation.cancel();
       setAttribute(moveIndicator, 'visibility', point ? 'visible' : 'hidden');
@@ -93,29 +108,36 @@ export function createMapControls(map: SVGSVGElement) {
       { duration: 550, fill: 'forwards' });
       animation.onfinish = () => setAttribute(moveIndicator, 'visibility', 'hidden');
     },
-    ghost(snapshot: StrongholdSnapshot, kind: PlacementKind | null, point: Point | null, rotation = 0): void {
+    ghost(snapshot: StrongholdSnapshot, kind: PlacementKind | null, point: Point | null, rotation = 0): string | null {
       const self = snapshot.players.find(player => player.id === snapshot.selfId);
       if (!self || !kind || !point || snapshot.phase !== 'playing') {
         setAttribute(ghost, 'visibility', 'hidden');
-        return;
+        obstructions.innerHTML = '';
+        return null;
       }
-      const nextSignature = `${kind}/${self.constructionTier}/${rotation}`;
+      const building = { ...point, kind, tier: self.constructionTier, rotation, enemy: false };
+      const scale = buildingScale(snapshot, building), box = buildingFootprint(snapshot, building);
+      const nextSignature = `${kind}/${self.constructionTier}/${rotation}/${scale}`;
       if (signature !== nextSignature) {
         ghost.innerHTML = buildingMarkup({
           ...point, id: 0, kind, hp: 1, maxHp: 1, tier: self.constructionTier,
-          progress: 1, cooldown: 0, enemy: false, attackTarget: null, ownerId: self.id, rotation, trainingQueue: []
-        }) + (kind === 'wall'
-          ? `<rect data-outline transform="rotate(${rotation})" x="-29" y="${-WALL_OUTLINE_HEIGHT / 2}" width="58" height="${WALL_OUTLINE_HEIGHT}" fill="none" stroke-width="3" stroke-dasharray="5 3"/>`
-          : '<rect data-outline x="-22" y="-28" width="44" height="58" fill="none" stroke-width="3" stroke-dasharray="5 3"/>');
+          progress: 1, cooldown: 0, enemy: false, attackTarget: null, ownerId: self.id, rotation, trainingQueue: [], rally: null
+        }) + `<rect data-outline transform="rotate(${box.rotation})" x="${-box.halfX / scale}" y="${-box.halfY / scale}" width="${box.halfX * 2 / scale}" height="${box.halfY * 2 / scale}" fill="none" stroke-width="2" stroke-dasharray="5 3"/>`;
         signature = nextSignature;
       }
-      setAttribute(ghost, 'transform', `translate(${point.x} ${point.y})`);
+      setAttribute(ghost, 'transform', `translate(${point.x} ${point.y}) scale(${scale})`);
       setAttribute(ghost, 'visibility', 'visible');
       const outline = ghost.querySelector('[data-outline]');
       if (!outline) throw new Error('Missing Stronghold placement outline.');
       const problem = placementProblem(snapshot, self, kind, point, rotation);
+      const blockers = placementBlockers(snapshot, self, kind, point, rotation);
+      obstructions.innerHTML = snapshot.buildings.filter(building => blockers.buildings.includes(building.id)).map(building => {
+        const box = buildingFootprint(snapshot, building);
+        return `<rect data-blocking-building="${building.id}" transform="translate(${box.x} ${box.y}) rotate(${box.rotation})" x="${-box.halfX - 2}" y="${-box.halfY - 2}" width="${box.halfX * 2 + 4}" height="${box.halfY * 2 + 4}" fill="#ff1726" fill-opacity=".35" stroke="#ff1726" stroke-width="3"/>`;
+      }).join('') + snapshot.units.filter(unit => blockers.units.includes(unit.id)).map(unit => `<circle data-blocking-unit="${unit.id}" cx="${unit.x}" cy="${unit.y}" r="15" fill="#ff1726" fill-opacity=".35" stroke="#ff1726" stroke-width="3"/>`).join('');
       setAttribute(outline, 'stroke', problem ? '#ff1726' : highlight);
       setAttribute(ghost, 'data-valid', String(!problem));
+      return problem;
     },
     selection(start: Point | null, end: Point | null): void {
       setAttribute(selection, 'visibility', start && end ? 'visible' : 'hidden');

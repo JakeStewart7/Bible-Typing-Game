@@ -5,7 +5,7 @@ import { moveUnitToward } from '../src/stronghold/domain/navigation.ts';
 import { updateLogistics } from '../src/stronghold/domain/logistics.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
-import { AUTUMN_LEAF_COLORS, weatherMarkup } from '../src/stronghold/ui/environment.ts';
+import { AUTUMN_LEAF_COLORS, SPRING_PARTICLE_COUNT, SUMMER_PARTICLE_COUNT, WEATHER_PARTICLE_COUNT, weatherMarkup } from '../src/stronghold/ui/environment.ts';
 import { executeCommand } from '../src/stronghold/domain/actions.ts';
 import { seasonalTrack } from '../src/stronghold/audio/catalog.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
@@ -226,14 +226,29 @@ test('Stronghold dev markup provides live season, day and night controls separat
 
 test('Stronghold weather uses a fixed small decorative particle pool instead of growing the DOM', () => {
   const markup = weatherMarkup();
-  equal((markup.match(/class="stronghold-weather-particle"/g) ?? []).length, 36);
+  equal((markup.match(/class="stronghold-weather-particle"/g) ?? []).length, WEATHER_PARTICLE_COUNT);
+  equal(markup.includes('stronghold-weather-field'), true);
+  equal(markup.includes('stronghold-weather-world'), false);
   equal(markup.includes('aria-hidden="true"'), true);
   equal(markup.includes('<button'), false);
   for (const axis of ['x', 'y']) {
-    const positions = [...markup.matchAll(new RegExp(`--weather-${axis}:(\\d+)%`, 'g'))].map(match => Number(match[1]));
-    equal(positions.length, 36);
+    const positions = [...markup.matchAll(new RegExp(`--weather-${axis}:([\\d.]+)%`, 'g'))].map(match => Number(match[1]));
+    equal(positions.length, WEATHER_PARTICLE_COUNT);
     equal(new Set(positions.map(position => Math.floor(position / 25))).size, 4);
   }
+});
+
+test('Stronghold spring flowers share one randomly chosen breeze direction across the particle pool', () => {
+  const directions = [0, .25, .5, .75].map(sample => {
+    const markup = weatherMarkup(() => sample);
+    equal((markup.match(/--breeze-x:/g) ?? []).length, 1);
+    equal((markup.match(/--breeze-y:/g) ?? []).length, 1);
+    const x = Number(/--breeze-x:([-\d.]+)px/.exec(markup)?.[1]);
+    const y = Number(/--breeze-y:([-\d.]+)px/.exec(markup)?.[1]);
+    equal(Math.round(Math.hypot(x, y)), 160);
+    return { x: Math.round(x), y: Math.round(y) };
+  });
+  equal(directions, [{ x: 160, y: 0 }, { x: 0, y: 160 }, { x: -160, y: 0 }, { x: 0, y: -160 }]);
 });
 
 test('Stronghold autumn leaves randomly choose red, orange, yellow or brown for each particle', () => {
@@ -242,14 +257,31 @@ test('Stronghold autumn leaves randomly choose red, orange, yellow or brown for 
   for (let index = 0; index < AUTUMN_LEAF_COLORS.length; index++) {
     for (const offset of [0, .99999]) {
       const markup = weatherMarkup(() => (index + offset) / AUTUMN_LEAF_COLORS.length);
-      equal((markup.match(new RegExp(`--leaf-color:${AUTUMN_LEAF_COLORS[index]}`, 'g')) ?? []).length, 36);
+      equal((markup.match(new RegExp(`--leaf-color:${AUTUMN_LEAF_COLORS[index]}`, 'g')) ?? []).length, WEATHER_PARTICLE_COUNT);
     }
   }
   let samples = 0;
   const markup = weatherMarkup(() => samples++ % AUTUMN_LEAF_COLORS.length / AUTUMN_LEAF_COLORS.length);
-  equal(samples, 36);
   equal([...markup.matchAll(/--leaf-color:(#[a-f0-9]+)/g)].map(match => match[1]),
-    Array.from({ length: 36 }, (_, index) => AUTUMN_LEAF_COLORS[index % AUTUMN_LEAF_COLORS.length]));
+    Array.from({ length: WEATHER_PARTICLE_COUNT }, (_, index) => AUTUMN_LEAF_COLORS[(index + 1) % AUTUMN_LEAF_COLORS.length]));
+});
+
+test('Stronghold spring and summer have smaller naturally spaced screen-effect populations', () => {
+  let seed = 1234567;
+  const markup = weatherMarkup(() => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 4294967296;
+  });
+  equal(SPRING_PARTICLE_COUNT, 18);
+  equal(SUMMER_PARTICLE_COUNT, 32);
+  equal((markup.match(/data-spring-hidden/g) ?? []).length, WEATHER_PARTICLE_COUNT - SPRING_PARTICLE_COUNT);
+  equal((markup.match(/data-summer-hidden/g) ?? []).length, WEATHER_PARTICLE_COUNT - SUMMER_PARTICLE_COUNT);
+  const points = [...markup.matchAll(/--weather-x:([\d.]+)%;--weather-y:([\d.]+)%/g)]
+    .map(match => ({ x: Number(match[1]), y: Number(match[2]) }));
+  for (const [index, point] of points.slice(0, SUMMER_PARTICLE_COUNT).entries()) {
+    equal(points.slice(0, index).every(other => Math.hypot((point.x - other.x) * 1.6, point.y - other.y) > 5), true);
+  }
+  equal(points.some(point => point.x % 1 !== 0 && point.y % 1 !== 0), true);
 });
 
 test('Stronghold seasonal movement applies equally to every friendly unit and enemy formation', () => {
@@ -275,6 +307,7 @@ test('Stronghold seasonal resource value applies once to typed supplies and cast
   ] as const) {
     const state = createStronghold({ resources: 0, length: 'short', computersPaused: true }, season);
     const player = state.players[0]!;
+    executeCommand(state, player, { type: 'ACTION', action: 'resources' });
     player.work = 31; player.phrase = 'a';
     executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: 'a' });
     equal(state.resources, typed);
@@ -310,7 +343,7 @@ test('Stronghold fall adds fifteen percent to every completed typing task, inclu
 });
 
 test('Stronghold fall boosts completed tier phrases without partial credit, rounding drift or duplicate unlocks', () => {
-  const state = createStronghold({ resources: 0, length: 'medium', computersPaused: true }, 'fall');
+  const state = createStronghold({ resources: 300, length: 'medium', computersPaused: true }, 'fall');
   const player = state.players[0]!;
   executeCommand(state, player, { type: 'READY', ready: true });
   player.phrase = 'abcdef';

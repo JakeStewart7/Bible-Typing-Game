@@ -88,7 +88,7 @@ test('Stronghold units retain slow movement and double health, with equal opposi
   state.nodes = [{ id: 100, x: 100, y: 500, remaining: 100, rich: false }];
   addBuilding(state, 'barracks', { x: 200, y: 500 });
   for (const kind of ['worker', 'builder', 'warrior', 'archer', 'catapult', 'invader'] as const) {
-    equal(Math.abs(UNIT_RULES[kind].speed - original[kind][0] * .3) < .000001, true);
+    equal(Math.abs(UNIT_RULES[kind].speed - original[kind][0] * (kind === 'catapult' ? .15 : .3)) < .000001, true);
     const unit = addUnit(state, kind, { x: 100, y: 300 });
     equal(unit.maxHp, original[kind][1] * 2);
     unit.destination = { x: 100, y: 500 };
@@ -148,9 +148,9 @@ test('Stronghold gatherers and builders follow move orders then resume nearest w
     if (kind === 'builder') {
       equal(project.progress > 0, true);
       equal(unit.attackTarget, { x: project.x, y: project.y });
-      equal(unitMotionTransform(unit, unit, .1).startsWith('translate(0 '), true);
+      equal(unitMotionTransform(unit, unit, .1), '');
       equal(unitMotionTransform(unit, unit, .1, true), '');
-      equal(unitMotionTransform(unit, unit, .1) !== unitMotionTransform(unit, unit, .2), true);
+      equal(unitMotionTransform(unit, unit, .1), unitMotionTransform(unit, unit, .2));
     } else equal(state.nodes[0]?.remaining < 100, true);
   }
 });
@@ -310,6 +310,7 @@ test('Stronghold dropped cargo survives a gatherer death and routes without dupl
 
 test('Stronghold role members keep private text and share completed work and placement without duplicate costs', () => {
   const state = createStronghold();
+  executeCommand(state, state.players[0]!, { type: 'ACTION', action: 'resources' });
   state.players.forEach(player => { player.simulated = false; });
   const [you, teammate] = state.players;
   if (!you || !teammate) throw new Error('Missing players.');
@@ -359,6 +360,7 @@ test('Stronghold role members keep private text and share completed work and pla
   executeCommand(state, teammate, { type: 'ROLE', role: 'defenses' });
   executeCommand(state, you, { type: 'LENGTH', length: 'medium' });
   executeCommand(state, you, { type: 'ACTION', action: 'tower', tier: 2 });
+  executeCommand(state, teammate, { type: 'ACTION', action: 'tower', tier: 2 });
   let towerWork = phraseWork(you);
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
   equal(teammate.actionPhrases, 1);
@@ -393,6 +395,7 @@ test('Stronghold simulated role mates contribute work without editing human text
   const phrase = you.phrase;
   const phraseId = you.phraseId;
   const partner = state.players.find(player => player.simulated && player.role === 'defenses')!;
+  executeCommand(state, partner, { type: 'ACTION', action: 'wall' });
   const points = phraseWork(partner);
   const completed = partner.completed;
   for (let frame = 0; frame < 40 && partner.completed === completed; frame++) advanceStronghold(state, .1);
@@ -418,7 +421,7 @@ test('Stronghold simulated role mates contribute work without editing human text
   equal(you.phraseId, armyId);
 });
 
-test('Stronghold square castle, T towers and basic animations preserve health and selection markup', () => {
+test('Stronghold square castle, tiered towers and basic animations preserve health and selection markup', () => {
   const state = createStronghold();
   const castle = state.buildings.find(building => building.kind === 'castle');
   const tower = state.buildings.find(building => building.kind === 'tower');
@@ -426,7 +429,7 @@ test('Stronghold square castle, T towers and basic animations preserve health an
   if (!castle || !tower || !worker) throw new Error('Missing entities.');
   equal(buildingMarkup(castle).includes('v-10 h10'), false);
   equal(buildingMarkup(castle).includes('width="68" height="68"'), true);
-  equal(buildingMarkup(tower).includes('M-16 -20 H16 V-10 H5 V20 H-5 V-10 H-16 Z'), true);
+  equal(buildingMarkup(tower).includes('data-tower-tier="1"'), true);
   equal(unitMotionTransform(worker, { x: worker.x - 1, y: worker.y }, 1).includes('rotate'), true);
   equal(unitMotionTransform(worker, worker, 1), '');
   worker.attackTarget = { x: 100, y: 100 }; worker.cooldown = 3;

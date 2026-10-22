@@ -11,7 +11,7 @@ export class StrongholdEngine {
 
   constructor(options: StrongholdMatchOptions = DEFAULT_MATCH_OPTIONS) {
     this.state = createStronghold(options);
-    this.options = { ...options };
+    this.options = structuredClone(options);
   }
 
   send(playerId: string, command: StrongholdCommand): void {
@@ -24,7 +24,7 @@ export class StrongholdEngine {
   }
   restart(options: StrongholdMatchOptions = this.options): void {
     const state = createStronghold(options);
-    this.options = { ...options };
+    this.options = structuredClone(options);
     this.state = state;
   }
   snapshot(playerId: string): StrongholdSnapshot {

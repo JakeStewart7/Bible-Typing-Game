@@ -1,15 +1,16 @@
-import { actionProblem, executeCommand } from './actions.ts';
+import { actionProblem, actionUnlockProblem, executeCommand } from './actions.ts';
 import { rallyArmy, spawnWave, updateCombat } from './combat.ts';
 import { updateLogistics } from './logistics.ts';
 import { assignPhrase } from './phrases.ts';
 import { addUnit } from './state.ts';
-import { distance, isTypingAction, MIN_TIER, TIER_MAX, UNIT_CAPS, validPoint } from './rules.ts';
+import { distance, isTypingAction, MIN_TIER, TIER_MAX, UNIT_CAPS } from './rules.ts';
 import { taskWork } from './technology.ts';
 import { ENTITY_LABELS, recordEvent } from './events.ts';
 import type { Action, Participant, Point, StrongholdState } from './types.ts';
 import { updateWorldEvent } from './world-events.ts';
 import { queuedUnits, TRAINING_SECONDS } from './training.ts';
-import { wallContains } from './navigation.ts';
+import { unitRadius, unitSpawnPoint } from './navigation.ts';
+import { taskKey } from './tasks.ts';
 
 const BOT_RELAY_SITES = [
   { x: 360, y: 540 }, { x: 640, y: 540 }, { x: 250, y: 435 }, { x: 760, y: 435 },
@@ -42,6 +43,7 @@ function botAction(state: StrongholdState, player: Participant): Action {
     return state.buildings.filter(building => building.kind === 'wall').length < 8 ? 'wall' : 'builder';
   }
   const troop = botTroop(state);
+  if (state.tier < MIN_TIER[troop]) return 'resources';
   if (!state.buildings.some(building => building.kind === 'barracks' && building.hp > 0 && building.tier === MIN_TIER[troop])) return 'barracks';
   return troop;
 }
@@ -68,13 +70,13 @@ function updateBot(state: StrongholdState, player: Participant, seconds: number)
       return;
     }
     const tier = !humanOnRole && action === 'barracks' ? MIN_TIER[botTroop(state)] : player.constructionTier;
+    if (actionUnlockProblem(state, { ...player, action, constructionTier: tier })) return;
     if (action !== player.action || (action === 'barracks' && player.constructionTier !== tier)) {
       executeCommand(state, player, { type: 'ACTION', action, tier });
     }
-    const preparingConstruction = (action === 'barracks' || action === 'tower') && player.work < taskWork(player);
-    if (actionProblem(state, player, action) && !preparingConstruction) return;
+    if (actionProblem(state, player, action)) return;
     if (['relay', 'barracks', 'tower', 'wall'].includes(action) && (action === 'relay' || player.work >= taskWork(player))) {
-      if (humanOnRole) return;
+      if (state.players.some(other => !other.simulated && other.role === player.role && taskKey(other) === taskKey(player))) return;
       const count = state.buildings.filter(building => building.kind === action && !building.enemy).length;
       const point = action === 'relay' ? nextRelaySite(state) : action === 'barracks'
         ? { x: 620 + count * 48, y: 575 }
@@ -105,13 +107,11 @@ function produceArmy(state: StrongholdState, seconds: number): void {
     if (state.computersPaused && state.players.some(player => player.id === order.playerId && player.simulated)) continue;
     barracks.cooldown = Math.max(0, barracks.cooldown - seconds);
     if (barracks.cooldown < 1e-9) barracks.cooldown = 0;
-    if (barracks.cooldown > 0 || state.units.filter(unit => unit.kind === order.kind).length >= UNIT_CAPS[order.kind]) continue;
-    const spawn = [{ x: 0, y: -30 }, { x: 30, y: 0 }, { x: -30, y: 0 }, { x: 0, y: 30 }]
-      .map(offset => ({ x: barracks.x + offset.x, y: barracks.y + offset.y }))
-      .find(point => validPoint(point) && !state.buildings.some(building => building.kind === 'wall' && building.hp > 0 && wallContains(point, building, 10)));
+    if (barracks.cooldown > 0 || state.units.filter(unit => unit.kind === order.kind && unit.hp > 0).length >= UNIT_CAPS[order.kind]) continue;
+    const spawn = unitSpawnPoint(state, barracks, unitRadius(order));
     if (!spawn) continue;
     const unit = addUnit(state, order.kind, spawn);
-    unit.destination = { ...state.rally };
+    unit.destination = { ...(barracks.rally ?? state.rally) };
     const owner = state.players.find(player => player.id === order.playerId);
     recordEvent(state, `${owner ? `Player ${state.players.indexOf(owner) + 1}` : 'Barracks'} created ${ENTITY_LABELS[order.kind]}`, order.playerId);
     barracks.trainingQueue.shift();

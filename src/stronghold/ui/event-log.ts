@@ -7,7 +7,7 @@ export function createEventLog(element: HTMLElement) {
     const overflowing = String(element.scrollHeight > element.clientHeight);
     if (element.dataset.overflowing !== overflowing) element.dataset.overflowing = overflowing;
   }
-  return (snapshot: StrongholdSnapshot): void => {
+  const render = (snapshot: StrongholdSnapshot): void => {
     const following = element.scrollHeight - element.clientHeight - element.scrollTop < 24;
     if (snapshot.events.length < count || (count > 0 && snapshot.events[count - 1]?.text !== lastText)) {
       element.replaceChildren();
@@ -28,4 +28,10 @@ export function createEventLog(element: HTMLElement) {
     if (following) element.scrollTop = element.scrollHeight;
     updateFade();
   };
+  return Object.assign(render, { reset(): void {
+    element.replaceChildren();
+    element.scrollTop = 0;
+    count = 0;
+    lastText = '';
+  } });
 }

@@ -1,8 +1,8 @@
 import { requireElement } from '../../shared/dom.ts';
-import { BUILDING_CAPS, EVENT_LABELS, ROLE_ACTIONS, TIER_MAX, UNIT_CAPS } from '../domain/rules.ts';
+import { BUILDING_CAPS, EVENT_LABELS, ROLE_ACTIONS, TIER_COSTS, TIER_MAX, UNIT_CAPS } from '../domain/rules.ts';
 import { tierProgress } from '../domain/tier-progress.ts';
 import { taskCost, taskWork, upgradeLimit } from '../domain/technology.ts';
-import { actionProblem } from '../domain/actions.ts';
+import { actionProblem, actionUnlockProblem } from '../domain/actions.ts';
 import { taskKey } from '../domain/tasks.ts';
 import { PHRASE_LENGTHS, ROLES, UPGRADE_TARGETS, type StrongholdSnapshot } from '../domain/types.ts';
 import { createMapCamera } from './map-camera.ts';
@@ -37,7 +37,7 @@ export function strongholdElements() {
       });
       return { role, element, buttons };
     });
-    return { id, card, groups, roleSelect: requireElement(`stronghold-role-${id}`, HTMLSelectElement),
+    return { id, card, groups, roleButtons: ROLES.map(role => ({ role, element: requireElement(`stronghold-role-${id}-${role}`, HTMLButtonElement) })),
       name: requireElement(`stronghold-name-${id}`, HTMLElement),
       typed: requireElement(`stronghold-typed-${id}`, HTMLElement), progress: requireElement(`stronghold-progress-${id}`, HTMLElement),
       progressLabel: requireElement(`stronghold-progress-label-${id}`, HTMLElement),
@@ -59,6 +59,7 @@ export function strongholdElements() {
     worldEvent: requireElement('stronghold-world-event', HTMLElement),
     computerButtons: ['stronghold-computers', 'stronghold-tier-computers'].map(id => requireElement(id, HTMLButtonElement)),
     nextWave: requireElement('stronghold-next-wave', HTMLButtonElement),
+    timer: requireElement('stronghold-timer', HTMLTimeElement),
     devSeason: requireElement('stronghold-dev-season', HTMLSelectElement),
     nextNight: requireElement('stronghold-next-night', HTMLButtonElement),
     nextDay: requireElement('stronghold-next-day', HTMLButtonElement),
@@ -69,6 +70,10 @@ export function strongholdElements() {
 }
 export type StrongholdElements = ReturnType<typeof strongholdElements>;
 const textElements = new Map<string, HTMLElement>();
+export function formatBattleTime(elapsed: number): string {
+  const seconds = Math.floor(elapsed);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+}
 function text(id: string, value: string): void {
   let element = textElements.get(id);
   if (!element?.isConnected) { element = requireElement(id, HTMLElement); textElements.set(id, element); }
@@ -90,6 +95,8 @@ export function renderStronghold(
   elements.nextWave.disabled = !running || snapshot.phase !== 'playing';
   const environmentDisabled = !running || snapshot.phase !== 'playing';
   const period = daylight(snapshot.environmentElapsed).period;
+  setText(elements.timer, formatBattleTime(snapshot.elapsed));
+  setAttribute(elements.timer, 'datetime', `PT${Math.floor(snapshot.elapsed)}S`);
   elements.devSeason.disabled = environmentDisabled;
   if (elements.devSeason.value !== snapshot.season) elements.devSeason.value = snapshot.season;
   elements.nextNight.disabled = environmentDisabled || period === 'night';
@@ -103,14 +110,17 @@ export function renderStronghold(
     setAttribute(button, 'aria-pressed', String(snapshot.computersPaused));
     button.disabled = !running || terminal;
   }
-  text('stronghold-tower-count', `${snapshot.buildings.filter(building => building.kind === 'tower' && !building.enemy).length}/${BUILDING_CAPS.tower}`);
-  for (const kind of ['warrior', 'builder', 'worker'] as const) text(`stronghold-${kind}-count`, `${snapshot.units.filter(unit => unit.kind === kind).length}/${UNIT_CAPS[kind]}`);
+  text('stronghold-tower-count', `${snapshot.buildings.filter(building => building.kind === 'tower' && !building.enemy && building.hp > 0).length}/${BUILDING_CAPS.tower}`);
+  for (const kind of ['warrior', 'archer', 'catapult', 'builder', 'worker'] as const) text(`stronghold-${kind}-count`, `${snapshot.units.filter(unit => unit.kind === kind && unit.hp > 0).length}/${UNIT_CAPS[kind]}`);
   text('stronghold-tier-label', `Tier ${snapshot.tier}`);
   text('stronghold-tier-action', self.ready ? 'Ready!' : snapshot.tier === TIER_MAX ? 'Max Tier' : 'Tier Up');
   const ready = requireElement('stronghold-ready', HTMLButtonElement);
-  const readyDisabled = terminal || challenge || snapshot.tier >= TIER_MAX;
+  const tierCost = TIER_COSTS[snapshot.tier] ?? 0;
+  text('stronghold-tier-price', String(tierCost));
+  requireElement('stronghold-tier-cost', HTMLElement).classList.toggle('is-hidden', snapshot.tier >= TIER_MAX);
+  const readyDisabled = terminal || challenge || snapshot.tier >= TIER_MAX || (!self.ready && snapshot.resources < tierCost);
   if (ready.disabled !== readyDisabled) ready.disabled = readyDisabled;
-  ready.setAttribute('aria-label', `Tier ${snapshot.tier}. ${self.ready ? 'Cancel ready' : 'Ready up for the next tier'}`);
+  ready.setAttribute('aria-label', `Tier ${snapshot.tier}. ${self.ready ? 'Cancel ready' : `Ready up for ${tierCost} shared supplies`}`);
   text('stronghold-pause', paused ? 'Resume' : 'Pause');
   text('stronghold-tier-pause', paused ? 'Resume challenge' : 'Pause challenge');
   elements.renderBattlefield(snapshot, selected);
@@ -120,6 +130,8 @@ export function renderStronghold(
   text('stronghold-outcome-copy', snapshot.message);
   if (elements.orders.parentElement !== ownCard.actions) ownCard.actions.append(elements.orders);
   elements.orders.classList.toggle('is-hidden', !army || terminal);
+  for (const button of elements.orders.querySelectorAll<HTMLButtonElement>('button')) button.disabled = !running || !army || terminal;
+  setAttribute(requireElement('stronghold-rally', HTMLButtonElement), 'aria-pressed', String(rallyPlacement));
   elements.privateTyping.classList.toggle('is-hidden', terminal);
   const placing = running && !challenge && !placementCancelled && (relayPlacement || readyBuilding(snapshot) !== null);
   const cursorMode = running && !terminal && !challenge && (placing || rallyPlacement) ? 'placement' : 'default';
@@ -129,7 +141,7 @@ export function renderStronghold(
     elements.screen.dataset.cursorMode = cursorMode;
   }
   elements.placement.classList.toggle('is-hidden', !placing || terminal);
-  const inputDisabled = !running || terminal;
+  const inputDisabled = !running || terminal || (!challenge && Boolean(actionUnlockProblem(snapshot, self)));
   if (elements.input.disabled !== inputDisabled) elements.input.disabled = inputDisabled;
   setAttribute(elements.length, 'aria-activedescendant', `stronghold-length-${self.length}`);
   setAttribute(elements.length, 'aria-disabled', String(!running || terminal));
@@ -161,10 +173,16 @@ export function renderStronghold(
       setAttribute(progressBar, 'aria-valuenow', String(displayPercent));
       setAttribute(progressBar, 'aria-valuetext', challenge ? `${displayPercent}% of shared tier progress` : bank.description);
     }
-    setText(entry.progressLabel, challenge ? `${displayPercent}%` : bank.label);
-    if (entry.roleSelect.value !== player.role) entry.roleSelect.value = player.role;
+    const recruitCount = player.action === 'worker' || player.action === 'builder'
+      ? snapshot.units.filter(unit => unit.kind === player.action && unit.hp > 0).length : null;
+    const recruitLimit = player.action === 'worker' || player.action === 'builder' ? UNIT_CAPS[player.action] : null;
+    const recruitCapped = recruitCount !== null && recruitLimit !== null && recruitCount >= recruitLimit;
+    setText(entry.progressLabel, challenge ? `${displayPercent}%` : recruitCapped ? `Limit ${recruitCount}/${recruitLimit}` : bank.label);
     const roleDisabled = !own || challenge || terminal || !running;
-    if (entry.roleSelect.disabled !== roleDisabled) entry.roleSelect.disabled = roleDisabled;
+    for (const button of entry.roleButtons) {
+      setAttribute(button.element, 'aria-pressed', String(button.role === player.role));
+      button.element.disabled = roleDisabled;
+    }
     for (const group of entry.groups) {
       group.element.classList.toggle('is-hidden', group.role !== player.role);
       for (const button of group.buttons) {
@@ -173,7 +191,14 @@ export function renderStronghold(
         const cost = taskCost(selection);
         const unaffordable = snapshot.resources < cost;
         button.element.classList.toggle('is-unaffordable', unaffordable);
-        const purchaseProblem = button.miniBar ? null : actionProblem(snapshot, { ...player, ...selection }, button.action);
+        const recruitment = button.action === 'worker' || button.action === 'builder';
+        const purchaseProblem = button.miniBar && !recruitment ? null : actionProblem(snapshot, { ...player, ...selection }, button.action);
+        const population = button.element.querySelector('[data-unit-population]');
+        if (population && (button.action === 'worker' || button.action === 'builder' || isArmyUnit(button.action))) {
+          const kind = button.action;
+          const count = snapshot.units.filter(unit => unit.kind === kind && unit.hp > 0).length;
+          setText(population, `${count}/${UNIT_CAPS[kind]}`);
+        }
         if (isArmyUnit(button.action)) {
           const queued = button.element.querySelector('[data-training-queued]');
           if (queued) setText(queued, `${queuedUnits(snapshot, button.action)} queued`);
@@ -182,7 +207,7 @@ export function renderStronghold(
         button.element.classList.toggle('is-unavailable', tierLocked || capped || Boolean(purchaseProblem));
         button.element.classList.toggle('is-tier-locked', tierLocked);
         button.lockIcon?.classList.toggle('is-hidden', !tierLocked);
-        const disabled = !own || !running || challenge || terminal || (!button.miniBar && tierLocked) || capped || Boolean(purchaseProblem);
+        const disabled = !own || !running || challenge || terminal || tierLocked || capped || (Boolean(purchaseProblem) && button.action !== 'relay');
         if (button.element.disabled !== disabled) button.element.disabled = disabled;
         const selectedAction = own && relayPlacement ? button.action === 'relay' : Boolean(button.miniBar) && button.action === player.action
           && (!button.tier || button.tier === player.constructionTier) && (!button.upgrade || button.upgrade === player.upgradeTarget);
@@ -190,7 +215,7 @@ export function renderStronghold(
         setAttribute(button.element, 'aria-pressed', String(selectedAction));
         const label = button.element.querySelector('.stronghold-action-label')?.textContent ?? button.action;
         const description = unaffordable ? `Need ${cost} shared supplies; ${Math.floor(snapshot.resources)} available (${Math.ceil(cost - snapshot.resources)} short).`
-          : tierLocked ? `${button.miniBar ? 'Prepare work now; placement requires' : 'Requires'} Tier ${button.minimumTier}.`
+          : tierLocked ? `Requires Tier ${button.minimumTier}.`
           : purchaseProblem ?? (cost > 0 ? `Costs ${cost} shared supplies.` : 'Complete phrases to prepare this task.');
         setAttribute(button.element, 'aria-description', description);
         setAttribute(button.element, 'data-tooltip', `${label}. ${description} (Alt+${button.element.dataset.shortcut})`);
