@@ -5,7 +5,7 @@ import { connectedRelays, relayNeighbors, updateLogistics } from '../src/strongh
 import { moveUnitToward, unitSpawnPoint, wallBetween, wallContains, WALL_HALF_WIDTH } from '../src/stronghold/domain/navigation.ts';
 import { assignPhrase, TIER_WORD_POOLS } from '../src/stronghold/domain/phrases.ts';
 import { tierProgress } from '../src/stronghold/domain/tier-progress.ts';
-import { distance, MIN_TIER, TEXT_LENGTH_RANGES, UNIT_CAPS, UNIT_RULES } from '../src/stronghold/domain/rules.ts';
+import { BASE, distance, MIN_TIER, TEXT_LENGTH_RANGES, UNIT_CAPS, UNIT_RULES } from '../src/stronghold/domain/rules.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { addBuilding, addUnit, createStronghold } from './stronghold-fixtures.ts';
 import { queuedUnits, TRAINING_SECONDS } from '../src/stronghold/domain/training.ts';
@@ -65,6 +65,59 @@ test('Stronghold recruitment and barracks spawns avoid walls, occupied points an
   equal(spawn.x >= 20 && spawn.y >= 20, true);
   equal(wallContains(spawn, wall, 10), false);
   equal(state.units.every(unit => distance(unit, spawn) >= 20), true);
+});
+
+function blockSpawnArea(state: ReturnType<typeof createStronghold>, origin: { x: number; y: number }): Set<number> {
+  const blockers = new Set<number>();
+  let point = unitSpawnPoint(state, origin);
+  while (point) {
+    if (blockers.size > 100) throw new Error('Spawn-area fixture did not converge.');
+    blockers.add(addBuilding(state, 'wall', point, true).id);
+    point = unitSpawnPoint(state, origin);
+  }
+  return blockers;
+}
+
+test('Stronghold blocked recruitment keeps completed work and recruits once castle spawn space clears', () => {
+  for (const kind of ['worker', 'builder'] as const) {
+    const state = createStronghold({ resources: 0, length: 'medium', computersPaused: true });
+    const player = state.players[0]!;
+    if (kind === 'builder') executeCommand(state, player, { type: 'ROLE', role: 'defenses' });
+    const blockers = blockSpawnArea(state, BASE), before = state.units.length;
+    for (let entry = 0; entry < 10; entry++) executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+    equal(state.units.length, before);
+    equal(player.work >= taskWork(player), true);
+    equal(state.message.includes('Clear space'), true);
+    const earned = player.work;
+    state.buildings = state.buildings.filter(building => !blockers.has(building.id));
+    executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+    equal(state.units.length, before + Math.floor(earned / taskWork(player)));
+    equal(state.resources, 0);
+    equal(player.work, Math.round((earned % taskWork(player)) * 100) / 100);
+  }
+});
+
+test('Stronghold fully trained paid orders wait without extra charges and spawn when barracks space clears', () => {
+  for (const kind of ['warrior', 'archer', 'catapult'] as const) {
+    const state = createStronghold({ resources: 1000, length: 'medium', computersPaused: true });
+    state.tier = 3; state.units = []; state.buildings = [];
+    state.waveIn = 10000; state.eventIn = 10000;
+    const player = state.players[0]!;
+    executeCommand(state, player, { type: 'ROLE', role: 'production' });
+    const barracks = addBuilding(state, 'barracks', { x: 600, y: 450 }, true, false, MIN_TIER[kind]);
+    executeCommand(state, player, { type: 'ACTION', action: kind });
+    const paid = state.resources, blockers = blockSpawnArea(state, barracks);
+    for (let second = 0; second < TRAINING_SECONDS + 3; second++) advanceStronghold(state, 1);
+    equal(state.units.length, 0);
+    equal(barracks.trainingQueue.length, 1);
+    equal(barracks.cooldown, 0);
+    equal(state.resources, paid);
+    state.buildings = state.buildings.filter(building => !blockers.has(building.id));
+    advanceStronghold(state, 1);
+    equal(state.units.filter(unit => unit.kind === kind).length, 1);
+    equal(barracks.trainingQueue.length, 0);
+    equal(state.resources, paid);
+  }
 });
 
 test('Stronghold warriors clear nearby towers before a closer enemy castle and resume attacking the castle afterwards', () => {

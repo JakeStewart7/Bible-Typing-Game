@@ -39,11 +39,15 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   const startingColor = requireElement('stronghold-dev-color', HTMLSelectElement);
   const startingResources = requireElement('stronghold-dev-resources', HTMLInputElement);
   const startingZoom = requireElement('stronghold-dev-zoom', HTMLInputElement);
+  const startingSeason = requireElement('stronghold-dev-starting-season', HTMLSelectElement);
+  const startingPeriod = requireElement('stronghold-dev-period', HTMLSelectElement);
   startingComputers.value = defaults.computersPaused ? 'stopped' : 'started';
   startingLength.value = defaults.length;
   startingColor.value = defaults.playerColor;
   startingResources.value = String(defaults.resources);
   startingZoom.value = String(defaults.mapZoom);
+  startingSeason.value = defaults.season;
+  startingPeriod.value = defaults.period;
   elements.camera.reset(defaults.mapZoom);
   const selected = new Set<number>();
   let snapshot: StrongholdSnapshot | null = null;
@@ -143,6 +147,37 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       display();
       return false;
     } finally { focusTyping(); }
+  }
+  function saveDefaults(options: DeveloperOptions): boolean {
+    try {
+      validateDeveloperOptions(options);
+      developer.save(options);
+      defaults = { ...options };
+      startingSeason.value = defaults.season;
+      startingPeriod.value = defaults.period;
+      errorMessage = '';
+      display();
+      return true;
+    } catch (error) {
+      errorMessage = `Could not save dev options: ${error instanceof Error ? error.message : String(error)}`;
+      display();
+      return false;
+    }
+  }
+  function saveDefaultForm(): boolean {
+    if (!developerForm.reportValidity()) return false;
+    const length = PHRASE_LENGTHS.find(length => length === startingLength.value);
+    const playerColor = startingColor.value;
+    const season = startingSeason.value === 'random' ? 'random' : SEASONS.find(season => season === startingSeason.value);
+    const period = startingPeriod.value;
+    if (!length || !isPlayerColor(playerColor) || !season || (period !== 'day' && period !== 'night')
+      || !['started', 'stopped'].includes(startingComputers.value)) {
+      errorMessage = 'Choose valid developer defaults.'; display(); return false;
+    }
+    return saveDefaults({
+      resources: startingResources.valueAsNumber, length, computersPaused: startingComputers.value === 'stopped',
+      mapZoom: startingZoom.valueAsNumber, playerColor, season, period
+    });
   }
   const unsubscribe = connection.subscribe(next => {
     const previousRole = self()?.role;
@@ -394,12 +429,14 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   });
   elements.nextWave.addEventListener('click', () => { void send({ type: 'NEXT_WAVE' }); });
   for (const [button, period] of [[elements.nextNight, 'night'], [elements.nextDay, 'day']] as const) {
-    button.addEventListener('click', () => { void send({ type: 'TIME_OF_DAY', period }); });
+    button.addEventListener('click', async () => {
+      if (await send({ type: 'TIME_OF_DAY', period })) saveDefaults({ ...defaults, period });
+    });
   }
-  elements.devSeason.addEventListener('change', () => {
+  elements.devSeason.addEventListener('change', async () => {
     const season = SEASONS.find(season => season === elements.devSeason.value);
     if (!season) { errorMessage = 'Choose a valid season.'; display(); return; }
-    void send({ type: 'SET_SEASON', season });
+    if (await send({ type: 'SET_SEASON', season })) saveDefaults({ ...defaults, season });
   });
   for (const id of ['stronghold-pause', 'stronghold-tier-pause']) requireElement(id, HTMLButtonElement).addEventListener('click', togglePause);
   for (const id of ['stronghold-restart', 'stronghold-play-again']) requireElement(id, HTMLButtonElement).addEventListener('click', restart);
@@ -411,27 +448,14 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   requireElement('stronghold-close-credits', HTMLButtonElement).addEventListener('click', () => credits.close());
   const creditsClosed = (): void => { connection.setActive(running()); display(); focusTyping(); };
   credits.addEventListener('close', creditsClosed);
+  for (const field of [startingComputers, startingLength, startingColor, startingResources, startingZoom, startingSeason, startingPeriod]) {
+    field.addEventListener('change', saveDefaultForm);
+  }
   developerForm.addEventListener('submit', event => {
     event.preventDefault();
-    if (!developerForm.reportValidity()) return;
-    try {
-      const length = PHRASE_LENGTHS.find(length => length === startingLength.value);
-      if (!length) throw new Error('Choose a valid default text length.');
-      const playerColor = startingColor.value;
-      if (!isPlayerColor(playerColor)) throw new Error('Choose a valid default player color.');
-      if (!['started', 'stopped'].includes(startingComputers.value)) throw new Error('Choose whether computers start or stop.');
-      const options: DeveloperOptions = {
-        resources: startingResources.valueAsNumber, length, computersPaused: startingComputers.value === 'stopped',
-        mapZoom: startingZoom.valueAsNumber, playerColor
-      };
-      validateDeveloperOptions(options);
-      developer.save(options);
-      defaults = { ...options };
+    if (saveDefaultForm()) {
       developerPanel.open = false;
       restart();
-    } catch (error) {
-      errorMessage = `Could not apply dev options: ${error instanceof Error ? error.message : String(error)}`;
-      display();
     }
   });
   requireElement('stronghold-select-army', HTMLButtonElement).addEventListener('click', () => {

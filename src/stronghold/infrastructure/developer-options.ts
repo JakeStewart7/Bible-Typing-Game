@@ -1,13 +1,15 @@
 import { AppStorage, decodeJson } from '../../persistence/storage.ts';
 import { DEFAULT_MATCH_OPTIONS, isMatchOptions, validateMatchOptions } from '../domain/options.ts';
-import { PLAYER_COLORS, type PlayerColor, type StrongholdMatchOptions } from '../domain/types.ts';
+import { PLAYER_COLORS, type PlayerColor, type Season, type StrongholdMatchOptions } from '../domain/types.ts';
 export const DEFAULT_MAP_ZOOM = 1.2;
 export const MIN_MAP_ZOOM = 1;
 export const MAX_MAP_ZOOM = 2;
 
-export type DeveloperOptions = StrongholdMatchOptions & { mapZoom: number; playerColor: PlayerColor };
+export type DeveloperOptions = StrongholdMatchOptions & {
+  mapZoom: number; playerColor: PlayerColor; season: Season | 'random'; period: 'day' | 'night';
+};
 export const DEFAULT_DEVELOPER_OPTIONS: Readonly<DeveloperOptions> = {
-  ...DEFAULT_MATCH_OPTIONS, mapZoom: DEFAULT_MAP_ZOOM, playerColor: PLAYER_COLORS.Red
+  ...DEFAULT_MATCH_OPTIONS, mapZoom: DEFAULT_MAP_ZOOM, playerColor: PLAYER_COLORS.Red, season: 'random', period: 'day'
 };
 function isStoredOptions(value: unknown): value is StrongholdMatchOptions & { mapZoom?: number } {
   return isMatchOptions(value) && (!('mapZoom' in value) || (typeof value.mapZoom === 'number'
@@ -19,7 +21,8 @@ const storedOptions = {
   decode: (raw: string): DeveloperOptions | null => {
     const options = decodeOptions(raw);
     return options ? {
-      ...options, mapZoom: options.mapZoom ?? DEFAULT_MAP_ZOOM, playerColor: options.playerColor ?? PLAYER_COLORS.Red
+      ...options, mapZoom: options.mapZoom ?? DEFAULT_MAP_ZOOM, playerColor: options.playerColor ?? PLAYER_COLORS.Red,
+      season: options.season ?? 'random', period: options.period ?? 'day'
     } : null;
   }
 };

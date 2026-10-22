@@ -291,7 +291,8 @@
 .stronghold-tier-dialog .stronghold-typing { padding: 14px 20px; }
 .stronghold-tier-dialog .text-display { min-height: 66px; max-height: 110px; font: var(--stronghold-font-weight) clamp(20px, 3vw, 36px)/1.6 var(--stronghold-font); text-align: center; }
 .stronghold-typing .text-display, .stronghold-typing .char, .stronghold-typed-area .typing-input,
-.stronghold-typed-area .typed-bar, .stronghold-typed-area .typed-bar span, .stronghold-peer-typed { font-family: "Courier New", Courier, monospace; }
+.stronghold-typed-area .typed-bar, .stronghold-typed-area .typed-bar span,
+.stronghold-screen .stronghold-peer-typed, .stronghold-tier-contributions p { font-family: "Courier New", Courier, monospace; }
 .stronghold-tier-status { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
 .stronghold-tier-status h2 { font-size: 28px; margin: 0; }.stronghold-tier-status p { font-size: 16px; }
 .stronghold-tier-contributions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; min-height: 145px; }

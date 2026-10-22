@@ -3,7 +3,8 @@ import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
 import { TIER_CHARACTER_GOAL } from '../src/stronghold/domain/rules.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { addBuilding, createStronghold } from './stronghold-fixtures.ts';
-import { PLAYER_COLORS, type Participant, type StrongholdCommand, type StrongholdState } from '../src/stronghold/domain/types.ts';
+import { PLAYER_COLORS, SEASONS, type Participant, type StrongholdCommand, type StrongholdState } from '../src/stronghold/domain/types.ts';
+import { DAY_SECONDS, daylight, seasonalNodes } from '../src/stronghold/domain/environment.ts';
 import { equal, test } from './harness.ts';
 import { AppStorage } from '../src/persistence/storage.ts';
 import { DEFAULT_DEVELOPER_OPTIONS, readDeveloperOptions, writeDeveloperOptions } from '../src/stronghold/infrastructure/developer-options.ts';
@@ -68,18 +69,57 @@ test('Stronghold developer defaults persist independently of the current match a
     removeItem: key => { values.delete(key); }
   });
   equal(readDeveloperOptions(storage), DEFAULT_DEVELOPER_OPTIONS);
-  const options = { resources: 25, length: 'long' as const, computersPaused: true, mapZoom: 1.5, playerColor: PLAYER_COLORS.Green };
+  const options = { ...DEFAULT_DEVELOPER_OPTIONS, resources: 25, length: 'long' as const, computersPaused: true, mapZoom: 1.5, playerColor: PLAYER_COLORS.Green, season: 'fall' as const, period: 'night' as const };
   writeDeveloperOptions(storage, options);
   equal(readDeveloperOptions(storage), options);
   const saved = readDeveloperOptions(storage);
   saved.resources = 100;
   equal(readDeveloperOptions(storage).resources, 25);
   values.set('stronghold-developer-options', '{"resources":25,"length":"long","computersPaused":true}');
-  equal(readDeveloperOptions(storage), { ...options, mapZoom: 1.2, playerColor: PLAYER_COLORS.Red });
+  equal(readDeveloperOptions(storage), { ...options, mapZoom: 1.2, playerColor: PLAYER_COLORS.Red, season: 'random', period: 'day' });
   values.set('stronghold-developer-options', JSON.stringify({ ...options, playerColor: 'invalid' }));
   equal(readDeveloperOptions(storage), DEFAULT_DEVELOPER_OPTIONS);
   values.set('stronghold-developer-options', '{"length":"obsolete"}');
   equal(readDeveloperOptions(storage), DEFAULT_DEVELOPER_OPTIONS);
+});
+
+test('Stronghold saved seasons and day/night initialize every fresh game without carrying battle progress', () => {
+  for (const season of SEASONS) for (const period of ['day', 'night'] as const) {
+    const options = { ...DEFAULT_DEVELOPER_OPTIONS, season, period };
+    const engine = new StrongholdEngine(options);
+    for (let restart = 0; restart < 3; restart++) {
+      const snapshot = engine.snapshot('you');
+      equal(snapshot.season, season);
+      equal(snapshot.nodes, seasonalNodes(season));
+      equal(snapshot.environmentElapsed, period === 'night' ? DAY_SECONDS : 0);
+      equal(daylight(snapshot.environmentElapsed).period, period);
+      equal(snapshot.elapsed, 0);
+      equal(snapshot.tier, 0);
+      engine.advance(1);
+      engine.send('you', { type: 'SET_SEASON', season: season === 'winter' ? 'summer' : 'winter' });
+      engine.restart();
+    }
+    const fresh = new StrongholdEngine(JSON.parse(JSON.stringify(options)));
+    equal(fresh.snapshot('you').season, season);
+    equal(daylight(fresh.snapshot('you').environmentElapsed).period, period);
+  }
+});
+
+test('Stronghold rejects invalid saved environment preferences atomically and accepts random new-match seasons', () => {
+  const options = { ...DEFAULT_DEVELOPER_OPTIONS, season: 'random' as const };
+  equal(isMatchOptions(options), true);
+  for (const invalid of [{ ...options, season: 'rain' }, { ...options, season: null }, { ...options, period: 'sunset' }, { ...options, period: null }]) {
+    equal(isMatchOptions(invalid), false);
+    const values = new Map([['stronghold-developer-options', JSON.stringify(invalid)]]);
+    const storage = new AppStorage({
+      getItem: key => values.get(key) ?? null,
+      setItem: (key, value) => { values.set(key, value); },
+      removeItem: key => { values.delete(key); }
+    });
+    equal(readDeveloperOptions(storage), DEFAULT_DEVELOPER_OPTIONS);
+  }
+  const engine = new StrongholdEngine(options);
+  equal(SEASONS.includes(engine.snapshot('you').season), true);
 });
 
 test('Stronghold saved player colors survive restarts and keep teammate colors distinct', () => {

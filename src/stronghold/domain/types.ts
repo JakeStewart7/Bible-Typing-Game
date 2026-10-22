@@ -6,7 +6,10 @@ export const SEASONS = ['spring', 'summer', 'fall', 'winter'] as const;
 export type Season = typeof SEASONS[number];
 export const PLAYER_COLORS = { Red: '#ff1726', Blue: '#00aeef', Yellow: '#ead500', Green: '#18b644' } as const;
 export type PlayerColor = typeof PLAYER_COLORS[keyof typeof PLAYER_COLORS];
-export type StrongholdMatchOptions = { resources: number; length: PhraseLength; computersPaused: boolean; playerColor?: PlayerColor };
+export type StrongholdMatchOptions = {
+  resources: number; length: PhraseLength; computersPaused: boolean; playerColor?: PlayerColor;
+  season?: Season | 'random'; period?: 'day' | 'night';
+};
 export type Point = { x: number; y: number };
 export type UnitKind = 'worker' | 'builder' | 'warrior' | 'archer' | 'catapult' | 'invader';
 export type ArmyUnitKind = 'warrior' | 'archer' | 'catapult';

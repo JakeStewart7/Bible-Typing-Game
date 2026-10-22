@@ -95,9 +95,11 @@ the building's required tier.
 
 **Dev options** sets the starting computer state, default text length, default player
 color (red, blue, yellow or green), starting
-supplies (0-10,000), and starting map zoom (1.0-2.0). **Apply & new game** saves these defaults on this device and
-starts a fresh match. Subsequent **New game** actions and page reloads use the
-saved defaults; changing them does not save an ongoing match.
+supplies (0-10,000), starting map zoom (1.0-2.0), starting season (or Random each
+game), and starting day/night. Valid field changes save automatically in this
+browser, even without pressing Apply. **Apply & new game** starts a fresh match.
+Subsequent **New game**, **Build again** and page reloads use the saved defaults;
+changing them does not save an ongoing match.
 Choosing a teammate's color swaps that teammate to red so everyone stays distinct.
 **Next Wave** in Dev options immediately spawns the next wave and resets the
 countdown without advancing battle time or restarting. It is unavailable while
@@ -114,9 +116,11 @@ Switching to another browser tab automatically pauses Stronghold, including
 the battlefield and computer typing. Returning resumes without catching up
 the time spent away; switching screens or using Pause also stops the simulation.
 
-Each new Stronghold match uses system-generated randomness to pick one of four
+By default, each new Stronghold match uses system-generated randomness to pick one of four
 seasonal maps, with an independent **25% chance per season**. Consecutive repeats
-are possible; a Dev options season override does not pin future matches. Only resource
+are possible. Selecting a fixed starting season or using the live season preview
+saves that preference for future matches; choose **Random each game** to restore
+random selection. Only resource
 node positions change: every layout keeps six standard nodes, two rich nodes,
 and 7,200 total supplies, with the same bases, troops and rules. Spring uses light
 green grass and pastel flowers fading in and out along one shared, randomly chosen
@@ -148,7 +152,8 @@ the environment clock without advancing waves, world events or battle time.
 The **Season** selector immediately updates terrain, weather, music and resource
 positions without restarting. It preserves node identities, remaining supplies,
 gatherer assignments and existing deliveries. These controls require a running
-match outside a tier challenge; they do not change saved new-match defaults.
+match outside a tier challenge. Season and day/night previews also update the
+saved starting season/time; Next Wave remains a one-shot action.
 
 Stronghold's **Music** button and volume slider control its local seasonal
 soundtrack. Only the current recording loads; day/night transitions choose the
@@ -269,7 +274,8 @@ castle health, wave countdown and season/day labels are
 omitted. Weather, day/night lighting and Dev previews still work.
 **Help** contains the map key and instructions. On narrow screens the
 player panels scroll instead of shrinking their text.
-The castle is a clean square and towers use T-shaped map and HUD icons.
+The castle is a clean square; towers progress from a simple T shape to fortified,
+armed silhouettes, while the compact HUD keeps its T-shaped tower icon.
 Friendly and opposing units of the same formation share base health, damage,
 range and speed; enemy waves no longer add hidden health or damage bonuses.
 Movement remains slow, and troop upgrades still improve your units.

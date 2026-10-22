@@ -4,7 +4,7 @@ import { unitUpgrade } from './technology.ts';
 import { createRoleTasks } from './tasks.ts';
 import { DEFAULT_MATCH_OPTIONS, validateMatchOptions } from './options.ts';
 import type { ArmyUnitKind, Building, BuildingKind, Participant, Point, Season, StrongholdMatchOptions, StrongholdState, Unit, UnitKind } from './types.ts';
-import { randomSeason, seasonalNodes } from './environment.ts';
+import { DAY_SECONDS, randomSeason, seasonalNodes } from './environment.ts';
 import { PLAYER_COLORS } from './types.ts';
 
 export function addUnit(state: StrongholdState, kind: UnitKind, point: Point, formation: ArmyUnitKind | null = null): Unit {
@@ -27,8 +27,9 @@ export function addBuilding(
   state.buildings.push(building);
   return building;
 }
-export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH_OPTIONS, season: Season = randomSeason()): StrongholdState {
+export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH_OPTIONS, season?: Season): StrongholdState {
   validateMatchOptions(options);
+  const startingSeason = season ?? (options.season && options.season !== 'random' ? options.season : randomSeason());
   const roster: Pick<Participant, 'id' | 'name' | 'color' | 'role' | 'simulated'>[] = [
     { id: 'you', name: 'You', color: options.playerColor ?? PLAYER_COLORS.Red, role: 'economy', simulated: false },
     { id: 'bot-1', name: 'Miriam', color: PLAYER_COLORS.Blue, role: 'production', simulated: true },
@@ -38,7 +39,7 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
   const matchingTeammate = roster.find(player => player.simulated && player.color === options.playerColor);
   if (matchingTeammate) matchingTeammate.color = PLAYER_COLORS.Red;
   const state: StrongholdState = {
-    season, environmentElapsed: 0,
+    season: startingSeason, environmentElapsed: options.period === 'night' ? DAY_SECONDS : 0,
     phase: 'playing', tier: 0, elapsed: 0, wave: 0, waveIn: 60, resources: options.resources,
     event: 'peace', eventIn: 60, nextId: 1, units: [], buildings: [], chunks: [],
     players: roster.map(player => ({
@@ -47,7 +48,7 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
       constructionTier: 1, upgradeTarget: player.role === 'production' ? 'warrior' : player.role === 'defenses' ? 'tower-1' : 'economy',
       actionPhrases: 0, work: 0, length: options.length
     })),
-    nodes: seasonalNodes(season),
+    nodes: seasonalNodes(startingSeason),
     upgrades: { economy: 0, production: 0, defenses: 0 },
     technology: { economy: 0, warrior: 0, archer: 0, catapult: 0, 'tower-1': 0, 'tower-2': 0, 'tower-3': 0 },
     rally: { x: 500, y: 450 }, message: '', events: [{ id: 1, elapsed: 0, playerId: null, text: 'Game started' }],

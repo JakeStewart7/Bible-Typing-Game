@@ -1,4 +1,4 @@
-import { PHRASE_LENGTHS, PLAYER_COLORS, type PlayerColor, type StrongholdMatchOptions } from './types.ts';
+import { PHRASE_LENGTHS, PLAYER_COLORS, SEASONS, type PlayerColor, type StrongholdMatchOptions } from './types.ts';
 
 export const DEFAULT_MATCH_OPTIONS: Readonly<StrongholdMatchOptions> = {
   resources: 50, length: 'medium', computersPaused: false
@@ -15,9 +15,11 @@ export function isMatchOptions(value: unknown): value is StrongholdMatchOptions 
     && Number.isInteger(value.resources) && value.resources >= 0 && value.resources <= MAX_STARTING_RESOURCES
     && 'length' in value && PHRASE_LENGTHS.some(length => length === value.length)
     && 'computersPaused' in value && typeof value.computersPaused === 'boolean'
-    && (!('playerColor' in value) || isPlayerColor(value.playerColor));
+    && (!('playerColor' in value) || isPlayerColor(value.playerColor))
+    && (!('season' in value) || value.season === 'random' || SEASONS.some(season => season === value.season))
+    && (!('period' in value) || value.period === 'day' || value.period === 'night');
 }
 
 export function validateMatchOptions(options: StrongholdMatchOptions): void {
-  if (!isMatchOptions(options)) throw new Error('Choose a valid text length, computer start state, player color and 0-10000 starting supplies.');
+  if (!isMatchOptions(options)) throw new Error('Choose a valid text length, computer start state, player color, season, day/night and 0-10000 starting supplies.');
 }
