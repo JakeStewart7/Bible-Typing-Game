@@ -17,9 +17,10 @@ export function isMatchOptions(value: unknown): value is StrongholdMatchOptions 
     && 'computersPaused' in value && typeof value.computersPaused === 'boolean'
     && (!('playerColor' in value) || isPlayerColor(value.playerColor))
     && (!('season' in value) || value.season === 'random' || SEASONS.some(season => season === value.season))
-    && (!('period' in value) || value.period === 'day' || value.period === 'night');
+    && (!('period' in value) || value.period === 'day' || value.period === 'night')
+    && (!('tier' in value) || (typeof value.tier === 'number' && Number.isInteger(value.tier) && value.tier >= 0 && value.tier <= 3));
 }
 
 export function validateMatchOptions(options: StrongholdMatchOptions): void {
-  if (!isMatchOptions(options)) throw new Error('Choose a valid text length, computer start state, player color, season, day/night and 0-10000 starting supplies.');
+  if (!isMatchOptions(options)) throw new Error('Choose a valid text length, computer start state, player color, season, day/night, tier 0-3 and 0-10000 starting supplies.');
 }

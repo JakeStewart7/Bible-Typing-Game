@@ -143,7 +143,7 @@ test('Stronghold building placement costs once and waits for a nearby builder', 
   equal(relay?.progress, 0);
   for (let index = 0; index < 60; index++) updateLogistics(state, .25);
   equal(relay?.progress, 1);
-  executeCommand(state, self(state), { type: 'PLACE', kind: 'relay', point: { x: 650, y: 540 } });
+  executeCommand(state, self(state), { type: 'PLACE', kind: 'relay', point: { x: 650, y: 600 } });
   equal(state.resources, 40);
 });
 
@@ -181,28 +181,28 @@ test('Stronghold upgrades obey per-tier limits and population caps', () => {
   equal(self(state).work, cappedWork);
 });
 
-test('Stronghold towers have 50 percent more health across tiers, sides and construction states', () => {
+test('Stronghold towers have doubled their previous health across tiers, sides and construction states', () => {
   const state = createStronghold();
   for (const enemy of [false, true]) {
     for (const complete of [false, true]) {
       for (const tier of [1, 2, 3]) {
         const tower = addBuilding(state, 'tower', { x: 300, y: 400 }, complete, enemy, tier);
-        const expected = (160 + 60 * (tier - 1)) * 1.5;
+        const expected = (160 + 60 * (tier - 1)) * 3;
         equal(tower.hp, expected);
         equal(tower.maxHp, expected);
       }
     }
   }
-  equal(state.buildings.filter(building => building.enemy && building.kind === 'tower').slice(0, 2).map(tower => tower.maxHp), [240, 240]);
+  equal(state.buildings.filter(building => building.enemy && building.kind === 'tower').slice(0, 2).map(tower => tower.maxHp), [480, 480]);
   equal(addBuilding(state, 'barracks', { x: 300, y: 400 }, true, false, 3).maxHp, 240);
   equal(addBuilding(state, 'wall', { x: 300, y: 400 }).maxHp, 260);
   const waveState = createStronghold();
   waveState.wave = 2;
   spawnWave(waveState);
-  equal(waveState.buildings.filter(building => building.enemy && building.kind === 'tower').map(tower => tower.maxHp), [240, 240, 240]);
+  equal(waveState.buildings.filter(building => building.enemy && building.kind === 'tower').map(tower => tower.maxHp), [480, 480, 480]);
 });
 
-test('Stronghold tower damage scales by 1.5 including upgrades and waves without changing attack timing', () => {
+test('Stronghold T1 tower damage is halved on both sides including upgrades without changing attack timing', () => {
   for (const enemy of [false, true]) {
     for (const tier of [1, 2, 3]) {
       for (const upgrades of [0, 2]) {
@@ -216,7 +216,7 @@ test('Stronghold tower damage scales by 1.5 including upgrades and waves without
         const tower = addBuilding(state, 'tower', { x: 500, y: 400 }, true, enemy, tier);
         const target = addUnit(state, enemy ? 'worker' : 'invader', { x: 550, y: 400 });
         const startingHp = target.hp;
-        const damage = (enemy ? 8 + state.wave : 18 + tier * 3 + upgrades * 5) * 1.5;
+        const damage = (enemy ? 8 + state.wave : 18 + tier * 3 + upgrades * 5) * 1.5 * (tier === 1 ? .5 : 1);
         updateCombat(state, .1);
         equal(startingHp - target.hp, damage);
         equal(tower.cooldown, 1);

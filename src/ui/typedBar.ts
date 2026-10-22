@@ -11,7 +11,7 @@ export function renderTypedBar(container: HTMLElement, game: Game): void {
     const span = document.createElement('span');
     span.className = 'typed-word';
     const expectedSlice = expected.slice(pos, pos + w.length);
-    const isCorrect = w === expectedSlice;
+    const isCorrect = w === expectedSlice && (game.blockedAccuracyIndex === null || pos + w.length <= game.blockedAccuracyIndex);
 
     if (wi < words.length - 1) {
       span.classList.add('completed');
@@ -28,7 +28,7 @@ export function renderTypedBar(container: HTMLElement, game: Game): void {
     for (let index = 0; index < text.length; index++) {
       const letter = document.createElement('span');
       letter.className = 'typed-letter';
-      if (text[index] !== expected[pos + index]) letter.classList.add('incorrect');
+      if (game.blockedAccuracyIndex !== null && pos + index >= game.blockedAccuracyIndex) letter.classList.add('incorrect');
       letter.textContent = text[index] ?? '';
       span.appendChild(letter);
     }

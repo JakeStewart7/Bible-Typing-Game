@@ -8,7 +8,7 @@ export const PLAYER_COLORS = { Red: '#ff1726', Blue: '#00aeef', Yellow: '#ead500
 export type PlayerColor = typeof PLAYER_COLORS[keyof typeof PLAYER_COLORS];
 export type StrongholdMatchOptions = {
   resources: number; length: PhraseLength; computersPaused: boolean; playerColor?: PlayerColor;
-  season?: Season | 'random'; period?: 'day' | 'night';
+  season?: Season | 'random'; period?: 'day' | 'night'; tier?: number;
 };
 export type Point = { x: number; y: number };
 export type UnitKind = 'worker' | 'builder' | 'warrior' | 'archer' | 'catapult' | 'invader';
@@ -23,12 +23,13 @@ export type Unit = Point & {
   id: number; kind: UnitKind; hp: number; maxHp: number;
   destination: Point | null; manualMove: boolean; cooldown: number; task: number | null;
   formation: ArmyUnitKind | null; attackTarget: Point | null;
-  idleTime: number | null;
+  idleTime: number | null; attackWindup: number;
 };
 export type Building = Point & {
   id: number; kind: BuildingKind; hp: number; maxHp: number;
   tier: number; progress: number; cooldown: number; enemy: boolean; attackTarget: Point | null; ownerId: string | null; rotation?: number;
   trainingQueue: { kind: ArmyUnitKind; playerId: string }[];
+  rally: Point | null;
 };
 export type ResourceNode = Point & { id: number; rich: boolean; remaining: number };
 export type ResourceChunk = Point & { id: number; amount: number; rich: boolean; target: number | null; carrier: number | null };
@@ -68,9 +69,9 @@ export type StrongholdCommand =
   | { type: 'TYPE'; phraseId: number; text: string }
   | { type: 'READY'; ready: boolean }
   | { type: 'PLACE'; kind: 'relay' | 'barracks' | 'tower' | 'wall'; point: Point; rotation?: number }
-  | { type: 'ROTATE_WALL'; id: number }
+  | { type: 'ROTATE_WALL'; id: number; direction?: 1 | -1 }
   | { type: 'MOVE'; ids: number[]; point: Point }
-  | { type: 'RALLY'; point: Point };
+  | { type: 'RALLY'; point: Point; ids?: number[] };
 export interface StrongholdConnection {
   subscribe(listener: (snapshot: StrongholdSnapshot) => void): () => void;
   send(command: StrongholdCommand): Promise<void>;

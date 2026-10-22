@@ -1,4 +1,4 @@
-import { distance, ENEMY_BASE, TOWER_STRENGTH_MULTIPLIER, UNIT_CAPS, UNIT_RULES } from './rules.ts';
+import { CATAPULT_WINDUP_SECONDS, distance, ENEMY_BASE, TOWER_STRENGTH_MULTIPLIER, UNIT_CAPS, UNIT_RULES } from './rules.ts';
 import { moveUnitToward, wallApproach, wallBetween } from './navigation.ts';
 import { addBuilding, addUnit } from './state.ts';
 import { towerUpgrade, unitUpgrade } from './technology.ts';
@@ -20,9 +20,21 @@ function attack(origin: Unit | Building, target: Target, damage: number): void {
 }
 function updateUnit(state: StrongholdState, unit: Unit, seconds: number): void {
   const rule = UNIT_RULES[unit.formation ?? unit.kind];
+  const siege = (unit.formation ?? unit.kind) === 'catapult';
+  const moving = (): void => {
+    if (siege) { unit.cooldown = 0; unit.attackWindup = CATAPULT_WINDUP_SECONDS; unit.attackTarget = null; }
+  };
+  const fire = (target: Target, damage: number): void => {
+    if (siege) {
+      unit.attackWindup = Math.max(0, unit.attackWindup - seconds);
+      if (unit.attackWindup > 1e-9) return;
+    }
+    attack(unit, target, damage);
+  };
   if (rule.damage === 0 || unit.hp <= 0) return;
   unit.cooldown = Math.max(0, unit.cooldown - seconds);
   if (unit.kind !== 'invader' && unit.manualMove && unit.destination) {
+    moving();
     unit.attackTarget = null;
     moveUnitToward(state, unit, unit.destination, seconds * rule.speed);
     if (distance(unit, unit.destination) < 5) {
@@ -42,26 +54,34 @@ function updateUnit(state: StrongholdState, unit: Unit, seconds: number): void {
   } else {
     target = closest(unit, enemies.filter(other => distance(unit, other) < Math.max(140, rule.range)));
     if (!target && unit.kind === 'warrior') target = closest(unit, buildings.filter(building => building.kind === 'tower' && distance(unit, building) < 140));
+    if (!target && siege) target = closest(unit, buildings.filter(building => distance(unit, building) <= rule.range));
     if (!target && unit.destination) {
+      moving();
       moveUnitToward(state, unit, unit.destination, seconds * rule.speed);
       if (distance(unit, unit.destination) < 5) unit.destination = null;
+      if (siege) return;
     }
     if (!target) target = closest(unit, buildings.filter(building => distance(unit, building) < rule.range + 20));
   }
-  if (!target) return;
+  if (!target) { moving(); return; }
   const targetWall = 'enemy' in target && target.kind === 'wall' ? target : undefined;
   const approach = targetWall ? wallApproach(unit, targetWall) : target;
   const blocked = wallBetween(state, unit, target, targetWall);
   if (distance(unit, approach) > (targetWall ? 1 : rule.range) || blocked) {
-    if (!moveUnitToward(state, unit, approach, seconds * rule.speed) && unit.kind === 'invader') {
+    if (moveUnitToward(state, unit, approach, seconds * rule.speed)) moving();
+    else if (unit.kind === 'invader') {
       const wall = closest(unit, buildings.filter(building => building.kind === 'wall'));
       if (wall && 'enemy' in wall) {
         const point = wallApproach(unit, wall);
-        if (distance(unit, point) <= 1) attack(unit, wall, rule.damage);
-        else moveUnitToward(state, unit, point, seconds * rule.speed);
+        if (distance(unit, point) <= 1) {
+          fire(wall, rule.damage);
+        }
+        else { moving(); moveUnitToward(state, unit, point, seconds * rule.speed); }
       }
     }
-  } else attack(unit, target, rule.damage + (unit.kind === 'invader' ? 0 : unitUpgrade(state, unit) * 3));
+  } else {
+    fire(target, rule.damage + (unit.kind === 'invader' ? 0 : unitUpgrade(state, unit) * 3));
+  }
 }
 
 export function spawnWave(state: StrongholdState): void {
@@ -98,7 +118,7 @@ export function updateCombat(state: StrongholdState, seconds: number): void {
     const target = closest(tower, state.units.filter(unit => (unit.kind === 'invader') !== tower.enemy
       && distance(unit, tower) <= 150 + tower.tier * 15));
     const damage = tower.enemy ? 8 + state.wave : 18 + tower.tier * 3 + towerUpgrade(state, tower.tier) * 5;
-    if (target) attack(tower, target, damage * TOWER_STRENGTH_MULTIPLIER);
+    if (target) attack(tower, target, damage * TOWER_STRENGTH_MULTIPLIER * (tower.tier === 1 ? .5 : 1));
   }
   const enemyBase = state.buildings.find(building => building.kind === 'enemy-base');
   const castle = state.buildings.find(building => building.kind === 'castle');

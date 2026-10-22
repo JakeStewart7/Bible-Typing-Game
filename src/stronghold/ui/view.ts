@@ -192,7 +192,7 @@ export function renderStronghold(
         if (population && (button.action === 'worker' || button.action === 'builder' || isArmyUnit(button.action))) {
           const kind = button.action;
           const count = snapshot.units.filter(unit => unit.kind === kind && unit.hp > 0).length;
-          setText(population, `${count}/${UNIT_CAPS[kind]} on field`);
+          setText(population, `${count}/${UNIT_CAPS[kind]}`);
         }
         if (isArmyUnit(button.action)) {
           const queued = button.element.querySelector('[data-training-queued]');
@@ -202,7 +202,7 @@ export function renderStronghold(
         button.element.classList.toggle('is-unavailable', tierLocked || capped || Boolean(purchaseProblem));
         button.element.classList.toggle('is-tier-locked', tierLocked);
         button.lockIcon?.classList.toggle('is-hidden', !tierLocked);
-        const disabled = !own || !running || challenge || terminal || tierLocked || capped || Boolean(purchaseProblem);
+        const disabled = !own || !running || challenge || terminal || tierLocked || capped || (Boolean(purchaseProblem) && button.action !== 'relay');
         if (button.element.disabled !== disabled) button.element.disabled = disabled;
         const selectedAction = own && relayPlacement ? button.action === 'relay' : Boolean(button.miniBar) && button.action === player.action
           && (!button.tier || button.tier === player.constructionTier) && (!button.upgrade || button.upgrade === player.upgradeTarget);

@@ -1,4 +1,4 @@
-import { BASE, ENEMY_BASE, TOWER_STRENGTH_MULTIPLIER, UNIT_HEALTH_MULTIPLIER, UNIT_RULES } from './rules.ts';
+import { BASE, CATAPULT_WINDUP_SECONDS, ENEMY_BASE, TOWER_STRENGTH_MULTIPLIER, UNIT_HEALTH_MULTIPLIER, UNIT_RULES } from './rules.ts';
 import { assignPhrase } from './phrases.ts';
 import { unitUpgrade } from './technology.ts';
 import { createRoleTasks } from './tasks.ts';
@@ -10,7 +10,7 @@ import { PLAYER_COLORS } from './types.ts';
 export function addUnit(state: StrongholdState, kind: UnitKind, point: Point, formation: ArmyUnitKind | null = null): Unit {
   const hp = ((formation ? UNIT_RULES[formation].hp : UNIT_RULES[kind].hp)
     + (kind === 'invader' ? 0 : unitUpgrade(state, { kind }) * 10)) * UNIT_HEALTH_MULTIPLIER;
-  const unit: Unit = { ...point, id: state.nextId++, kind, hp, maxHp: hp, destination: null, manualMove: false, cooldown: 0, task: null, formation, attackTarget: null, idleTime: null };
+  const unit: Unit = { ...point, id: state.nextId++, kind, hp, maxHp: hp, destination: null, manualMove: false, cooldown: 0, task: null, formation, attackTarget: null, idleTime: null, attackWindup: CATAPULT_WINDUP_SECONDS };
   state.units.push(unit);
   return unit;
 }
@@ -19,10 +19,10 @@ export function addBuilding(
 ): Building {
   const baseHp = kind === 'castle' || kind === 'enemy-base' ? 4000 : kind === 'wall' ? 260
     : 160 + (kind === 'tower' ? 60 : kind === 'barracks' ? 40 : 0) * Math.max(0, tier - 1);
-  const hp = baseHp * (kind === 'tower' ? TOWER_STRENGTH_MULTIPLIER : 1);
+  const hp = baseHp * (kind === 'tower' ? TOWER_STRENGTH_MULTIPLIER * 2 : 1);
   const building: Building = {
     ...point, id: state.nextId++, kind, hp, maxHp: hp, tier,
-    progress: complete ? 1 : 0, cooldown: 0, enemy, attackTarget: null, ownerId: null, rotation: 0, trainingQueue: []
+    progress: complete ? 1 : 0, cooldown: 0, enemy, attackTarget: null, ownerId: null, rotation: 0, trainingQueue: [], rally: null
   };
   state.buildings.push(building);
   return building;
@@ -40,7 +40,7 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
   if (matchingTeammate) matchingTeammate.color = PLAYER_COLORS.Red;
   const state: StrongholdState = {
     season: startingSeason, environmentElapsed: options.period === 'night' ? DAY_SECONDS : 0,
-    phase: 'playing', tier: 0, elapsed: 0, wave: 0, waveIn: 60, resources: options.resources,
+    phase: 'playing', tier: options.tier ?? 0, elapsed: 0, wave: 0, waveIn: 60, resources: options.resources,
     event: 'peace', eventIn: 60, nextId: 1, units: [], buildings: [], chunks: [],
     players: roster.map(player => ({
       ...player, action: player.role === 'economy' ? 'worker' : player.role === 'defenses' ? 'builder' : 'resources',

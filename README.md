@@ -95,7 +95,7 @@ the building's required tier.
 
 **Dev options** sets the starting computer state, default text length, default player
 color (red, blue, yellow or green), starting
-supplies (0-10,000), starting map zoom (1.0-2.0), starting season (or Random each
+supplies (0-10,000), starting tier (0-3), starting season (or Random each
 game), and starting day/night. Valid field changes save automatically in this
 browser, even without pressing Apply. **Apply & new game** starts a fresh match.
 Subsequent **New game**, **Build again** and page reloads use the saved defaults;
@@ -109,8 +109,9 @@ The first wave arrives after **60 seconds**. The first two waves have **one
 invader each**, giving the two starting warriors time to defend without new
 troops. Later waves grow by one invader at a time, up to 18; their intervals
 start at 78 seconds and gradually shorten to no less than 45 seconds.
-Friendly and enemy towers have **50% more health and damage**. Tier 1/2/3 towers
-have 240/330/420 health; damage scaling includes tower upgrades and enemy waves.
+Friendly and enemy towers now have **twice their previous health**. Tier 1/2/3 towers
+have 480/660/840 health. T1 damage is halved, including upgrade and enemy-wave
+bonuses; T2/T3 damage is unchanged.
 Tower attack range and firing interval are unchanged.
 Switching to another browser tab automatically pauses Stronghold, including
 the battlefield and computer typing. Returning resumes without catching up
@@ -129,10 +130,11 @@ blowing right, gently undulating and pulsing as they catch the light.
 Fall uses light brown ground and slowly falling autumn-colored triangles that sway
 back and forth; winter has blue-white ground and snow circles that fade before
 reaching the bottom. Leaves randomly use red, orange, yellow
-or brown. A fixed pool of 36 decorative particles spans the entire battlefield,
-with staggered phases; spring flowers and summer motes are spread across both axes
-rather than falling from the top. Weather
-is clipped to the map and layered underneath UI, never intercepts clicks, and
+or brown. A fixed pool of 96 decorative particles spans the entire map in world
+coordinates, so panning and zooming keep them anchored to their map positions.
+Animation phases are staggered; spring flowers and summer motes are spread across
+both axes rather than falling from the top. Weather is clipped to the map and
+layered underneath UI, never intercepts clicks, and
 is hidden for reduced-motion preferences.
 Days and nights each last three minutes of battle time, with fifteen-second
 dusk/dawn fades. Night blends a moonlit blue overlay into the entire Stronghold
@@ -189,7 +191,7 @@ without obscuring text or intercepting clicks. The faded length reel sits to the
 left of typing, with its **PgUp / PgDn** indicator on the reel's left and a thin
 dark player-colored divider between the keys.
 Expanded length choices use a darker gray background. Stronghold typing uses a
-fixed-width font and a thin neutral caret. Mistakes retain a vivid highlight,
+the same Arial-family font as the controls and a thin neutral caret. Mistakes retain a vivid highlight,
 outline and strikethrough, all matching the selected player color.
 The larger Tier Up badge aligns with the top controls and hangs below the bar.
 Economy places Gatherer and Supplies together, Relay beneath, and its upgrade last.
@@ -199,7 +201,7 @@ controls and map entities. The custom player cursor remains visible while typing
 over controls and dialogs, with the native custom cursor as a fallback.
 The deck fits the viewport height, with scrolling inside action panels
 and the squad list on narrow screens rather than clipping the bottom.
-The map starts at **120% zoom**, focused toward the home base. Use the mouse wheel
+The map starts at **200% zoom**, focused toward the home base. Use the mouse wheel
 to zoom, and **Alt-drag or middle-drag** to pan without issuing orders.
 Hovering near a map edge does not scroll.
 Hold the **arrow keys** to pan; diagonal combinations work and opposite keys cancel.
@@ -258,17 +260,22 @@ Attack impacts retain their explosion without the extra crossing slash lines.
 
 Walls block travel for friendly and enemy units, including while being built.
 Walls are 25% thicker, with matching collision bounds and placement previews.
-**Rotate +45 deg** or **Alt+R** turns the placement preview in 45-degree steps.
-In Defenses, click a friendly wall to highlight it and show its current angle
-and Rotate button. **Done**, Escape or clicking empty ground finishes editing;
-Shift-click still rotates a wall immediately. Rotation and placement cannot
-overlap units or leave the construction area.
+The **scroll wheel** rotates a wall placement preview or selected wall in
+22.5-degree steps through sixteen orientations, instead of zooming. No rotation
+button, Alt+R or Shift-click shortcut is used. **Done**, Escape or clicking empty
+ground finishes editing. Rotation and placement cannot overlap units or leave
+the construction area. Placement outlines and actual buildings use the same
+tier/upgrade-scaled footprint. Blocking buildings or units are highlighted in
+red, and the preview explicitly reports insufficient supplies or other failures.
 Units route around wall ends; enemies attack a blocking wall if no route exists.
 
 Controls, typing and logs use consistent bold Arial-family typography and larger,
 high-contrast text; repeated captions stay out of
 the battlefield. Enemy troops are dark-red squares (melee), diamonds (archers),
-and triangles (siege), with red outlines. The emphasized resource icon and count
+and large wheeled siege carts (catapults), with red outlines. Catapults move at
+half their previous speed, stop to attack and need 0.8 seconds to aim before
+firing. Moving resets the shot cooldown and requires a fresh aiming delay.
+The emphasized resource icon and count
 lead the HUD without a visible Supplies caption, followed by population counts;
 castle health, wave countdown and season/day labels are
 omitted. Weather, day/night lighting and Dev previews still work.
@@ -353,7 +360,15 @@ a phrase already in progress at either transition. Enemy waves add ranged and si
 base develops. Select troops with
 click/Shift-click, drag a selection rectangle (Shift adds to the selection), or
 **Select all troops**, then **right-click** the battlefield or use **Defend** / **Assault
-base**. **Set rally on map** makes the next map click the production rally point.
+base**. Click or Shift-click friendly buildings to select them, then right-click
+to set their individual rally points. Barracks send newly trained units to their
+own rally; a castle rally also directs newly recruited gatherers and builders
+before they resume automatic work. Unit Control's **Rally all buildings** applies
+one rally point to all friendly buildings and becomes the default for future
+barracks. Mixed unit/building selections both move units and update building
+rallies on right-click. **Ctrl+Tab / Ctrl+Shift+Tab** cycle roles forwards/backwards
+when the browser delivers those keys to the game; role buttons remain available
+in browsers that reserve these shortcuts for tab switching.
 Manual movement takes priority over enemy pursuit and automatic rally orders
 until arrival, allowing troops to retreat from combat; normal fighting then resumes.
 Warriors prioritize nearby enemy towers over the enemy castle once movement
@@ -361,6 +376,11 @@ orders finish, while still defending themselves against nearby enemy troops.
 No coordinate fields are needed. Destroy the enemy
 stronghold before invading waves destroy yours.
 Left-clicking empty ground clears the selection without moving units.
+Unlocked recruitment tiles show compact population counts in their top-right
+corner, replacing the tier lock. Costs sit in centered supply badges, and the
+text-length reel stays clipped while hovering; its visible neighboring choices
+remain clickable. Summer motes drift twice as fast as before, with double the
+vertical sway and brighter light pulses.
 Left-click still places a building or rally point; right-click cancels targeting.
 The browser context menu is suppressed inside Stronghold, including while paused.
 

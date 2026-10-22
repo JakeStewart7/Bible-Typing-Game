@@ -34,6 +34,7 @@
   background: linear-gradient(150deg, #597ddc, #3258ae); mix-blend-mode: multiply; opacity: var(--night-opacity);
 }
 .stronghold-weather { position: absolute; inset: var(--header-height) 0 auto; height: max(0px, calc(100% - var(--header-height) - var(--deck-height) - var(--typing-height))); overflow: hidden; pointer-events: none; z-index: 2; }
+.stronghold-weather-world { position: absolute; top: 0; left: 0; width: 1000px; height: 650px; transform-origin: 0 0; }
 .stronghold-weather-particle {
   position: absolute; top: -16px; left: var(--weather-x); width: 7px; height: 7px; border-radius: 50%; background: white; opacity: 0;
   animation: stronghold-weather-drift var(--weather-duration) var(--weather-delay) linear infinite;
@@ -54,18 +55,18 @@
 }
 [data-season="summer"] .stronghold-weather-particle {
   top: var(--weather-y); width: 3px; height: 3px; background: #fff4af;
-  box-shadow: 0 0 5px 1px #fff7c866; border-radius: 50%;
-  animation-name: stronghold-summer-mote; animation-duration: calc(var(--weather-duration) * 2); animation-delay: calc(var(--weather-delay) * 2);
+  box-shadow: 0 0 5px 1px #fff7c8cc; border-radius: 50%;
+  animation-name: stronghold-summer-mote; animation-duration: var(--weather-duration); animation-delay: var(--weather-delay);
 }
 @keyframes stronghold-summer-mote {
-  0% { opacity: 0; transform: translate(-80px, 4px) scale(.7); }
-  15% { opacity: .7; transform: translate(-47px, -6px) scale(1.2); }
-  30% { opacity: .15; transform: translate(-14px, 5px) scale(.8); }
-  45% { opacity: .65; transform: translate(19px, -7px) scale(1.15); }
-  60% { opacity: .15; transform: translate(52px, 6px) scale(.8); }
-  75% { opacity: .7; transform: translate(85px, -5px) scale(1.2); }
-  90% { opacity: .2; transform: translate(118px, 5px) scale(.8); }
-  100% { opacity: 0; transform: translate(140px, 0) scale(.7); }
+  0% { opacity: 0; filter: brightness(1); transform: translate(-80px, 8px) scale(.7); }
+  15% { opacity: 1; filter: brightness(2) drop-shadow(0 0 6px #fff7c8); transform: translate(-47px, -12px) scale(1.2); }
+  30% { opacity: .15; filter: brightness(1); transform: translate(-14px, 10px) scale(.8); }
+  45% { opacity: 1; filter: brightness(2) drop-shadow(0 0 6px #fff7c8); transform: translate(19px, -14px) scale(1.15); }
+  60% { opacity: .15; filter: brightness(1); transform: translate(52px, 12px) scale(.8); }
+  75% { opacity: 1; filter: brightness(2) drop-shadow(0 0 6px #fff7c8); transform: translate(85px, -10px) scale(1.2); }
+  90% { opacity: .2; filter: brightness(1); transform: translate(118px, 10px) scale(.8); }
+  100% { opacity: 0; filter: brightness(1); transform: translate(140px, 0) scale(.7); }
 }
 [data-season="spring"] .stronghold-weather-particle {
   --petal: #f4a9ce; top: var(--weather-y); width: 17px; height: 17px; border-radius: 0;
@@ -153,20 +154,22 @@
 .stronghold-symbol { display: inline-block; flex: 0 0 15px; width: 15px; height: 15px; }
 .stronghold-symbol--warrior { background: #dce2e8; border: 3px solid #65727e; }
 .stronghold-symbol--archer { background: #9ed7e6; border: 3px solid #00aeef; transform: rotate(45deg) scale(.8); }
-.stronghold-symbol--catapult { background: #cfb000; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-.stronghold-build-tile [data-unit-population] { display: block; font-size: 9px; line-height: 1.1; }
+.stronghold-symbol--catapult { background: #cfb000; clip-path: polygon(0 65%, 30% 65%, 30% 30%, 75% 0, 95% 15%, 50% 50%, 50% 65%, 100% 65%, 100% 100%, 0 100%); }
+.stronghold-build-tile [data-unit-population] { position: absolute; top: 3px; right: 4px; margin: 0; display: block; font-size: 10px; line-height: 1.1; }
+.stronghold-build-tile:has([data-unit-population]) { padding-top: 18px; }
+.stronghold-build-tile.is-tier-locked [data-unit-population] { display: none; }
 .stronghold-symbol--worker { background: white; border: 3px solid #b88051; border-radius: 50%; }
 .stronghold-symbol--resource { background: #00aeef; border: 3px solid #9ed7e6; border-radius: 50%; }
 .stronghold-symbol--builder { background: #a64caf; clip-path: polygon(50% 0, 100% 100%, 0 100%); position: relative; }
 .stronghold-symbol--builder::after { content: ''; position: absolute; inset: 5px 4px 3px; background: #cec0df; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
 .stronghold-symbol--tower { background: #ffd500; clip-path: polygon(0 0, 100% 0, 100% 30%, 65% 30%, 65% 100%, 35% 100%, 35% 30%, 0 30%); }
-.stronghold-tier-mount { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 84px; height: 84px; filter: drop-shadow(0 2px 0 #574b25); }
+.stronghold-tier-mount { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 84px; height: 84px; filter: drop-shadow(0 3px 1px #574b25) drop-shadow(0 5px 5px #10251b99); }
 .stronghold-tier {
   position: relative; width: 84px; height: 84px;
   z-index: 5; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
   background: #9b7d34; border: none; border-radius: 0; padding: 15px 2px; font: var(--stronghold-font-weight) 15px/1.2 var(--stronghold-font); color: #382b12;
 }
-.stronghold-tier::before { content: ''; position: absolute; inset: 2px; background: linear-gradient(#fff6bd, #dfaf43); clip-path: inherit; }
+.stronghold-tier::before { content: ''; position: absolute; inset: 3px; background: #e3b850; clip-path: inherit; box-shadow: inset 5px 5px 9px #fff2ad, inset -6px -7px 10px #795019; }
 .stronghold-tier:not(:disabled):hover::before { background: #fff6ba; }
 .stronghold-tier:disabled { opacity: .65; }
 .stronghold-tier span, .stronghold-tier strong { position: relative; display: block; }
@@ -211,9 +214,8 @@
 .stronghold-length-wheel { position: relative; height: 48px; overflow: hidden; }
 .stronghold-length-wheel button { position: absolute; top: calc(50% - 8px); left: 0; width: 100%; height: 16px; min-height: 0; padding: 0; border: 0; border-radius: 0; font: var(--stronghold-font-weight) 11px var(--stronghold-font); background: transparent; color: #111; transform: translateY(calc(var(--length-offset, 0) * 16px)); opacity: var(--length-opacity, .4); transition: transform 140ms ease, opacity 140ms ease; box-shadow: none; white-space: nowrap; }
 .stronghold-length-wheel button[aria-selected="true"] { color: var(--player-bold); background: var(--player-fill); }
-.stronghold-length-wheel:hover, .stronghold-length-wheel:focus-within { overflow: visible; }
-.stronghold-length-wheel:is(:hover, :focus-within) button { opacity: 1; background: #aeb7b0; box-shadow: none; }
-.stronghold-length-wheel:is(:hover, :focus-within) button[aria-selected="true"] { background: var(--player-fill); }
+.stronghold-length-wheel button:hover { color: var(--player-bold); background: transparent; }
+.stronghold-length-wheel button[aria-selected="true"]:hover { background: var(--player-fill); }
 .stronghold-squad { position: absolute; left: var(--squad-inset); right: var(--squad-inset); bottom: 7px; height: calc(var(--deck-height) - 7px); z-index: 3; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); gap: 6px; }
 .stronghold-player { --player-color: #ff1726; --player-fill: #ffb3c9; --player-text: #711e2b; color: var(--player-text); min-width: 0; min-height: 0; height: 100%; display: flex; flex-direction: column; }
 .stronghold-player-frame { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; border: 3px solid var(--player-color); border-radius: 0; padding: 5px; background: #e3e6e3; box-shadow: none; }
@@ -245,12 +247,14 @@
 .stronghold-build-tile small, .stronghold-upgrade-tile small { display: block; font-size: 9px; margin-top: 1px; white-space: nowrap; }
 .stronghold-build-tile [data-training-queued] { font-size: 8px; }
 .stronghold-lock { position: absolute; top: 3px; right: 4px; width: 10px; height: 11px; color: #66716a; }
-.stronghold-build-tile.has-cost, .stronghold-upgrade-tile.has-cost, .stronghold-build-tile.is-tier-locked { padding-top: 18px; }
+.stronghold-build-tile.is-tier-locked, .stronghold-upgrade-tile.is-tier-locked { padding-top: 18px; }
 .stronghold-upgrade-kind { display: block; }
 .stronghold-upgrade-tile [data-upgrade-level] { grid-column: 1 / -1; justify-self: center; text-align: center; }
-.stronghold-action-label { display: block; grid-column: 1 / -1; }
+.stronghold-action-label { display: block; grid-column: 1 / -1; width: 100%; text-align: center; }
 .stronghold-build-tile .stronghold-task-progress { grid-column: 1 / -1; }
-.stronghold-cost { position: absolute; top: 3px; left: 5px; color: var(--player-bold); font: 800 12px/1 var(--stronghold-font); text-shadow: 0 1px #ffffff88; }
+.stronghold-cost { display: inline-flex; gap: 3px; justify-self: center; align-items: center; padding: 2px 5px; border-radius: 3px; background: #ffffff66; color: var(--player-bold); font: 800 11px/1 var(--stronghold-font); }
+.stronghold-cost::before { content: ''; width: 6px; height: 6px; background: #00aeef; border: 1px solid #006783; transform: rotate(45deg); }
+.stronghold-placement.is-invalid { border-color: #c10f25; color: #9d0018; background: #fff0ed; }
 .stronghold-build-tile.selected, .stronghold-upgrade-tile.selected { border-color: #111; background: var(--player-fill); box-shadow: inset 0 0 0 1px var(--player-bold); }
 .stronghold-build-tile:disabled, .stronghold-upgrade-tile:disabled { opacity: 1; }
 .stronghold-build-tile:is(.is-unaffordable, .is-unavailable), .stronghold-upgrade-tile:is(.is-unaffordable, .is-unavailable) { background: #bfc5c1; color: #5c675f; border-color: #8f9992; box-shadow: none; }
@@ -292,7 +296,7 @@
 .stronghold-tier-dialog .text-display { min-height: 66px; max-height: 110px; font: var(--stronghold-font-weight) clamp(20px, 3vw, 36px)/1.6 var(--stronghold-font); text-align: center; }
 .stronghold-typing .text-display, .stronghold-typing .char, .stronghold-typed-area .typing-input,
 .stronghold-typed-area .typed-bar, .stronghold-typed-area .typed-bar span,
-.stronghold-screen .stronghold-peer-typed, .stronghold-tier-contributions p { font-family: "Courier New", Courier, monospace; }
+.stronghold-screen .stronghold-peer-typed, .stronghold-tier-contributions p { font-family: var(--stronghold-font, Arial, Helvetica, sans-serif); }
 .stronghold-tier-status { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
 .stronghold-tier-status h2 { font-size: 28px; margin: 0; }.stronghold-tier-status p { font-size: 16px; }
 .stronghold-tier-contributions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; min-height: 145px; }

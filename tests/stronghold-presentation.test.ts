@@ -4,13 +4,13 @@ import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
 import { equal, test } from './harness.ts';
 import { PLAYER_COLORS } from '../src/stronghold/domain/types.ts';
 
-test('Stronghold enemies use dark-red squares, diamonds and triangles with red outlines', () => {
+test('Stronghold enemies use dark-red squares, diamonds and siege carts with red outlines', () => {
   const state = createStronghold();
   for (const formation of [null, 'warrior', 'archer', 'catapult'] as const) {
     const markup = unitMarkup(addUnit(state, 'invader', { x: 500, y: 100 }, formation), false);
     equal(markup.includes('fill="#870018" stroke="#ff1726" stroke-width="2"'), true);
     equal(markup.includes(formation === 'archer' ? 'M0 -10 L8 0 L0 10 L-8 0 Z'
-      : formation === 'catapult' ? 'M0 -12 L10 9 L-10 9 Z' : '<rect x="-8" y="-8" width="16" height="16"'), true);
+      : formation === 'catapult' ? 'data-catapult' : '<rect x="-8" y="-8" width="16" height="16"'), true);
     equal(markup.includes('#91a8b7'), false);
   }
   equal(unitMarkup(addUnit(state, 'warrior', { x: 500, y: 500 }), false).includes('fill="#dce2e8" stroke="#65727e"'), true);

@@ -1,5 +1,5 @@
 import { COSTS, TEXT_LENGTH_BONUSES, UNIT_HEALTH_MULTIPLIER } from './rules.ts';
-import type { Participant, Role, StrongholdState, UpgradeTarget, Unit } from './types.ts';
+import type { Building, Participant, Role, StrongholdState, UpgradeTarget, Unit } from './types.ts';
 
 export const UPGRADE_OPTIONS: Record<UpgradeTarget, { label: string; role: Role; tier: number; cost: number }> = {
   economy: { label: 'Economy', role: 'economy', tier: 0, cost: 120 },
@@ -32,6 +32,10 @@ export function unitUpgrade(state: Pick<StrongholdState, 'technology'>, unit: Pi
 }
 export function towerUpgrade(state: Pick<StrongholdState, 'technology'>, tier: number): number {
   return tier >= 3 ? state.technology['tower-3'] : tier === 2 ? state.technology['tower-2'] : state.technology['tower-1'];
+}
+export function buildingScale(state: Pick<StrongholdState, 'technology'>, building: Pick<Building, 'kind' | 'enemy' | 'tier'>): number {
+  const level = building.kind === 'tower' && !building.enemy ? towerUpgrade(state, building.tier) : 0;
+  return building.kind === 'tower' || building.kind === 'enemy-base' ? 1 + Math.min(3, building.tier) * .08 + level * .05 : 1;
 }
 export function applyUpgrade(state: StrongholdState, player: Participant): void {
   state.technology[player.upgradeTarget]++;

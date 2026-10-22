@@ -4,7 +4,7 @@ import { buildingMarkup, unitMarkup, unitMotionTransform } from '../src/strongho
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
 import { addBuilding, addUnit, createStronghold } from './stronghold-fixtures.ts';
 import { PHRASE_LENGTHS, PLAYER_COLORS, ROLES } from '../src/stronghold/domain/types.ts';
-import { validateDeveloperOptions } from '../src/stronghold/infrastructure/developer-options.ts';
+import { DEFAULT_DEVELOPER_OPTIONS, DEFAULT_MAP_ZOOM, validateDeveloperOptions } from '../src/stronghold/infrastructure/developer-options.ts';
 import { WALL_HALF_WIDTH } from '../src/stronghold/domain/navigation.ts';
 import { equal, test } from './harness.ts';
 
@@ -186,7 +186,8 @@ test('Stronghold military panels omit Supplies and every remaining task has a ma
   for (const id of ['stronghold-zoom-fit', 'stronghold-zoom-in', 'stronghold-zoom-out', 'stronghold-zoom']) {
     equal(markup.includes(`id="${id}"`), false);
   }
-  equal(markup.includes('aria-keyshortcuts="Alt+R"'), true);
+  equal(markup.includes('aria-keyshortcuts="Alt+R"'), false);
+  equal(markup.includes('id="stronghold-rotate-wall"'), false);
   equal(markup.includes('class="stronghold-action-label">Queue '), false);
   equal(markup.includes('data-training-queued>0 queued'), true);
   equal(markup.includes('id="stronghold-next-wave" type="button">Next Wave</button>'), true);
@@ -203,10 +204,11 @@ test('Stronghold zoom camera stays within the full battlefield and minimum zoom 
   equal(zoomed.y + zoomed.height, 650);
   equal(zoomed.width < 1000 && zoomed.height < 650, true);
   equal(cameraBounds(10, { x: 500, y: 325 }).width, 500);
-  for (const mapZoom of [NaN, Infinity, .5, 2.1]) {
+  equal(DEFAULT_MAP_ZOOM, 2);
+  for (const tier of [NaN, Infinity, -.5, 1.5, 4]) {
     let rejected = false;
-    try { validateDeveloperOptions({ resources: 50, length: 'medium', computersPaused: false, mapZoom, playerColor: PLAYER_COLORS.Red }); }
-    catch (error) { rejected = error instanceof Error && error.message.includes('map zoom'); }
+    try { validateDeveloperOptions({ ...DEFAULT_DEVELOPER_OPTIONS, tier }); }
+    catch (error) { rejected = error instanceof Error; }
     equal(rejected, true);
   }
 });

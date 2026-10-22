@@ -88,7 +88,7 @@ test('Stronghold units retain slow movement and double health, with equal opposi
   state.nodes = [{ id: 100, x: 100, y: 500, remaining: 100, rich: false }];
   addBuilding(state, 'barracks', { x: 200, y: 500 });
   for (const kind of ['worker', 'builder', 'warrior', 'archer', 'catapult', 'invader'] as const) {
-    equal(Math.abs(UNIT_RULES[kind].speed - original[kind][0] * .3) < .000001, true);
+    equal(Math.abs(UNIT_RULES[kind].speed - original[kind][0] * (kind === 'catapult' ? .15 : .3)) < .000001, true);
     const unit = addUnit(state, kind, { x: 100, y: 300 });
     equal(unit.maxHp, original[kind][1] * 2);
     unit.destination = { x: 100, y: 500 };

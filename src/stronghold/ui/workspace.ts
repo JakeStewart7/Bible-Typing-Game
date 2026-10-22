@@ -12,7 +12,7 @@ import { PLAYER_CURSOR_SHAPE } from './player-theme.ts';
 export const PLAYER_IDS = ['you', 'bot-1', 'bot-2', 'bot-3'] as const;
 const ROLE_ICONS: Record<Role, string> = {
   economy: '<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 4 16 4 16 0V6M4 12v6c0 4 16 4 16 0v-6"/>',
-  production: '<path d="m15 3 6 0 0 6-10 10-6-6Z M4 12l8 8 M3 21l5-5"/>',
+  production: '<path d="M8 16L18 3L21 2L20 6L10 18Z" fill="currentColor"/><path d="M4 13L13 22M4 22L8 18" stroke-width="3"/>',
   army: PLAYER_CURSOR_SHAPE,
   defenses: '<path d="M3 21V5h4v4h3V3h4v6h3V5h4v16ZM10 21v-6h4v6"/>'
 };
@@ -85,14 +85,14 @@ export function strongholdWorkspaceMarkup(): string {
         <div class="stronghold-legend"><span>Dark red: enemies</span><span>□ Warrior</span><span>◇ Archer</span><span>▲ Catapult</span><span>△ Builder</span><span>○ Gatherer</span></div>
         <p>Completed characters, including spaces, advance your selected free task. Short is 1-5 characters at 1x, Medium 6-11 at 1.1x, Long 12-24 at 1.25x, and Extra Long 25-40 at 1.5x. All lengths use normal words or word groups.</p>
         <p>Relays need no typing: select Relay and click the map to place its shadow. Other buildings need a full work bar first. Escape cancels placement. Builders construct and repair automatically.</p>
-        <p>Use Rotate or Alt+R before placing a wall to turn it 45 degrees. In Defenses, click an existing friendly wall to show its angle and Rotate button; Done or Escape finishes editing. Shift-click also rotates immediately. Walls block all units; enemies go around them or attack a wall if there is no route.</p>
+        <p>Scroll while placing or selecting a wall to rotate through 16 angles, 22.5 degrees apart, without zooming. Done or Escape finishes editing. Walls block units; enemies go around them or attack if there is no route.</p>
         <p>Gatherers carry blue or purple chunks matching their resource node to the nearest relay or castle. Neutral glowing chunks travel through completed relay links. Hover a relay or castle, or place a relay, to see the 155-unit ranges of nearby completed and unfinished relays. Green previews reach the castle network; amber previews are disconnected or planned. Unfinished relays never transport supplies. Purple nodes yield twice as much. Broken connections stop relay deliveries.</p>
         <p>In Unit Control, left-click or drag to select friendly units, right-click to move, and left-click empty ground to deselect. Shift adds units. Manual move orders take priority over combat and automatic rally orders until arrival; units then resume fighting. Right-click cancels placement or rally targeting; left-click places the building or rally point. A plus badge on the cursor shows targeting mode.</p>
         <p>Gatherers and builders resume nearest work after two idle seconds at their destination. Builders and walls cost no supplies, only typing work.</p>
         <p>Supplies, Gatherers, Barracks, Builders, Walls and Towers need typing, not supplies. Each typing option has a small progress bar; select it to show its progress in the main player-colored bar. More expensive buildings fill more slowly. Excess progress from a completed entry carries into the next bar. Once construction is ready, further entries do not bank more completions. Troops, upgrades and relays cost supplies without typing.</p>
         <p>Every match starts at Tier 0, with T1 starting units and buildings. Complete the first shared tier challenge to unlock T1 Barracks and towers. Locked tasks cannot be selected or typed for. Army types for supplies at Tier 0 and selects Barracks work when you join after unlocking T1. Fill the work bar, then click the map to place. Teammates help with the same selected work, and prepared work survives tier challenges. Unit Control can type for supplies while issuing orders.</p>
-        <p>Each typing task keeps its progress when you switch tasks or roles. Building tiers keep separate progress. Dev options sets the defaults for new matches.</p>
-        <p>Use the coin, sword, cursor and castle buttons to switch between Economy, Army, Unit Control and Defenses. Tab selects the next unlocked typing or placement task; Shift+Tab selects the previous one, skipping locked tasks without buying troops or upgrades. In menus, Tab keeps its normal focus behavior.</p>
+        <p>Each typing task keeps its progress when you switch tasks or roles. Building tiers keep separate progress. Dev options automatically saves defaults in this browser for new matches and refreshes.</p>
+        <p>Use the coin, sword, cursor and castle buttons, or Ctrl+Tab / Ctrl+Shift+Tab, to switch roles. Tab selects the next unlocked task; Shift+Tab selects the previous one. Click friendly buildings to select; right-click sets their rally points. Unit Control can set all building rally points at once.</p>
         <p>The command bar timer shows battle time, stopping during pauses, tier challenges and the match outcome. Build again and New game reset the battlefield, timer, typing, selections and camera using your saved new-match defaults.</p>
         <p>Arrow keys pan the map. Page Up selects longer text and Page Down shorter text, or click a length option. Shift+arrows still selects typed text. Alt+number chooses the matching displayed option in your current role.</p>
         <p>The map starts zoomed toward the home base. Scroll to zoom; Alt-drag, middle-drag or arrow keys pan. Moving the pointer to a map edge does not scroll. Right-click moves units or cancels placement, never pans. Shift-drag still adds troops to your selection.</p>
@@ -106,28 +106,25 @@ export function strongholdWorkspaceMarkup(): string {
       <details id="stronghold-dev-options" class="stronghold-dev-options">
         <summary>Dev options</summary>
         <form id="stronghold-dev-form" class="stronghold-dev-panel">
-          <h3>New match defaults</h3>
-          <label>Computers start
+          <h3>New game</h3>
+          <label>Computers
             <select id="stronghold-dev-computers"><option value="started">Started</option><option value="stopped">Stopped</option></select>
           </label>
-          <label>Default text length
+          <label>Text length
             <select id="stronghold-dev-length">${PHRASE_LENGTHS.map(length => `<option value="${length}">${LENGTH_LABELS[length]}</option>`).join('')}</select>
           </label>
-          <label>Default player color
+          <label>Player color
             <select id="stronghold-dev-color">${Object.entries(PLAYER_COLORS).map(([name, color]) => `<option value="${color}">${name}</option>`).join('')}</select>
           </label>
-          <label>Starting supplies <input id="stronghold-dev-resources" type="number" min="0" max="10000" step="1" required></label>
-          <label>Starting map zoom <input id="stronghold-dev-zoom" type="number" min="1" max="2" step="0.1" required></label>
-          <label>Starting season <select id="stronghold-dev-starting-season"><option value="random">Random each game</option>${SEASONS.map(season => `<option value="${season}">${SEASON_LABELS[season]}</option>`).join('')}</select></label>
-          <label>Starting time <select id="stronghold-dev-period"><option value="day">Day</option><option value="night">Night</option></select></label>
-          <p>Valid changes save automatically in this browser, including across refreshes. Applying starts a new match; New game uses these defaults.</p>
+          <label>Supplies <input id="stronghold-dev-resources" type="number" min="0" max="10000" step="1" required></label>
+          <label>Tier <select id="stronghold-dev-tier">${[0, 1, 2, 3].map(tier => `<option value="${tier}">Tier ${tier}</option>`).join('')}</select></label>
+          <label>Season <select id="stronghold-dev-starting-season"><option value="random">Random each game</option>${SEASONS.map(season => `<option value="${season}">${SEASON_LABELS[season]}</option>`).join('')}</select></label>
+          <label>Time <select id="stronghold-dev-period"><option value="day">Day</option><option value="night">Night</option></select></label>
           <button type="submit">Apply &amp; new game</button>
           <h3>Current match</h3>
           <label>Season <select id="stronghold-dev-season">${SEASONS.map(season => `<option value="${season}">${SEASON_LABELS[season]}</option>`).join('')}</select></label>
           <div class="stronghold-dev-time"><button id="stronghold-next-night" type="button">Skip to Night</button><button id="stronghold-next-day" type="button">Skip to Day</button></div>
-          <p>Preview the season or time of day without restarting or advancing battle time, and save it as a new-match default. Existing resource supplies are preserved.</p>
           <button id="stronghold-next-wave" type="button">Next Wave</button>
-          <p>Spawn the next wave now and reset its countdown without restarting the match.</p>
         </form>
       </details>
       <div class="stronghold-atmosphere-controls" role="group" aria-label="Soundtrack and credits">
@@ -165,9 +162,9 @@ export function strongholdWorkspaceMarkup(): string {
       </div>
       <section id="stronghold-army-orders" class="stronghold-army-orders is-hidden">
         <button id="stronghold-select-army" type="button" data-shortcut="1" aria-keyshortcuts="Alt+1" data-tooltip="Select all troops (Alt+1)">Select all troops</button><button id="stronghold-defend" type="button" data-shortcut="2" aria-keyshortcuts="Alt+2" data-tooltip="Defend (Alt+2)">Defend</button><button id="stronghold-assault" type="button" data-shortcut="3" aria-keyshortcuts="Alt+3" data-tooltip="Assault base (Alt+3)">Assault base</button>
-        <button id="stronghold-rally" type="button" data-shortcut="4" aria-keyshortcuts="Alt+4" data-tooltip="Set rally on map (Alt+4)">Set rally on map</button><p id="stronghold-selection"></p>
+        <button id="stronghold-rally" type="button" data-shortcut="4" aria-keyshortcuts="Alt+4" data-tooltip="Set all building rally points (Alt+4)">Rally all buildings</button><p id="stronghold-selection"></p>
       </section>
-      <div id="stronghold-placement" class="stronghold-placement is-hidden"><span id="stronghold-placement-label">Click the map to place.</span><button id="stronghold-rotate-wall" type="button" class="is-hidden" aria-keyshortcuts="Alt+R">Rotate +45 deg (Alt+R)</button><button id="stronghold-cancel-placement" type="button">Cancel</button></div>
+      <div id="stronghold-placement" class="stronghold-placement is-hidden"><span id="stronghold-placement-label">Click the map to place.</span><button id="stronghold-cancel-placement" type="button">Cancel</button></div>
     </div>
     ${creditsMarkup()}
     <dialog id="stronghold-tier-dialog" class="stronghold-tier-dialog">

@@ -26,6 +26,13 @@ export function createMapCamera(map: SVGSVGElement) {
     const bounds = cameraBounds(zoom, center);
     center = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
     setAttribute(map, 'viewBox', `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`);
+    const weather = map.closest('.stronghold-stage')?.querySelector<HTMLElement>('.stronghold-weather');
+    const world = weather?.querySelector<HTMLElement>('.stronghold-weather-world');
+    const matrix = map.getScreenCTM();
+    if (weather && world && matrix) {
+      const rect = weather.getBoundingClientRect();
+      world.style.transform = `matrix(${matrix.a}, ${matrix.b}, ${matrix.c}, ${matrix.d}, ${matrix.e - rect.left}, ${matrix.f - rect.top})`;
+    }
   }
   function setZoom(value: number, point = center): void {
     if (!Number.isFinite(value)) throw new Error('Invalid map zoom.');
@@ -37,6 +44,7 @@ export function createMapCamera(map: SVGSVGElement) {
   return {
     get zoom(): number { return zoom; },
     get center(): Point { return { ...center }; },
+    refresh: draw,
     setZoom,
     panTo(point: Point): void { cameraBounds(zoom, point); center = { ...point }; draw(); },
     reset(value = DEFAULT_MAP_ZOOM): void { setZoom(value, BASE); }

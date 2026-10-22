@@ -61,6 +61,21 @@ test('Stronghold developer defaults are validated, copied and reused by new matc
     { resources: 50, length: 'short', computersPaused: 'true' }]) equal(isMatchOptions(value), false);
 });
 
+test('Stronghold starting tiers persist and restart with unlocked tasks but no carried battle progress', () => {
+  for (const tier of [0, 1, 2, 3]) {
+    const engine = new StrongholdEngine({ ...DEFAULT_DEVELOPER_OPTIONS, tier });
+    engine.advance(1);
+    engine.restart();
+    equal(engine.snapshot('you').tier, tier);
+    equal(engine.snapshot('you').elapsed, 0);
+    engine.send('you', { type: 'ROLE', role: 'defenses' });
+    if (tier > 0) {
+      engine.send('you', { type: 'ACTION', action: 'tower', tier });
+      equal(engine.snapshot('you').players[0]!.constructionTier, tier);
+    }
+  }
+});
+
 test('Stronghold developer defaults persist independently of the current match and tolerate obsolete stored data', () => {
   const values = new Map<string, string>();
   const storage = new AppStorage({
@@ -69,14 +84,16 @@ test('Stronghold developer defaults persist independently of the current match a
     removeItem: key => { values.delete(key); }
   });
   equal(readDeveloperOptions(storage), DEFAULT_DEVELOPER_OPTIONS);
-  const options = { ...DEFAULT_DEVELOPER_OPTIONS, resources: 25, length: 'long' as const, computersPaused: true, mapZoom: 1.5, playerColor: PLAYER_COLORS.Green, season: 'fall' as const, period: 'night' as const };
+  const options = { ...DEFAULT_DEVELOPER_OPTIONS, resources: 25, length: 'long' as const, computersPaused: true, playerColor: PLAYER_COLORS.Green, season: 'fall' as const, period: 'night' as const };
   writeDeveloperOptions(storage, options);
   equal(readDeveloperOptions(storage), options);
   const saved = readDeveloperOptions(storage);
   saved.resources = 100;
   equal(readDeveloperOptions(storage).resources, 25);
   values.set('stronghold-developer-options', '{"resources":25,"length":"long","computersPaused":true}');
-  equal(readDeveloperOptions(storage), { ...options, mapZoom: 1.2, playerColor: PLAYER_COLORS.Red, season: 'random', period: 'day' });
+  equal(readDeveloperOptions(storage), { ...options, playerColor: PLAYER_COLORS.Red, season: 'random', period: 'day' });
+  values.set('stronghold-developer-options', JSON.stringify({ ...options, mapZoom: 1.2 }));
+  equal(readDeveloperOptions(storage), options);
   values.set('stronghold-developer-options', JSON.stringify({ ...options, playerColor: 'invalid' }));
   equal(readDeveloperOptions(storage), DEFAULT_DEVELOPER_OPTIONS);
   values.set('stronghold-developer-options', '{"length":"obsolete"}');
@@ -343,7 +360,7 @@ test('Stronghold Army cannot prepare locked Barracks and unlocks each building t
   equal(readyBuilding(engine.snapshot('you')), 'barracks');
   const supplies = engine.snapshot('you').resources;
   const work = self().work;
-  engine.send('you', { type: 'PLACE', kind: 'barracks', point: { x: 620, y: 570 } });
+  engine.send('you', { type: 'PLACE', kind: 'barracks', point: { x: 800, y: 570 } });
   equal(self().work, Math.round((work - 40) * 100) / 100);
   equal(engine.snapshot('you').resources, supplies);
   equal(engine.snapshot('you').buildings.some(building => building.kind === 'barracks' && building.tier === 1), true);

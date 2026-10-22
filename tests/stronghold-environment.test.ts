@@ -226,12 +226,12 @@ test('Stronghold dev markup provides live season, day and night controls separat
 
 test('Stronghold weather uses a fixed small decorative particle pool instead of growing the DOM', () => {
   const markup = weatherMarkup();
-  equal((markup.match(/class="stronghold-weather-particle"/g) ?? []).length, 36);
+  equal((markup.match(/class="stronghold-weather-particle"/g) ?? []).length, 96);
   equal(markup.includes('aria-hidden="true"'), true);
   equal(markup.includes('<button'), false);
   for (const axis of ['x', 'y']) {
     const positions = [...markup.matchAll(new RegExp(`--weather-${axis}:(\\d+)%`, 'g'))].map(match => Number(match[1]));
-    equal(positions.length, 36);
+    equal(positions.length, 96);
     equal(new Set(positions.map(position => Math.floor(position / 25))).size, 4);
   }
 });
@@ -255,14 +255,14 @@ test('Stronghold autumn leaves randomly choose red, orange, yellow or brown for 
   for (let index = 0; index < AUTUMN_LEAF_COLORS.length; index++) {
     for (const offset of [0, .99999]) {
       const markup = weatherMarkup(() => (index + offset) / AUTUMN_LEAF_COLORS.length);
-      equal((markup.match(new RegExp(`--leaf-color:${AUTUMN_LEAF_COLORS[index]}`, 'g')) ?? []).length, 36);
+      equal((markup.match(new RegExp(`--leaf-color:${AUTUMN_LEAF_COLORS[index]}`, 'g')) ?? []).length, 96);
     }
   }
   let samples = 0;
   const markup = weatherMarkup(() => samples++ % AUTUMN_LEAF_COLORS.length / AUTUMN_LEAF_COLORS.length);
-  equal(samples, 37);
+  equal(samples, 97);
   equal([...markup.matchAll(/--leaf-color:(#[a-f0-9]+)/g)].map(match => match[1]),
-    Array.from({ length: 36 }, (_, index) => AUTUMN_LEAF_COLORS[(index + 1) % AUTUMN_LEAF_COLORS.length]));
+    Array.from({ length: 96 }, (_, index) => AUTUMN_LEAF_COLORS[(index + 1) % AUTUMN_LEAF_COLORS.length]));
 });
 
 test('Stronghold seasonal movement applies equally to every friendly unit and enemy formation', () => {

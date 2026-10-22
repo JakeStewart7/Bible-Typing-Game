@@ -1,6 +1,6 @@
 import { connectedRelays, relayNeighbors } from '../domain/logistics.ts';
 import { distance, RELAY_RANGE } from '../domain/rules.ts';
-import { towerUpgrade, unitUpgrade } from '../domain/technology.ts';
+import { buildingScale, unitUpgrade } from '../domain/technology.ts';
 import type { Building, Point, ResourceChunk, ResourceNode, StrongholdSnapshot, Unit } from '../domain/types.ts';
 import { createSvgLayer, setAttribute, setText } from './dom-updates.ts';
 import { playerTheme } from './player-theme.ts';
@@ -44,15 +44,16 @@ export function unitMotionTransform(unit: Unit, previous: Point | undefined, ela
   return `translate(0 ${stride * 1.5}) rotate(${stride * 5})`;
 }
 export function unitMarkup(unit: Unit, selected: boolean): string {
-  const shape = unit.kind === 'worker' ? '<circle r="8" fill="#fff" stroke="#b88051" stroke-width="2"/>'
+  const siege = (unit.formation ?? unit.kind) === 'catapult';
+  const fill = unit.kind === 'invader' ? '#870018' : '#b18b45', stroke = unit.kind === 'invader' ? '#ff1726' : '#654717';
+  const shape = siege ? `<g data-catapult><rect x="-16" y="2" width="32" height="10" rx="2" fill="${fill}" stroke="${stroke}" stroke-width="2"/><circle cx="-11" cy="13" r="5" fill="#27323a" stroke="${stroke}" stroke-width="2"/><circle cx="11" cy="13" r="5" fill="#27323a" stroke="${stroke}" stroke-width="2"/><path d="M-10 2L0 -10L10 2Z" fill="${fill}" stroke="${stroke}" stroke-width="2"/><g data-catapult-arm><path d="M-9 4L13 -19" stroke="${stroke}" stroke-width="5"/><path d="M7 -21L17 -13L20 -21Z" fill="${unit.kind === 'invader' ? '#ff1726' : '#e7c76e'}" stroke="${stroke}" stroke-width="2"/></g></g>`
+    : unit.kind === 'worker' ? '<circle r="8" fill="#fff" stroke="#b88051" stroke-width="2"/>'
     : unit.kind === 'builder' ? '<path d="M0 -11 L10 8 L-10 8 Z" fill="#cec0df" stroke="#a64caf" stroke-width="2"/>'
     : unit.kind === 'warrior' ? '<rect x="-8" y="-8" width="16" height="16" fill="#dce2e8" stroke="#65727e" stroke-width="2"/>'
     : unit.kind === 'archer' ? '<path d="M0 -10 L8 0 L0 10 L-8 0 Z" fill="#9ed7e6" stroke="#00aeef" stroke-width="2"/>'
-    : unit.kind === 'catapult' ? '<path d="M0 -12 L10 9 L-10 9 Z" fill="#f0e3a7" stroke="#cfb000" stroke-width="2"/>'
     : unit.formation === 'archer' ? '<path d="M0 -10 L8 0 L0 10 L-8 0 Z" fill="#870018" stroke="#ff1726" stroke-width="2"/>'
-    : unit.formation === 'catapult' ? '<path d="M0 -12 L10 9 L-10 9 Z" fill="#870018" stroke="#ff1726" stroke-width="2"/>'
     : '<rect x="-8" y="-8" width="16" height="16" fill="#870018" stroke="#ff1726" stroke-width="2"/>';
-  return `${actionEffectMarkup(unit.kind === 'worker' || unit.kind === 'builder', unit.kind === 'invader')}<circle data-selected r="16" fill="none" stroke="#fff" stroke-width="2" visibility="${selected ? 'visible' : 'hidden'}"/><g data-visual>${shape}</g>${health(unit.hp, unit.maxHp, 13, 20)}<desc>${unit.kind}${unit.formation ? ' ' + unit.formation : ''}: ${Math.ceil(unit.hp)} HP</desc>`;
+  return `${actionEffectMarkup(unit.kind === 'worker' || unit.kind === 'builder', unit.kind === 'invader')}<circle data-selected r="${siege ? 27 : 16}" fill="none" stroke="#fff" stroke-width="2" visibility="${selected ? 'visible' : 'hidden'}"/><g data-visual>${shape}</g>${health(unit.hp, unit.maxHp, siege ? 23 : 13, siege ? 34 : 20)}<desc>${unit.kind}${unit.formation ? ' ' + unit.formation : ''}: ${Math.ceil(unit.hp)} HP</desc>`;
 }
 export function buildingMarkup(building: Building): string {
   const color = building.enemy ? '#870018' : building.kind === 'relay' ? '#b0b0b0' : '#c3c3c3';
@@ -186,13 +187,14 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     setAttribute(child(element, '[data-selected]'), 'stroke', selectionColor);
     setAttribute(child(element, '[data-selected]'), 'fill', selectionColor);
     setAttribute(child(element, '[data-selected]'), 'fill-opacity', '.2');
-    setAttribute(child(element, '[data-health]'), 'width', String(20 * Math.max(0, unit.hp / unit.maxHp)));
+    setAttribute(child(element, '[data-health]'), 'width', String(((unit.formation ?? unit.kind) === 'catapult' ? 34 : 20) * Math.max(0, unit.hp / unit.maxHp)));
+    const arm = element.querySelector('[data-catapult-arm]');
+    if (arm) setAttribute(arm, 'transform', `rotate(${-unit.attackWindup * 12})`);
     describe(element, `${unit.kind}${unit.formation ? ' ' + unit.formation : ''}: ${Math.ceil(unit.hp)} HP / upgrade ${level}`);
   }, unit => `${unit.kind}/${unit.formation}`);
   const renderBuildings = createSvgLayer<Building>(layer('buildings'), buildingMarkup, (element, building) => {
     if (!technology) throw new Error('Missing Stronghold technology snapshot.');
-    const level = building.kind === 'tower' && !building.enemy ? towerUpgrade(technology, building.tier) : 0;
-    const scale = building.kind === 'tower' || building.kind === 'enemy-base' ? 1 + Math.min(3, building.tier) * .08 + level * .05 : 1;
+    const scale = buildingScale(technology, building);
     position(element, building, scale);
     setAttribute(element, 'data-building', String(building.id));
     const wallShape = element.querySelector('[data-wall-shape]');

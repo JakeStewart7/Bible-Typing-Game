@@ -9,7 +9,7 @@ import { ENTITY_LABELS, recordEvent } from './events.ts';
 import type { Action, Participant, Point, StrongholdState } from './types.ts';
 import { updateWorldEvent } from './world-events.ts';
 import { queuedUnits, TRAINING_SECONDS } from './training.ts';
-import { unitSpawnPoint } from './navigation.ts';
+import { unitRadius, unitSpawnPoint } from './navigation.ts';
 
 const BOT_RELAY_SITES = [
   { x: 360, y: 540 }, { x: 640, y: 540 }, { x: 250, y: 435 }, { x: 760, y: 435 },
@@ -107,10 +107,10 @@ function produceArmy(state: StrongholdState, seconds: number): void {
     barracks.cooldown = Math.max(0, barracks.cooldown - seconds);
     if (barracks.cooldown < 1e-9) barracks.cooldown = 0;
     if (barracks.cooldown > 0 || state.units.filter(unit => unit.kind === order.kind && unit.hp > 0).length >= UNIT_CAPS[order.kind]) continue;
-    const spawn = unitSpawnPoint(state, barracks);
+    const spawn = unitSpawnPoint(state, barracks, unitRadius(order));
     if (!spawn) continue;
     const unit = addUnit(state, order.kind, spawn);
-    unit.destination = { ...state.rally };
+    unit.destination = { ...(barracks.rally ?? state.rally) };
     const owner = state.players.find(player => player.id === order.playerId);
     recordEvent(state, `${owner ? `Player ${state.players.indexOf(owner) + 1}` : 'Barracks'} created ${ENTITY_LABELS[order.kind]}`, order.playerId);
     barracks.trainingQueue.shift();
