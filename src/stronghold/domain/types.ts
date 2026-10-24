@@ -35,6 +35,11 @@ export type Building = Point & {
 };
 export type ResourceNode = Point & { id: number; rich: boolean; remaining: number };
 export type ResourceChunk = Point & { id: number; amount: number; rich: boolean; target: number | null; carrier: number | null };
+export type VisionSource = Point & { id: string; radius: number };
+export type FogOfWar = {
+  sources: VisionSource[]; explored: number[];
+  units: Unit[]; buildings: Building[]; nodes: ResourceNode[];
+};
 export type Participant = {
   id: string; name: string; color: string; role: Role; simulated: boolean;
   action: Action; phrase: string; typed: string; phraseId: number;
@@ -50,10 +55,11 @@ export type StrongholdState = {
   phase: Phase; tier: number; elapsed: number; wave: number; waveIn: number;
   resources: number; event: WorldEvent; eventIn: number;
   players: Participant[]; units: Unit[]; buildings: Building[];
+  fog: FogOfWar;
   nodes: ResourceNode[]; chunks: ResourceChunk[]; nextId: number;
   upgrades: Record<'economy' | 'production' | 'defenses', number>;
   technology: Record<UpgradeTarget, number>;
-  rally: Point; message: string; events: StrongholdEvent[];
+  rally: Point | null; message: string; events: StrongholdEvent[];
   roleTasks: Record<Role, RoleTasks>; computersPaused: boolean;
 };
 export type StrongholdSnapshot = Omit<StrongholdState, 'players' | 'nextId'> & {

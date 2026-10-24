@@ -2,8 +2,9 @@ import { AppStorage, decodeJson } from '../../persistence/storage.ts';
 import { DEFAULT_MATCH_OPTIONS, DEFAULT_STARTING_COUNTS, isMatchOptions, validateMatchOptions } from '../domain/options.ts';
 import { PLAYER_COLORS, type PlayerColor, type Season, type StartingCounts, type StrongholdMatchOptions } from '../domain/types.ts';
 export const DEFAULT_MAP_ZOOM = 2;
-export const MIN_MAP_ZOOM = 1;
-export const MAX_MAP_ZOOM = 2;
+export const MAP_ZOOM_LEVELS = [1.75, 2, 2.25, 2.5] as const;
+export const MIN_MAP_ZOOM = MAP_ZOOM_LEVELS[0];
+export const MAX_MAP_ZOOM = MAP_ZOOM_LEVELS[MAP_ZOOM_LEVELS.length - 1]!;
 
 export type DeveloperOptions = StrongholdMatchOptions & {
   playerColor: PlayerColor; season: Season | 'random'; period: 'day' | 'night'; tier: number; startingCounts: StartingCounts;

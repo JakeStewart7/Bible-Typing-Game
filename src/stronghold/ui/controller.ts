@@ -12,6 +12,7 @@ import { actionShortcutKey, arrowPan, nextTaskIndex, typingLengthKey } from './k
 import { createSeasonalMusic } from '../audio/music.ts';
 import { isPlayerColor } from '../domain/options.ts';
 import { createPlayerCursor } from './player-cursor.ts';
+import { supportsRally } from '../domain/training.ts';
 
 export function createStrongholdController(connection: StrongholdConnection, developer: {
   defaults: DeveloperOptions; save(options: DeveloperOptions): void;
@@ -272,7 +273,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     });
   }
   elements.input.addEventListener('input', () => {
-    if (!snapshot) return;
+    if (!snapshot || elements.input.disabled) return;
     updateTypingInput(typing, elements.input.value);
     typingDirty = true;
     void send({ type: 'TYPE', phraseId, text: elements.input.value });
@@ -346,8 +347,11 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       event.preventDefault(); clearDrag();
       const point = mapPoint(elements.map, event.clientX, event.clientY);
       if (point && selectedBuildings.size && !placing() && !rallyPlacement) {
+        const rallyIds = snapshot.buildings.filter(building => selectedBuildings.has(building.id) && supportsRally(building)).map(building => building.id);
         const moveSelected = self()?.role === 'army' && selected.size > 0;
-        void send({ type: 'RALLY', ids: [...selectedBuildings], point }).then(sent => { if (sent && moveSelected) move(point); });
+        if (rallyIds.length) void send({ type: 'RALLY', ids: rallyIds, point }).then(sent => { if (sent && moveSelected) move(point); });
+        else if (moveSelected) move(point);
+        else { errorMessage = 'Only castles and barracks have rally points.'; display(); }
       } else if (placing() || rallyPlacement || editingWall !== null) cancelPlacement();
       else if (point && self()?.role === 'army') move(point);
       focusTyping();
@@ -566,13 +570,14 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       }
     }
     if (player && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey
-      && !elements.input.disabled && !(document.activeElement instanceof HTMLSelectElement)) {
+      && !(document.activeElement instanceof HTMLSelectElement)) {
       if (snapshot.phase === 'playing' && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
         event.preventDefault();
         panKeys.add(event.key);
         if (panFrame === null) { panTime = performance.now(); panFrame = requestAnimationFrame(panWithKeys); }
         return;
       }
+      if (elements.input.disabled) return;
       const length = typingLengthKey(player.length, event.key);
       if (length) {
         event.preventDefault();

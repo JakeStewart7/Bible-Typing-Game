@@ -196,14 +196,14 @@ test('Stronghold military panels omit Supplies and every remaining task has a ma
   equal([...orders.matchAll(/data-shortcut="([0-9])"/g)].map(match => match[1]), ['1', '2', '3', '4']);
 });
 
-test('Stronghold zoom camera stays within the full battlefield and minimum zoom exposes all legal construction sites', () => {
-  equal(cameraBounds(1, { x: 500, y: 400 }), { x: 0, y: 0, width: 1000, height: 650 });
+test('Stronghold zoom camera stays within the battlefield at the closer minimum and two additional close zoom levels', () => {
+  equal(cameraBounds(1, { x: 500, y: 400 }), cameraBounds(1.75, { x: 500, y: 400 }));
   equal(cameraBounds(2, { x: -1000, y: -1000 }), { x: 0, y: 0, width: 500, height: 325 });
   equal(cameraBounds(2, { x: 2000, y: 2000 }), { x: 500, y: 325, width: 500, height: 325 });
   const zoomed = cameraBounds(1.2, { x: 500, y: 400 });
-  equal(zoomed.y + zoomed.height, 650);
+  equal(zoomed.width, 1000 / 1.75);
   equal(zoomed.width < 1000 && zoomed.height < 650, true);
-  equal(cameraBounds(10, { x: 500, y: 325 }).width, 500);
+  equal(cameraBounds(10, { x: 500, y: 325 }).width, 400);
   equal(DEFAULT_MAP_ZOOM, 2);
   for (const tier of [NaN, Infinity, -.5, 1.5, 4]) {
     let rejected = false;

@@ -13,6 +13,7 @@ import { distance } from '../src/stronghold/domain/rules.ts';
 import { unitRadius } from '../src/stronghold/domain/navigation.ts';
 import { phraseWork, taskWork } from '../src/stronghold/domain/technology.ts';
 import { readyBuilding } from '../src/stronghold/ui/map-controls.ts';
+import { inVision } from '../src/stronghold/domain/fog.ts';
 
 function human(state: StrongholdState): Participant {
   const player = state.players.find(player => player.id === 'you');
@@ -80,7 +81,7 @@ test('Stronghold starting forces persist across storage, refresh and reset witho
   const storage = new AppStorage({
     getItem: key => values.get(key) ?? null, setItem: (key, value) => { values.set(key, value); }, removeItem: key => { values.delete(key); }
   });
-  const options = { ...DEFAULT_DEVELOPER_OPTIONS, startingCounts: { worker: 3, builder: 2, warrior: 4, tower: 2, archer: 3, catapult: 2 } };
+  const options = { ...DEFAULT_DEVELOPER_OPTIONS, season: 'summer' as const, startingCounts: { worker: 3, builder: 2, warrior: 4, tower: 2, archer: 3, catapult: 2 } };
   writeDeveloperOptions(storage, options);
   const loaded = readDeveloperOptions(storage), engine = new StrongholdEngine(loaded);
   loaded.startingCounts.worker = 0;
@@ -174,7 +175,7 @@ test('Stronghold saved seasons and day/night initialize every fresh game without
     for (let restart = 0; restart < 3; restart++) {
       const snapshot = engine.snapshot('you');
       equal(snapshot.season, season);
-      equal(snapshot.nodes, seasonalNodes(season));
+      equal(snapshot.nodes, seasonalNodes(season).filter(node => inVision(snapshot.fog.sources, node)));
       equal(snapshot.environmentElapsed, period === 'night' ? DAY_SECONDS : 0);
       equal(daylight(snapshot.environmentElapsed).period, period);
       equal(snapshot.elapsed, 0);
@@ -253,7 +254,7 @@ test('Stronghold starts with 50 supplies, Medium text and running computers, and
 });
 
 test('Stronghold restart replaces the entire progressed match with a fresh initial state', () => {
-  const engine = new StrongholdEngine({ resources: 375, length: 'long', computersPaused: true });
+  const engine = new StrongholdEngine({ resources: 375, length: 'long', computersPaused: true, season: 'summer' });
   const initial = engine.snapshot('you');
   engine.send('you', { type: 'ROLE', role: 'army' });
   const unit = engine.snapshot('you').units.find(unit => unit.kind === 'warrior')!;
@@ -307,8 +308,8 @@ test('Stronghold each task retains completed work across task changes and a vaca
   send(state, { type: 'ROLE', role: 'economy' });
   equal(player.action, 'worker');
   equal(player.work, workerWork);
-  while (workerWork < 32) workerWork = Math.round((workerWork + entry(state)) * 100) / 100;
-  workerWork = Math.round((workerWork - 32) * 100) / 100;
+  while (workerWork < 64) workerWork = Math.round((workerWork + entry(state)) * 100) / 100;
+  workerWork = Math.round((workerWork - 64) * 100) / 100;
   equal(player.work, workerWork);
   equal(state.units.filter(unit => unit.kind === 'worker').length, 3);
   send(state, { type: 'ACTION', action: 'resources' });
@@ -354,9 +355,9 @@ test('Stronghold construction tiers keep independent bars and instant upgrades l
   const player = human(state);
   send(state, { type: 'ROLE', role: 'defenses' });
   send(state, { type: 'ACTION', action: 'tower', tier: 1 });
-  for (let index = 0; index < 4; index++) entry(state);
+  while (player.work < taskWork(player)) entry(state);
   const tower1Work = player.work;
-  equal(tower1Work >= 25, true);
+  equal(tower1Work >= 50, true);
   send(state, { type: 'ACTION', action: 'tower', tier: 2 });
   const tower2Work = entry(state);
   equal(player.work, tower2Work);
@@ -374,8 +375,8 @@ test('Stronghold construction tiers keep independent bars and instant upgrades l
   equal(state.roleTasks.defenses.progress['upgrade:tower-1'], undefined);
   send(state, { type: 'ACTION', action: 'tower', tier: 1 });
   equal(player.work, tower1Work);
-  send(state, { type: 'PLACE', kind: 'tower', point: { x: 300, y: 500 } });
-  equal(player.work, Math.round((tower1Work - 25) * 100) / 100);
+  send(state, { type: 'PLACE', kind: 'tower', point: { x: 450, y: 500 } });
+  equal(player.work, Math.round((tower1Work - 50) * 100) / 100);
   equal(state.resources, 800);
   send(state, { type: 'ACTION', action: 'tower', tier: 2 });
   equal(player.work, tower2Work);
@@ -397,10 +398,10 @@ test('Stronghold construction tiers keep independent bars and instant upgrades l
 });
 
 test('Stronghold Army cannot prepare locked Barracks and unlocks each building tier independently', () => {
-  const engine = new StrongholdEngine({ resources: 300, length: 'medium', computersPaused: false });
+  const engine = new StrongholdEngine({ resources: 300, length: 'medium', computersPaused: false, season: 'summer' });
   const self = () => engine.snapshot('you').players.find(player => player.id === 'you')!;
   engine.send('you', { type: 'ROLE', role: 'production' });
-  equal(self().action, 'resources');
+  equal(self().action, 'barracks');
   equal(self().constructionTier, 1);
   const before = engine.snapshot('you');
   let locked = false;
@@ -409,11 +410,14 @@ test('Stronghold Army cannot prepare locked Barracks and unlocks each building t
   equal(locked, true);
   equal(engine.snapshot('you'), before);
   const phrase = self().phrase;
-  engine.send('you', { type: 'TYPE', phraseId: self().phraseId, text: phrase.slice(0, 2) });
+  let typingLocked = false;
+  try { engine.send('you', { type: 'TYPE', phraseId: self().phraseId, text: phrase.slice(0, 2) }); }
+  catch (error) { typingLocked = error instanceof Error && error.message.includes('tier 1'); }
+  equal(typingLocked, true);
   for (let second = 0; second < 15; second++) engine.advance(1);
-  equal(engine.snapshot('you').roleTasks.production.progress['barracks:1'], undefined);
+  equal(engine.snapshot('you').roleTasks.production.progress['barracks:1'], { work: 0, actionPhrases: 0 });
   equal(self().phrase, phrase);
-  equal(self().typed, phrase.slice(0, 2));
+  equal(self().typed, '');
   equal(engine.snapshot('you').tier, 0);
   equal(readyBuilding(engine.snapshot('you')), null);
   engine.send('you', { type: 'COMPUTERS', paused: true });
@@ -424,15 +428,15 @@ test('Stronghold Army cannot prepare locked Barracks and unlocks each building t
   equal(engine.snapshot('you').tier, 1);
   engine.send('you', { type: 'ACTION', action: 'barracks', tier: 1 });
   equal(self().work, 0);
-  for (let count = 0; self().work < 40; count++) {
+  for (let count = 0; self().work < 60; count++) {
     if (count > 20) throw new Error('Barracks task did not fill.');
     engine.send('you', { type: 'TYPE', phraseId: self().phraseId, text: self().phrase });
   }
   equal(readyBuilding(engine.snapshot('you')), 'barracks');
   const supplies = engine.snapshot('you').resources;
   const work = self().work;
-  engine.send('you', { type: 'PLACE', kind: 'barracks', point: { x: 800, y: 570 } });
-  equal(self().work, Math.round((work - 40) * 100) / 100);
+  engine.send('you', { type: 'PLACE', kind: 'barracks', point: { x: 680, y: 570 } });
+  equal(self().work, Math.round((work - 60) * 100) / 100);
   equal(engine.snapshot('you').resources, supplies);
   equal(engine.snapshot('you').buildings.some(building => building.kind === 'barracks' && building.tier === 1), true);
   const afterPlacement = engine.snapshot('you');
@@ -479,7 +483,7 @@ test('Stronghold all three Barracks selections preserve independent shared progr
     equal([player.action, partner.action], ['barracks', 'barracks']);
     equal([player.constructionTier, partner.constructionTier], [tier, tier]);
     equal([player.work, partner.work], [0, 0]);
-    equal(taskWork(player), 40 * tier);
+    equal(taskWork(player), 60 * tier);
     send(state, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase.slice(0, 2) });
     const privateInput = { phrase: player.phrase, phraseId: player.phraseId, typed: player.typed };
     let work = entry(state, partner);
@@ -499,15 +503,15 @@ test('Stronghold all three Barracks selections preserve independent shared progr
     executeCommand(state, partner, { type: 'ACTION', action: 'barracks', tier });
     let expected = banks.get(tier)!;
     equal([player.work, partner.work], [expected, expected]);
-    for (let entries = 0; expected < 40 * tier && entries < 40 * tier; entries++) {
+    for (let entries = 0; expected < 60 * tier && entries < 60 * tier; entries++) {
       expected = Math.round((expected + entry(state)) * 100) / 100;
       equal([player.work, partner.work], [expected, expected]);
     }
-    equal(expected >= 40 * tier, true);
+    equal(expected >= 60 * tier, true);
     entry(state, partner);
     equal([player.work, partner.work], [expected, expected]);
-    send(state, { type: 'PLACE', kind: 'barracks', point: { x: 620 + (tier - 1) * 70, y: 570 } });
-    expected = Math.round((expected - 40 * tier) * 100) / 100;
+    send(state, { type: 'PLACE', kind: 'barracks', point: { x: 590 + (tier - 1) * 50, y: 570 } });
+    expected = Math.round((expected - 60 * tier) * 100) / 100;
     equal([player.work, partner.work], [expected, expected]);
     equal(state.roleTasks.production.progress[`barracks:${tier}`], { work: expected, actionPhrases: 0 });
     equal(state.resources, 1000);

@@ -124,7 +124,7 @@ test('Stronghold warriors clear nearby towers before a closer enemy castle and r
   const state = createStronghold();
   state.units = []; state.buildings = [];
   const warrior = addUnit(state, 'warrior', { x: 500, y: 200 });
-  const castle = addBuilding(state, 'enemy-base', { x: 500, y: 190 }, true, true);
+  const castle = addBuilding(state, 'enemy-base', { x: 500, y: 140 }, true, true);
   const tower = addBuilding(state, 'tower', { x: 560, y: 200 }, true, true);
   updateCombat(state, .1);
   equal(warrior.x > 500, true);
@@ -361,7 +361,7 @@ test('Stronghold all unit types route around horizontal, diagonal and vertical w
       for (let step = 0; step < 300; step++) {
         const before = { x: unit.x, y: unit.y };
         equal(moveUnitToward(state, unit, target, 2), true);
-        equal(wallContains(unit, wall, 9.9), false);
+        equal(wallContains(unit, wall, unitRadius(unit) - .1), false);
         equal(wallBetween(state, before, unit), undefined);
         if (Math.abs((unit.x - 430) - (unit.y - 280)) > 1) routed = true;
       }
@@ -438,6 +438,7 @@ test('Stronghold thicker walls block the added edge area at every wall angle', (
 
 test('Stronghold wall placement and rotation allow unit overlap but reject invalid angles and bounds', () => {
   const state = createStronghold();
+  addUnit(state, 'builder', { x: 300, y: 450 });
   const player = state.players[0]!;
   executeCommand(state, player, { type: 'ROLE', role: 'defenses' });
   executeCommand(state, player, { type: 'ACTION', action: 'wall' });
@@ -474,6 +475,7 @@ test('Stronghold paid queues train FIFO at matching barracks, pay only once and 
   for (const kind of ['warrior', 'archer', 'catapult'] as const) {
     const state = createStronghold({ resources: 1000, length: 'medium', computersPaused: true }, 'fall');
     state.tier = 3; state.units = []; state.buildings = [];
+    state.waveIn = 10000;
     const player = state.players[0]!;
     executeCommand(state, player, { type: 'ROLE', role: 'production' });
     const barracks = addBuilding(state, 'barracks', { x: 600, y: 550 }, false, false, MIN_TIER[kind]);
@@ -500,7 +502,7 @@ test('Stronghold paid queues train FIFO at matching barracks, pay only once and 
   }
 });
 
-test('Stronghold selected building rallies are independent and Unit Control can override every friendly building', () => {
+test('Stronghold selected production rallies are independent and Unit Control never gives towers a rally', () => {
   const state = createStronghold({ resources: 1000, length: 'medium', computersPaused: true });
   const player = state.players[0]!, castle = state.buildings.find(building => building.kind === 'castle')!;
   state.tier = 3;
@@ -524,9 +526,25 @@ test('Stronghold selected building rallies are independent and Unit Control can 
   executeCommand(state, player, { type: 'ROLE', role: 'army' });
   executeCommand(state, player, { type: 'RALLY', point: all });
   equal(state.rally, all);
-  for (const building of state.buildings) equal(building.rally, building.enemy ? null : all);
+  for (const building of state.buildings) equal(building.rally,
+    !building.enemy && (building.kind === 'castle' || building.kind === 'barracks') ? all : null);
   const future = addBuilding(state, 'barracks', { x: 600, y: 500 }, true, false, 1);
   equal(future.rally ?? state.rally, all);
+});
+
+test('Stronghold has no default rally or implicit movement orders and rejects tower rallies atomically', () => {
+  const state = createStronghold({ resources: 1000, length: 'medium', computersPaused: false });
+  const player = state.players[0]!;
+  equal(state.rally, null);
+  equal(state.buildings.every(building => building.rally === null), true);
+  const warriors = state.units.filter(unit => unit.kind === 'warrior');
+  advanceStronghold(state, .1);
+  equal(warriors.every(unit => unit.destination === null), true);
+  const tower = addBuilding(state, 'tower', { x: 350, y: 400 }, true);
+  const barracks = addBuilding(state, 'barracks', { x: 700, y: 500 }, true);
+  const before = structuredClone(state);
+  rejects(() => executeCommand(state, player, { type: 'RALLY', ids: [barracks.id, tower.id], point: { x: 500, y: 300 } }), 'Only castles and barracks');
+  equal(state, before);
 });
 
 test('Stronghold castle rally points direct freshly typed gatherers and builders without replacing their automatic jobs permanently', () => {
@@ -536,7 +554,7 @@ test('Stronghold castle rally points direct freshly typed gatherers and builders
     const point = { x: 700, y: 400 };
     executeCommand(state, player, { type: 'RALLY', ids: [castle.id], point });
     if (kind === 'builder') executeCommand(state, player, { type: 'ROLE', role: 'defenses' });
-    player.work = 32;
+    player.work = taskWork(player);
     completePhrase(state, player);
     const recruit = state.units.at(-1)!;
     equal(recruit.kind, kind);
@@ -549,6 +567,7 @@ test('Stronghold friendly and enemy catapults stay still during windup and must 
   for (const enemy of [false, true]) {
     const state = createStronghold(undefined, 'fall');
     state.units = []; state.buildings = [];
+    state.nodes = [];
     const siege = addUnit(state, enemy ? 'invader' : 'catapult', { x: 400, y: 300 }, enemy ? 'catapult' : null);
     const target = addBuilding(state, enemy ? 'castle' : 'enemy-base', { x: 500, y: 300 }, true, !enemy);
     for (let aim = 0; aim < 2; aim++) {
@@ -559,7 +578,7 @@ test('Stronghold friendly and enemy catapults stay still during windup and must 
         equal({ x: siege.x, y: siege.y }, { x: 400, y: 300 });
       }
       updateCombat(state, .1);
-      equal(target.hp, health - UNIT_RULES.catapult.damage);
+      equal(target.hp, health - UNIT_RULES.catapult.damage * 1.5);
       siege.x = 200;
       siege.destination = { x: target.x, y: target.y };
       updateCombat(state, .1);
@@ -594,7 +613,7 @@ test('Stronghold placement identifies buildings but allows units inside tier-sca
   state.tier = 3;
   executeCommand(state, player, { type: 'ROLE', role: 'defenses' });
   executeCommand(state, player, { type: 'ACTION', action: 'tower', tier: 3 });
-  player.work = 75;
+  player.work = taskWork(player);
   const point = { x: 300, y: 400 };
   const wall = addBuilding(state, 'wall', { x: 345, y: 400 }, true);
   const unit = addUnit(state, 'worker', point);
@@ -603,10 +622,10 @@ test('Stronghold placement identifies buildings but allows units inside tier-sca
   equal(blockers.units, []);
   equal(placementProblem(state, player, 'tower', point)?.includes('buildings'), true);
   wall.hp = 0;
-  equal(placementBlockers(state, player, 'tower', point), { buildings: [], units: [] });
+  equal(placementBlockers(state, player, 'tower', point), { buildings: [], nodes: [], units: [] });
   equal(placementProblem(state, player, 'tower', point), null);
   const box = buildingFootprint(state, { ...point, kind: 'tower', tier: 3, enemy: false });
-  equal(box.halfY, 27 * 1.24);
+  equal(box.halfY, 20.25 * 1.3 * 1.24);
   executeCommand(state, player, { type: 'PLACE', kind: 'tower', point });
   const before = { x: unit.x, y: unit.y };
   moveUnitToward(state, unit, { x: 400, y: 450 }, 10);
@@ -615,7 +634,7 @@ test('Stronghold placement identifies buildings but allows units inside tier-sca
 });
 
 test('Stronghold troop queues balance matching barracks, count against caps and stop when destroyed', () => {
-  const state = createStronghold({ resources: 1000, length: 'medium', computersPaused: true });
+  const state = createStronghold({ resources: 2000, length: 'medium', computersPaused: true });
   state.tier = 1;
   const player = state.players[0]!;
   executeCommand(state, player, { type: 'ROLE', role: 'production' });
@@ -632,12 +651,17 @@ test('Stronghold troop queues balance matching barracks, count against caps and 
   equal(state.units.filter(unit => unit.kind === 'warrior').length, 2);
 });
 
-test('Stronghold wheel zoom normalizes deltas and clamps at the full map and maximum zoom', () => {
-  equal(wheelZoom(1.2, -100, 0) > 1.2, true);
-  equal(wheelZoom(1.2, 100, 0) < 1.2, true);
-  equal(wheelZoom(1.2, 1, 1), wheelZoom(1.2, 16, 0));
-  equal(wheelZoom(2, -500, 0), 2);
-  equal(wheelZoom(1, 500, 0), 1);
+test('Stronghold wheel zoom steps through 175%, 200%, 225% and 250% and clamps at each end', () => {
+  equal(wheelZoom(1.75, -100, 0), 2);
+  equal(wheelZoom(2, -100, 0), 2.25);
+  equal(wheelZoom(2.25, -100, 0), 2.5);
+  equal(wheelZoom(2.5, -500, 0), 2.5);
+  equal(wheelZoom(2.5, 100, 0), 2.25);
+  equal(wheelZoom(2.25, 100, 0), 2);
+  equal(wheelZoom(2, 100, 0), 1.75);
+  equal(wheelZoom(1.75, 500, 0), 1.75);
+  equal(wheelZoom(2, 0, 0), 2);
+  equal(wheelZoom(2, 1, 1), wheelZoom(2, 16, 0));
 });
 
 test('Stronghold relay previews include the base at exactly 155 units and exclude unavailable or out-of-range sites', () => {
@@ -687,6 +711,7 @@ test('Stronghold towers retain a simple T silhouette with subtly increasing size
 test('Stronghold units prefer paths around ordinary buildings and escape buildings placed over them', () => {
   const state = createStronghold();
   state.units = []; state.buildings = [];
+  state.nodes = [];
   addBuilding(state, 'barracks', { x: 400, y: 400 }, true);
   const unit = addUnit(state, 'warrior', { x: 340, y: 400 });
   const target = { x: 460, y: 400 };
@@ -701,6 +726,37 @@ test('Stronghold units prefer paths around ordinary buildings and escape buildin
   addBuilding(state, 'tower', target, false);
   for (let step = 0; step < 100; step++) moveUnitToward(state, unit, { x: 550, y: 400 }, 1);
   equal({ x: unit.x, y: unit.y }, { x: 550, y: 400 });
+});
+
+test('Stronghold line-of-sight checks do not eagerly calculate the navigation visibility graph', () => {
+  const state = createStronghold();
+  state.buildings = [];
+  for (let index = 0; index < 40; index++) {
+    addBuilding(state, 'wall', { x: 100 + index % 8 * 100, y: 150 + Math.floor(index / 8) * 80 }, true);
+  }
+  const hypot = Math.hypot;
+  let distances = 0;
+  Math.hypot = (...values: number[]) => { distances++; return hypot(...values); };
+  try {
+    for (let check = 0; check < 20; check++) wallBetween(state, { x: 30, y: 30 }, { x: 40, y: 40 });
+    equal(distances, 0);
+  } finally { Math.hypot = hypot; }
+});
+
+test('Stronghold cached routes follow small target movements to the exact destination', () => {
+  const state = createStronghold(undefined, 'fall');
+  state.units = []; state.buildings = [];
+  const wall = addBuilding(state, 'wall', { x: 500, y: 350 }, true);
+  const unit = addUnit(state, 'warrior', { x: 500, y: 280 });
+  const target = { x: 500, y: 420 };
+  for (let step = 0; step < 300; step++) {
+    if (step < 30) target.x += .2;
+    const before = { x: unit.x, y: unit.y };
+    moveUnitToward(state, unit, target, 1);
+    equal(wallBetween(state, before, unit), undefined);
+    equal(wallContains(unit, wall, 9.9), false);
+  }
+  equal({ x: unit.x, y: unit.y }, target);
 });
 
 test('Stronghold builders stay still within construction and repair range', () => {

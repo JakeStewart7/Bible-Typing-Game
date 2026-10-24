@@ -139,6 +139,7 @@ test('Stronghold four players on one role keep unique phrases and private typing
 
 test('Stronghold private lengths survive role switches and world events refresh only each idle player', () => {
   const state = createStronghold({ resources: 50, length: 'medium', computersPaused: true });
+  state.tier = 1;
   const [you, teammate] = state.players;
   if (!you || !teammate) throw new Error('Missing players.');
   executeCommand(state, you, { type: 'LENGTH', length: 'short' });
@@ -204,8 +205,8 @@ test('Stronghold free construction has proportional requirements, preserves word
   equal(PHRASE_LENGTHS.map(length => TEXT_LENGTH_RANGES[length]), [[1, 5], [6, 11], [12, 24], [25, 40]]);
   equal(PHRASE_LENGTHS.map(length => TEXT_LENGTH_BONUSES[length]), [1, 1.1, 1.25, 1.5]);
   for (const tier of [1, 2, 3]) {
-    equal(taskWork({ action: 'tower', constructionTier: tier }), 25 * tier);
-    equal(taskWork({ action: 'barracks', constructionTier: tier }), 40 * tier);
+    equal(taskWork({ action: 'tower', constructionTier: tier }), 50 * tier);
+    equal(taskWork({ action: 'barracks', constructionTier: tier }), 60 * tier);
   }
   const state = createStronghold();
   state.tier = 3;
@@ -220,9 +221,12 @@ test('Stronghold free construction has proportional requirements, preserves word
   for (let entry = 0; entry < 10; entry++) executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
   equal(player.work, 60);
   executeCommand(state, player, { type: 'PLACE', kind: 'tower', point: { x: 350, y: 500 } });
-  equal(player.work, 35);
-  executeCommand(state, player, { type: 'PLACE', kind: 'tower', point: { x: 400, y: 500 } });
   equal(player.work, 10);
+  equal(placementProblem(state, player, 'tower', { x: 400, y: 500 }), 'Complete the construction work first.');
+  player.phrase = 'a'.repeat(40);
+  executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+  executeCommand(state, player, { type: 'PLACE', kind: 'tower', point: { x: 400, y: 500 } });
+  equal(player.work, 20);
   equal(state.resources, 50);
   equal(state.buildings.filter(building => building.kind === 'tower' && !building.enemy).length, 2);
   equal(placementProblem(state, player, 'tower', { x: 450, y: 500 }), 'Complete the construction work first.');
@@ -230,9 +234,9 @@ test('Stronghold free construction has proportional requirements, preserves word
 
 test('Stronghold paid troop queues and upgrades never spend or change typing progress', () => {
   const cases: { role: Role; action: Action; cost: number; kind?: UnitKind; upgrade?: UpgradeTarget }[] = [
-    { role: 'production', action: 'warrior', cost: 25, kind: 'warrior' },
-    { role: 'production', action: 'archer', cost: 45, kind: 'archer' },
-    { role: 'production', action: 'catapult', cost: 80, kind: 'catapult' },
+    { role: 'production', action: 'warrior', cost: 60, kind: 'warrior' },
+    { role: 'production', action: 'archer', cost: 100, kind: 'archer' },
+    { role: 'production', action: 'catapult', cost: 180, kind: 'catapult' },
     { role: 'economy', action: 'upgrade', cost: 120, upgrade: 'economy' },
     { role: 'production', action: 'upgrade', cost: 60, upgrade: 'warrior' },
     { role: 'production', action: 'upgrade', cost: 100, upgrade: 'archer' },
@@ -307,9 +311,9 @@ test('Stronghold free builders and walls retain only one full bar and placement 
   executeCommand(state, player, { type: 'ROLE', role: 'defenses' });
   executeCommand(state, player, { type: 'ACTION', action: 'builder' });
   let builderWork = 0, builders = 1;
-  for (let entry = 0; entry < 20; entry++) {
-    if (builderWork < 32) builderWork = Math.round((builderWork + phraseWork(player)) * 100) / 100;
-    if (builderWork >= 32 && builders < 4) { builderWork = Math.round((builderWork - 32) * 100) / 100; builders++; }
+  for (let entry = 0; entry < 40; entry++) {
+    if (builderWork < 64) builderWork = Math.round((builderWork + phraseWork(player)) * 100) / 100;
+    if (builderWork >= 64 && builders < 4) { builderWork = Math.round((builderWork - 64) * 100) / 100; builders++; }
     executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
     equal(player.work, builderWork);
   }
@@ -425,8 +429,8 @@ test('Stronghold Army bot waits for Tier 1 before preparing barracks and trainin
   for (let step = 0; step < 100; step++) advanceStronghold(state, .25);
   equal(state.tier, 0);
   equal(state.buildings.some(building => building.kind === 'barracks'), false);
-  equal(state.players.find(player => player.role === 'production')?.action, 'resources');
-  equal(state.roleTasks.production.progress['barracks:1'], undefined);
+  equal(state.players.find(player => player.role === 'production')?.action, 'barracks');
+  equal(state.roleTasks.production.progress['barracks:1'], { work: 0, actionPhrases: 0 });
   const player = state.players[0]!;
   executeCommand(state, player, { type: 'READY', ready: true });
   for (let entry = 0; state.phase === 'tier-up' && entry < TIER_CHARACTER_GOAL; entry++) {
@@ -444,7 +448,7 @@ test('Stronghold player themes pair light highlights and dark basic cursors for 
     equal(theme.color, player.color);
     equal(theme.light !== theme.bold, true);
     equal(decodeURIComponent(playerCursor(player.color)).includes(`color="${theme.bold}"`), true);
-    equal(decodeURIComponent(playerCursor(player.color)).includes('fill="currentColor"'), true);
+    equal(decodeURIComponent(playerCursor(player.color)).includes('fill="currentColor" stroke="white"'), true);
     const placementCursor = decodeURIComponent(playerCursor(player.color, true));
     equal(placementCursor.includes('M20 23.5h7m-3.5-3.5v7'), true);
     equal(placementCursor.includes(`stroke="${theme.bold}"`), true);

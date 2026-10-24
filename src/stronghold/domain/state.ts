@@ -1,4 +1,4 @@
-import { BASE, CATAPULT_WINDUP_SECONDS, ENEMY_BASE, TOWER_STRENGTH_MULTIPLIER, UNIT_HEALTH_MULTIPLIER, UNIT_RULES } from './rules.ts';
+import { BASE, CATAPULT_WINDUP_SECONDS, ENEMY_BASE, UNIT_HEALTH_MULTIPLIER, UNIT_RULES } from './rules.ts';
 import { assignPhrase } from './phrases.ts';
 import { unitUpgrade } from './technology.ts';
 import { createRoleTasks } from './tasks.ts';
@@ -7,10 +7,11 @@ import type { ArmyUnitKind, Building, BuildingKind, Participant, Point, Season, 
 import { DAY_SECONDS, randomSeason, seasonalNodes } from './environment.ts';
 import { PLAYER_COLORS, STARTING_ENTITIES } from './types.ts';
 import { unitRadius, unitSpawnClear } from './navigation.ts';
+import { createFog, updateFog } from './fog.ts';
 
 export function addUnit(state: StrongholdState, kind: UnitKind, point: Point, formation: ArmyUnitKind | null = null): Unit {
   const hp = ((formation ? UNIT_RULES[formation].hp : UNIT_RULES[kind].hp)
-    + (kind === 'invader' ? 0 : unitUpgrade(state, { kind }) * 10)) * UNIT_HEALTH_MULTIPLIER;
+    + (kind === 'invader' ? 0 : unitUpgrade(state, { kind }) * 15)) * UNIT_HEALTH_MULTIPLIER;
   const unit: Unit = { ...point, id: state.nextId++, kind, hp, maxHp: hp, destination: null, manualMove: false, cooldown: 0, task: null, formation, attackTarget: null, idleTime: null, attackWindup: CATAPULT_WINDUP_SECONDS };
   state.units.push(unit);
   return unit;
@@ -18,9 +19,9 @@ export function addUnit(state: StrongholdState, kind: UnitKind, point: Point, fo
 export function addBuilding(
   state: StrongholdState, kind: BuildingKind, point: Point, complete = false, enemy = false, tier = Math.max(1, state.tier)
 ): Building {
-  const baseHp = kind === 'castle' || kind === 'enemy-base' ? 4000 : kind === 'wall' ? 260
-    : 160 + (kind === 'tower' ? 60 : kind === 'barracks' ? 40 : 0) * Math.max(0, tier - 1);
-  const hp = baseHp * (kind === 'tower' ? TOWER_STRENGTH_MULTIPLIER * 2 : 1);
+  const hp = kind === 'castle' || kind === 'enemy-base' ? 4000 : kind === 'wall' ? 440
+    : kind === 'tower' ? 600 + 200 * Math.max(0, tier - 1)
+    : kind === 'barracks' ? 320 + 100 * Math.max(0, tier - 1) : 240;
   const building: Building = {
     ...point, id: state.nextId++, kind, hp, maxHp: hp, tier,
     progress: complete ? 1 : 0, cooldown: 0, enemy, attackTarget: null, ownerId: null, rotation: 0, trainingQueue: [], rally: null
@@ -42,9 +43,10 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
   const state: StrongholdState = {
     season: startingSeason, environmentElapsed: options.period === 'night' ? DAY_SECONDS : 0,
     phase: 'playing', tier: options.tier ?? 0, elapsed: 0, wave: 0, waveIn: 60, resources: options.resources,
+    fog: createFog(),
     event: 'peace', eventIn: 60, nextId: 1, units: [], buildings: [], chunks: [],
     players: roster.map(player => ({
-      ...player, action: player.role === 'economy' ? 'worker' : player.role === 'defenses' ? 'builder' : 'resources',
+      ...player, action: player.role === 'economy' ? 'worker' : player.role === 'defenses' ? 'builder' : player.role === 'production' ? 'barracks' : 'resources',
       phrase: '', typed: '', phraseId: 0, completed: 0, ready: false, contribution: 0, typingCredit: 0,
       constructionTier: 1, upgradeTarget: player.role === 'production' ? 'warrior' : player.role === 'defenses' ? 'tower-1' : 'economy',
       actionPhrases: 0, work: 0, length: options.length
@@ -52,11 +54,11 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
     nodes: seasonalNodes(startingSeason),
     upgrades: { economy: 0, production: 0, defenses: 0 },
     technology: { economy: 0, warrior: 0, archer: 0, catapult: 0, 'tower-1': 0, 'tower-2': 0, 'tower-3': 0 },
-    rally: { x: 500, y: 450 }, message: '', events: [{ id: 1, elapsed: 0, playerId: null, text: 'Game started' }],
+    rally: null, message: '', events: [{ id: 1, elapsed: 0, playerId: null, text: 'Game started' }],
     computersPaused: options.computersPaused,
     roleTasks: {
       economy: createRoleTasks({ action: 'worker', constructionTier: 1, upgradeTarget: 'economy' }),
-      production: createRoleTasks({ action: 'resources', constructionTier: 1, upgradeTarget: 'warrior' }),
+      production: createRoleTasks({ action: 'barracks', constructionTier: 1, upgradeTarget: 'warrior' }),
       army: createRoleTasks({ action: 'resources', constructionTier: 1, upgradeTarget: 'economy' }),
       defenses: createRoleTasks({ action: 'builder', constructionTier: 1, upgradeTarget: 'tower-1' })
     }
@@ -85,5 +87,6 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
     }
   }
   state.players.forEach(player => assignPhrase(state, player));
+  updateFog(state);
   return state;
 }

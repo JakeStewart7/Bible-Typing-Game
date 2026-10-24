@@ -1,6 +1,6 @@
 import { assignPhrase, copyRoleTask } from './phrases.ts';
 import { addBuilding, addUnit } from './state.ts';
-import { ACTION_LABELS, BASE, BUILDING_CAPS, distance, isTypingAction, MIN_TIER, ROLE_ACTIONS, ROLE_LABELS, TIER_COSTS, TIER_MAX, UNIT_CAPS, validPoint, WALL_ROTATION_STEP } from './rules.ts';
+import { ACTION_LABELS, BASE, BUILDING_CAPS, isTypingAction, MIN_TIER, ROLE_ACTIONS, ROLE_LABELS, TIER_COSTS, TIER_MAX, UNIT_CAPS, validPoint, WALL_ROTATION_STEP } from './rules.ts';
 import { applyUpgrade, phraseWork, taskCost, taskWork, upgradeLimit, UPGRADE_OPTIONS } from './technology.ts';
 import { ENTITY_LABELS, playerEvent, recordEvent } from './events.ts';
 import { PHRASE_LENGTHS, SEASONS, type Action, type BuildingKind, type Participant, type Point, type StrongholdCommand, type StrongholdState } from './types.ts';
@@ -8,15 +8,17 @@ import { restoreRoleTask, saveRoleTask, taskKey } from './tasks.ts';
 import { spawnWave } from './combat.ts';
 import { creditResources, daylight, DAY_SECONDS, NIGHT_SECONDS, SEASON_BONUSES, SEASON_LABELS, seasonalNodes } from './environment.ts';
 import { tierProgress } from './tier-progress.ts';
-import { buildingFootprint, footprintCorners, footprintsOverlap, unitSpawnPoint } from './navigation.ts';
-import { isArmyUnit, queuedUnits, trainingBarracks, TRAINING_SECONDS } from './training.ts';
+import { buildingFootprint, footprintCorners, footprintsOverlap, nodeOverlapsFootprint, unitSpawnPoint } from './navigation.ts';
+import { isArmyUnit, queuedUnits, supportsRally, trainingBarracks, TRAINING_SECONDS } from './training.ts';
+import { inVision, visionSources } from './fog.ts';
 
-type ActionWorld = Pick<StrongholdState, 'tier' | 'resources' | 'units' | 'technology' | 'buildings'>;
+type ActionWorld = Pick<StrongholdState, 'tier' | 'resources' | 'units' | 'technology' | 'buildings' | 'nodes'>;
 type TaskPlayer = Pick<Participant, 'role' | 'action' | 'constructionTier' | 'upgradeTarget' | 'work'>;
-export function actionUnlockProblem(state: Pick<StrongholdState, 'tier'>, task: Pick<Participant, 'action' | 'constructionTier' | 'upgradeTarget'>): string | null {
+export function actionUnlockProblem(state: Pick<StrongholdState, 'tier'>, task: Pick<Participant, 'action' | 'constructionTier' | 'upgradeTarget'> & Partial<Pick<Participant, 'role'>>): string | null {
   const tier = Math.max(MIN_TIER[task.action], task.action === 'tower' || task.action === 'barracks' ? task.constructionTier
     : task.action === 'upgrade' ? UPGRADE_OPTIONS[task.upgradeTarget].tier : 0);
-  return state.tier < tier ? `Requires tier ${tier}. Ready up to advance together.` : null;
+  if (state.tier < tier) return `Requires tier ${tier}. Ready up to advance together.`;
+  return task.role === 'production' && state.tier < 1 ? 'Requires tier 1. Army typing unlocks then.' : null;
 }
 export function actionProblem(state: ActionWorld, player: TaskPlayer, action: Action): string | null {
   if (!ROLE_ACTIONS[player.role].includes(action)) return 'This action belongs to another role.';
@@ -39,28 +41,31 @@ export function actionProblem(state: ActionWorld, player: TaskPlayer, action: Ac
 
 export function placementProblem(
   state: ActionWorld & Pick<StrongholdState, 'buildings'>,
-  player: TaskPlayer, kind: Extract<BuildingKind, 'relay' | 'barracks' | 'tower' | 'wall'>, point: Point, rotation = 0
+  player: TaskPlayer, kind: Extract<BuildingKind, 'relay' | 'barracks' | 'tower' | 'wall'>, point: Point, rotation = 0, excludeBuildingId?: number
 ): string | null {
   if (!validPoint(point)) return 'Choose a location inside the battlefield.';
   if (!Number.isFinite(rotation) || rotation < 0 || rotation >= 360 || rotation % WALL_ROTATION_STEP !== 0) return 'Choose one of the 16 wall angles, 22.5 degrees apart.';
   const footprint = buildingFootprint(state, { ...point, kind, rotation, tier: player.constructionTier, enemy: false });
   if (footprintCorners(footprint).some(corner => !validPoint(corner) || corner.y < 130)) return `Keep the entire ${kind} inside the construction area.`;
+  if (!inVision(visionSources(state), point)) return 'Explore this location with a unit before building here.';
   const blockers = placementBlockers(state, player, kind, point, rotation);
   if (kind !== 'relay' && (player.action !== kind || player.work < taskWork(player))) return 'Complete the construction work first.';
   const problem = actionProblem(state, player, kind);
   if (problem) return problem;
   if (!state.units.some(unit => unit.kind === 'builder' && unit.hp > 0)) return 'Recruit a builder in Defenses first.';
   if (state.buildings.filter(building => building.kind === kind && !building.enemy && building.hp > 0).length >= BUILDING_CAPS[kind]) return 'Building limit reached.';
-  if (blockers.buildings.length) return 'Leave space between buildings.';
+  if (blockers.buildings.some(id => id !== excludeBuildingId)) return 'Leave space between buildings.';
+  if (blockers.nodes.length) return 'Do not build over resource nodes.';
   if (point.y < 130) return 'The enemy stronghold cannot be used as a construction site.';
   return null;
 }
 export function placementBlockers(state: ActionWorld, player: Pick<Participant, 'constructionTier'>,
-  kind: Extract<BuildingKind, 'relay' | 'barracks' | 'tower' | 'wall'>, point: Point, rotation = 0): { buildings: number[]; units: number[] } {
+  kind: Extract<BuildingKind, 'relay' | 'barracks' | 'tower' | 'wall'>, point: Point, rotation = 0): { buildings: number[]; units: number[]; nodes: number[] } {
   const footprint = buildingFootprint(state, { ...point, kind, rotation, tier: player.constructionTier, enemy: false });
   return {
-    buildings: state.buildings.filter(building => building.hp > 0 && (distance(point, building) < 38
-      || footprintsOverlap(footprint, buildingFootprint(state, building)))).map(building => building.id),
+    buildings: state.buildings.filter(building => building.hp > 0
+      && footprintsOverlap(footprint, buildingFootprint(state, building))).map(building => building.id),
+    nodes: state.nodes.filter(node => nodeOverlapsFootprint(node, footprint)).map(node => node.id),
     units: []
   };
 }
@@ -231,8 +236,8 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     if (direction !== 1 && direction !== -1) throw new Error('Choose a valid rotation direction.');
     const rotation = ((wall.rotation ?? 0) + direction * WALL_ROTATION_STEP + 360) % 360;
     // Validate geometry without spending or requiring another completed construction task.
-    const problem = placementProblem({ ...state, buildings: state.buildings.filter(building => building !== wall) },
-      { ...player, role: 'defenses', action: 'wall', work: taskWork({ ...player, action: 'wall' }) }, 'wall', wall, rotation);
+    const problem = placementProblem(state,
+      { ...player, role: 'defenses', action: 'wall', work: taskWork({ ...player, action: 'wall' }) }, 'wall', wall, rotation, wall.id);
     if (problem) throw new Error(problem);
     wall.rotation = rotation;
     playerEvent(state, player, 'rotated Wall');
@@ -284,6 +289,7 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     if (!command.ids.length || command.ids.length > 64) throw new Error('Select friendly buildings first.');
     const buildings = command.ids.map(id => state.buildings.find(building => building.id === id && !building.enemy && building.hp > 0));
     if (buildings.some(building => !building)) throw new Error('Select only friendly buildings.');
+    if (buildings.some(building => building && !supportsRally(building))) throw new Error('Only castles and barracks have rally points.');
     for (const building of buildings) if (building) building.rally = { ...command.point };
     playerEvent(state, player, 'set building Rally points');
     return;
@@ -292,7 +298,7 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
   if (!validPoint(command.point)) throw new Error('Choose a location inside the battlefield.');
   if (command.type === 'RALLY') {
     state.rally = { ...command.point };
-    for (const building of state.buildings) if (!building.enemy && building.hp > 0) building.rally = { ...command.point };
+    for (const building of state.buildings) if (!building.enemy && building.hp > 0 && supportsRally(building)) building.rally = { ...command.point };
     playerEvent(state, player, 'set Rally point');
     return;
   }

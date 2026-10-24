@@ -1,9 +1,9 @@
-import { actionProblem, actionUnlockProblem, executeCommand } from './actions.ts';
+import { actionProblem, actionUnlockProblem, executeCommand, placementBlockers, placementProblem } from './actions.ts';
 import { rallyArmy, spawnWave, updateCombat } from './combat.ts';
 import { updateLogistics } from './logistics.ts';
 import { assignPhrase } from './phrases.ts';
 import { addUnit } from './state.ts';
-import { distance, isTypingAction, MIN_TIER, TIER_MAX, UNIT_CAPS } from './rules.ts';
+import { isTypingAction, MIN_TIER, TIER_MAX, UNIT_CAPS } from './rules.ts';
 import { taskWork } from './technology.ts';
 import { ENTITY_LABELS, recordEvent } from './events.ts';
 import type { Action, Participant, Point, StrongholdState } from './types.ts';
@@ -11,6 +11,7 @@ import { updateWorldEvent } from './world-events.ts';
 import { queuedUnits, TRAINING_SECONDS } from './training.ts';
 import { unitRadius, unitSpawnPoint } from './navigation.ts';
 import { taskKey } from './tasks.ts';
+import { inVision, updateFog, visionSources } from './fog.ts';
 
 const BOT_RELAY_SITES = [
   { x: 360, y: 540 }, { x: 640, y: 540 }, { x: 250, y: 435 }, { x: 760, y: 435 },
@@ -18,7 +19,12 @@ const BOT_RELAY_SITES = [
   { x: 140, y: 340 }, { x: 140, y: 215 }, { x: 770, y: 240 }
 ];
 function nextRelaySite(state: StrongholdState): Point | undefined {
-  return BOT_RELAY_SITES.find(site => !state.buildings.some(building => building.hp > 0 && distance(site, building) < 38));
+  const sources = visionSources(state);
+  return BOT_RELAY_SITES.find(site => {
+    if (!inVision(sources, site)) return false;
+    const blockers = placementBlockers(state, { constructionTier: 1 }, 'relay', site);
+    return !blockers.buildings.length && !blockers.nodes.length;
+  });
 }
 function botTroop(state: StrongholdState): 'warrior' | 'archer' | 'catapult' {
   const count = (kind: 'warrior' | 'archer' | 'catapult') => state.units.filter(unit => unit.kind === kind).length + queuedUnits(state, kind);
@@ -78,16 +84,14 @@ function updateBot(state: StrongholdState, player: Participant, seconds: number)
     if (['relay', 'barracks', 'tower', 'wall'].includes(action) && (action === 'relay' || player.work >= taskWork(player))) {
       if (state.players.some(other => !other.simulated && other.role === player.role && taskKey(other) === taskKey(player))) return;
       const count = state.buildings.filter(building => building.kind === action && !building.enemy).length;
-      const point = action === 'relay' ? nextRelaySite(state) : action === 'barracks'
-        ? { x: 620 + count * 48, y: 575 }
-        : action === 'tower' ? { x: 360 + count * 140, y: 425 } : { x: 340 + count * 45, y: 480 };
-      if (point && (action === 'barracks' || action === 'tower' || action === 'wall' || action === 'relay')) {
-        // Legal placement failures are visible in the room; select a fresh task afterwards.
-        try { executeCommand(state, player, { type: 'PLACE', kind: action, point }); }
-        catch (error) {
-          state.message = `${player.name}: ${error instanceof Error ? error.message : String(error)}`;
-          assignPhrase(state, player);
-        }
+      if (action === 'barracks' || action === 'tower' || action === 'wall' || action === 'relay') {
+        const preferred = action === 'barracks' ? { x: 620 + count * 48, y: 575 }
+          : action === 'tower' ? { x: 360 + count * 140, y: 425 } : { x: 340 + count * 49, y: 480 };
+        const sites = action === 'relay' ? BOT_RELAY_SITES : [preferred,
+          ...Array.from({ length: 33 }, (_, index) => ({ x: 280 + index % 11 * 49, y: 460 + Math.floor(index / 11) * 55 }))];
+        const point = sites.find(site => !placementProblem(state, player, action, site));
+        if (!point) return;
+        executeCommand(state, player, { type: 'PLACE', kind: action, point });
       }
       return;
     }
@@ -111,7 +115,8 @@ function produceArmy(state: StrongholdState, seconds: number): void {
     const spawn = unitSpawnPoint(state, barracks, unitRadius(order));
     if (!spawn) continue;
     const unit = addUnit(state, order.kind, spawn);
-    unit.destination = { ...(barracks.rally ?? state.rally) };
+    const rally = barracks.rally ?? state.rally;
+    unit.destination = rally ? { ...rally } : null;
     const owner = state.players.find(player => player.id === order.playerId);
     recordEvent(state, `${owner ? `Player ${state.players.indexOf(owner) + 1}` : 'Barracks'} created ${ENTITY_LABELS[order.kind]}`, order.playerId);
     barracks.trainingQueue.shift();
@@ -121,6 +126,7 @@ function produceArmy(state: StrongholdState, seconds: number): void {
 export function advanceStronghold(state: StrongholdState, seconds: number): void {
   if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 1) throw new Error('Simulation steps must be between zero and one second.');
   if (state.phase === 'won' || state.phase === 'lost') return;
+  updateFog(state);
   for (const player of state.players) {
     if (player.simulated && !state.computersPaused) updateBot(state, player, seconds);
   }
@@ -137,4 +143,5 @@ export function advanceStronghold(state: StrongholdState, seconds: number): void
   updateLogistics(state, seconds);
   produceArmy(state, seconds);
   updateCombat(state, seconds);
+  updateFog(state);
 }

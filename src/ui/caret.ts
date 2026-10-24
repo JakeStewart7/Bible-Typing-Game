@@ -78,8 +78,17 @@ function findCaretTarget(container: HTMLElement) {
 
 function keepTargetVisible(
   container: HTMLElement,
-  target: { y: number; height: number }
+  target: { x: number; y: number; height: number }
 ): void {
+  if (container.dataset.horizontalScroll === 'true') {
+    const margin = Math.min(48, container.clientWidth / 4);
+    const visibleLeft = target.x - container.scrollLeft;
+    if (visibleLeft < margin || visibleLeft > container.clientWidth - margin) {
+      container.scrollLeft = Math.max(0, target.x - margin);
+    }
+    container.scrollTop = 0;
+    return;
+  }
   const visibleTop = target.y - container.scrollTop;
   if (visibleTop < 24 || visibleTop > container.clientHeight - target.height - 24) {
     container.scrollTop = Math.max(0, target.y - container.clientHeight / 2);

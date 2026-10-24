@@ -4,7 +4,8 @@ import type { Building, BuildingKind, Point, StrongholdSnapshot, Unit } from '..
 import { buildingMarkup, relayPreviewMarkup } from './battlefield.ts';
 import { setAttribute } from './dom-updates.ts';
 import { playerTheme } from './player-theme.ts';
-import { buildingFootprint, WALL_HALF_WIDTH } from '../domain/navigation.ts';
+import { buildingFootprint, resourceNodeRadius, WALL_HALF_WIDTH } from '../domain/navigation.ts';
+import { supportsRally } from '../domain/training.ts';
 
 export type PlacementKind = Extract<BuildingKind, 'relay' | 'barracks' | 'tower' | 'wall'>;
 const WALL_OUTLINE_HEIGHT = WALL_HALF_WIDTH * 2 + 9;
@@ -92,7 +93,8 @@ export function createMapControls(map: SVGSVGElement) {
     },
     buildingSelection(snapshot: StrongholdSnapshot, ids: ReadonlySet<number>): void {
       buildingSelection.innerHTML = snapshot.buildings.filter(building => ids.has(building.id) && !building.enemy && building.hp > 0).map(building => {
-        const box = buildingFootprint(snapshot, building), rally = building.rally ?? (building.kind === 'barracks' ? snapshot.rally : null);
+        const box = buildingFootprint(snapshot, building);
+        const rally = supportsRally(building) ? building.rally ?? (building.kind === 'barracks' ? snapshot.rally : null) : null;
         return `<g data-selected-building="${building.id}"><rect transform="translate(${box.x} ${box.y}) rotate(${box.rotation})" x="${-box.halfX - 4}" y="${-box.halfY - 4}" width="${box.halfX * 2 + 8}" height="${box.halfY * 2 + 8}" fill="${highlight}" fill-opacity=".15" stroke="${ink}" stroke-width="2"/>
           ${rally ? `<path d="M${building.x} ${building.y}L${rally.x} ${rally.y}" stroke="${ink}" stroke-width="2" stroke-dasharray="5 4"/><g transform="translate(${rally.x} ${rally.y})" data-building-rally="${building.id}"><path d="M0 8V-14L15 -8L0 -2" fill="${highlight}" stroke="${ink}" stroke-width="2"/></g>` : ''}</g>`;
       }).join('');
@@ -122,7 +124,7 @@ export function createMapControls(map: SVGSVGElement) {
         ghost.innerHTML = buildingMarkup({
           ...point, id: 0, kind, hp: 1, maxHp: 1, tier: self.constructionTier,
           progress: 1, cooldown: 0, enemy: false, attackTarget: null, ownerId: self.id, rotation, trainingQueue: [], rally: null
-        }) + `<rect data-outline transform="rotate(${box.rotation})" x="${-box.halfX / scale}" y="${-box.halfY / scale}" width="${box.halfX * 2 / scale}" height="${box.halfY * 2 / scale}" fill="none" stroke-width="2" stroke-dasharray="5 3"/>`;
+        }, false) + `<rect data-outline transform="rotate(${box.rotation})" x="${-box.halfX / scale}" y="${-box.halfY / scale}" width="${box.halfX * 2 / scale}" height="${box.halfY * 2 / scale}" fill="none" stroke-width="2" stroke-dasharray="5 3"/>`;
         signature = nextSignature;
       }
       setAttribute(ghost, 'transform', `translate(${point.x} ${point.y}) scale(${scale})`);
@@ -134,7 +136,8 @@ export function createMapControls(map: SVGSVGElement) {
       obstructions.innerHTML = snapshot.buildings.filter(building => blockers.buildings.includes(building.id)).map(building => {
         const box = buildingFootprint(snapshot, building);
         return `<rect data-blocking-building="${building.id}" transform="translate(${box.x} ${box.y}) rotate(${box.rotation})" x="${-box.halfX - 2}" y="${-box.halfY - 2}" width="${box.halfX * 2 + 4}" height="${box.halfY * 2 + 4}" fill="#ff1726" fill-opacity=".35" stroke="#ff1726" stroke-width="3"/>`;
-      }).join('') + snapshot.units.filter(unit => blockers.units.includes(unit.id)).map(unit => `<circle data-blocking-unit="${unit.id}" cx="${unit.x}" cy="${unit.y}" r="15" fill="#ff1726" fill-opacity=".35" stroke="#ff1726" stroke-width="3"/>`).join('');
+      }).join('') + snapshot.nodes.filter(node => blockers.nodes.includes(node.id)).map(node =>
+        `<circle data-blocking-node="${node.id}" cx="${node.x}" cy="${node.y}" r="${resourceNodeRadius(node)}" fill="#ff1726" fill-opacity=".35" stroke="#ff1726" stroke-width="2"/>`).join('');
       setAttribute(outline, 'stroke', problem ? '#ff1726' : highlight);
       setAttribute(ghost, 'data-valid', String(!problem));
       return problem;
