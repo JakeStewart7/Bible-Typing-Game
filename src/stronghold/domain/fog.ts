@@ -18,7 +18,26 @@ export function visionSources(world: World, enemy = false): VisionSource[] {
   ];
 }
 export function inVision(sources: readonly VisionSource[], point: Point): boolean {
-  return sources.some(source => (point.x - source.x) ** 2 + (point.y - source.y) ** 2 <= source.radius ** 2);
+  const x = Math.floor(point.x / FOG_CELL_SIZE), y = Math.floor(point.y / FOG_CELL_SIZE);
+  return x >= 0 && x < FOG_COLUMNS && y >= 0 && y < FOG_ROWS && sources.some(source => seesCell(source, x, y));
+}
+function seesCell(source: VisionSource, x: number, y: number): boolean {
+  const dx = Math.max(0, Math.abs((x + .5) * FOG_CELL_SIZE - source.x) - FOG_CELL_SIZE / 2);
+  const dy = Math.max(0, Math.abs((y + .5) * FOG_CELL_SIZE - source.y) - FOG_CELL_SIZE / 2);
+  return dx * dx + dy * dy < source.radius ** 2;
+}
+export function visibleCells(sources: readonly VisionSource[]): number[] {
+  const cells = new Set<number>();
+  for (const source of sources) {
+    const minX = Math.max(0, Math.floor((source.x - source.radius) / FOG_CELL_SIZE));
+    const maxX = Math.min(FOG_COLUMNS - 1, Math.floor((source.x + source.radius) / FOG_CELL_SIZE));
+    const minY = Math.max(0, Math.floor((source.y - source.radius) / FOG_CELL_SIZE));
+    const maxY = Math.min(FOG_ROWS - 1, Math.floor((source.y + source.radius) / FOG_CELL_SIZE));
+    for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
+      if (seesCell(source, x, y)) cells.add(y * FOG_COLUMNS + x);
+    }
+  }
+  return [...cells];
 }
 export function createFog(): FogOfWar {
   return { sources: [], explored: [], units: [], buildings: [], nodes: [] };
@@ -28,17 +47,7 @@ export function updateFog(state: StrongholdState): void {
   const sources = visionSources(state);
   fog.sources = sources;
   const explored = new Set(fog.explored);
-  for (const source of sources) {
-    const minX = Math.max(0, Math.floor((source.x - source.radius) / FOG_CELL_SIZE));
-    const maxX = Math.min(FOG_COLUMNS - 1, Math.floor((source.x + source.radius) / FOG_CELL_SIZE));
-    const minY = Math.max(0, Math.floor((source.y - source.radius) / FOG_CELL_SIZE));
-    const maxY = Math.min(FOG_ROWS - 1, Math.floor((source.y + source.radius) / FOG_CELL_SIZE));
-    for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
-      const dx = Math.max(0, Math.abs((x + .5) * FOG_CELL_SIZE - source.x) - FOG_CELL_SIZE / 2);
-      const dy = Math.max(0, Math.abs((y + .5) * FOG_CELL_SIZE - source.y) - FOG_CELL_SIZE / 2);
-      if (dx * dx + dy * dy <= source.radius ** 2) explored.add(y * FOG_COLUMNS + x);
-    }
-  }
+  for (const cell of visibleCells(sources)) explored.add(cell);
   if (explored.size !== fog.explored.length) fog.explored = [...explored];
   // A memory is replaced only by a current sighting, or cleared by revisiting its empty location.
   const remember = <T extends Point & { id: number }>(previous: T[], current: T[]): T[] => {

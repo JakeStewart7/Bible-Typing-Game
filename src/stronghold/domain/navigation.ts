@@ -13,7 +13,7 @@ type Layout = { obstacles: Obstacle[]; corners: Point[]; edges: ({ to: number; c
 const layouts = new WeakMap<World, Map<number, Layout>>();
 const routes = new WeakMap<Unit, { layout: Layout; target: Point; path: Point[]; fallback: boolean }>();
 export function unitRadius(unit: Partial<Pick<Unit, 'kind' | 'formation'>>): number {
-  return (unit.formation ?? unit.kind) === 'catapult' ? 20 : UNIT_RADIUS;
+  return (unit.formation ?? unit.kind) === 'catapult' ? 20 : unit.kind === 'worker' ? 9 : UNIT_RADIUS;
 }
 export function resourceNodeRadius(node: Pick<ResourceNode, 'rich'>): number {
   return (node.rich ? 27 : 24) + 1.5;

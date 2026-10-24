@@ -1,5 +1,5 @@
 import { distance, moveToward, RELAY_RANGE, UNIT_RULES } from './rules.ts';
-import type { Building, Point, StrongholdState, Unit } from './types.ts';
+import type { Building, Point, ResourceChunk, ResourceNode, StrongholdState, Unit } from './types.ts';
 import { ENTITY_LABELS, recordEvent } from './events.ts';
 import { buildingApproach, buildingFootprint, distanceToFootprint, movementDestination, moveUnitToward, resourceNodeRadius, unitRadius, wallApproach } from './navigation.ts';
 import { creditResources } from './environment.ts';
@@ -47,27 +47,52 @@ function automaticWorkTime(state: StrongholdState, unit: Unit, seconds: number):
   return seconds - remaining;
 }
 
+function depositCargo(state: StrongholdState, worker: Unit, cargo: ResourceChunk): void {
+  const depot = state.buildings.find(building => !building.enemy && (building.kind === 'relay' || building.kind === 'castle')
+    && building.hp > 0 && building.progress === 1
+    && distanceToFootprint(worker, buildingFootprint(state, building)) <= unitRadius(worker) + .02);
+  if (!depot) return;
+  cargo.carrier = null;
+  cargo.x = depot.x;
+  cargo.y = depot.y;
+  cargo.target = depot.id;
+}
+function harvestNode(state: StrongholdState, worker: Unit, node: ResourceNode): void {
+  const amount = Math.min(node.remaining, (node.rich ? 8 : 4) + state.upgrades.economy * 2);
+  node.remaining -= amount;
+  if (node.remaining === 0) recordEvent(state, 'Resource node depleted');
+  state.chunks.push({ id: state.nextId++, x: worker.x, y: worker.y, amount, rich: node.rich, target: null, carrier: worker.id });
+  worker.attackTarget = { x: node.x, y: node.y };
+  worker.cooldown = 3;
+}
+function workerContact(state: StrongholdState, worker: Unit): void {
+  const cargo = state.chunks.find(chunk => chunk.carrier === worker.id);
+  if (cargo) depositCargo(state, worker, cargo);
+  else {
+    const node = state.nodes.find(node => node.remaining > 0 && distance(worker, node) <= resourceNodeRadius(node) + unitRadius(worker) + .02);
+    if (node) harvestNode(state, worker, node);
+  }
+}
 function updateWorker(state: StrongholdState, worker: Unit, seconds: number): void {
   worker.cooldown = Math.max(0, worker.cooldown - seconds);
   if (worker.cooldown <= 2.72 || worker.idleTime !== null) worker.attackTarget = null;
+  workerContact(state, worker);
   seconds = automaticWorkTime(state, worker, seconds);
   const cargo = state.chunks.find(chunk => chunk.carrier === worker.id);
   if (seconds === 0) {
-    if (cargo) { cargo.x = worker.x; cargo.y = worker.y; }
+    if (cargo) {
+      cargo.x = worker.x; cargo.y = worker.y;
+    }
+    workerContact(state, worker);
     return;
   }
   if (cargo) {
-    const depot = state.buildings.filter(building => (building.kind === 'relay' || building.kind === 'castle')
+    const depot = state.buildings.filter(building => !building.enemy && (building.kind === 'relay' || building.kind === 'castle')
       && building.hp > 0 && building.progress === 1).sort((a, b) => distance(worker, a) - distance(worker, b))[0];
     if (depot) moveUnitToward(state, worker, buildingApproach(state, worker, depot), seconds * UNIT_RULES.worker.speed);
     cargo.x = worker.x;
     cargo.y = worker.y;
-    if (depot && distanceToFootprint(worker, buildingFootprint(state, depot)) <= unitRadius(worker) + 1) {
-      cargo.carrier = null;
-      cargo.x = depot.x;
-      cargo.y = depot.y;
-      cargo.target = depot.id;
-    }
+    depositCargo(state, worker, cargo);
     return;
   }
   const known = knownResourceNodes(state);
@@ -79,15 +104,10 @@ function updateWorker(state: StrongholdState, worker: Unit, seconds: number): vo
   }
   if (!node) return;
   moveUnitToward(state, worker, node, seconds * UNIT_RULES.worker.speed);
-  if (distance(worker, node) > resourceNodeRadius(node) + unitRadius(worker) + 1 || worker.cooldown > 0) return;
+  if (distance(worker, node) > resourceNodeRadius(node) + unitRadius(worker) + .02) return;
   node = state.nodes.find(candidate => candidate.id === node?.id);
   if (!node || node.remaining <= 0) { worker.task = null; return; }
-  const amount = Math.min(node.remaining, (node.rich ? 8 : 4) + state.upgrades.economy * 2);
-  node.remaining -= amount;
-  if (node.remaining === 0) recordEvent(state, 'Resource node depleted');
-  state.chunks.push({ id: state.nextId++, x: worker.x, y: worker.y, amount, rich: node.rich, target: null, carrier: worker.id });
-  worker.attackTarget = { x: node.x, y: node.y };
-  worker.cooldown = 3;
+  harvestNode(state, worker, node);
 }
 
 function updateBuilder(state: StrongholdState, builder: Unit, seconds: number, project: Building): void {

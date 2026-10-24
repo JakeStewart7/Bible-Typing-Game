@@ -8,7 +8,7 @@ typing strategy game with three simulated teammates. The full-screen battlefield
 follows the Paint design: borderless bright-green map, gray castle, colored shape-coded
 units, upper-right population/resource HUD, central hexagonal **Tier Up** button,
 and four colored player panels along the bottom. Switch Player 1's role with the
-supply bag (Economy), outline sword (Army), cursor (Unit Control), and castle (Defenses) buttons.
+resource circle (Economy), outline sword (Army), cursor (Unit Control), and castle (Defenses) buttons.
 Players on the same role choose their tasks independently. Players working on the
 same task contribute completed entries to its shared work bar;
 each finished task costs and rewards supplies only once. Each player keeps an
@@ -91,10 +91,11 @@ The Stronghold typing cursor snaps directly to the current character without
 animated travel or a movement speed limit. Phrases stay on one line and scroll
 horizontally as you type, keeping the active character visible without a scrollbar.
 
-Joining **Army** after Tier 1 unlocks selects its saved Barracks work rather than
-an invisible Supplies task. At Tier 0, Army types for supplies until construction
-unlocks. Locked building tiles cannot be selected, cycled to, or typed for by
-humans or simulated teammates.
+Army starts with Barracks selected and its progress bar locked at **Tier 0**.
+Human and simulated Army players cannot type until **Tier 1**, including through
+an old Supplies task. They can still contribute to shared tier challenges.
+After unlocking, Army uses its saved Barracks work. Locked building tiles cannot
+be selected, cycled to, or typed for by humans or simulated teammates.
 Simulated teammates keep their own task selection; matching tasks share work
 without switching anyone else's task or replacing their input.
 Ready work is preserved through tier challenges, and placement unlocks only at
@@ -225,7 +226,9 @@ neutral caret. Mistakes retain a vivid highlight, outline and underline matching
 the selected player color, without a strike-through.
 The flat, single-color octagonal Tier Up button aligns with the top controls.
 Economy places Gatherer and Supplies together, Relay beneath, and its upgrade last.
-Economy reuses the blue resource-circle icon, Army uses a slightly wider outlined
+Economy reuses the resource-circle shape, colored for the player throughout that
+player's controls and cost badges. All role/task buttons use Unit Control's pale
+background and player-colored hover/focus highlights. Army uses a slightly wider outlined
 sword, and Unit Control has a hollow cursor in the same muted shade as the other
 role icons. The actual native mouse cursor remains filled.
 Hover descriptions appear immediately in dark styled tooltips, including disabled
@@ -235,22 +238,26 @@ simulation or rendering work cannot hold its position in place.
 The deck fits the viewport height, with scrolling inside action panels
 and the squad list on narrow screens rather than clipping the bottom.
 The map starts at **200% zoom**, focused toward the home base. Use the mouse wheel
-to zoom, and **Alt-drag or middle-drag** to pan without issuing orders.
+to step through **175%, 200%, 225% and 250%**, and **Alt-drag or middle-drag**
+to pan without issuing orders. Leaves and other weather are anchored to the map,
+so they move past as the camera pans.
 Hovering near a map edge does not scroll.
 Hold the **arrow keys** to pan; diagonal combinations work and opposite keys cancel.
 Right-click issues movement orders or cancels placement; it never pans.
 Successful movement orders briefly mark their destination with a player-colored
 click pulse; reduced-motion mode uses only a fade.
-Minimum zoom shows the entire map; zoom and pan do not change world coordinates or speed.
+The three farthest-out views are removed; pan to reach distant ground.
+Zoom and pan do not change world coordinates or speed.
 Shift-drag retains additive army selection.
 
 Fog of war shares vision across the whole team. Units explore the map and
 completed friendly buildings reveal nearby ground. Gatherers/builders see 120
 map units; warriors 150, archers 180 and catapults 210. Castles reveal 200,
 barracks 160, towers 220, relays 120 and walls 80.
-Unexplored ground is dark; explored ground returns to shadow outside current
-vision. Resource nodes, enemy buildings and enemy troops remain as frozen,
-non-interactive last-seen silhouettes until you revisit. Hidden movement,
+Current sight, unexplored ground and explored shadows share the same pixel grid.
+Unexplored ground is darkened rather than black; explored ground has a lighter
+shadow. Resource nodes, enemy buildings and enemy troops remain as frozen,
+non-interactive last-seen silhouettes without health bars until you revisit. Hidden movement,
 damage, depletion and destruction do not update those memories.
 Only currently visible enemies can be targeted, and hidden enemy upgrades,
 construction and deaths do not appear in the log. Wave warnings remain global.
@@ -308,7 +315,10 @@ Units prefer routes around all living buildings, including unfinished structures
 Buildings may be placed over units; those units can move out, and units may pass
 through ordinary buildings when no route around exists rather than becoming trapped.
 Resource circles (including depleted nodes) and both castles are always solid.
-Gatherers harvest and deliver from outside their visible borders; builders repair
+Gatherers harvest immediately on touching a node's visible border, without a
+harvest cooldown, and touching a completed castle credits supplies immediately.
+Contact pickup/delivery also works during manual orders and idle waiting.
+They stay outside the solid borders; builders repair
 castles from outside, and melee troops attack their outer edges.
 Placement uses the exact outer stroke bounds, without an extra gap: walls can
 touch edge-to-edge at any rotation. Resource circles also block construction.

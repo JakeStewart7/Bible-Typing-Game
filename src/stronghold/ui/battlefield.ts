@@ -6,7 +6,7 @@ import { createSvgLayer, setAttribute, setText } from './dom-updates.ts';
 import { playerTheme } from './player-theme.ts';
 import { TRAINING_SECONDS } from '../domain/training.ts';
 import { WALL_HALF_WIDTH } from '../domain/navigation.ts';
-import { exploredPath } from '../domain/fog.ts';
+import { exploredPath, visibleCells } from '../domain/fog.ts';
 
 function health(hp: number, max: number, y: number, width = 26): string {
   return `<rect x="${-width / 2}" y="${y}" width="${width}" height="3" fill="#1d3029"/><rect data-health x="${-width / 2}" y="${y}" width="${width * Math.max(0, hp / max)}" height="3" fill="#a6ed89"/>`;
@@ -44,7 +44,7 @@ export function unitMotionTransform(unit: Unit, previous: Point | undefined, ela
   }
   return `translate(0 ${stride * 1.5}) rotate(${stride * 5})`;
 }
-export function unitMarkup(unit: Unit, selected: boolean): string {
+export function unitMarkup(unit: Unit, selected: boolean, showHealth = true): string {
   const siege = (unit.formation ?? unit.kind) === 'catapult';
   const fill = unit.kind === 'invader' ? '#870018' : '#b18b45', stroke = unit.kind === 'invader' ? '#ff1726' : '#654717';
   const shape = siege ? `<g data-catapult><rect x="-16" y="2" width="32" height="10" rx="2" fill="${fill}" stroke="${stroke}" stroke-width="2"/><circle cx="-11" cy="13" r="5" fill="#27323a" stroke="${stroke}" stroke-width="2"/><circle cx="11" cy="13" r="5" fill="#27323a" stroke="${stroke}" stroke-width="2"/><path d="M-10 2L0 -10L10 2Z" fill="${fill}" stroke="${stroke}" stroke-width="2"/><g data-catapult-arm><path d="M-9 4L13 -19" stroke="${stroke}" stroke-width="5"/><path d="M7 -21L17 -13L20 -21Z" fill="${unit.kind === 'invader' ? '#ff1726' : '#e7c76e'}" stroke="${stroke}" stroke-width="2"/></g></g>`
@@ -54,16 +54,16 @@ export function unitMarkup(unit: Unit, selected: boolean): string {
     : unit.kind === 'archer' ? '<path d="M0 -10 L8 0 L0 10 L-8 0 Z" fill="#9ed7e6" stroke="#00aeef" stroke-width="2"/>'
     : unit.formation === 'archer' ? '<path d="M0 -10 L8 0 L0 10 L-8 0 Z" fill="#870018" stroke="#ff1726" stroke-width="2"/>'
     : '<rect x="-8" y="-8" width="16" height="16" fill="#870018" stroke="#ff1726" stroke-width="2"/>';
-  return `${actionEffectMarkup(unit.kind === 'worker' || unit.kind === 'builder', unit.kind === 'invader')}<circle data-selected r="${siege ? 27 : 16}" fill="none" stroke="#fff" stroke-width="2" visibility="${selected ? 'visible' : 'hidden'}"/><g data-visual>${shape}</g>${health(unit.hp, unit.maxHp, siege ? 23 : 13, siege ? 34 : 20)}<desc>${unit.kind}${unit.formation ? ' ' + unit.formation : ''}: ${Math.ceil(unit.hp)} HP</desc>`;
+  return `${actionEffectMarkup(unit.kind === 'worker' || unit.kind === 'builder', unit.kind === 'invader')}<circle data-selected r="${siege ? 27 : 16}" fill="none" stroke="#fff" stroke-width="2" visibility="${selected ? 'visible' : 'hidden'}"/><g data-visual>${shape}</g>${showHealth ? health(unit.hp, unit.maxHp, siege ? 23 : 13, siege ? 34 : 20) : ''}<desc>${unit.kind}${unit.formation ? ' ' + unit.formation : ''}${showHealth ? `: ${Math.ceil(unit.hp)} HP` : ', last seen'}</desc>`;
 }
-export function buildingMarkup(building: Building): string {
+export function buildingMarkup(building: Building, showHealth = true): string {
   const color = building.enemy ? '#870018' : building.kind === 'relay' ? '#b0b0b0' : '#c3c3c3';
   const size = building.kind === 'castle' || building.kind === 'enemy-base' ? 34 : 14;
   const shape = building.kind === 'tower' ? towerMarkup(building)
     : building.kind === 'relay' ? `<path d="M-4 16 L-4 -7 L-9 -12 L0 -18 L9 -12 L4 -7 L4 16 Z" fill="${color}" stroke="#7f7f7f" stroke-width="2"/>`
     : building.kind === 'wall' ? `<rect data-wall-shape transform="rotate(${building.rotation ?? 0})" x="-23" y="${-WALL_HALF_WIDTH + 1.5}" width="46" height="${WALL_HALF_WIDTH * 2 - 3}" fill="${building.enemy ? color : '#ffdb58'}" stroke="${building.enemy ? '#ff1726' : '#e8ad23'}" stroke-width="3"/>`
     : `<rect x="${-size}" y="${-size}" width="${size * 2}" height="${size * 2}" fill="${color}" stroke="${building.enemy ? '#ff1726' : '#7f7f7f'}" stroke-width="4"/>`;
-  return `${actionEffectMarkup(false, building.enemy)}${shape}${health(building.hp, building.maxHp, building.kind === 'tower' ? 26 : size + 6, size * 2)}<desc></desc>${building.kind === 'barracks' ? `<text data-tier y="5" text-anchor="middle" fill="#111" font-size="16">T${building.tier}</text><g data-training><rect x="-17" y="26" width="34" height="8" fill="#23372e"/><rect x="-16" y="27" width="32" height="6" fill="#333"/><rect data-training-fill x="-16" y="27" width="0" height="6" fill="#a6ed89"/><text data-training-count y="43" text-anchor="middle" fill="#111" stroke="white" stroke-width="2" paint-order="stroke" font-size="12"></text></g>` : ''}`;
+  return `${actionEffectMarkup(false, building.enemy)}${shape}${showHealth ? health(building.hp, building.maxHp, building.kind === 'tower' ? 26 : size + 6, size * 2) : ''}<desc></desc>${building.kind === 'barracks' ? `<text data-tier y="5" text-anchor="middle" fill="#111" font-size="16">T${building.tier}</text>${showHealth ? `<g data-training><rect x="-17" y="26" width="34" height="8" fill="#23372e"/><rect x="-16" y="27" width="32" height="6" fill="#333"/><rect data-training-fill x="-16" y="27" width="0" height="6" fill="#a6ed89"/><text data-training-count y="43" text-anchor="middle" fill="#111" stroke="white" stroke-width="2" paint-order="stroke" font-size="12"></text></g>` : ''}` : ''}`;
 }
 function towerMarkup(building: Building): string {
   const outline = building.enemy ? '#ff1726' : '#cf9700';
@@ -151,16 +151,15 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     <filter id="stronghold-resource-glow" x="-100%" y="-100%" width="300%" height="300%"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#effff2" flood-opacity=".95"/></filter>
     <filter id="stronghold-work-glow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="1.5" flood-color="#f0f5ff" flood-opacity=".7"/></filter>
     <filter id="stronghold-attack-glow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="1.8" flood-color="#ed914c" flood-opacity=".8"/></filter>
-    <filter id="stronghold-fog-edge"><feGaussianBlur stdDeviation="6"/></filter>
-    <g id="stronghold-vision-circles" data-layer="vision"></g>
+    <path id="stronghold-vision-cells" data-visible/>
     <mask id="stronghold-current-sight" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="650" style="mask-type:luminance">
-      <rect width="1000" height="650" fill="black"/><use href="#stronghold-vision-circles" fill="white"/>
+      <rect width="1000" height="650" fill="black"/><use href="#stronghold-vision-cells" fill="white"/>
     </mask>
     <mask id="stronghold-fog-shadow" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="650" style="mask-type:luminance">
-      <rect width="1000" height="650" fill="white"/><use href="#stronghold-vision-circles" fill="black"/>
+      <rect width="1000" height="650" fill="white"/><use href="#stronghold-vision-cells" fill="black"/>
     </mask>
     <mask id="stronghold-fog-unexplored" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="650" style="mask-type:luminance">
-      <rect width="1000" height="650" fill="white"/><path data-explored fill="black" filter="url(#stronghold-fog-edge)"/><use href="#stronghold-vision-circles" fill="black"/>
+      <rect width="1000" height="650" fill="white"/><path data-explored fill="black"/><use href="#stronghold-vision-cells" fill="black"/>
     </mask></defs>
     <g data-layer="memories" mask="url(#stronghold-fog-shadow)" pointer-events="none" aria-hidden="true" opacity=".7">
       <g data-layer="remembered-nodes"></g><g data-layer="remembered-buildings"></g><g data-layer="remembered-units"></g>
@@ -169,8 +168,8 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
       <g data-layer="coverage" pointer-events="none"></g><g data-layer="links" pointer-events="none"></g><g data-layer="nodes"></g><g data-layer="chunks" pointer-events="none"></g><g data-layer="buildings"></g><g data-layer="units"></g>
     </g>
     <g data-layer="fog" pointer-events="none" aria-hidden="true">
-      <rect width="1000" height="650" fill="#080f18" fill-opacity=".68" mask="url(#stronghold-fog-shadow)"/>
-      <rect width="1000" height="650" fill="#080f12" mask="url(#stronghold-fog-unexplored)"/>
+      <rect width="1000" height="650" fill="#14231b" fill-opacity=".3" mask="url(#stronghold-fog-shadow)"/>
+      <rect width="1000" height="650" fill="#14231b" fill-opacity=".5" mask="url(#stronghold-fog-unexplored)"/>
     </g>
     <g data-layer="rally" data-tooltip="Production rally point"><path d="M0 14V-15l20 7-20 7" fill="#e7d98b" stroke="#e7d98b" opacity=".6"/><desc>Production rally point</desc></g>`;
   function layer(name: string): SVGGElement {
@@ -186,12 +185,11 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
   const unitDirections = new Map<number, Point>();
   let connectedRelayIds = new Set<number>();
   const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const renderVision = createSvgLayer<{ id: number; x: number; y: number; radius: number }>(layer('vision'), () => '<circle/>',
-    (element, source) => { position(element, source); setAttribute(child(element, 'circle'), 'r', String(source.radius)); });
-  const renderRememberedUnits = createSvgLayer<Unit>(layer('remembered-units'), unit => unitMarkup(unit, false),
+  const visible = child(map, '[data-visible]');
+  const renderRememberedUnits = createSvgLayer<Unit>(layer('remembered-units'), unit => unitMarkup(unit, false, false),
     (element, unit) => { position(element, unit); setAttribute(element, 'data-memory-unit', String(unit.id)); },
     unit => `${unit.kind}/${unit.formation}`);
-  const renderRememberedBuildings = createSvgLayer<Building>(layer('remembered-buildings'), buildingMarkup,
+  const renderRememberedBuildings = createSvgLayer<Building>(layer('remembered-buildings'), building => buildingMarkup(building, false),
     (element, building) => {
       if (!technology) throw new Error('Missing Stronghold technology snapshot.');
       position(element, building, buildingScale(technology, building));
@@ -268,7 +266,7 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     selection = selected;
     technology = snapshot;
     elapsed = snapshot.elapsed;
-    renderVision(snapshot.fog.sources.map((source, index) => ({ ...source, id: index })));
+    setAttribute(visible, 'd', exploredPath(visibleCells(snapshot.fog.sources)));
     if (exploredCount !== snapshot.fog.explored.length) {
       setAttribute(explored, 'd', exploredPath(snapshot.fog.explored));
       exploredCount = snapshot.fog.explored.length;

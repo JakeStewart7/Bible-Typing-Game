@@ -361,7 +361,7 @@ test('Stronghold all unit types route around horizontal, diagonal and vertical w
       for (let step = 0; step < 300; step++) {
         const before = { x: unit.x, y: unit.y };
         equal(moveUnitToward(state, unit, target, 2), true);
-        equal(wallContains(unit, wall, 9.9), false);
+        equal(wallContains(unit, wall, unitRadius(unit) - .1), false);
         equal(wallBetween(state, before, unit), undefined);
         if (Math.abs((unit.x - 430) - (unit.y - 280)) > 1) routed = true;
       }
@@ -651,12 +651,17 @@ test('Stronghold troop queues balance matching barracks, count against caps and 
   equal(state.units.filter(unit => unit.kind === 'warrior').length, 2);
 });
 
-test('Stronghold wheel zoom normalizes deltas and clamps at the full map and maximum zoom', () => {
-  equal(wheelZoom(1.2, -100, 0) > 1.2, true);
-  equal(wheelZoom(1.2, 100, 0) < 1.2, true);
-  equal(wheelZoom(1.2, 1, 1), wheelZoom(1.2, 16, 0));
-  equal(wheelZoom(2, -500, 0), 2);
-  equal(wheelZoom(1, 500, 0), 1);
+test('Stronghold wheel zoom steps through 175%, 200%, 225% and 250% and clamps at each end', () => {
+  equal(wheelZoom(1.75, -100, 0), 2);
+  equal(wheelZoom(2, -100, 0), 2.25);
+  equal(wheelZoom(2.25, -100, 0), 2.5);
+  equal(wheelZoom(2.5, -500, 0), 2.5);
+  equal(wheelZoom(2.5, 100, 0), 2.25);
+  equal(wheelZoom(2.25, 100, 0), 2);
+  equal(wheelZoom(2, 100, 0), 1.75);
+  equal(wheelZoom(1.75, 500, 0), 1.75);
+  equal(wheelZoom(2, 0, 0), 2);
+  equal(wheelZoom(2, 1, 1), wheelZoom(2, 16, 0));
 });
 
 test('Stronghold relay previews include the base at exactly 155 units and exclude unavailable or out-of-range sites', () => {

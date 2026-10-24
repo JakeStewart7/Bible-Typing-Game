@@ -53,6 +53,7 @@ export function strongholdElements() {
     input: requireElement('stronghold-input', HTMLInputElement), phrase: requireElement('stronghold-phrase', HTMLElement),
     typedBar: requireElement('stronghold-typed-bar', HTMLElement), progressFill: requireElement('stronghold-typing-progress', HTMLElement),
     typing: requireElement('stronghold-typing', HTMLElement), typedArea: requireElement('stronghold-typed-area', HTMLElement),
+    typingLock: requireElement('stronghold-typing-lock', HTMLElement),
     privateTyping: requireElement('stronghold-private', HTMLElement), privateSlot: requireElement('stronghold-private-slot', HTMLElement),
     length: requireElement('stronghold-length', HTMLElement),
     lengthOptions: PHRASE_LENGTHS.map(length => ({ length, element: requireElement(`stronghold-length-${length}`, HTMLButtonElement) })),
@@ -141,7 +142,11 @@ export function renderStronghold(
     elements.screen.dataset.cursorMode = cursorMode;
   }
   elements.placement.classList.toggle('is-hidden', !placing || terminal);
-  const inputDisabled = !running || terminal || (!challenge && Boolean(actionUnlockProblem(snapshot, self)));
+  const typingLocked = !challenge && Boolean(actionUnlockProblem(snapshot, self));
+  elements.typing.classList.toggle('is-tier-locked', typingLocked);
+  elements.typingLock.classList.toggle('is-hidden', !typingLocked);
+  elements.typingLock.querySelector('[data-typing-lock]')?.classList.remove('is-hidden');
+  const inputDisabled = !running || terminal || typingLocked;
   if (elements.input.disabled !== inputDisabled) elements.input.disabled = inputDisabled;
   setAttribute(elements.length, 'aria-activedescendant', `stronghold-length-${self.length}`);
   setAttribute(elements.length, 'aria-disabled', String(!running || terminal));
@@ -161,23 +166,27 @@ export function renderStronghold(
     entry.card.classList.toggle('is-you', own);
     setText(entry.name, `${own ? 'You' : `${player.name}, simulated teammate`}${player.ready && !challenge ? ', ready' : ''}`);
     setText(entry.typed, player.typed);
-    entry.typed.classList.remove('is-hidden');
+    const locked = !challenge && actionUnlockProblem(snapshot, player);
+    entry.typed.classList.toggle('is-hidden', Boolean(locked));
     const bank = workProgress(player.work, taskWork(player));
     const goal = tierProgress(snapshot.players).goal;
-    const percent = challenge ? player.contribution / goal * 100 : bank.percent;
+    const percent = locked ? 0 : challenge ? player.contribution / goal * 100 : bank.percent;
     const displayPercent = challenge ? Math.round(percent * 10) / 10 : Math.round(percent);
     const width = `${percent}%`;
     if (entry.progress.style.width !== width) entry.progress.style.width = width;
     const progressBar = entry.progress.closest('[role="progressbar"]');
     if (progressBar) {
       setAttribute(progressBar, 'aria-valuenow', String(displayPercent));
-      setAttribute(progressBar, 'aria-valuetext', challenge ? `${displayPercent}% of shared tier progress` : bank.description);
+      setAttribute(progressBar, 'aria-valuetext', locked || (challenge ? `${displayPercent}% of shared tier progress` : bank.description));
+      setAttribute(progressBar, 'aria-disabled', String(Boolean(locked)));
+      progressBar.classList.toggle('is-tier-locked', Boolean(locked));
+      progressBar.querySelector('[data-progress-lock]')?.classList.toggle('is-hidden', !locked);
     }
     const recruitCount = player.action === 'worker' || player.action === 'builder'
       ? snapshot.units.filter(unit => unit.kind === player.action && unit.hp > 0).length : null;
     const recruitLimit = player.action === 'worker' || player.action === 'builder' ? UNIT_CAPS[player.action] : null;
     const recruitCapped = recruitCount !== null && recruitLimit !== null && recruitCount >= recruitLimit;
-    setText(entry.progressLabel, challenge ? `${displayPercent}%` : recruitCapped ? `Limit ${recruitCount}/${recruitLimit}` : bank.label);
+    setText(entry.progressLabel, locked ? 'Tier 1' : challenge ? `${displayPercent}%` : recruitCapped ? `Limit ${recruitCount}/${recruitLimit}` : bank.label);
     const roleDisabled = !own || challenge || terminal || !running;
     for (const button of entry.roleButtons) {
       setAttribute(button.element, 'aria-pressed', String(button.role === player.role));

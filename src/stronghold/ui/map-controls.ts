@@ -124,7 +124,7 @@ export function createMapControls(map: SVGSVGElement) {
         ghost.innerHTML = buildingMarkup({
           ...point, id: 0, kind, hp: 1, maxHp: 1, tier: self.constructionTier,
           progress: 1, cooldown: 0, enemy: false, attackTarget: null, ownerId: self.id, rotation, trainingQueue: [], rally: null
-        }) + `<rect data-outline transform="rotate(${box.rotation})" x="${-box.halfX / scale}" y="${-box.halfY / scale}" width="${box.halfX * 2 / scale}" height="${box.halfY * 2 / scale}" fill="none" stroke-width="2" stroke-dasharray="5 3"/>`;
+        }, false) + `<rect data-outline transform="rotate(${box.rotation})" x="${-box.halfX / scale}" y="${-box.halfY / scale}" width="${box.halfX * 2 / scale}" height="${box.halfY * 2 / scale}" fill="none" stroke-width="2" stroke-dasharray="5 3"/>`;
         signature = nextSignature;
       }
       setAttribute(ghost, 'transform', `translate(${point.x} ${point.y}) scale(${scale})`);

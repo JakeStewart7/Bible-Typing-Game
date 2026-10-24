@@ -39,10 +39,10 @@ test('Stronghold sight comes from living units and completed buildings, never en
   const tower = addBuilding(state, 'tower', { x: 500, y: 300 });
   addBuilding(state, 'enemy-base', { x: 900, y: 100 }, true, true);
   equal(visionSources(state).length, 1);
-  equal(inVision(visionSources(state), { x: 220, y: 100 }), true);
-  equal(inVision(visionSources(state), { x: 220.01, y: 100 }), false);
+  equal(inVision(visionSources(state), { x: 219.99, y: 100 }), true);
+  equal(inVision(visionSources(state), { x: 220, y: 100 }), false);
   tower.progress = 1;
-  equal(inVision(visionSources(state), { x: 720, y: 300 }), true);
+  equal(inVision(visionSources(state), { x: 719.99, y: 300 }), true);
   worker.hp = 0; tower.hp = 0;
   equal(visionSources(state), []);
 });

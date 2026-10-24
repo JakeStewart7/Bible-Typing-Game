@@ -273,7 +273,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     });
   }
   elements.input.addEventListener('input', () => {
-    if (!snapshot) return;
+    if (!snapshot || elements.input.disabled) return;
     updateTypingInput(typing, elements.input.value);
     typingDirty = true;
     void send({ type: 'TYPE', phraseId, text: elements.input.value });
@@ -570,13 +570,14 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       }
     }
     if (player && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey
-      && !elements.input.disabled && !(document.activeElement instanceof HTMLSelectElement)) {
+      && !(document.activeElement instanceof HTMLSelectElement)) {
       if (snapshot.phase === 'playing' && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
         event.preventDefault();
         panKeys.add(event.key);
         if (panFrame === null) { panTime = performance.now(); panFrame = requestAnimationFrame(panWithKeys); }
         return;
       }
+      if (elements.input.disabled) return;
       const length = typingLengthKey(player.length, event.key);
       if (length) {
         event.preventDefault();

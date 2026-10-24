@@ -398,10 +398,10 @@ test('Stronghold construction tiers keep independent bars and instant upgrades l
 });
 
 test('Stronghold Army cannot prepare locked Barracks and unlocks each building tier independently', () => {
-  const engine = new StrongholdEngine({ resources: 300, length: 'medium', computersPaused: false });
+  const engine = new StrongholdEngine({ resources: 300, length: 'medium', computersPaused: false, season: 'summer' });
   const self = () => engine.snapshot('you').players.find(player => player.id === 'you')!;
   engine.send('you', { type: 'ROLE', role: 'production' });
-  equal(self().action, 'resources');
+  equal(self().action, 'barracks');
   equal(self().constructionTier, 1);
   const before = engine.snapshot('you');
   let locked = false;
@@ -410,11 +410,14 @@ test('Stronghold Army cannot prepare locked Barracks and unlocks each building t
   equal(locked, true);
   equal(engine.snapshot('you'), before);
   const phrase = self().phrase;
-  engine.send('you', { type: 'TYPE', phraseId: self().phraseId, text: phrase.slice(0, 2) });
+  let typingLocked = false;
+  try { engine.send('you', { type: 'TYPE', phraseId: self().phraseId, text: phrase.slice(0, 2) }); }
+  catch (error) { typingLocked = error instanceof Error && error.message.includes('tier 1'); }
+  equal(typingLocked, true);
   for (let second = 0; second < 15; second++) engine.advance(1);
-  equal(engine.snapshot('you').roleTasks.production.progress['barracks:1'], undefined);
+  equal(engine.snapshot('you').roleTasks.production.progress['barracks:1'], { work: 0, actionPhrases: 0 });
   equal(self().phrase, phrase);
-  equal(self().typed, phrase.slice(0, 2));
+  equal(self().typed, '');
   equal(engine.snapshot('you').tier, 0);
   equal(readyBuilding(engine.snapshot('you')), null);
   engine.send('you', { type: 'COMPUTERS', paused: true });

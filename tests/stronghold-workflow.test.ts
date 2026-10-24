@@ -139,6 +139,7 @@ test('Stronghold four players on one role keep unique phrases and private typing
 
 test('Stronghold private lengths survive role switches and world events refresh only each idle player', () => {
   const state = createStronghold({ resources: 50, length: 'medium', computersPaused: true });
+  state.tier = 1;
   const [you, teammate] = state.players;
   if (!you || !teammate) throw new Error('Missing players.');
   executeCommand(state, you, { type: 'LENGTH', length: 'short' });
@@ -428,8 +429,8 @@ test('Stronghold Army bot waits for Tier 1 before preparing barracks and trainin
   for (let step = 0; step < 100; step++) advanceStronghold(state, .25);
   equal(state.tier, 0);
   equal(state.buildings.some(building => building.kind === 'barracks'), false);
-  equal(state.players.find(player => player.role === 'production')?.action, 'resources');
-  equal(state.roleTasks.production.progress['barracks:1'], undefined);
+  equal(state.players.find(player => player.role === 'production')?.action, 'barracks');
+  equal(state.roleTasks.production.progress['barracks:1'], { work: 0, actionPhrases: 0 });
   const player = state.players[0]!;
   executeCommand(state, player, { type: 'READY', ready: true });
   for (let entry = 0; state.phase === 'tier-up' && entry < TIER_CHARACTER_GOAL; entry++) {

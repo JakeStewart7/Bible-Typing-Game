@@ -14,10 +14,11 @@ import { inVision, visionSources } from './fog.ts';
 
 type ActionWorld = Pick<StrongholdState, 'tier' | 'resources' | 'units' | 'technology' | 'buildings' | 'nodes'>;
 type TaskPlayer = Pick<Participant, 'role' | 'action' | 'constructionTier' | 'upgradeTarget' | 'work'>;
-export function actionUnlockProblem(state: Pick<StrongholdState, 'tier'>, task: Pick<Participant, 'action' | 'constructionTier' | 'upgradeTarget'>): string | null {
+export function actionUnlockProblem(state: Pick<StrongholdState, 'tier'>, task: Pick<Participant, 'action' | 'constructionTier' | 'upgradeTarget'> & Partial<Pick<Participant, 'role'>>): string | null {
   const tier = Math.max(MIN_TIER[task.action], task.action === 'tower' || task.action === 'barracks' ? task.constructionTier
     : task.action === 'upgrade' ? UPGRADE_OPTIONS[task.upgradeTarget].tier : 0);
-  return state.tier < tier ? `Requires tier ${tier}. Ready up to advance together.` : null;
+  if (state.tier < tier) return `Requires tier ${tier}. Ready up to advance together.`;
+  return task.role === 'production' && state.tier < 1 ? 'Requires tier 1. Army typing unlocks then.' : null;
 }
 export function actionProblem(state: ActionWorld, player: TaskPlayer, action: Action): string | null {
   if (!ROLE_ACTIONS[player.role].includes(action)) return 'This action belongs to another role.';

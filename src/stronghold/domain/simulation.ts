@@ -91,12 +91,7 @@ function updateBot(state: StrongholdState, player: Participant, seconds: number)
           ...Array.from({ length: 33 }, (_, index) => ({ x: 280 + index % 11 * 49, y: 460 + Math.floor(index / 11) * 55 }))];
         const point = sites.find(site => !placementProblem(state, player, action, site));
         if (!point) return;
-        // Legal placement failures are visible in the room; select a fresh task afterwards.
-        try { executeCommand(state, player, { type: 'PLACE', kind: action, point }); }
-        catch (error) {
-          state.message = `${player.name}: ${error instanceof Error ? error.message : String(error)}`;
-          assignPhrase(state, player);
-        }
+        executeCommand(state, player, { type: 'PLACE', kind: action, point });
       }
       return;
     }
