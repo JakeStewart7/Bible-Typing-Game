@@ -1,9 +1,6 @@
 .app-shell[data-theme="stronghold"] { grid-template-rows: minmax(0, 1fr); min-height: 0; }
 .app-shell[data-theme="stronghold"] > .topbar { display: none; }
 :root[data-stronghold-cursor], :root[data-stronghold-cursor] *, :root[data-stronghold-cursor] ::backdrop { cursor: var(--stronghold-cursor, default) !important; }
-:root[data-stronghold-cursor][data-pointer-visible], :root[data-stronghold-cursor][data-pointer-visible] *, :root[data-stronghold-cursor][data-pointer-visible] ::backdrop { cursor: none !important; }
-.stronghold-pointer { position: fixed; inset: auto; width: 32px; height: 34px; margin: 0; padding: 0; border: 0; background: transparent; overflow: visible; pointer-events: none; }
-.stronghold-pointer img { display: block; max-width: none; }
 .stronghold-screen {
   --battlefield-color: #1c9e45; --night-opacity: 0;
   --deck-height: clamp(290px, 30dvh, 300px); --header-height: 70px; --typing-height: 76px; --ink: #111; --muted: #444; --border: #333;
@@ -16,7 +13,7 @@
 .stronghold-screen :is(button, select, input, summary, small, p, label, h2, h3, strong, span, text) { font-family: var(--stronghold-font); font-weight: var(--stronghold-font-weight); }
 .stronghold-screen, .stronghold-screen :is(button, select, input, summary, .stronghold-map-unit), .stronghold-screen #stronghold-map { cursor: var(--stronghold-cursor, auto); }
 .stronghold-screen button:focus-visible, .stronghold-screen select:focus-visible, .stronghold-screen input:focus-visible { outline: 2px solid #111; outline-offset: 1px; }
-.stronghold-tier:focus-visible::before { background: #ffe64c; }
+.stronghold-tier:focus-visible { outline: 2px solid #111; outline-offset: 2px; }
 .stronghold-stage {
   position: relative; width: 100%; height: 100%; min-height: 0; overflow: hidden;
   background: linear-gradient(to bottom, #c6d8e5 0 var(--header-height),
@@ -170,16 +167,14 @@
 .stronghold-symbol--builder { background: #a64caf; clip-path: polygon(50% 0, 100% 100%, 0 100%); position: relative; }
 .stronghold-symbol--builder::after { content: ''; position: absolute; inset: 5px 4px 3px; background: #cec0df; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
 .stronghold-symbol--tower { background: #ffd500; clip-path: polygon(0 0, 100% 0, 100% 30%, 65% 30%, 65% 100%, 35% 100%, 35% 30%, 0 30%); }
-.stronghold-tier-mount { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 84px; height: 84px; filter: drop-shadow(0 3px 1px #574b25) drop-shadow(0 5px 5px #10251b99); }
+.stronghold-tier-mount { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 84px; height: 84px; }
 .stronghold-tier {
   position: relative; width: 84px; height: 84px;
-  z-index: 5; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
-  background: #9b7d34; border: none; border-radius: 0; padding: 15px 2px; font: var(--stronghold-font-weight) 15px/1.2 var(--stronghold-font); color: #382b12;
+  z-index: 5;
+  background: #e3b850; border: 1px solid #9b7d34; border-radius: 2px; padding: 15px 2px; font: var(--stronghold-font-weight) 15px/1.2 var(--stronghold-font); color: #382b12; box-shadow: none;
 }
-.stronghold-tier::before { content: ''; position: absolute; inset: 3px; background: #e3b850; clip-path: inherit; box-shadow: inset 3px 3px #fff2ad, inset -4px -4px #795019; }
-.stronghold-tier:not(:disabled):hover::before { background: #fff6ba; }
-.stronghold-tier:disabled { opacity: 1; color: #606760; background: #7e8780; }
-.stronghold-tier:disabled::before { background: #c6ccc7; box-shadow: inset 3px 3px #e7ece8, inset -4px -4px #8a938c; }
+.stronghold-tier:not(:disabled):hover { background: #edc76c; transform: none; box-shadow: none; }
+.stronghold-tier:disabled { opacity: 1; color: #606760; background: #c6ccc7; border-color: #8a938c; }
 .stronghold-tier > span, .stronghold-tier > strong { position: relative; display: block; }
 .stronghold-tier > span:not(.stronghold-cost) { font-size: 13px; }
 .stronghold-tier-progress { display: flex; flex: 0 0 40px; width: 100%; overflow: hidden; border: 4px solid #111; background: #ddd; }
@@ -232,7 +227,6 @@
 .stronghold-role-buttons { display: flex; gap: 3px; }
 .stronghold-role-buttons button { display: grid; place-items: center; width: 26px; height: 26px; min-height: 26px; padding: 3px; border: 1px solid #8f9c93; border-radius: 1px; background: #f2f4f2; color: var(--player-text); box-shadow: none; transform: none; }
 .stronghold-role-buttons svg { width: 18px; height: 18px; }
-.stronghold-role-buttons [data-role-button="army"] svg { color: var(--player-bold); }
 .stronghold-role-buttons button[aria-pressed="true"] { border-color: var(--player-bold); background: var(--player-fill); outline: 1px solid var(--player-bold); }
 .stronghold-role-buttons button:disabled { opacity: .5; }
 .stronghold-role-buttons button[aria-pressed="true"]:disabled { opacity: 1; }
@@ -277,7 +271,8 @@
 .stronghold-peer-typed { margin: 0; padding: 3px 5px; color: var(--player-text); font: var(--stronghold-font-weight) 12px/1.3 var(--stronghold-font); overflow-wrap: anywhere; }
 .stronghold-army-help { margin: 2px 0; font-size: 11px; line-height: 1.35; }
 .stronghold-typing { grid-area: phrase; min-width: 0; padding: 0; width: 100%; background: #f3f5f3; border: 1px solid #9ba89f; border-radius: 0; color: var(--player-text); box-shadow: none; overflow: hidden; }
-.stronghold-typing .text-display { min-height: 30px; max-height: 34px; padding: 3px 6px; overflow: auto; font: var(--stronghold-font-weight) clamp(16px, 1.5vw, 20px)/1.2 var(--stronghold-font); text-align: center; color: var(--player-text); letter-spacing: 0; }
+.stronghold-typing .text-display { min-height: 30px; max-height: 34px; padding: 3px 6px; overflow: hidden; white-space: pre; overflow-wrap: normal; scrollbar-width: none; font: var(--stronghold-font-weight) clamp(16px, 1.5vw, 20px)/1.2 var(--stronghold-font); text-align: left; color: var(--player-text); letter-spacing: 0; }
+.stronghold-typing .text-display::-webkit-scrollbar { display: none; }
 .stronghold-typing .progress-track { height: 4px; margin: 0; background: #dfd7bc; }
 .stronghold-typing .progress-track > div { background: var(--player-bold); transition: none; }
 .stronghold-typing .char.correct { color: var(--player-bold); background: transparent; }
@@ -309,7 +304,7 @@
 .stronghold-tier-dialog::backdrop { background: #0003; }
 .stronghold-tier-dialog .stronghold-private { position: static; transform: none; width: 100%; height: auto; grid-template-columns: 132px minmax(0, 1fr); grid-template-rows: 32px minmax(0, auto); grid-template-areas: "length input" "length phrase"; box-shadow: none; }
 .stronghold-tier-dialog .stronghold-typing { padding: 14px 20px; }
-.stronghold-tier-dialog .text-display { min-height: 66px; max-height: 110px; font: var(--stronghold-font-weight) clamp(20px, 3vw, 36px)/1.6 var(--stronghold-font); text-align: center; }
+.stronghold-tier-dialog .text-display { min-height: 66px; max-height: 110px; font: var(--stronghold-font-weight) clamp(20px, 3vw, 36px)/1.6 var(--stronghold-font); }
 .stronghold-typing .text-display, .stronghold-typing .char, .stronghold-typed-area .typing-input,
 .stronghold-typed-area .typed-bar, .stronghold-typed-area .typed-bar span,
 .stronghold-screen .stronghold-peer-typed, .stronghold-tier-contributions p { font-family: var(--stronghold-font, Arial, Helvetica, sans-serif); }

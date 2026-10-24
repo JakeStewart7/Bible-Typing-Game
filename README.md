@@ -88,7 +88,8 @@ text for its heading, role selector, task labels, costs, progress labels and typ
 text. Tier contribution cards use that same palette. Bright accents and
 white/gray panel backgrounds remain unchanged.
 The Stronghold typing cursor snaps directly to the current character without
-animated travel or a movement speed limit.
+animated travel or a movement speed limit. Phrases stay on one line and scroll
+horizontally as you type, keeping the active character visible without a scrollbar.
 
 Joining **Army** after Tier 1 unlocks selects its saved Barracks work rather than
 an invisible Supplies task. At Tier 0, Army types for supplies until construction
@@ -204,12 +205,14 @@ The length reel stays clipped while keeping its neighboring choices clickable.
 Stronghold typing uses the same Arial-family font as the controls and a thin
 neutral caret. Mistakes retain a vivid highlight, outline and underline matching
 the selected player color, without a strike-through.
-The larger Tier Up badge aligns with the top controls and hangs below the bar.
+The flat, single-color Tier Up button aligns with the top controls.
 Economy places Gatherer and Supplies together, Relay beneath, and its upgrade last.
-Unit Control's role button reuses the actual player cursor.
+Economy uses an outlined sprout, Army a slightly wider outlined sword, and
+Unit Control an outlined cursor in the same muted shade as the other role icons.
 Hover descriptions appear immediately in dark styled tooltips, including disabled
-controls and map entities. The custom player cursor remains visible while typing,
-over controls and dialogs, with the native custom cursor as a fallback.
+controls and map entities. The player-colored mouse cursor is a native custom
+cursor over controls and dialogs, not a JavaScript-positioned overlay, so page
+simulation or rendering work cannot hold its position in place.
 The deck fits the viewport height, with scrolling inside action panels
 and the squad list on narrow screens rather than clipping the bottom.
 The map starts at **200% zoom**, focused toward the home base. Use the mouse wheel

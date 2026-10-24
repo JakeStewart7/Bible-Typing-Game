@@ -12,8 +12,8 @@ import { PLAYER_CURSOR_SHAPE } from './player-theme.ts';
 
 export const PLAYER_IDS = ['you', 'bot-1', 'bot-2', 'bot-3'] as const;
 const ROLE_ICONS: Record<Role, string> = {
-  economy: '<path d="M8 3h8l-2 5c2 2 6 6 6 10 0 3-3 4-8 4s-8-1-8-4c0-4 4-8 6-10ZM8 8h8"/><circle cx="12" cy="16" r="3"/>',
-  production: '<path d="M8 16L18 3L21 2L20 6L10 18Z"/><path d="M4 13L13 22M4 22L8 18"/>',
+  economy: '<path d="M12 21V10M12 15C6 15 3 11 3 6c6 0 9 3 9 9ZM12 11c0-5 3-8 9-8 0 5-3 8-9 8Z"/>',
+  production: '<path d="M7 15L17 3L22 2L21 7L11 19Z"/><path d="M4 13L13 22M4 22L8 18"/>',
   army: PLAYER_CURSOR_SHAPE,
   defenses: '<path d="M3 21V5h4v4h3V3h4v6h3V5h4v16ZM10 21v-6h4v6"/>'
 };
@@ -99,7 +99,7 @@ export function strongholdWorkspaceMarkup(): string {
         <p>Supplies, Gatherers, Barracks, Builders, Walls and Towers need typing, not supplies. Each typing option has a small progress bar; select it to show its progress in the main player-colored bar. More expensive buildings fill more slowly. Excess progress from a completed entry carries into the next bar. Once construction is ready, further entries do not bank more completions. Troops, upgrades and relays cost supplies without typing.</p>
         <p>Matches normally start at Tier 0, with T1 starting units and buildings. Complete the first shared tier challenge to unlock T1 Barracks and towers. Locked tasks cannot be selected or typed for. Army types for supplies at Tier 0 and selects Barracks work when you join after unlocking T1. Fill the work bar, then click the map to place. Each player chooses tasks independently; matching tasks share work, and prepared work survives tier challenges. Unit Control can type for supplies while issuing orders.</p>
         <p>Each typing task keeps its progress when you switch tasks or roles. Building tiers keep separate progress. Dev options automatically saves defaults in this browser for new matches and refreshes.</p>
-        <p>Use the supply bag, sword, cursor and castle buttons, or Ctrl+Tab / Ctrl+Shift+Tab, to switch roles. Tab selects the next unlocked task; Shift+Tab selects the previous one. Click friendly buildings to select; right-click sets their rally points. Unit Control can set all building rally points at once.</p>
+        <p>Use the sprout, sword, cursor and castle buttons, or Ctrl+Tab / Ctrl+Shift+Tab, to switch roles. Tab selects the next unlocked task; Shift+Tab selects the previous one. Click friendly buildings to select; right-click sets their rally points. Unit Control can set all building rally points at once.</p>
         <p>The command bar timer shows battle time, stopping during pauses, tier challenges and the match outcome. Build again and New game reset the battlefield, timer, typing, selections and camera using your saved new-match defaults.</p>
         <p>Arrow keys pan the map. Page Up selects longer text and Page Down shorter text, or click a length option. Shift+arrows still selects typed text. Alt+number chooses the matching displayed option in your current role.</p>
         <p>The map starts zoomed toward the home base. Scroll to zoom; Alt-drag, middle-drag or arrow keys pan. Moving the pointer to a map edge does not scroll. Right-click moves units or cancels placement, never pans. Shift-drag still adds troops to your selection.</p>
@@ -166,7 +166,7 @@ export function strongholdWorkspaceMarkup(): string {
             <div id="stronghold-typed-bar" class="typed-bar" aria-hidden="true"></div><input id="stronghold-input" class="typing-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type here">
           </div>
           <section id="stronghold-typing" class="stronghold-typing">
-            <div id="stronghold-phrase" class="text-display" tabindex="0" aria-label="Your private text to type"></div>
+            <div id="stronghold-phrase" class="text-display" data-horizontal-scroll="true" tabindex="0" aria-label="Your private text to type"></div>
             <div class="progress-track is-hidden" aria-hidden="true"><div id="stronghold-typing-progress"></div></div>
           </section>
         </section>
