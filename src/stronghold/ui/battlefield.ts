@@ -6,6 +6,7 @@ import { createSvgLayer, setAttribute, setText } from './dom-updates.ts';
 import { playerTheme } from './player-theme.ts';
 import { TRAINING_SECONDS } from '../domain/training.ts';
 import { WALL_HALF_WIDTH } from '../domain/navigation.ts';
+import { exploredPath } from '../domain/fog.ts';
 
 function health(hp: number, max: number, y: number, width = 26): string {
   return `<rect x="${-width / 2}" y="${y}" width="${width}" height="3" fill="#1d3029"/><rect data-health x="${-width / 2}" y="${y}" width="${width * Math.max(0, hp / max)}" height="3" fill="#a6ed89"/>`;
@@ -149,8 +150,28 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
   map.innerHTML = `<defs>
     <filter id="stronghold-resource-glow" x="-100%" y="-100%" width="300%" height="300%"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#effff2" flood-opacity=".95"/></filter>
     <filter id="stronghold-work-glow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="1.5" flood-color="#f0f5ff" flood-opacity=".7"/></filter>
-    <filter id="stronghold-attack-glow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="1.8" flood-color="#ed914c" flood-opacity=".8"/></filter></defs>
-    <g data-layer="coverage" pointer-events="none"></g><g data-layer="links" pointer-events="none"></g><g data-layer="nodes"></g><g data-layer="chunks" pointer-events="none"></g><g data-layer="buildings"></g><g data-layer="units"></g>
+    <filter id="stronghold-attack-glow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="1.8" flood-color="#ed914c" flood-opacity=".8"/></filter>
+    <filter id="stronghold-fog-edge"><feGaussianBlur stdDeviation="6"/></filter>
+    <g id="stronghold-vision-circles" data-layer="vision"></g>
+    <mask id="stronghold-current-sight" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="650" style="mask-type:luminance">
+      <rect width="1000" height="650" fill="black"/><use href="#stronghold-vision-circles" fill="white"/>
+    </mask>
+    <mask id="stronghold-fog-shadow" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="650" style="mask-type:luminance">
+      <rect width="1000" height="650" fill="white"/><use href="#stronghold-vision-circles" fill="black"/>
+    </mask>
+    <mask id="stronghold-fog-unexplored" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="650" style="mask-type:luminance">
+      <rect width="1000" height="650" fill="white"/><path data-explored fill="black" filter="url(#stronghold-fog-edge)"/><use href="#stronghold-vision-circles" fill="black"/>
+    </mask></defs>
+    <g data-layer="memories" mask="url(#stronghold-fog-shadow)" pointer-events="none" aria-hidden="true" opacity=".7">
+      <g data-layer="remembered-nodes"></g><g data-layer="remembered-buildings"></g><g data-layer="remembered-units"></g>
+    </g>
+    <g data-layer="visible-world" mask="url(#stronghold-current-sight)">
+      <g data-layer="coverage" pointer-events="none"></g><g data-layer="links" pointer-events="none"></g><g data-layer="nodes"></g><g data-layer="chunks" pointer-events="none"></g><g data-layer="buildings"></g><g data-layer="units"></g>
+    </g>
+    <g data-layer="fog" pointer-events="none" aria-hidden="true">
+      <rect width="1000" height="650" fill="#080f18" fill-opacity=".68" mask="url(#stronghold-fog-shadow)"/>
+      <rect width="1000" height="650" fill="#080f12" mask="url(#stronghold-fog-unexplored)"/>
+    </g>
     <g data-layer="rally" data-tooltip="Production rally point"><path d="M0 14V-15l20 7-20 7" fill="#e7d98b" stroke="#e7d98b" opacity=".6"/><desc>Production rally point</desc></g>`;
   function layer(name: string): SVGGElement {
     const found = map.querySelector(`[data-layer="${name}"]`);
@@ -165,6 +186,23 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
   const unitDirections = new Map<number, Point>();
   let connectedRelayIds = new Set<number>();
   const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const renderVision = createSvgLayer<{ id: number; x: number; y: number; radius: number }>(layer('vision'), () => '<circle/>',
+    (element, source) => { position(element, source); setAttribute(child(element, 'circle'), 'r', String(source.radius)); });
+  const renderRememberedUnits = createSvgLayer<Unit>(layer('remembered-units'), unit => unitMarkup(unit, false),
+    (element, unit) => { position(element, unit); setAttribute(element, 'data-memory-unit', String(unit.id)); },
+    unit => `${unit.kind}/${unit.formation}`);
+  const renderRememberedBuildings = createSvgLayer<Building>(layer('remembered-buildings'), buildingMarkup,
+    (element, building) => {
+      if (!technology) throw new Error('Missing Stronghold technology snapshot.');
+      position(element, building, buildingScale(technology, building));
+      setAttribute(element, 'data-memory-building', String(building.id));
+    }, building => `${building.kind}/${building.tier}/${building.hp}/${building.rotation}`);
+  const renderRememberedNodes = createSvgLayer<ResourceNode>(layer('remembered-nodes'), node =>
+    `<circle r="${node.rich ? 27 : 24}" fill="${node.remaining <= 0 ? '#aaa' : node.rich ? '#ccc0e0' : '#9ed7e6'}" stroke="${node.rich ? '#a64caf' : '#00aeef'}" stroke-width="3"/>`,
+    (element, node) => { position(element, node); setAttribute(element, 'data-memory-node', String(node.id)); },
+    node => `${node.rich}/${node.remaining <= 0}`);
+  let exploredCount = -1;
+  const explored = child(map, '[data-explored]');
   const renderCoverage = createSvgLayer<Building>(layer('coverage'), () =>
     `<circle data-relay-radius r="${RELAY_RANGE}" fill="#8ce4db" fill-opacity=".035" stroke="#b4ede2" stroke-opacity=".3" stroke-width="1" stroke-dasharray="4 5"/>`,
   (element, building) => { position(element, building); setAttribute(element, 'data-relay-source', String(building.id)); });
@@ -230,6 +268,14 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     selection = selected;
     technology = snapshot;
     elapsed = snapshot.elapsed;
+    renderVision(snapshot.fog.sources.map((source, index) => ({ ...source, id: index })));
+    if (exploredCount !== snapshot.fog.explored.length) {
+      setAttribute(explored, 'd', exploredPath(snapshot.fog.explored));
+      exploredCount = snapshot.fog.explored.length;
+    }
+    renderRememberedNodes(snapshot.fog.nodes);
+    renderRememberedBuildings(snapshot.fog.buildings);
+    renderRememberedUnits(snapshot.fog.units);
     const self = snapshot.players.find(player => player.id === snapshot.selfId);
     if (self) selectionColor = playerTheme(self.color).light;
     const livingUnits = new Set(snapshot.units.map(unit => unit.id));
@@ -259,5 +305,6 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     unitDirections.clear();
     linkSignature = '';
     connectedRelayIds.clear();
+    exploredCount = -1;
   } });
 }

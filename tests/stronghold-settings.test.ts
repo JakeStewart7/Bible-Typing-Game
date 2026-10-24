@@ -13,6 +13,7 @@ import { distance } from '../src/stronghold/domain/rules.ts';
 import { unitRadius } from '../src/stronghold/domain/navigation.ts';
 import { phraseWork, taskWork } from '../src/stronghold/domain/technology.ts';
 import { readyBuilding } from '../src/stronghold/ui/map-controls.ts';
+import { inVision } from '../src/stronghold/domain/fog.ts';
 
 function human(state: StrongholdState): Participant {
   const player = state.players.find(player => player.id === 'you');
@@ -174,7 +175,7 @@ test('Stronghold saved seasons and day/night initialize every fresh game without
     for (let restart = 0; restart < 3; restart++) {
       const snapshot = engine.snapshot('you');
       equal(snapshot.season, season);
-      equal(snapshot.nodes, seasonalNodes(season));
+      equal(snapshot.nodes, seasonalNodes(season).filter(node => inVision(snapshot.fog.sources, node)));
       equal(snapshot.environmentElapsed, period === 'night' ? DAY_SECONDS : 0);
       equal(daylight(snapshot.environmentElapsed).period, period);
       equal(snapshot.elapsed, 0);
@@ -253,7 +254,7 @@ test('Stronghold starts with 50 supplies, Medium text and running computers, and
 });
 
 test('Stronghold restart replaces the entire progressed match with a fresh initial state', () => {
-  const engine = new StrongholdEngine({ resources: 375, length: 'long', computersPaused: true });
+  const engine = new StrongholdEngine({ resources: 375, length: 'long', computersPaused: true, season: 'summer' });
   const initial = engine.snapshot('you');
   engine.send('you', { type: 'ROLE', role: 'army' });
   const unit = engine.snapshot('you').units.find(unit => unit.kind === 'warrior')!;
@@ -431,7 +432,7 @@ test('Stronghold Army cannot prepare locked Barracks and unlocks each building t
   equal(readyBuilding(engine.snapshot('you')), 'barracks');
   const supplies = engine.snapshot('you').resources;
   const work = self().work;
-  engine.send('you', { type: 'PLACE', kind: 'barracks', point: { x: 800, y: 570 } });
+  engine.send('you', { type: 'PLACE', kind: 'barracks', point: { x: 680, y: 570 } });
   equal(self().work, Math.round((work - 60) * 100) / 100);
   equal(engine.snapshot('you').resources, supplies);
   equal(engine.snapshot('you').buildings.some(building => building.kind === 'barracks' && building.tier === 1), true);
@@ -506,7 +507,7 @@ test('Stronghold all three Barracks selections preserve independent shared progr
     equal(expected >= 60 * tier, true);
     entry(state, partner);
     equal([player.work, partner.work], [expected, expected]);
-    send(state, { type: 'PLACE', kind: 'barracks', point: { x: 620 + (tier - 1) * 70, y: 570 } });
+    send(state, { type: 'PLACE', kind: 'barracks', point: { x: 590 + (tier - 1) * 50, y: 570 } });
     expected = Math.round((expected - 60 * tier) * 100) / 100;
     equal([player.work, partner.work], [expected, expected]);
     equal(state.roleTasks.production.progress[`barracks:${tier}`], { work: expected, actionPhrases: 0 });

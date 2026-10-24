@@ -244,6 +244,19 @@ click pulse; reduced-motion mode uses only a fade.
 Minimum zoom shows the entire map; zoom and pan do not change world coordinates or speed.
 Shift-drag retains additive army selection.
 
+Fog of war shares vision across the whole team. Units explore the map and
+completed friendly buildings reveal nearby ground. Gatherers/builders see 120
+map units; warriors 150, archers 180 and catapults 210. Castles reveal 200,
+barracks 160, towers 220, relays 120 and walls 80.
+Unexplored ground is dark; explored ground returns to shadow outside current
+vision. Resource nodes, enemy buildings and enemy troops remain as frozen,
+non-interactive last-seen silhouettes until you revisit. Hidden movement,
+damage, depletion and destruction do not update those memories.
+Only currently visible enemies can be targeted, and hidden enemy upgrades,
+construction and deaths do not appear in the log. Wave warnings remain global.
+Build in current vision and send gatherers or troops out to discover more
+resources. A new game resets exploration and memories.
+
 The length selector is a faded reel: **Page Down** selects shorter entries,
 **Page Up** longer entries, from anywhere outside dropdowns and dev fields.
 Clicking an option also works; endpoints do not wrap or discard current typing.

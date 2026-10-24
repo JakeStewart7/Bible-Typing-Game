@@ -46,9 +46,9 @@ test('Stronghold free barracks require proportional tier-specific typing and ret
     executeCommand(state, self(state), { type: 'TYPE', phraseId: self(state).phraseId, text: self(state).phrase });
   }
   equal(self(state).work, expected);
-  rejects(() => executeCommand(state, self(state), { type: 'PLACE', kind: 'barracks', point: { x: 770, y: 570 } }));
+  rejects(() => executeCommand(state, self(state), { type: 'PLACE', kind: 'barracks', point: { x: 690, y: 570 } }));
   finish(state);
-  executeCommand(state, self(state), { type: 'PLACE', kind: 'barracks', point: { x: 770, y: 570 } });
+  executeCommand(state, self(state), { type: 'PLACE', kind: 'barracks', point: { x: 690, y: 570 } });
   equal(state.resources, 500);
   const barracks = state.buildings.filter(building => building.kind === 'barracks');
   equal(barracks.map(building => building.tier), [1, 3]);

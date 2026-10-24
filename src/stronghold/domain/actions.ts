@@ -10,6 +10,7 @@ import { creditResources, daylight, DAY_SECONDS, NIGHT_SECONDS, SEASON_BONUSES, 
 import { tierProgress } from './tier-progress.ts';
 import { buildingFootprint, footprintCorners, footprintsOverlap, nodeOverlapsFootprint, unitSpawnPoint } from './navigation.ts';
 import { isArmyUnit, queuedUnits, supportsRally, trainingBarracks, TRAINING_SECONDS } from './training.ts';
+import { inVision, visionSources } from './fog.ts';
 
 type ActionWorld = Pick<StrongholdState, 'tier' | 'resources' | 'units' | 'technology' | 'buildings' | 'nodes'>;
 type TaskPlayer = Pick<Participant, 'role' | 'action' | 'constructionTier' | 'upgradeTarget' | 'work'>;
@@ -39,19 +40,20 @@ export function actionProblem(state: ActionWorld, player: TaskPlayer, action: Ac
 
 export function placementProblem(
   state: ActionWorld & Pick<StrongholdState, 'buildings'>,
-  player: TaskPlayer, kind: Extract<BuildingKind, 'relay' | 'barracks' | 'tower' | 'wall'>, point: Point, rotation = 0
+  player: TaskPlayer, kind: Extract<BuildingKind, 'relay' | 'barracks' | 'tower' | 'wall'>, point: Point, rotation = 0, excludeBuildingId?: number
 ): string | null {
   if (!validPoint(point)) return 'Choose a location inside the battlefield.';
   if (!Number.isFinite(rotation) || rotation < 0 || rotation >= 360 || rotation % WALL_ROTATION_STEP !== 0) return 'Choose one of the 16 wall angles, 22.5 degrees apart.';
   const footprint = buildingFootprint(state, { ...point, kind, rotation, tier: player.constructionTier, enemy: false });
   if (footprintCorners(footprint).some(corner => !validPoint(corner) || corner.y < 130)) return `Keep the entire ${kind} inside the construction area.`;
+  if (!inVision(visionSources(state), point)) return 'Explore this location with a unit before building here.';
   const blockers = placementBlockers(state, player, kind, point, rotation);
   if (kind !== 'relay' && (player.action !== kind || player.work < taskWork(player))) return 'Complete the construction work first.';
   const problem = actionProblem(state, player, kind);
   if (problem) return problem;
   if (!state.units.some(unit => unit.kind === 'builder' && unit.hp > 0)) return 'Recruit a builder in Defenses first.';
   if (state.buildings.filter(building => building.kind === kind && !building.enemy && building.hp > 0).length >= BUILDING_CAPS[kind]) return 'Building limit reached.';
-  if (blockers.buildings.length) return 'Leave space between buildings.';
+  if (blockers.buildings.some(id => id !== excludeBuildingId)) return 'Leave space between buildings.';
   if (blockers.nodes.length) return 'Do not build over resource nodes.';
   if (point.y < 130) return 'The enemy stronghold cannot be used as a construction site.';
   return null;
@@ -233,8 +235,8 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     if (direction !== 1 && direction !== -1) throw new Error('Choose a valid rotation direction.');
     const rotation = ((wall.rotation ?? 0) + direction * WALL_ROTATION_STEP + 360) % 360;
     // Validate geometry without spending or requiring another completed construction task.
-    const problem = placementProblem({ ...state, buildings: state.buildings.filter(building => building !== wall) },
-      { ...player, role: 'defenses', action: 'wall', work: taskWork({ ...player, action: 'wall' }) }, 'wall', wall, rotation);
+    const problem = placementProblem(state,
+      { ...player, role: 'defenses', action: 'wall', work: taskWork({ ...player, action: 'wall' }) }, 'wall', wall, rotation, wall.id);
     if (problem) throw new Error(problem);
     wall.rotation = rotation;
     playerEvent(state, player, 'rotated Wall');

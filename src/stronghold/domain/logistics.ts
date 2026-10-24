@@ -3,6 +3,7 @@ import type { Building, Point, StrongholdState, Unit } from './types.ts';
 import { ENTITY_LABELS, recordEvent } from './events.ts';
 import { buildingApproach, buildingFootprint, distanceToFootprint, movementDestination, moveUnitToward, resourceNodeRadius, unitRadius, wallApproach } from './navigation.ts';
 import { creditResources } from './environment.ts';
+import { knownResourceNodes } from './fog.ts';
 
 export function relayNeighbors(state: Pick<StrongholdState, 'buildings'>, point: Point, excludeId?: number): Building[] {
   return state.buildings.filter(building => (building.kind === 'relay' || building.kind === 'castle')
@@ -69,15 +70,18 @@ function updateWorker(state: StrongholdState, worker: Unit, seconds: number): vo
     }
     return;
   }
-  let node = state.nodes.find(candidate => candidate.id === worker.task && candidate.remaining > 0);
+  const known = knownResourceNodes(state);
+  let node = known.find(candidate => candidate.id === worker.task && candidate.remaining > 0);
   if (!node) {
-    node = state.nodes.filter(candidate => candidate.remaining > 0)
+    node = known.filter(candidate => candidate.remaining > 0)
       .sort((a, b) => distance(worker, a) - distance(worker, b))[0];
     worker.task = node?.id ?? null;
   }
   if (!node) return;
   moveUnitToward(state, worker, node, seconds * UNIT_RULES.worker.speed);
   if (distance(worker, node) > resourceNodeRadius(node) + unitRadius(worker) + 1 || worker.cooldown > 0) return;
+  node = state.nodes.find(candidate => candidate.id === node?.id);
+  if (!node || node.remaining <= 0) { worker.task = null; return; }
   const amount = Math.min(node.remaining, (node.rich ? 8 : 4) + state.upgrades.economy * 2);
   node.remaining -= amount;
   if (node.remaining === 0) recordEvent(state, 'Resource node depleted');

@@ -7,6 +7,7 @@ import type { ArmyUnitKind, Building, BuildingKind, Participant, Point, Season, 
 import { DAY_SECONDS, randomSeason, seasonalNodes } from './environment.ts';
 import { PLAYER_COLORS, STARTING_ENTITIES } from './types.ts';
 import { unitRadius, unitSpawnClear } from './navigation.ts';
+import { createFog, updateFog } from './fog.ts';
 
 export function addUnit(state: StrongholdState, kind: UnitKind, point: Point, formation: ArmyUnitKind | null = null): Unit {
   const hp = ((formation ? UNIT_RULES[formation].hp : UNIT_RULES[kind].hp)
@@ -42,6 +43,7 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
   const state: StrongholdState = {
     season: startingSeason, environmentElapsed: options.period === 'night' ? DAY_SECONDS : 0,
     phase: 'playing', tier: options.tier ?? 0, elapsed: 0, wave: 0, waveIn: 60, resources: options.resources,
+    fog: createFog(),
     event: 'peace', eventIn: 60, nextId: 1, units: [], buildings: [], chunks: [],
     players: roster.map(player => ({
       ...player, action: player.role === 'economy' ? 'worker' : player.role === 'defenses' ? 'builder' : 'resources',
@@ -85,5 +87,6 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
     }
   }
   state.players.forEach(player => assignPhrase(state, player));
+  updateFog(state);
   return state;
 }

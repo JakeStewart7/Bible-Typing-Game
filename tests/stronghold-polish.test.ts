@@ -438,6 +438,7 @@ test('Stronghold thicker walls block the added edge area at every wall angle', (
 
 test('Stronghold wall placement and rotation allow unit overlap but reject invalid angles and bounds', () => {
   const state = createStronghold();
+  addUnit(state, 'builder', { x: 300, y: 450 });
   const player = state.players[0]!;
   executeCommand(state, player, { type: 'ROLE', role: 'defenses' });
   executeCommand(state, player, { type: 'ACTION', action: 'wall' });
