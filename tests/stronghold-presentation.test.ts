@@ -11,8 +11,8 @@ test('Stronghold role and order icons are outlined and cost badges reuse the res
   if (!sword || !economy) throw new Error('Missing role icons.');
   equal(sword.includes('fill="none"'), true);
   equal(sword.includes('fill="currentColor"'), false);
-  equal(economy.includes('M12 21V10'), true);
-  equal(economy.includes('<circle'), false);
+  equal(economy.includes('class="stronghold-symbol stronghold-symbol--resource"'), true);
+  equal(economy.includes('<svg'), false);
   equal(sword.includes('M7 15L17 3L22 2L21 7L11 19Z'), true);
   const cursor = /id="stronghold-role-you-army"[\s\S]*?<\/button>/.exec(markup)?.[0];
   equal(cursor?.includes('fill="none" stroke="currentColor"'), true);

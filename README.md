@@ -223,10 +223,11 @@ The length reel stays clipped while keeping its neighboring choices clickable.
 Stronghold typing uses the same Arial-family font as the controls and a thin
 neutral caret. Mistakes retain a vivid highlight, outline and underline matching
 the selected player color, without a strike-through.
-The flat, single-color Tier Up button aligns with the top controls.
+The flat, single-color octagonal Tier Up button aligns with the top controls.
 Economy places Gatherer and Supplies together, Relay beneath, and its upgrade last.
-Economy uses an outlined sprout, Army a slightly wider outlined sword, and
-Unit Control an outlined cursor in the same muted shade as the other role icons.
+Economy reuses the blue resource-circle icon, Army uses a slightly wider outlined
+sword, and Unit Control has a hollow cursor in the same muted shade as the other
+role icons. The actual native mouse cursor remains filled.
 Hover descriptions appear immediately in dark styled tooltips, including disabled
 controls and map entities. The player-colored mouse cursor is a native custom
 cursor over controls and dialogs, not a JavaScript-positioned overlay, so page

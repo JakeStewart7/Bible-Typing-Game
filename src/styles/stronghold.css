@@ -170,7 +170,7 @@
 .stronghold-tier-mount { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 84px; height: 84px; }
 .stronghold-tier {
   position: relative; width: 84px; height: 84px;
-  z-index: 5;
+  z-index: 5; clip-path: polygon(29.3% 0, 70.7% 0, 100% 29.3%, 100% 70.7%, 70.7% 100%, 29.3% 100%, 0 70.7%, 0 29.3%);
   background: #e3b850; border: 1px solid #9b7d34; border-radius: 2px; padding: 15px 2px; font: var(--stronghold-font-weight) 15px/1.2 var(--stronghold-font); color: #382b12; box-shadow: none;
 }
 .stronghold-tier:not(:disabled):hover { background: #edc76c; transform: none; box-shadow: none; }

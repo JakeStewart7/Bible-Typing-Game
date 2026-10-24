@@ -5,7 +5,9 @@ const THEMES = [
   { color: '#18b644', bold: '#0c6427', light: '#bdeb18', text: '#245032' }
 ] as const;
 
-export const PLAYER_CURSOR_SHAPE = '<path d="M3 2V23L9 18L14 28L19 25L14 16H22Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>';
+const CURSOR_PATH = 'M3 2V23L9 18L14 28L19 25L14 16H22Z';
+export const UNIT_CONTROL_ICON = `<path d="${CURSOR_PATH}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>`;
+const PLAYER_CURSOR_SHAPE = `<path d="${CURSOR_PATH}" fill="currentColor" stroke="white" stroke-width="2" stroke-linejoin="round"/>`;
 
 export function playerTheme(color: string) {
   const theme = THEMES.find(candidate => candidate.color === color);
