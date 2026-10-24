@@ -19,8 +19,9 @@ export function taskCost(player: Pick<Participant, 'action' | 'constructionTier'
   return COSTS[player.action];
 }
 export function taskWork(player: Pick<Participant, 'action' | 'constructionTier'>): number {
-  if (player.action === 'tower') return 25 * player.constructionTier;
-  if (player.action === 'barracks') return 40 * player.constructionTier;
+  if (player.action === 'tower') return 50 * player.constructionTier;
+  if (player.action === 'barracks') return 60 * player.constructionTier;
+  if (player.action === 'worker' || player.action === 'builder') return 64;
   return 32;
 }
 export function phraseWork(player: Pick<Participant, 'phrase' | 'length'>): number {
@@ -41,6 +42,6 @@ export function applyUpgrade(state: StrongholdState, player: Participant): void 
   state.technology[player.upgradeTarget]++;
   if (player.role !== 'army') state.upgrades[player.role]++;
   for (const unit of state.units) {
-    if (unit.kind === player.upgradeTarget) { unit.maxHp += 10 * UNIT_HEALTH_MULTIPLIER; unit.hp += 10 * UNIT_HEALTH_MULTIPLIER; }
+    if (unit.kind === player.upgradeTarget) { unit.maxHp += 15 * UNIT_HEALTH_MULTIPLIER; unit.hp += 15 * UNIT_HEALTH_MULTIPLIER; }
   }
 }

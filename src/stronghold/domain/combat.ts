@@ -1,4 +1,4 @@
-import { CATAPULT_WINDUP_SECONDS, distance, TOWER_STRENGTH_MULTIPLIER, UNIT_CAPS, UNIT_RULES } from './rules.ts';
+import { CATAPULT_WINDUP_SECONDS, distance, UNIT_CAPS, UNIT_RULES } from './rules.ts';
 import { moveUnitToward, wallApproach, wallBetween } from './navigation.ts';
 import { addBuilding, addUnit } from './state.ts';
 import { towerUpgrade, unitUpgrade } from './technology.ts';
@@ -80,13 +80,14 @@ function updateUnit(state: StrongholdState, unit: Unit, seconds: number): void {
       }
     }
   } else {
-    fire(target, rule.damage + (unit.kind === 'invader' ? 0 : unitUpgrade(state, unit) * 3));
+    const damage = rule.damage + (unit.kind === 'invader' ? 0 : unitUpgrade(state, unit));
+    fire(target, damage * (siege ? 'enemy' in target ? 1.5 : .5 : 1));
   }
 }
 
 export function spawnWave(state: StrongholdState): void {
   state.wave++;
-  const amount = Math.min(18, Math.max(1, state.wave - 1));
+  const amount = Math.min(12, Math.ceil(state.wave / 2));
   const remaining = UNIT_CAPS.invader - state.units.filter(unit => unit.kind === 'invader').length;
   for (let index = 0; index < Math.min(amount, remaining); index++) {
     const side = index % 3;
@@ -96,7 +97,7 @@ export function spawnWave(state: StrongholdState): void {
       y: side === 2 ? 35 : 100 + (index * 57) % 280
     }, formation);
   }
-  state.waveIn = Math.max(45, 80 - state.wave * 2);
+  state.waveIn = Math.max(65, 95 - state.wave * 2);
   state.message = `Wave ${state.wave}: invaders are approaching. Protect the gatherers!`;
   recordEvent(state, `Wave ${state.wave} approaching`);
   if (state.wave % 3 === 0) {
@@ -117,8 +118,8 @@ export function updateCombat(state: StrongholdState, seconds: number): void {
     tower.cooldown = Math.max(0, tower.cooldown - seconds);
     const target = closest(tower, state.units.filter(unit => (unit.kind === 'invader') !== tower.enemy
       && distance(unit, tower) <= 150 + tower.tier * 15));
-    const damage = tower.enemy ? 8 + state.wave : 18 + tower.tier * 3 + towerUpgrade(state, tower.tier) * 5;
-    if (target) attack(tower, target, damage * TOWER_STRENGTH_MULTIPLIER * (tower.tier === 1 ? .5 : 1));
+    const damage = 8 + tower.tier * 4 + (tower.enemy ? 0 : towerUpgrade(state, tower.tier) * 2);
+    if (target) attack(tower, target, damage);
   }
   const enemyBase = state.buildings.find(building => building.kind === 'enemy-base');
   const castle = state.buildings.find(building => building.kind === 'castle');

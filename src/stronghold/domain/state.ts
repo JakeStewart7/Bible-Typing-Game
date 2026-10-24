@@ -1,4 +1,4 @@
-import { BASE, CATAPULT_WINDUP_SECONDS, ENEMY_BASE, TOWER_STRENGTH_MULTIPLIER, UNIT_HEALTH_MULTIPLIER, UNIT_RULES } from './rules.ts';
+import { BASE, CATAPULT_WINDUP_SECONDS, ENEMY_BASE, UNIT_HEALTH_MULTIPLIER, UNIT_RULES } from './rules.ts';
 import { assignPhrase } from './phrases.ts';
 import { unitUpgrade } from './technology.ts';
 import { createRoleTasks } from './tasks.ts';
@@ -10,7 +10,7 @@ import { unitRadius, unitSpawnClear } from './navigation.ts';
 
 export function addUnit(state: StrongholdState, kind: UnitKind, point: Point, formation: ArmyUnitKind | null = null): Unit {
   const hp = ((formation ? UNIT_RULES[formation].hp : UNIT_RULES[kind].hp)
-    + (kind === 'invader' ? 0 : unitUpgrade(state, { kind }) * 10)) * UNIT_HEALTH_MULTIPLIER;
+    + (kind === 'invader' ? 0 : unitUpgrade(state, { kind }) * 15)) * UNIT_HEALTH_MULTIPLIER;
   const unit: Unit = { ...point, id: state.nextId++, kind, hp, maxHp: hp, destination: null, manualMove: false, cooldown: 0, task: null, formation, attackTarget: null, idleTime: null, attackWindup: CATAPULT_WINDUP_SECONDS };
   state.units.push(unit);
   return unit;
@@ -18,9 +18,9 @@ export function addUnit(state: StrongholdState, kind: UnitKind, point: Point, fo
 export function addBuilding(
   state: StrongholdState, kind: BuildingKind, point: Point, complete = false, enemy = false, tier = Math.max(1, state.tier)
 ): Building {
-  const baseHp = kind === 'castle' || kind === 'enemy-base' ? 4000 : kind === 'wall' ? 260
-    : 160 + (kind === 'tower' ? 60 : kind === 'barracks' ? 40 : 0) * Math.max(0, tier - 1);
-  const hp = baseHp * (kind === 'tower' ? TOWER_STRENGTH_MULTIPLIER * 2 : 1);
+  const hp = kind === 'castle' || kind === 'enemy-base' ? 4000 : kind === 'wall' ? 440
+    : kind === 'tower' ? 600 + 200 * Math.max(0, tier - 1)
+    : kind === 'barracks' ? 320 + 100 * Math.max(0, tier - 1) : 240;
   const building: Building = {
     ...point, id: state.nextId++, kind, hp, maxHp: hp, tier,
     progress: complete ? 1 : 0, cooldown: 0, enemy, attackTarget: null, ownerId: null, rotation: 0, trainingQueue: [], rally: null

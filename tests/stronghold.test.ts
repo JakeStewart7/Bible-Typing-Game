@@ -12,6 +12,7 @@ import { equal, test } from './harness.ts';
 import { phraseWork, taskWork } from '../src/stronghold/domain/technology.ts';
 import { EVENT_WORD_POOLS } from '../src/stronghold/domain/event-phrases.ts';
 import { WORD_POOLS } from '../src/stronghold/domain/word-pools.ts';
+import { TRAINING_SECONDS } from '../src/stronghold/domain/training.ts';
 
 function self(state: StrongholdState): Participant {
   const player = state.players.find(candidate => candidate.id === 'you');
@@ -183,28 +184,29 @@ test('Stronghold upgrades obey per-tier limits and population caps', () => {
   equal(self(state).work, cappedWork);
 });
 
-test('Stronghold towers have doubled their previous health across tiers, sides and construction states', () => {
+test('Stronghold structures have durable tier-scaled health across sides and construction states', () => {
   const state = createStronghold();
   for (const enemy of [false, true]) {
     for (const complete of [false, true]) {
       for (const tier of [1, 2, 3]) {
         const tower = addBuilding(state, 'tower', { x: 300, y: 400 }, complete, enemy, tier);
-        const expected = (160 + 60 * (tier - 1)) * 3;
+        const expected = 600 + 200 * (tier - 1);
         equal(tower.hp, expected);
         equal(tower.maxHp, expected);
       }
     }
   }
-  equal(state.buildings.filter(building => building.enemy && building.kind === 'tower').slice(0, 2).map(tower => tower.maxHp), [480, 480]);
-  equal(addBuilding(state, 'barracks', { x: 300, y: 400 }, true, false, 3).maxHp, 240);
-  equal(addBuilding(state, 'wall', { x: 300, y: 400 }).maxHp, 260);
+  equal(state.buildings.filter(building => building.enemy && building.kind === 'tower').slice(0, 2).map(tower => tower.maxHp), [600, 600]);
+  equal(addBuilding(state, 'barracks', { x: 300, y: 400 }, true, false, 3).maxHp, 520);
+  equal(addBuilding(state, 'wall', { x: 300, y: 400 }).maxHp, 440);
+  equal(addBuilding(state, 'relay', { x: 300, y: 400 }).maxHp, 240);
   const waveState = createStronghold();
   waveState.wave = 2;
   spawnWave(waveState);
-  equal(waveState.buildings.filter(building => building.enemy && building.kind === 'tower').map(tower => tower.maxHp), [480, 480, 480]);
+  equal(waveState.buildings.filter(building => building.enemy && building.kind === 'tower').map(tower => tower.maxHp), [600, 600, 600]);
 });
 
-test('Stronghold T1 tower damage is halved on both sides including upgrades without changing attack timing', () => {
+test('Stronghold towers deal restrained tier-scaled damage with no hidden enemy wave bonus', () => {
   for (const enemy of [false, true]) {
     for (const tier of [1, 2, 3]) {
       for (const upgrades of [0, 2]) {
@@ -218,7 +220,7 @@ test('Stronghold T1 tower damage is halved on both sides including upgrades with
         const tower = addBuilding(state, 'tower', { x: 500, y: 400 }, true, enemy, tier);
         const target = addUnit(state, enemy ? 'worker' : 'invader', { x: 550, y: 400 });
         const startingHp = target.hp;
-        const damage = (enemy ? 8 + state.wave : 18 + tier * 3 + upgrades * 5) * 1.5 * (tier === 1 ? .5 : 1);
+        const damage = 8 + tier * 4 + (enemy ? 0 : upgrades * 2);
         updateCombat(state, .1);
         equal(startingHp - target.hp, damage);
         equal(tower.cooldown, 1);
@@ -296,6 +298,7 @@ test('Stronghold only army role orders friendly troops and rejects nonfinite map
 test('Stronghold barracks require explicit paid queues and completed matching construction', () => {
   const state = createStronghold();
   noBots(state); state.tier = 2;
+  state.resources = 150;
   state.units = [];
   const barracks = addBuilding(state, 'barracks', { x: 650, y: 570 });
   advanceStronghold(state, .1);
@@ -305,9 +308,9 @@ test('Stronghold barracks require explicit paid queues and completed matching co
   barracks.progress = 1;
   executeCommand(state, self(state), { type: 'ACTION', action: 'archer' });
   equal(state.units.length, 0);
-  for (let second = 0; second < 12; second++) advanceStronghold(state, 1);
+  for (let second = 0; second < TRAINING_SECONDS; second++) advanceStronghold(state, 1);
   equal(state.units[0]?.kind, 'archer');
-  equal(state.resources, 5);
+  equal(state.resources, 50);
   equal(state.units[0]?.destination, state.rally);
 });
 

@@ -16,8 +16,8 @@ export const ACTION_LABELS: Record<Action, string> = {
   wall: 'Place wall', upgrade: 'Upgrade role'
 };
 export const COSTS: Record<Action, number> = {
-  resources: 0, worker: 0, relay: 30, barracks: 0, warrior: 25,
-  archer: 45,   catapult: 80, builder: 0, tower: 0, wall: 0, upgrade: 120
+  resources: 0, worker: 0, relay: 30, barracks: 0, warrior: 60,
+  archer: 100, catapult: 180, builder: 0, tower: 0, wall: 0, upgrade: 120
 };
 export function isTypingAction(action: Action): boolean {
   return action === 'resources' || action === 'worker' || action === 'barracks'
@@ -34,15 +34,14 @@ export const BUILDING_CAPS: Record<BuildingKind, number> = {
   castle: 1, 'enemy-base': 1, relay: 16, barracks: 6, tower: 8, wall: 16
 };
 export const UNIT_RULES: Record<UnitKind, { hp: number; speed: number; damage: number; range: number }> = {
-  worker: { hp: 35, speed: 12.6, damage: 0, range: 0 },
-  builder: { hp: 55, speed: 15, damage: 0, range: 0 },
-  warrior: { hp: 100, speed: 18.6, damage: 12, range: 26 },
-  archer: { hp: 65, speed: 16.5, damage: 9, range: 120 },
-  catapult: { hp: 110, speed: 4.8, damage: 30, range: 165 },
-  invader: { hp: 100, speed: 18.6, damage: 12, range: 26 }
+  worker: { hp: 50, speed: 13, damage: 0, range: 0 },
+  builder: { hp: 70, speed: 14, damage: 0, range: 0 },
+  warrior: { hp: 150, speed: 19, damage: 8, range: 26 },
+  archer: { hp: 105, speed: 16, damage: 6, range: 120 },
+  catapult: { hp: 180, speed: 8, damage: 18, range: 165 },
+  invader: { hp: 150, speed: 19, damage: 8, range: 26 }
 };
 export const UNIT_HEALTH_MULTIPLIER = 2;
-export const TOWER_STRENGTH_MULTIPLIER = 1.5;
 export const CATAPULT_WINDUP_SECONDS = .8;
 export const WALL_ROTATION_STEP = 22.5;
 export const TEXT_LENGTH_RANGES: Record<PhraseLength, readonly [number, number]> = {

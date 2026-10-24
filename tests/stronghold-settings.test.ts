@@ -307,8 +307,8 @@ test('Stronghold each task retains completed work across task changes and a vaca
   send(state, { type: 'ROLE', role: 'economy' });
   equal(player.action, 'worker');
   equal(player.work, workerWork);
-  while (workerWork < 32) workerWork = Math.round((workerWork + entry(state)) * 100) / 100;
-  workerWork = Math.round((workerWork - 32) * 100) / 100;
+  while (workerWork < 64) workerWork = Math.round((workerWork + entry(state)) * 100) / 100;
+  workerWork = Math.round((workerWork - 64) * 100) / 100;
   equal(player.work, workerWork);
   equal(state.units.filter(unit => unit.kind === 'worker').length, 3);
   send(state, { type: 'ACTION', action: 'resources' });
@@ -354,9 +354,9 @@ test('Stronghold construction tiers keep independent bars and instant upgrades l
   const player = human(state);
   send(state, { type: 'ROLE', role: 'defenses' });
   send(state, { type: 'ACTION', action: 'tower', tier: 1 });
-  for (let index = 0; index < 4; index++) entry(state);
+  while (player.work < taskWork(player)) entry(state);
   const tower1Work = player.work;
-  equal(tower1Work >= 25, true);
+  equal(tower1Work >= 50, true);
   send(state, { type: 'ACTION', action: 'tower', tier: 2 });
   const tower2Work = entry(state);
   equal(player.work, tower2Work);
@@ -375,7 +375,7 @@ test('Stronghold construction tiers keep independent bars and instant upgrades l
   send(state, { type: 'ACTION', action: 'tower', tier: 1 });
   equal(player.work, tower1Work);
   send(state, { type: 'PLACE', kind: 'tower', point: { x: 300, y: 500 } });
-  equal(player.work, Math.round((tower1Work - 25) * 100) / 100);
+  equal(player.work, Math.round((tower1Work - 50) * 100) / 100);
   equal(state.resources, 800);
   send(state, { type: 'ACTION', action: 'tower', tier: 2 });
   equal(player.work, tower2Work);
@@ -424,7 +424,7 @@ test('Stronghold Army cannot prepare locked Barracks and unlocks each building t
   equal(engine.snapshot('you').tier, 1);
   engine.send('you', { type: 'ACTION', action: 'barracks', tier: 1 });
   equal(self().work, 0);
-  for (let count = 0; self().work < 40; count++) {
+  for (let count = 0; self().work < 60; count++) {
     if (count > 20) throw new Error('Barracks task did not fill.');
     engine.send('you', { type: 'TYPE', phraseId: self().phraseId, text: self().phrase });
   }
@@ -432,7 +432,7 @@ test('Stronghold Army cannot prepare locked Barracks and unlocks each building t
   const supplies = engine.snapshot('you').resources;
   const work = self().work;
   engine.send('you', { type: 'PLACE', kind: 'barracks', point: { x: 800, y: 570 } });
-  equal(self().work, Math.round((work - 40) * 100) / 100);
+  equal(self().work, Math.round((work - 60) * 100) / 100);
   equal(engine.snapshot('you').resources, supplies);
   equal(engine.snapshot('you').buildings.some(building => building.kind === 'barracks' && building.tier === 1), true);
   const afterPlacement = engine.snapshot('you');
@@ -479,7 +479,7 @@ test('Stronghold all three Barracks selections preserve independent shared progr
     equal([player.action, partner.action], ['barracks', 'barracks']);
     equal([player.constructionTier, partner.constructionTier], [tier, tier]);
     equal([player.work, partner.work], [0, 0]);
-    equal(taskWork(player), 40 * tier);
+    equal(taskWork(player), 60 * tier);
     send(state, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase.slice(0, 2) });
     const privateInput = { phrase: player.phrase, phraseId: player.phraseId, typed: player.typed };
     let work = entry(state, partner);
@@ -499,15 +499,15 @@ test('Stronghold all three Barracks selections preserve independent shared progr
     executeCommand(state, partner, { type: 'ACTION', action: 'barracks', tier });
     let expected = banks.get(tier)!;
     equal([player.work, partner.work], [expected, expected]);
-    for (let entries = 0; expected < 40 * tier && entries < 40 * tier; entries++) {
+    for (let entries = 0; expected < 60 * tier && entries < 60 * tier; entries++) {
       expected = Math.round((expected + entry(state)) * 100) / 100;
       equal([player.work, partner.work], [expected, expected]);
     }
-    equal(expected >= 40 * tier, true);
+    equal(expected >= 60 * tier, true);
     entry(state, partner);
     equal([player.work, partner.work], [expected, expected]);
     send(state, { type: 'PLACE', kind: 'barracks', point: { x: 620 + (tier - 1) * 70, y: 570 } });
-    expected = Math.round((expected - 40 * tier) * 100) / 100;
+    expected = Math.round((expected - 60 * tier) * 100) / 100;
     equal([player.work, partner.work], [expected, expected]);
     equal(state.roleTasks.production.progress[`barracks:${tier}`], { work: expected, actionPhrases: 0 });
     equal(state.resources, 1000);

@@ -474,6 +474,7 @@ test('Stronghold paid queues train FIFO at matching barracks, pay only once and 
   for (const kind of ['warrior', 'archer', 'catapult'] as const) {
     const state = createStronghold({ resources: 1000, length: 'medium', computersPaused: true }, 'fall');
     state.tier = 3; state.units = []; state.buildings = [];
+    state.waveIn = 10000;
     const player = state.players[0]!;
     executeCommand(state, player, { type: 'ROLE', role: 'production' });
     const barracks = addBuilding(state, 'barracks', { x: 600, y: 550 }, false, false, MIN_TIER[kind]);
@@ -552,7 +553,7 @@ test('Stronghold castle rally points direct freshly typed gatherers and builders
     const point = { x: 700, y: 400 };
     executeCommand(state, player, { type: 'RALLY', ids: [castle.id], point });
     if (kind === 'builder') executeCommand(state, player, { type: 'ROLE', role: 'defenses' });
-    player.work = 32;
+    player.work = taskWork(player);
     completePhrase(state, player);
     const recruit = state.units.at(-1)!;
     equal(recruit.kind, kind);
@@ -575,7 +576,7 @@ test('Stronghold friendly and enemy catapults stay still during windup and must 
         equal({ x: siege.x, y: siege.y }, { x: 400, y: 300 });
       }
       updateCombat(state, .1);
-      equal(target.hp, health - UNIT_RULES.catapult.damage);
+      equal(target.hp, health - UNIT_RULES.catapult.damage * 1.5);
       siege.x = 200;
       siege.destination = { x: target.x, y: target.y };
       updateCombat(state, .1);
@@ -610,7 +611,7 @@ test('Stronghold placement identifies buildings but allows units inside tier-sca
   state.tier = 3;
   executeCommand(state, player, { type: 'ROLE', role: 'defenses' });
   executeCommand(state, player, { type: 'ACTION', action: 'tower', tier: 3 });
-  player.work = 75;
+  player.work = taskWork(player);
   const point = { x: 300, y: 400 };
   const wall = addBuilding(state, 'wall', { x: 345, y: 400 }, true);
   const unit = addUnit(state, 'worker', point);
@@ -631,7 +632,7 @@ test('Stronghold placement identifies buildings but allows units inside tier-sca
 });
 
 test('Stronghold troop queues balance matching barracks, count against caps and stop when destroyed', () => {
-  const state = createStronghold({ resources: 1000, length: 'medium', computersPaused: true });
+  const state = createStronghold({ resources: 2000, length: 'medium', computersPaused: true });
   state.tier = 1;
   const player = state.players[0]!;
   executeCommand(state, player, { type: 'ROLE', role: 'production' });

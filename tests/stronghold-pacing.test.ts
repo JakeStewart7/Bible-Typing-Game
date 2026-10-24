@@ -3,8 +3,9 @@ import { spawnWave, updateCombat } from '../src/stronghold/domain/combat.ts';
 import { updateLogistics } from '../src/stronghold/domain/logistics.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { addBuilding, addUnit, createStronghold } from './stronghold-fixtures.ts';
-import { distance, UNIT_RULES } from '../src/stronghold/domain/rules.ts';
-import { phraseWork } from '../src/stronghold/domain/technology.ts';
+import { COSTS, distance, UNIT_RULES } from '../src/stronghold/domain/rules.ts';
+import { phraseWork, taskWork } from '../src/stronghold/domain/technology.ts';
+import { TRAINING_SECONDS } from '../src/stronghold/domain/training.ts';
 import { buildingMarkup, unitMarkup, unitMotionTransform } from '../src/stronghold/ui/battlefield.ts';
 import { equal, test } from './harness.ts';
 
@@ -15,8 +16,8 @@ test('Stronghold opening waves give a full minute to prepare, fewer invaders and
     state.units = state.units.filter(unit => unit.kind !== 'invader');
     spawnWave(state);
     equal(state.wave, wave);
-    equal(state.units.filter(unit => unit.kind === 'invader').length, Math.min(18, Math.max(1, wave - 1)));
-    equal(state.waveIn, Math.max(45, 80 - wave * 2));
+    equal(state.units.filter(unit => unit.kind === 'invader').length, Math.min(12, Math.ceil(wave / 2)));
+    equal(state.waveIn, Math.max(65, 95 - wave * 2));
   }
   for (let index = 0; index < 5; index++) spawnWave(state);
   equal(state.units.filter(unit => unit.kind === 'invader').length, 40);
@@ -45,7 +46,7 @@ test('Stronghold Next Wave spawns immediately without advancing battle time or r
   const before = structuredClone(state);
   executeCommand(state, player, { type: 'NEXT_WAVE' });
   equal(state.wave, 1);
-  equal(state.waveIn, 78);
+  equal(state.waveIn, 93);
   equal(state.units.filter(unit => unit.kind === 'invader').length, 1);
   equal(state.events.at(-1)?.text, 'Wave 1 approaching');
   for (const key of ['elapsed', 'event', 'eventIn', 'resources', 'players', 'roleTasks', 'computersPaused'] as const) {
@@ -53,7 +54,7 @@ test('Stronghold Next Wave spawns immediately without advancing battle time or r
   }
   advanceStronghold(state, .25);
   equal(state.wave, 1);
-  equal(state.waveIn, 77.75);
+  equal(state.waveIn, 92.75);
   executeCommand(state, player, { type: 'NEXT_WAVE' });
   executeCommand(state, player, { type: 'NEXT_WAVE' });
   equal(state.wave, 3);
@@ -80,17 +81,17 @@ test('Stronghold Next Wave rejects computers, tier challenges and finished match
   }
 });
 
-test('Stronghold units retain slow movement and double health, with equal opposing warrior stats', () => {
-  const original = { worker: [42, 35], builder: [50, 55], warrior: [62, 100],
-    archer: [55, 65], catapult: [32, 110], invader: [62, 100] } as const;
+test('Stronghold durable units use formation-specific fair movement speeds on both sides', () => {
+  const balanced = { worker: [13, 100], builder: [14, 140], warrior: [19, 300],
+    archer: [16, 210], catapult: [8, 360], invader: [19, 300] } as const;
   const state = createStronghold(undefined, 'fall');
   state.units = [];
   state.nodes = [{ id: 100, x: 100, y: 500, remaining: 100, rich: false }];
   addBuilding(state, 'barracks', { x: 200, y: 500 });
   for (const kind of ['worker', 'builder', 'warrior', 'archer', 'catapult', 'invader'] as const) {
-    equal(Math.abs(UNIT_RULES[kind].speed - original[kind][0] * (kind === 'catapult' ? .15 : .3)) < .000001, true);
+    equal(UNIT_RULES[kind].speed, balanced[kind][0]);
     const unit = addUnit(state, kind, { x: 100, y: 300 });
-    equal(unit.maxHp, original[kind][1] * 2);
+    equal(unit.maxHp, balanced[kind][1]);
     unit.destination = { x: 100, y: 500 };
     const start = { x: unit.x, y: unit.y };
     state.units = [unit];
@@ -115,6 +116,41 @@ test('Stronghold both bases keep a 4000 HP maximum through enemy upgrades withou
   bases.forEach(base => { base.hp -= 100; });
   for (let wave = 0; wave < 6; wave++) spawnWave(state);
   equal(bases.map(base => [base.hp, base.maxHp]), [[3900, 4000], [3900, 4000]]);
+});
+
+test('Stronghold baseline formation duels last thirty to forty-five seconds rather than bursting units down', () => {
+  for (const kind of ['warrior', 'archer', 'catapult'] as const) {
+    const state = createStronghold(undefined, 'fall');
+    state.units = []; state.buildings = [];
+    const friendly = addUnit(state, kind, { x: 500, y: 300 });
+    const enemy = addUnit(state, 'invader', { x: 500, y: 320 }, kind);
+    let elapsed = 0;
+    while (friendly.hp > 0 && enemy.hp > 0 && elapsed < 60) {
+      updateCombat(state, .25);
+      elapsed += .25;
+      if (elapsed === 5) {
+        equal(friendly.hp >= friendly.maxHp * .75, true);
+        equal(enemy.hp >= enemy.maxHp * .75, true);
+      }
+    }
+    equal(elapsed >= 30 && elapsed <= 45, true);
+  }
+});
+
+test('Stronghold recruitment is deliberately scarce and siege trades mobility for structure damage', () => {
+  equal([COSTS.warrior, COSTS.archer, COSTS.catapult], [60, 100, 180]);
+  equal(TRAINING_SECONDS, 24);
+  for (const action of ['worker', 'builder'] as const) equal(taskWork({ action, constructionTier: 1 }), 64);
+  equal(UNIT_RULES.warrior.speed > UNIT_RULES.archer.speed, true);
+  equal(UNIT_RULES.archer.speed > UNIT_RULES.catapult.speed, true);
+  for (const enemy of [false, true]) {
+    const state = createStronghold(undefined, 'fall');
+    state.units = []; state.buildings = [];
+    addUnit(state, enemy ? 'invader' : 'catapult', { x: 400, y: 300 }, enemy ? 'catapult' : null);
+    const target = addBuilding(state, enemy ? 'castle' : 'enemy-base', { x: 500, y: 300 }, true, !enemy);
+    updateCombat(state, 1);
+    equal(target.maxHp - target.hp, 27);
+  }
 });
 
 test('Stronghold gatherers and builders follow move orders then resume nearest work after two idle seconds', () => {
@@ -365,10 +401,10 @@ test('Stronghold role members keep private text and share completed work and pla
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
   equal(teammate.actionPhrases, 1);
   for (const player of [teammate, you, teammate, you, teammate]) {
-    if (towerWork < 50) towerWork = Math.round((towerWork + phraseWork(player)) * 100) / 100;
+    if (towerWork < 100) towerWork = Math.round((towerWork + phraseWork(player)) * 100) / 100;
     executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
   }
-  while (towerWork < 50) {
+  while (towerWork < 100) {
     towerWork = Math.round((towerWork + phraseWork(you)) * 100) / 100;
     executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
   }
@@ -379,7 +415,7 @@ test('Stronghold role members keep private text and share completed work and pla
   executeCommand(state, you, { type: 'TYPE', phraseId: constructionId, text: constructionPhrase.slice(0, 3) });
   executeCommand(state, teammate, { type: 'PLACE', kind: 'tower', point: { x: 300, y: 500 } });
   equal(state.resources, 500);
-  equal(you.work, Math.round((towerWork - 50) * 100) / 100);
+  equal(you.work, Math.round((towerWork - 100) * 100) / 100);
   equal(you.actionPhrases, 0);
   equal(you.typed, constructionPhrase.slice(0, 3));
   equal(you.phraseId, constructionId);

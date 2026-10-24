@@ -5,6 +5,7 @@ import { phraseWork, taskWork, unitUpgrade, upgradeLimit } from '../src/strongho
 import type { Participant, StrongholdState } from '../src/stronghold/domain/types.ts';
 import { equal, test } from './harness.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
+import { TRAINING_SECONDS } from '../src/stronghold/domain/training.ts';
 
 function self(state: StrongholdState): Participant {
   const player = state.players.find(candidate => candidate.id === 'you');
@@ -31,6 +32,7 @@ test('Stronghold free barracks require proportional tier-specific typing and ret
   const state = createStronghold();
   state.tier = 3;
   state.resources = 500;
+  state.nodes = [];
   state.players.forEach(player => { player.simulated = false; });
   executeCommand(state, self(state), { type: 'ROLE', role: 'production' });
   executeCommand(state, self(state), { type: 'ACTION', action: 'barracks', tier: 1 });
@@ -50,14 +52,14 @@ test('Stronghold free barracks require proportional tier-specific typing and ret
   equal(state.resources, 500);
   const barracks = state.buildings.filter(building => building.kind === 'barracks');
   equal(barracks.map(building => building.tier), [1, 3]);
-  equal(barracks.map(building => building.maxHp), [160, 240]);
+  equal(barracks.map(building => building.maxHp), [320, 520]);
   barracks.forEach(building => { building.progress = 1; });
   executeCommand(state, self(state), { type: 'ACTION', action: 'warrior' });
   executeCommand(state, self(state), { type: 'ACTION', action: 'catapult' });
-  for (let second = 0; second < 12; second++) advanceStronghold(state, 1);
+  for (let second = 0; second < TRAINING_SECONDS; second++) advanceStronghold(state, 1);
   equal(state.units.some(unit => unit.kind === 'catapult'), true);
   equal(state.units.filter(unit => unit.kind === 'warrior').length, 3);
-  equal(state.resources, 395);
+  equal(state.resources, 260);
 });
 
 test('Stronghold free towers retain their tier and paid troops are purchased without typing', () => {
@@ -71,7 +73,7 @@ test('Stronghold free towers retain their tier and paid troops are purchased wit
   finish(state);
   executeCommand(state, self(state), { type: 'PLACE', kind: 'tower', point: { x: 360, y: 425 } });
   equal(state.buildings.find(building => building.kind === 'tower' && !building.enemy)?.tier, 2);
-  equal(state.buildings.find(building => building.kind === 'tower' && !building.enemy)?.maxHp, 660);
+  equal(state.buildings.find(building => building.kind === 'tower' && !building.enemy)?.maxHp, 800);
   equal(state.resources, 500);
   executeCommand(state, self(state), { type: 'ROLE', role: 'production' });
   addBuilding(state, 'barracks', { x: 650, y: 570 }, true, false, 3);
@@ -80,7 +82,7 @@ test('Stronghold free towers retain their tier and paid troops are purchased wit
   equal(state.units.some(unit => unit.kind === 'catapult'), false);
   equal(state.buildings.some(building => building.trainingQueue.some(order => order.kind === 'catapult')), true);
   equal(self(state).phraseId, phraseId);
-  equal(state.resources, 420);
+  equal(state.resources, 320);
 });
 
 test('Stronghold upgrades are tracked independently for each troop and tower tier', () => {
@@ -102,7 +104,7 @@ test('Stronghold upgrades are tracked independently for each troop and tower tie
   const oldHp = warrior.maxHp;
   executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade', upgrade: 'warrior' });
   equal(state.technology.warrior, 1);
-  equal(warrior.maxHp, oldHp + 20);
+  equal(warrior.maxHp, oldHp + 30);
   equal(state.resources, 440);
   rejects(() => executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade', upgrade: 'warrior' }));
   equal(state.technology.warrior, 1);
@@ -110,7 +112,7 @@ test('Stronghold upgrades are tracked independently for each troop and tower tie
   rejects(() => executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade', upgrade: 'archer' }));
   equal(state.technology.archer, 0);
   equal(unitUpgrade(state, { kind: 'archer' }), 0);
-  equal(addUnit(state, 'warrior', { x: 500, y: 500 }).maxHp, oldHp + 20);
+  equal(addUnit(state, 'warrior', { x: 500, y: 500 }).maxHp, oldHp + 30);
 });
 
 test('Stronghold rejects invalid construction tiers and upgrades from the wrong role atomically', () => {

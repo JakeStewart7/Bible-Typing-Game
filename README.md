@@ -73,7 +73,7 @@ bars fill and retain entry overflow. Blocked tasks retain their earned progress.
 **Warriors, Archers and Catapults** queue at completed Tier 1, 2 and 3 barracks,
 respectively. Supplies are paid when queued, with no typing required; the selected
 typing task and private input stay untouched. Each barracks trains one unit every
-12 seconds, spawning it beside that barracks before it moves to the rally point.
+24 seconds, spawning it beside that barracks and moving only if a rally was set.
 Multiple matching barracks balance new orders by queue length. Queued units count
 toward population limits. Buttons show queue counts; barracks show their current
 unit and training progress. Empty barracks do not produce or spend supplies.
@@ -117,12 +117,30 @@ paused, during a tier challenge, or after the match ends.
 
 The first wave arrives after **60 seconds**. The first two waves have **one
 invader each**, giving the two starting warriors time to defend without new
-troops. Later waves grow by one invader at a time, up to 18; their intervals
-start at 78 seconds and gradually shorten to no less than 45 seconds.
-Friendly and enemy towers now have **twice their previous health**. Tier 1/2/3 towers
-have 480/660/840 health. T1 damage is halved, including upgrade and enemy-wave
-bonuses; T2/T3 damage is unchanged.
-Tower attack range and firing interval are unchanged.
+troops. Later waves grow by one invader every two waves, up to 12; their intervals
+start at 93 seconds and gradually shorten to no less than 65 seconds.
+Combat favors durable forces and time to react rather than disposable units:
+
+| Formation | Health | Damage per shot | Speed (map units/sec) | Supplies |
+| --- | ---: | ---: | ---: | ---: |
+| Gatherer | 100 | 0 | 13 | Typing |
+| Builder | 140 | 0 | 14 | Typing |
+| Warrior / melee invader | 300 | 8 | 19 | 60 |
+| Archer | 210 | 6 | 16 | 100 |
+| Catapult | 360 | 18 | 8 | 180 |
+
+Shots have a one-second cooldown; catapults also need their initial 0.8-second
+windup. Siege shots deal 1.5x damage to buildings and half damage to units, so
+siege needs an escort rather than replacing front-line troops.
+Gatherers and builders require 64 typing work each; barracks require 60 per tier
+and towers 50 per tier. Supplies and walls still require 32 work. All troop
+queues take 24 seconds per unit. Troop upgrades add 30 health and 1 damage per
+level, emphasizing survival rather than burst damage.
+T1/T2/T3 towers have 600/800/1,000 health and deal 12/16/20 damage per shot,
+with +2 damage per friendly tower upgrade. Enemy towers use the same base
+damage, without an escalating wave bonus. Barracks have 320/420/520 health,
+walls 440 and relays 240. Both bases retain 4,000 health.
+Tower attack ranges and one-second firing intervals are unchanged.
 Switching to another browser tab automatically pauses Stronghold, including
 the battlefield and computer typing. Returning resumes without catching up
 the time spent away; switching screens or using Pause also stops the simulation.
@@ -288,8 +306,8 @@ Units route around wall ends whenever a route is available.
 Controls, typing and logs use consistent bold Arial-family typography and larger,
 high-contrast text; repeated captions stay out of
 the battlefield. Enemy troops are dark-red squares (melee), diamonds (archers),
-and large wheeled siege carts (catapults), with red outlines. Catapults move at
-half their previous speed, stop to attack and need 0.8 seconds to aim before
+and large wheeled siege carts (catapults), with red outlines. Catapults move slower
+than other combat units, stop to attack and need 0.8 seconds to aim before
 firing. Moving resets the shot cooldown and requires a fresh aiming delay.
 The emphasized resource icon and count
 lead the HUD without a visible Supplies caption, followed by population counts;
@@ -357,7 +375,7 @@ and shortage. The state updates as supplies arrive.
 | --- | ---: |
 | Relay | 30 |
 | Tier 1 / Tier 2 / Tier 3 challenge | 300 / 600 / 1,500 |
-| Warrior / Archer / Catapult | 25 / 45 / 80 |
+| Warrior / Archer / Catapult | 60 / 100 / 180 |
 | Economy upgrade | 120 |
 | Warrior / Archer / Catapult upgrade | 60 / 100 / 160 |
 | T1 / T2 / T3 tower upgrade | 75 / 125 / 180 |
