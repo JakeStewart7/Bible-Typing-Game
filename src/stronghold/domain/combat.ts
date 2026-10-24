@@ -1,5 +1,5 @@
 import { CATAPULT_WINDUP_SECONDS, distance, UNIT_CAPS, UNIT_RULES } from './rules.ts';
-import { moveUnitToward, wallApproach, wallBetween } from './navigation.ts';
+import { buildingApproach, buildingFootprint, distanceToFootprint, movementDestination, moveUnitToward, wallApproach, wallBetween } from './navigation.ts';
 import { addBuilding, addUnit } from './state.ts';
 import { towerUpgrade, unitUpgrade } from './technology.ts';
 import { ENTITY_LABELS, recordEvent } from './events.ts';
@@ -37,7 +37,7 @@ function updateUnit(state: StrongholdState, unit: Unit, seconds: number): void {
     moving();
     unit.attackTarget = null;
     moveUnitToward(state, unit, unit.destination, seconds * rule.speed);
-    if (distance(unit, unit.destination) < 5) {
+    if (distance(unit, movementDestination(state, unit, unit.destination)) < 5) {
       unit.destination = null;
       unit.manualMove = false;
     }
@@ -58,14 +58,14 @@ function updateUnit(state: StrongholdState, unit: Unit, seconds: number): void {
     if (!target && unit.destination) {
       moving();
       moveUnitToward(state, unit, unit.destination, seconds * rule.speed);
-      if (distance(unit, unit.destination) < 5) unit.destination = null;
+      if (distance(unit, movementDestination(state, unit, unit.destination)) < 5) unit.destination = null;
       if (siege) return;
     }
-    if (!target) target = closest(unit, buildings.filter(building => distance(unit, building) < rule.range + 20));
+    if (!target) target = closest(unit, buildings.filter(building => distanceToFootprint(unit, buildingFootprint(state, building)) < rule.range + 20));
   }
   if (!target) { moving(); return; }
   const targetWall = 'enemy' in target && target.kind === 'wall' ? target : undefined;
-  const approach = targetWall ? wallApproach(unit, targetWall) : target;
+  const approach = targetWall ? wallApproach(unit, targetWall) : 'enemy' in target ? buildingApproach(state, unit, target) : target;
   const blocked = wallBetween(state, unit, target, targetWall);
   if (distance(unit, approach) > (targetWall ? 1 : rule.range) || blocked) {
     if (moveUnitToward(state, unit, approach, seconds * rule.speed)) moving();

@@ -1,27 +1,31 @@
 import { distance, moveToward, validPoint } from './rules.ts';
-import type { Building, Point, StrongholdState, Unit } from './types.ts';
+import type { Building, Point, ResourceNode, StrongholdState, Unit } from './types.ts';
 import { buildingScale } from './technology.ts';
 import { SEASON_BONUSES } from './environment.ts';
 
 export const WALL_HALF_LENGTH = 24.5;
 export const WALL_HALF_WIDTH = 6.875;
 const UNIT_RADIUS = 10;
-type World = Pick<StrongholdState, 'buildings' | 'technology'>;
-type Obstacle = { wall: Building; x: number; y: number; cosine: number; sine: number; halfX: number; halfY: number;
-  kind: Building['kind']; tier: number; rotation: number; scale: number };
-type Layout = { obstacles: Obstacle[]; corners: Point[]; edges: ({ to: number; cost: number }[] | undefined)[] };
+type World = Pick<StrongholdState, 'buildings' | 'technology' | 'nodes'>;
+type Obstacle = { wall: Building | null; node: ResourceNode | null; x: number; y: number; cosine: number; sine: number; halfX: number; halfY: number;
+  kind: Building['kind'] | 'node'; tier: number; rotation: number; scale: number; radius: number; hard: boolean };
+type Layout = { obstacles: Obstacle[]; corners: Point[]; edges: ({ to: number; cost: number }[] | undefined)[]; hardLayout?: Layout };
 const layouts = new WeakMap<World, Map<number, Layout>>();
 const routes = new WeakMap<Unit, { layout: Layout; target: Point; path: Point[]; fallback: boolean }>();
 export function unitRadius(unit: Partial<Pick<Unit, 'kind' | 'formation'>>): number {
   return (unit.formation ?? unit.kind) === 'catapult' ? 20 : UNIT_RADIUS;
 }
+export function resourceNodeRadius(node: Pick<ResourceNode, 'rich'>): number {
+  return (node.rich ? 27 : 24) + 1.5;
+}
 
 export function buildingFootprint(world: Pick<StrongholdState, 'technology'>, building: Pick<Building, 'kind' | 'tier' | 'enemy' | 'rotation'> & Point) {
   const scale = buildingScale(world, building);
+  const towerScale = 1 + (building.tier - 1) * .15;
   const halfX = building.kind === 'wall' ? WALL_HALF_LENGTH : building.kind === 'castle' || building.kind === 'enemy-base' ? 36
-    : building.kind === 'tower' ? 12 + building.tier * 3 : building.kind === 'relay' ? 11 : 16;
+    : building.kind === 'tower' ? 14.25 * towerScale : building.kind === 'relay' ? 10 : 16;
   const halfY = building.kind === 'wall' ? WALL_HALF_WIDTH : building.kind === 'castle' || building.kind === 'enemy-base' ? 36
-    : building.kind === 'tower' ? 18 + building.tier * 3 : building.kind === 'relay' ? 20 : 16;
+    : building.kind === 'tower' ? 20.25 * towerScale : building.kind === 'relay' ? 19 : 16;
   return { x: building.x, y: building.y, halfX: halfX * scale, halfY: halfY * scale, rotation: building.kind === 'wall' ? building.rotation ?? 0 : 0 };
 }
 type Footprint = ReturnType<typeof buildingFootprint>;
@@ -30,13 +34,20 @@ export function footprintCorners(box: Footprint): Point[] {
   return [-1, 1].flatMap(x => [-1, 1].map(y => ({ x: box.x + x * box.halfX * c - y * box.halfY * s,
     y: box.y + x * box.halfX * s + y * box.halfY * c })));
 }
-export function footprintsOverlap(a: Footprint, b: Footprint, gap = 3): boolean {
+export function footprintsOverlap(a: Footprint, b: Footprint): boolean {
   const ac = footprintCorners(a), bc = footprintCorners(b);
   return [a.rotation, a.rotation + 90, b.rotation, b.rotation + 90].every(angle => {
     const x = Math.cos(angle * Math.PI / 180), y = Math.sin(angle * Math.PI / 180);
     const ap = ac.map(p => p.x * x + p.y * y), bp = bc.map(p => p.x * x + p.y * y);
-    return Math.max(...ap) + gap > Math.min(...bp) && Math.max(...bp) + gap > Math.min(...ap);
+    return Math.max(...ap) - Math.min(...bp) > 1e-7 && Math.max(...bp) - Math.min(...ap) > 1e-7;
   });
+}
+export function distanceToFootprint(point: Point, box: Footprint): number {
+  const p = wallLocal(point, box);
+  return Math.hypot(Math.max(0, Math.abs(p.x) - box.halfX), Math.max(0, Math.abs(p.y) - box.halfY));
+}
+export function nodeOverlapsFootprint(node: ResourceNode, box: Footprint): boolean {
+  return distanceToFootprint(node, box) < resourceNodeRadius(node) - 1e-7;
 }
 export function wallLocal(point: Point, wall: Point & { rotation?: number }): Point {
   const angle = (wall.rotation ?? 0) * Math.PI / 180;
@@ -47,7 +58,7 @@ export function wallContains(point: Point, wall: Point & { rotation?: number }, 
   const local = wallLocal(point, wall);
   return Math.abs(local.x) < WALL_HALF_LENGTH + padding && Math.abs(local.y) < WALL_HALF_WIDTH + padding;
 }
-export function unitSpawnPoint(world: Pick<StrongholdState, 'buildings' | 'units'>, origin: Point, radiusPadding = UNIT_RADIUS): Point | undefined {
+export function unitSpawnPoint(world: World & Pick<StrongholdState, 'units'>, origin: Point, radiusPadding = UNIT_RADIUS): Point | undefined {
   const directions = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 },
     { x: 1, y: -1 }, { x: -1, y: -1 }, { x: 1, y: 1 }, { x: -1, y: 1 }];
   for (const radius of [30, 50, 70, 90]) for (const direction of directions) {
@@ -56,17 +67,22 @@ export function unitSpawnPoint(world: Pick<StrongholdState, 'buildings' | 'units
   }
   return undefined;
 }
-export function unitSpawnClear(world: Pick<StrongholdState, 'buildings' | 'units'>, point: Point, padding = UNIT_RADIUS): boolean {
+export function unitSpawnClear(world: World & Pick<StrongholdState, 'units'>, point: Point, padding = UNIT_RADIUS): boolean {
   return validPoint(point) && world.units.every(unit => unit.hp <= 0 || distance(unit, point) >= padding + unitRadius(unit))
-    && world.buildings.every(building => building.hp <= 0 || (building.kind === 'wall'
-      ? !wallContains(point, building, padding)
-      : distance(point, building) >= (building.kind === 'castle' || building.kind === 'enemy-base' ? 34 : 14) + padding));
+    && world.buildings.every(building => building.hp <= 0 || distanceToFootprint(point, buildingFootprint(world, building)) >= padding)
+    && world.nodes.every(node => distance(point, node) >= resourceNodeRadius(node) + padding);
 }
 function local(point: Point, obstacle: Obstacle): Point {
   const x = point.x - obstacle.x, y = point.y - obstacle.y;
   return { x: x * obstacle.cosine + y * obstacle.sine, y: -x * obstacle.sine + y * obstacle.cosine };
 }
 function intersects(start: Point, end: Point, obstacle: Obstacle): boolean {
+  if (obstacle.radius) {
+    const dx = end.x - start.x, dy = end.y - start.y;
+    const length = dx * dx + dy * dy;
+    const t = length ? Math.max(0, Math.min(1, ((obstacle.x - start.x) * dx + (obstacle.y - start.y) * dy) / length)) : 0;
+    return (start.x + t * dx - obstacle.x) ** 2 + (start.y + t * dy - obstacle.y) ** 2 < obstacle.radius ** 2 - 1e-7;
+  }
   const a = local(start, obstacle), b = local(end, obstacle);
   let enter = 0, leave = 1;
   for (const [origin, delta, half] of [[a.x, b.x - a.x, obstacle.halfX], [a.y, b.y - a.y, obstacle.halfY]]) {
@@ -83,7 +99,12 @@ function intersects(start: Point, end: Point, obstacle: Obstacle): boolean {
   return enter < leave;
 }
 function clear(start: Point, end: Point, obstacles: readonly Obstacle[], ignore: readonly Building[] = []): boolean {
-  return obstacles.every(obstacle => ignore.includes(obstacle.wall) || !intersects(start, end, obstacle));
+  return obstacles.every(obstacle => (obstacle.wall && ignore.includes(obstacle.wall)) || !intersects(start, end, obstacle));
+}
+function contains(point: Point, obstacle: Obstacle): boolean {
+  if (obstacle.radius) return (point.x - obstacle.x) ** 2 + (point.y - obstacle.y) ** 2 < obstacle.radius ** 2 - 1e-7;
+  const p = local(point, obstacle);
+  return Math.abs(p.x) < obstacle.halfX && Math.abs(p.y) < obstacle.halfY;
 }
 function layoutFor(world: World, padding = UNIT_RADIUS): Layout {
   const cache = layouts.get(world) ?? new Map<number, Layout>();
@@ -97,36 +118,85 @@ function layoutFor(world: World, padding = UNIT_RADIUS): Layout {
         && previous.kind === building.kind && previous.tier === building.tier
         && previous.rotation === (building.rotation ?? 0) && previous.scale === buildingScale(world, building);
     });
-    if (unchanged && index === cached.obstacles.length) return cached;
+    const nodesUnchanged = unchanged && world.nodes.every(node => {
+      const previous = cached.obstacles[index++];
+      return previous?.node === node && previous.x === node.x && previous.y === node.y
+        && previous.radius === resourceNodeRadius(node) + padding;
+    });
+    if (nodesUnchanged && index === cached.obstacles.length) return cached;
   }
   const buildings = world.buildings.filter(building => building.hp > 0);
-  const obstacles = buildings.map(wall => {
+  const obstacles: Obstacle[] = buildings.map(wall => {
     const box = buildingFootprint(world, wall), radians = box.rotation * Math.PI / 180;
-    return { wall, x: wall.x, y: wall.y, cosine: Math.cos(radians), sine: Math.sin(radians),
+    return { wall, node: null, x: wall.x, y: wall.y, cosine: Math.cos(radians), sine: Math.sin(radians),
       halfX: box.halfX + padding, halfY: box.halfY + padding,
-      kind: wall.kind, tier: wall.tier, rotation: wall.rotation ?? 0, scale: buildingScale(world, wall) };
+      kind: wall.kind, tier: wall.tier, rotation: wall.rotation ?? 0, scale: buildingScale(world, wall),
+      radius: 0, hard: wall.kind === 'castle' || wall.kind === 'enemy-base' };
   });
-  const corners = obstacles.flatMap(obstacle => [-1, 1].flatMap(x => [-1, 1].map(y => {
-    const dx = x * (obstacle.halfX + .5), dy = y * (obstacle.halfY + .5);
-    return { x: obstacle.x + dx * obstacle.cosine - dy * obstacle.sine,
-      y: obstacle.y + dx * obstacle.sine + dy * obstacle.cosine };
-  }))).filter(point => validPoint(point) && clear(point, point, obstacles));
-  const layout: Layout = { obstacles, corners, edges: [] };
+  for (const node of world.nodes) obstacles.push({
+    wall: null, node, x: node.x, y: node.y, cosine: 1, sine: 0, halfX: 0, halfY: 0,
+    kind: 'node', tier: 0, rotation: 0, scale: 1, radius: resourceNodeRadius(node) + padding, hard: true
+  });
+  const layout = createLayout(obstacles);
   cache.set(padding, layout);
   layouts.set(world, cache);
   return layout;
 }
+function createLayout(obstacles: Obstacle[]): Layout {
+  const corners = obstacles.flatMap(obstacle => obstacle.radius ? Array.from({ length: 12 }, (_, index) => {
+    const angle = index * Math.PI / 6, radius = obstacle.radius / Math.cos(Math.PI / 12) + .01;
+    return { x: obstacle.x + Math.cos(angle) * radius, y: obstacle.y + Math.sin(angle) * radius };
+  }) : [-1, 1].flatMap(x => [-1, 1].map(y => {
+    const dx = x * (obstacle.halfX + .5), dy = y * (obstacle.halfY + .5);
+    return { x: obstacle.x + dx * obstacle.cosine - dy * obstacle.sine,
+      y: obstacle.y + dx * obstacle.sine + dy * obstacle.cosine };
+  }))).filter(point => validPoint(point) && clear(point, point, obstacles));
+  return { obstacles, corners, edges: [] };
+}
 
 export function wallBetween(world: World, start: Point, end: Point, ignore?: Building): Building | undefined {
-  return layoutFor(world).obstacles.find(obstacle => obstacle.wall.kind === 'wall' && obstacle.wall !== ignore && intersects(start, end, {
+  return layoutFor(world).obstacles.find(obstacle => obstacle.wall?.kind === 'wall' && obstacle.wall !== ignore && intersects(start, end, {
     ...obstacle, halfX: WALL_HALF_LENGTH, halfY: WALL_HALF_WIDTH
-  }))?.wall;
+  }))?.wall ?? undefined;
+}
+function approach(point: Point, obstacle: Obstacle): Point {
+  if (obstacle.radius) {
+    const dx = point.x - obstacle.x, dy = point.y - obstacle.y, length = Math.hypot(dx, dy);
+    return { x: obstacle.x + (length ? dx / length : 0) * (obstacle.radius + .01),
+      y: obstacle.y + (length ? dy / length : -1) * (obstacle.radius + .01) };
+  }
+  const p = local(point, obstacle);
+  let x = Math.max(-obstacle.halfX - .01, Math.min(obstacle.halfX + .01, p.x));
+  let y = Math.max(-obstacle.halfY - .01, Math.min(obstacle.halfY + .01, p.y));
+  if (contains(point, obstacle)) {
+    if (obstacle.halfX - Math.abs(p.x) < obstacle.halfY - Math.abs(p.y)) x = (p.x < 0 ? -1 : 1) * (obstacle.halfX + .01);
+    else y = (p.y < 0 ? -1 : 1) * (obstacle.halfY + .01);
+  }
+  return { x: obstacle.x + x * obstacle.cosine - y * obstacle.sine, y: obstacle.y + x * obstacle.sine + y * obstacle.cosine };
+}
+export function movementDestination(world: World, unit: Unit, target: Point): Point {
+  let result = target;
+  for (const obstacle of layoutFor(world, unitRadius(unit)).obstacles) {
+    if (obstacle.hard && contains(result, obstacle)) result = approach(unit, obstacle);
+  }
+  return result;
+}
+export function buildingApproach(world: World, unit: Unit, building: Building): Point {
+  const layout = layoutFor(world, unitRadius(unit));
+  const obstacle = layout.obstacles.find(obstacle => obstacle.wall === building);
+  if (!obstacle) return building;
+  const preferred = approach(unit, obstacle);
+  const free = (point: Point) => validPoint(point) && !layout.obstacles.some(other => other.hard && contains(point, other));
+  if (free(preferred)) return preferred;
+  const points = [-1, 0, 1].flatMap(x => [-1, 0, 1].filter(y => x || y).map(y => {
+    const dx = x * (obstacle.halfX + .01), dy = y * (obstacle.halfY + .01);
+    return { x: obstacle.x + dx * obstacle.cosine - dy * obstacle.sine, y: obstacle.y + dx * obstacle.sine + dy * obstacle.cosine };
+  }));
+  return points.filter(free).sort((a, b) => distance(unit, a) - distance(unit, b))[0] ?? preferred;
 }
 function findPath(layout: Layout, start: Point, target: Point): Point[] {
-  const containing = (point: Point) => layout.obstacles.filter(obstacle => {
-    const p = local(point, obstacle);
-    return Math.abs(p.x) < obstacle.halfX && Math.abs(p.y) < obstacle.halfY;
-  }).map(obstacle => obstacle.wall);
+  const containing = (point: Point) => layout.obstacles.filter(obstacle => !obstacle.hard && contains(point, obstacle))
+    .flatMap(obstacle => obstacle.wall ? [obstacle.wall] : []);
   const startBuildings = containing(start), targetBuildings = containing(target);
   if (clear(start, target, layout.obstacles, [...startBuildings, ...targetBuildings])) return [{ ...target }];
   const points = [...layout.corners, target];
@@ -169,13 +239,25 @@ function findPath(layout: Layout, start: Point, target: Point): Point[] {
 export function moveUnitToward(world: World & Pick<StrongholdState, 'season'>, unit: Unit, target: Point, travel: number): boolean {
   travel *= SEASON_BONUSES[world.season].movement;
   const layout = layoutFor(world, unitRadius(unit));
+  target = movementDestination(world, unit, target);
+  const inside = layout.obstacles.filter(obstacle => obstacle.hard && contains(unit, obstacle));
+  if (inside.length) {
+    const obstacle = inside[0];
+    if (obstacle) moveToward(unit, approach(target, obstacle), travel);
+    routes.delete(unit);
+    return true;
+  }
   let route = routes.get(unit);
   // Moving combat targets do not need a new graph search for every subpixel step.
   if (!route || route.fallback || route.layout !== layout || distance(route.target, target) > 4
     || (!route.path.length && distance(unit, target) > .1)) {
     const path = findPath(layout, unit, target);
     route = { layout, target: { ...target }, path, fallback: !path.length };
-    if (!route.path.length) route.path.push({ ...target });
+    if (!route.path.length) {
+      layout.hardLayout ??= createLayout(layout.obstacles.filter(obstacle => obstacle.hard));
+      route.path = findPath(layout.hardLayout, unit, target);
+      if (!route.path.length) return false;
+    }
     routes.set(unit, route);
   }
   if (!route.path.length) return distance(unit, target) < .1;

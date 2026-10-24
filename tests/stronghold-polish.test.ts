@@ -124,7 +124,7 @@ test('Stronghold warriors clear nearby towers before a closer enemy castle and r
   const state = createStronghold();
   state.units = []; state.buildings = [];
   const warrior = addUnit(state, 'warrior', { x: 500, y: 200 });
-  const castle = addBuilding(state, 'enemy-base', { x: 500, y: 190 }, true, true);
+  const castle = addBuilding(state, 'enemy-base', { x: 500, y: 140 }, true, true);
   const tower = addBuilding(state, 'tower', { x: 560, y: 200 }, true, true);
   updateCombat(state, .1);
   equal(warrior.x > 500, true);
@@ -566,6 +566,7 @@ test('Stronghold friendly and enemy catapults stay still during windup and must 
   for (const enemy of [false, true]) {
     const state = createStronghold(undefined, 'fall');
     state.units = []; state.buildings = [];
+    state.nodes = [];
     const siege = addUnit(state, enemy ? 'invader' : 'catapult', { x: 400, y: 300 }, enemy ? 'catapult' : null);
     const target = addBuilding(state, enemy ? 'castle' : 'enemy-base', { x: 500, y: 300 }, true, !enemy);
     for (let aim = 0; aim < 2; aim++) {
@@ -620,10 +621,10 @@ test('Stronghold placement identifies buildings but allows units inside tier-sca
   equal(blockers.units, []);
   equal(placementProblem(state, player, 'tower', point)?.includes('buildings'), true);
   wall.hp = 0;
-  equal(placementBlockers(state, player, 'tower', point), { buildings: [], units: [] });
+  equal(placementBlockers(state, player, 'tower', point), { buildings: [], nodes: [], units: [] });
   equal(placementProblem(state, player, 'tower', point), null);
   const box = buildingFootprint(state, { ...point, kind: 'tower', tier: 3, enemy: false });
-  equal(box.halfY, 27 * 1.24);
+  equal(box.halfY, 20.25 * 1.3 * 1.24);
   executeCommand(state, player, { type: 'PLACE', kind: 'tower', point });
   const before = { x: unit.x, y: unit.y };
   moveUnitToward(state, unit, { x: 400, y: 450 }, 10);
@@ -704,6 +705,7 @@ test('Stronghold towers retain a simple T silhouette with subtly increasing size
 test('Stronghold units prefer paths around ordinary buildings and escape buildings placed over them', () => {
   const state = createStronghold();
   state.units = []; state.buildings = [];
+  state.nodes = [];
   addBuilding(state, 'barracks', { x: 400, y: 400 }, true);
   const unit = addUnit(state, 'warrior', { x: 340, y: 400 });
   const target = { x: 460, y: 400 };

@@ -80,7 +80,7 @@ test('Stronghold starting forces persist across storage, refresh and reset witho
   const storage = new AppStorage({
     getItem: key => values.get(key) ?? null, setItem: (key, value) => { values.set(key, value); }, removeItem: key => { values.delete(key); }
   });
-  const options = { ...DEFAULT_DEVELOPER_OPTIONS, startingCounts: { worker: 3, builder: 2, warrior: 4, tower: 2, archer: 3, catapult: 2 } };
+  const options = { ...DEFAULT_DEVELOPER_OPTIONS, season: 'summer' as const, startingCounts: { worker: 3, builder: 2, warrior: 4, tower: 2, archer: 3, catapult: 2 } };
   writeDeveloperOptions(storage, options);
   const loaded = readDeveloperOptions(storage), engine = new StrongholdEngine(loaded);
   loaded.startingCounts.worker = 0;
@@ -374,7 +374,7 @@ test('Stronghold construction tiers keep independent bars and instant upgrades l
   equal(state.roleTasks.defenses.progress['upgrade:tower-1'], undefined);
   send(state, { type: 'ACTION', action: 'tower', tier: 1 });
   equal(player.work, tower1Work);
-  send(state, { type: 'PLACE', kind: 'tower', point: { x: 300, y: 500 } });
+  send(state, { type: 'PLACE', kind: 'tower', point: { x: 450, y: 500 } });
   equal(player.work, Math.round((tower1Work - 50) * 100) / 100);
   equal(state.resources, 800);
   send(state, { type: 'ACTION', action: 'tower', tier: 2 });

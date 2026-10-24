@@ -1,7 +1,7 @@
 import { distance, moveToward, RELAY_RANGE, UNIT_RULES } from './rules.ts';
 import type { Building, Point, StrongholdState, Unit } from './types.ts';
 import { ENTITY_LABELS, recordEvent } from './events.ts';
-import { moveUnitToward, wallApproach } from './navigation.ts';
+import { buildingApproach, buildingFootprint, distanceToFootprint, movementDestination, moveUnitToward, resourceNodeRadius, unitRadius, wallApproach } from './navigation.ts';
 import { creditResources } from './environment.ts';
 
 export function relayNeighbors(state: Pick<StrongholdState, 'buildings'>, point: Point, excludeId?: number): Building[] {
@@ -28,9 +28,10 @@ export function connectedRelays(state: Pick<StrongholdState, 'buildings'>): Buil
 
 function automaticWorkTime(state: StrongholdState, unit: Unit, seconds: number): number {
   if (unit.destination) {
-    const travelTime = distance(unit, unit.destination) / UNIT_RULES[unit.kind].speed;
+    const destination = movementDestination(state, unit, unit.destination);
+    const travelTime = distance(unit, destination) / UNIT_RULES[unit.kind].speed;
     moveUnitToward(state, unit, unit.destination, seconds * UNIT_RULES[unit.kind].speed);
-    if (distance(unit, unit.destination) > .001) return 0;
+    if (distance(unit, destination) > .001) return 0;
     unit.destination = null;
     unit.manualMove = false;
     unit.idleTime = 0;
@@ -57,10 +58,10 @@ function updateWorker(state: StrongholdState, worker: Unit, seconds: number): vo
   if (cargo) {
     const depot = state.buildings.filter(building => (building.kind === 'relay' || building.kind === 'castle')
       && building.hp > 0 && building.progress === 1).sort((a, b) => distance(worker, a) - distance(worker, b))[0];
-    if (depot) moveUnitToward(state, worker, depot, seconds * UNIT_RULES.worker.speed);
+    if (depot) moveUnitToward(state, worker, buildingApproach(state, worker, depot), seconds * UNIT_RULES.worker.speed);
     cargo.x = worker.x;
     cargo.y = worker.y;
-    if (depot && distance(worker, depot) <= 14) {
+    if (depot && distanceToFootprint(worker, buildingFootprint(state, depot)) <= unitRadius(worker) + 1) {
       cargo.carrier = null;
       cargo.x = depot.x;
       cargo.y = depot.y;
@@ -76,7 +77,7 @@ function updateWorker(state: StrongholdState, worker: Unit, seconds: number): vo
   }
   if (!node) return;
   moveUnitToward(state, worker, node, seconds * UNIT_RULES.worker.speed);
-  if (distance(worker, node) > 14 || worker.cooldown > 0) return;
+  if (distance(worker, node) > resourceNodeRadius(node) + unitRadius(worker) + 1 || worker.cooldown > 0) return;
   const amount = Math.min(node.remaining, (node.rich ? 8 : 4) + state.upgrades.economy * 2);
   node.remaining -= amount;
   if (node.remaining === 0) recordEvent(state, 'Resource node depleted');
@@ -86,8 +87,9 @@ function updateWorker(state: StrongholdState, worker: Unit, seconds: number): vo
 }
 
 function updateBuilder(state: StrongholdState, builder: Unit, seconds: number, project: Building): void {
-  const approach = project.kind === 'wall' ? wallApproach(builder, project) : project;
-  const range = project.kind === 'wall' ? 1 : 22;
+  const hard = project.kind === 'castle' || project.kind === 'enemy-base';
+  const approach = project.kind === 'wall' ? wallApproach(builder, project) : hard ? buildingApproach(state, builder, project) : project;
+  const range = project.kind === 'wall' || hard ? 1 : 22;
   if (distance(builder, approach) > range) {
     moveUnitToward(state, builder, approach, Math.min(seconds * UNIT_RULES.builder.speed, distance(builder, approach) - range));
   }

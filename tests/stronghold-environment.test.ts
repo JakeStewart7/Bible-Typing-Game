@@ -288,6 +288,7 @@ test('Stronghold seasonal movement applies equally to every friendly unit and en
   for (const [season, travel] of [['spring', 100], ['summer', 115], ['fall', 100], ['winter', 85]] as const) {
     const state = createStronghold(undefined, season);
     state.buildings = []; state.units = [];
+    state.nodes = [];
     for (const [kind, formation] of [
       ['worker', null], ['builder', null], ['warrior', null], ['archer', null], ['catapult', null],
       ['invader', null], ['invader', 'archer'], ['invader', 'catapult']
@@ -364,11 +365,11 @@ test('Stronghold fall boosts completed tier phrases without partial credit, roun
 test('Stronghold changing season applies current bonuses immediately without rewriting cargo or earned supplies', () => {
   const state = createStronghold(undefined, 'summer');
   state.buildings = state.buildings.filter(building => building.kind === 'castle'); state.units = [];
-  const unit = addUnit(state, 'warrior', { x: 100, y: 300 });
-  moveUnitToward(state, unit, { x: 900, y: 300 }, 100);
+  const unit = addUnit(state, 'warrior', { x: 100, y: 100 });
+  moveUnitToward(state, unit, { x: 900, y: 100 }, 100);
   equal(Math.round(unit.x), 215);
   executeCommand(state, state.players[0]!, { type: 'SET_SEASON', season: 'winter' });
-  moveUnitToward(state, unit, { x: 900, y: 300 }, 100);
+  moveUnitToward(state, unit, { x: 900, y: 100 }, 100);
   equal(Math.round(unit.x), 300);
   const castle = state.buildings[0]!;
   state.chunks.push({ id: 999, x: castle.x, y: castle.y, amount: 10, rich: false, target: castle.id, carrier: null });

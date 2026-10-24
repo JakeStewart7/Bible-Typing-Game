@@ -1,6 +1,6 @@
 import { assignPhrase, copyRoleTask } from './phrases.ts';
 import { addBuilding, addUnit } from './state.ts';
-import { ACTION_LABELS, BASE, BUILDING_CAPS, distance, isTypingAction, MIN_TIER, ROLE_ACTIONS, ROLE_LABELS, TIER_COSTS, TIER_MAX, UNIT_CAPS, validPoint, WALL_ROTATION_STEP } from './rules.ts';
+import { ACTION_LABELS, BASE, BUILDING_CAPS, isTypingAction, MIN_TIER, ROLE_ACTIONS, ROLE_LABELS, TIER_COSTS, TIER_MAX, UNIT_CAPS, validPoint, WALL_ROTATION_STEP } from './rules.ts';
 import { applyUpgrade, phraseWork, taskCost, taskWork, upgradeLimit, UPGRADE_OPTIONS } from './technology.ts';
 import { ENTITY_LABELS, playerEvent, recordEvent } from './events.ts';
 import { PHRASE_LENGTHS, SEASONS, type Action, type BuildingKind, type Participant, type Point, type StrongholdCommand, type StrongholdState } from './types.ts';
@@ -8,10 +8,10 @@ import { restoreRoleTask, saveRoleTask, taskKey } from './tasks.ts';
 import { spawnWave } from './combat.ts';
 import { creditResources, daylight, DAY_SECONDS, NIGHT_SECONDS, SEASON_BONUSES, SEASON_LABELS, seasonalNodes } from './environment.ts';
 import { tierProgress } from './tier-progress.ts';
-import { buildingFootprint, footprintCorners, footprintsOverlap, unitSpawnPoint } from './navigation.ts';
+import { buildingFootprint, footprintCorners, footprintsOverlap, nodeOverlapsFootprint, unitSpawnPoint } from './navigation.ts';
 import { isArmyUnit, queuedUnits, supportsRally, trainingBarracks, TRAINING_SECONDS } from './training.ts';
 
-type ActionWorld = Pick<StrongholdState, 'tier' | 'resources' | 'units' | 'technology' | 'buildings'>;
+type ActionWorld = Pick<StrongholdState, 'tier' | 'resources' | 'units' | 'technology' | 'buildings' | 'nodes'>;
 type TaskPlayer = Pick<Participant, 'role' | 'action' | 'constructionTier' | 'upgradeTarget' | 'work'>;
 export function actionUnlockProblem(state: Pick<StrongholdState, 'tier'>, task: Pick<Participant, 'action' | 'constructionTier' | 'upgradeTarget'>): string | null {
   const tier = Math.max(MIN_TIER[task.action], task.action === 'tower' || task.action === 'barracks' ? task.constructionTier
@@ -52,15 +52,17 @@ export function placementProblem(
   if (!state.units.some(unit => unit.kind === 'builder' && unit.hp > 0)) return 'Recruit a builder in Defenses first.';
   if (state.buildings.filter(building => building.kind === kind && !building.enemy && building.hp > 0).length >= BUILDING_CAPS[kind]) return 'Building limit reached.';
   if (blockers.buildings.length) return 'Leave space between buildings.';
+  if (blockers.nodes.length) return 'Do not build over resource nodes.';
   if (point.y < 130) return 'The enemy stronghold cannot be used as a construction site.';
   return null;
 }
 export function placementBlockers(state: ActionWorld, player: Pick<Participant, 'constructionTier'>,
-  kind: Extract<BuildingKind, 'relay' | 'barracks' | 'tower' | 'wall'>, point: Point, rotation = 0): { buildings: number[]; units: number[] } {
+  kind: Extract<BuildingKind, 'relay' | 'barracks' | 'tower' | 'wall'>, point: Point, rotation = 0): { buildings: number[]; units: number[]; nodes: number[] } {
   const footprint = buildingFootprint(state, { ...point, kind, rotation, tier: player.constructionTier, enemy: false });
   return {
-    buildings: state.buildings.filter(building => building.hp > 0 && (distance(point, building) < 38
-      || footprintsOverlap(footprint, buildingFootprint(state, building)))).map(building => building.id),
+    buildings: state.buildings.filter(building => building.hp > 0
+      && footprintsOverlap(footprint, buildingFootprint(state, building))).map(building => building.id),
+    nodes: state.nodes.filter(node => nodeOverlapsFootprint(node, footprint)).map(node => node.id),
     units: []
   };
 }

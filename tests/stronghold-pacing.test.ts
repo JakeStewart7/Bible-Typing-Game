@@ -161,7 +161,7 @@ test('Stronghold gatherers and builders follow move orders then resume nearest w
     executeCommand(state, player, { type: 'ROLE', role: 'army' });
     state.units = [];
     const unit = addUnit(state, kind, { x: 500, y: 300 });
-    state.nodes = [{ id: 100, x: 530, y: 300, rich: false, remaining: 100 }];
+    state.nodes = [{ id: 100, x: 560, y: 300, rich: false, remaining: 100 }];
     const project = addBuilding(state, 'barracks', { x: 530, y: 300 });
     const point = { x: 500, y: 300 + UNIT_RULES[kind].speed };
     executeCommand(state, player, { type: 'MOVE', ids: [unit.id], point });
@@ -197,7 +197,7 @@ test('Stronghold manual gatherer movement keeps carried supplies attached and re
   if (!player) throw new Error('Missing player.');
   state.units = [];
   const worker = addUnit(state, 'worker', { x: 500, y: 500 });
-  state.nodes = [{ id: 100, x: 500, y: 500, rich: false, remaining: 100 }];
+  state.nodes = [{ id: 100, x: 500, y: 464, rich: false, remaining: 100 }];
   updateLogistics(state, .1);
   executeCommand(state, player, { type: 'ROLE', role: 'army' });
   executeCommand(state, player, { type: 'MOVE', ids: [worker.id], point: { x: 450, y: 500 } });
@@ -246,6 +246,7 @@ test('Stronghold construction assigns distinct nearest builders to multiple pend
 test('Stronghold busy, manually moving, waiting and dead builders cannot steal a new construction job', () => {
   const state = createStronghold();
   state.units = [];
+  state.nodes = [];
   const busy = addUnit(state, 'builder', { x: 100, y: 300 });
   const original = addBuilding(state, 'barracks', { x: 105, y: 300 });
   updateLogistics(state, .1);
@@ -300,7 +301,7 @@ test('Stronghold gatherers carry a single harvested chunk before returning to a 
   equal(state.chunks[0]?.y, worker.y);
   equal(state.nodes[0]?.remaining, 96);
   equal(state.resources, 50);
-  for (let step = 0; step < 70; step++) updateLogistics(state, .1);
+  for (let step = 0; step < 300 && state.resources === 50; step++) updateLogistics(state, .1);
   equal(state.resources, 54);
   equal(state.chunks.length, 0);
   equal(state.nodes[0]?.remaining, 96);
@@ -314,7 +315,7 @@ test('Stronghold gatherers choose the nearest completed depot and reroute when i
   addBuilding(state, 'relay', { x: 500, y: 301 });
   const worker = addUnit(state, 'worker', { x: 500, y: 300 });
   updateLogistics(state, .1);
-  for (let step = 0; step < 30; step++) updateLogistics(state, .1);
+  for (let step = 0; step < 300 && state.chunks[0]?.carrier !== null; step++) updateLogistics(state, .1);
   equal(state.chunks[0]?.carrier, null);
   equal(state.chunks[0]?.target, relay.id);
   equal(state.chunks[0]?.y, relay.y);
@@ -413,7 +414,7 @@ test('Stronghold role members keep private text and share completed work and pla
   const constructionPhrase = you.phrase;
   const constructionId = you.phraseId;
   executeCommand(state, you, { type: 'TYPE', phraseId: constructionId, text: constructionPhrase.slice(0, 3) });
-  executeCommand(state, teammate, { type: 'PLACE', kind: 'tower', point: { x: 300, y: 500 } });
+  executeCommand(state, teammate, { type: 'PLACE', kind: 'tower', point: { x: 450, y: 500 } });
   equal(state.resources, 500);
   equal(you.work, Math.round((towerWork - 100) * 100) / 100);
   equal(you.actionPhrases, 0);

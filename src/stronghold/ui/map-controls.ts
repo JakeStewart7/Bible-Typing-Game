@@ -4,7 +4,7 @@ import type { Building, BuildingKind, Point, StrongholdSnapshot, Unit } from '..
 import { buildingMarkup, relayPreviewMarkup } from './battlefield.ts';
 import { setAttribute } from './dom-updates.ts';
 import { playerTheme } from './player-theme.ts';
-import { buildingFootprint, WALL_HALF_WIDTH } from '../domain/navigation.ts';
+import { buildingFootprint, resourceNodeRadius, WALL_HALF_WIDTH } from '../domain/navigation.ts';
 import { supportsRally } from '../domain/training.ts';
 
 export type PlacementKind = Extract<BuildingKind, 'relay' | 'barracks' | 'tower' | 'wall'>;
@@ -136,7 +136,8 @@ export function createMapControls(map: SVGSVGElement) {
       obstructions.innerHTML = snapshot.buildings.filter(building => blockers.buildings.includes(building.id)).map(building => {
         const box = buildingFootprint(snapshot, building);
         return `<rect data-blocking-building="${building.id}" transform="translate(${box.x} ${box.y}) rotate(${box.rotation})" x="${-box.halfX - 2}" y="${-box.halfY - 2}" width="${box.halfX * 2 + 4}" height="${box.halfY * 2 + 4}" fill="#ff1726" fill-opacity=".35" stroke="#ff1726" stroke-width="3"/>`;
-      }).join('') + snapshot.units.filter(unit => blockers.units.includes(unit.id)).map(unit => `<circle data-blocking-unit="${unit.id}" cx="${unit.x}" cy="${unit.y}" r="15" fill="#ff1726" fill-opacity=".35" stroke="#ff1726" stroke-width="3"/>`).join('');
+      }).join('') + snapshot.nodes.filter(node => blockers.nodes.includes(node.id)).map(node =>
+        `<circle data-blocking-node="${node.id}" cx="${node.x}" cy="${node.y}" r="${resourceNodeRadius(node)}" fill="#ff1726" fill-opacity=".35" stroke="#ff1726" stroke-width="2"/>`).join('');
       setAttribute(outline, 'stroke', problem ? '#ff1726' : highlight);
       setAttribute(ghost, 'data-valid', String(!problem));
       return problem;

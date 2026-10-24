@@ -293,7 +293,12 @@ Attack impacts retain their explosion without the extra crossing slash lines.
 
 Units prefer routes around all living buildings, including unfinished structures.
 Buildings may be placed over units; those units can move out, and units may pass
-through buildings when no route around exists rather than becoming trapped.
+through ordinary buildings when no route around exists rather than becoming trapped.
+Resource circles (including depleted nodes) and both castles are always solid.
+Gatherers harvest and deliver from outside their visible borders; builders repair
+castles from outside, and melee troops attack their outer edges.
+Placement uses the exact outer stroke bounds, without an extra gap: walls can
+touch edge-to-edge at any rotation. Resource circles also block construction.
 Walls are 25% thicker, with matching collision bounds and placement previews.
 The **scroll wheel** rotates a wall placement preview or selected wall in
 22.5-degree steps through sixteen orientations, instead of zooming. No rotation

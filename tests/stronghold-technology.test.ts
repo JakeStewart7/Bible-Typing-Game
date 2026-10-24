@@ -71,7 +71,7 @@ test('Stronghold free towers retain their tier and paid troops are purchased wit
   executeCommand(state, self(state), { type: 'TYPE', phraseId: self(state).phraseId, text: self(state).phrase });
   equal(self(state).work, points);
   finish(state);
-  executeCommand(state, self(state), { type: 'PLACE', kind: 'tower', point: { x: 360, y: 425 } });
+  executeCommand(state, self(state), { type: 'PLACE', kind: 'tower', point: { x: 450, y: 425 } });
   equal(state.buildings.find(building => building.kind === 'tower' && !building.enemy)?.tier, 2);
   equal(state.buildings.find(building => building.kind === 'tower' && !building.enemy)?.maxHp, 800);
   equal(state.resources, 500);

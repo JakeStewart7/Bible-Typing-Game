@@ -17,6 +17,7 @@ import './stronghold-environment.test.ts';
 import './stronghold-music.test.ts';
 import './stronghold-word-pools.test.ts';
 import './stronghold-polish.test.ts';
+import './stronghold-collision.test.ts';
 import { runTests } from './harness.ts';
 
 await runTests();
