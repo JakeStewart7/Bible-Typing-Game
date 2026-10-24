@@ -7,8 +7,9 @@ export const WALL_HALF_LENGTH = 24.5;
 export const WALL_HALF_WIDTH = 6.875;
 const UNIT_RADIUS = 10;
 type World = Pick<StrongholdState, 'buildings' | 'technology'>;
-type Obstacle = { wall: Building; x: number; y: number; cosine: number; sine: number; halfX: number; halfY: number };
-type Layout = { signature: string; obstacles: Obstacle[]; corners: Point[]; edges: { to: number; cost: number }[][] };
+type Obstacle = { wall: Building; x: number; y: number; cosine: number; sine: number; halfX: number; halfY: number;
+  kind: Building['kind']; tier: number; rotation: number; scale: number };
+type Layout = { obstacles: Obstacle[]; corners: Point[]; edges: ({ to: number; cost: number }[] | undefined)[] };
 const layouts = new WeakMap<World, Map<number, Layout>>();
 const routes = new WeakMap<Unit, { layout: Layout; target: Point; path: Point[]; fallback: boolean }>();
 export function unitRadius(unit: Partial<Pick<Unit, 'kind' | 'formation'>>): number {
@@ -85,26 +86,32 @@ function clear(start: Point, end: Point, obstacles: readonly Obstacle[], ignore:
   return obstacles.every(obstacle => ignore.includes(obstacle.wall) || !intersects(start, end, obstacle));
 }
 function layoutFor(world: World, padding = UNIT_RADIUS): Layout {
-  const buildings = world.buildings.filter(building => building.hp > 0);
-  const signature = buildings.map(building => `${building.id}:${JSON.stringify(buildingFootprint(world, building))}`).join('|');
   const cache = layouts.get(world) ?? new Map<number, Layout>();
   const cached = cache.get(padding);
-  if (cached?.signature === signature) return cached;
+  if (cached) {
+    let index = 0;
+    const unchanged = world.buildings.every(building => {
+      if (building.hp <= 0) return true;
+      const previous = cached.obstacles[index++];
+      return previous?.wall === building && previous.x === building.x && previous.y === building.y
+        && previous.kind === building.kind && previous.tier === building.tier
+        && previous.rotation === (building.rotation ?? 0) && previous.scale === buildingScale(world, building);
+    });
+    if (unchanged && index === cached.obstacles.length) return cached;
+  }
+  const buildings = world.buildings.filter(building => building.hp > 0);
   const obstacles = buildings.map(wall => {
     const box = buildingFootprint(world, wall), radians = box.rotation * Math.PI / 180;
     return { wall, x: wall.x, y: wall.y, cosine: Math.cos(radians), sine: Math.sin(radians),
-      halfX: box.halfX + padding, halfY: box.halfY + padding };
+      halfX: box.halfX + padding, halfY: box.halfY + padding,
+      kind: wall.kind, tier: wall.tier, rotation: wall.rotation ?? 0, scale: buildingScale(world, wall) };
   });
   const corners = obstacles.flatMap(obstacle => [-1, 1].flatMap(x => [-1, 1].map(y => {
     const dx = x * (obstacle.halfX + .5), dy = y * (obstacle.halfY + .5);
     return { x: obstacle.x + dx * obstacle.cosine - dy * obstacle.sine,
       y: obstacle.y + dx * obstacle.sine + dy * obstacle.cosine };
   }))).filter(point => validPoint(point) && clear(point, point, obstacles));
-  const edges: Layout['edges'] = corners.map(() => []);
-  corners.forEach((a, from) => corners.forEach((b, to) => {
-    if (from !== to && clear(a, b, obstacles)) edges[from]?.push({ to, cost: distance(a, b) });
-  }));
-  const layout = { signature, obstacles, corners, edges };
+  const layout: Layout = { obstacles, corners, edges: [] };
   cache.set(padding, layout);
   layouts.set(world, cache);
   return layout;
@@ -143,7 +150,13 @@ function findPath(layout: Layout, start: Point, target: Point): Point[] {
     visited.add(current);
     const point = points[current];
     if (!point) throw new Error('Missing navigation vertex.');
-    const edges = [...(layout.edges[current] ?? [])];
+    let neighbors = layout.edges[current];
+    if (!neighbors) {
+      neighbors = layout.corners.flatMap((candidate, to) =>
+        to !== current && clear(point, candidate, layout.obstacles) ? [{ to, cost: distance(point, candidate) }] : []);
+      layout.edges[current] = neighbors;
+    }
+    const edges = [...neighbors];
     if (clear(point, target, layout.obstacles, targetBuildings)) edges.push({ to: points.length - 1, cost: distance(point, target) });
     for (const edge of edges) {
       if (cost + edge.cost < (costs[edge.to] ?? Infinity)) {
@@ -157,7 +170,9 @@ export function moveUnitToward(world: World & Pick<StrongholdState, 'season'>, u
   travel *= SEASON_BONUSES[world.season].movement;
   const layout = layoutFor(world, unitRadius(unit));
   let route = routes.get(unit);
-  if (!route || route.fallback || route.layout !== layout || distance(route.target, target) > .1) {
+  // Moving combat targets do not need a new graph search for every subpixel step.
+  if (!route || route.fallback || route.layout !== layout || distance(route.target, target) > 4
+    || (!route.path.length && distance(unit, target) > .1)) {
     const path = findPath(layout, unit, target);
     route = { layout, target: { ...target }, path, fallback: !path.length };
     if (!route.path.length) route.path.push({ ...target });

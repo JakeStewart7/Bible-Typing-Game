@@ -302,6 +302,9 @@ the construction area. Placement outlines and actual buildings use the same
 tier/upgrade-scaled footprint. Blocking buildings are highlighted in
 red, and the preview explicitly reports insufficient supplies or other failures.
 Units route around wall ends whenever a route is available.
+Navigation caches geometry without rebuilding string signatures for each unit,
+calculates visibility-graph edges only when a route needs them, and reuses paths
+across small combat-target movements to reduce crowded-battlefield stalls.
 
 Controls, typing and logs use consistent bold Arial-family typography and larger,
 high-contrast text; repeated captions stay out of

@@ -720,6 +720,37 @@ test('Stronghold units prefer paths around ordinary buildings and escape buildin
   equal({ x: unit.x, y: unit.y }, { x: 550, y: 400 });
 });
 
+test('Stronghold line-of-sight checks do not eagerly calculate the navigation visibility graph', () => {
+  const state = createStronghold();
+  state.buildings = [];
+  for (let index = 0; index < 40; index++) {
+    addBuilding(state, 'wall', { x: 100 + index % 8 * 100, y: 150 + Math.floor(index / 8) * 80 }, true);
+  }
+  const hypot = Math.hypot;
+  let distances = 0;
+  Math.hypot = (...values: number[]) => { distances++; return hypot(...values); };
+  try {
+    for (let check = 0; check < 20; check++) wallBetween(state, { x: 30, y: 30 }, { x: 40, y: 40 });
+    equal(distances, 0);
+  } finally { Math.hypot = hypot; }
+});
+
+test('Stronghold cached routes follow small target movements to the exact destination', () => {
+  const state = createStronghold(undefined, 'fall');
+  state.units = []; state.buildings = [];
+  const wall = addBuilding(state, 'wall', { x: 500, y: 350 }, true);
+  const unit = addUnit(state, 'warrior', { x: 500, y: 280 });
+  const target = { x: 500, y: 420 };
+  for (let step = 0; step < 300; step++) {
+    if (step < 30) target.x += .2;
+    const before = { x: unit.x, y: unit.y };
+    moveUnitToward(state, unit, target, 1);
+    equal(wallBetween(state, before, unit), undefined);
+    equal(wallContains(unit, wall, 9.9), false);
+  }
+  equal({ x: unit.x, y: unit.y }, target);
+});
+
 test('Stronghold builders stay still within construction and repair range', () => {
   const state = createStronghold();
   state.units = []; state.buildings = [];
