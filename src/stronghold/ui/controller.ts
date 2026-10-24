@@ -12,6 +12,7 @@ import { actionShortcutKey, arrowPan, nextTaskIndex, typingLengthKey } from './k
 import { createSeasonalMusic } from '../audio/music.ts';
 import { isPlayerColor } from '../domain/options.ts';
 import { createPlayerCursor } from './player-cursor.ts';
+import { supportsRally } from '../domain/training.ts';
 
 export function createStrongholdController(connection: StrongholdConnection, developer: {
   defaults: DeveloperOptions; save(options: DeveloperOptions): void;
@@ -346,8 +347,11 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       event.preventDefault(); clearDrag();
       const point = mapPoint(elements.map, event.clientX, event.clientY);
       if (point && selectedBuildings.size && !placing() && !rallyPlacement) {
+        const rallyIds = snapshot.buildings.filter(building => selectedBuildings.has(building.id) && supportsRally(building)).map(building => building.id);
         const moveSelected = self()?.role === 'army' && selected.size > 0;
-        void send({ type: 'RALLY', ids: [...selectedBuildings], point }).then(sent => { if (sent && moveSelected) move(point); });
+        if (rallyIds.length) void send({ type: 'RALLY', ids: rallyIds, point }).then(sent => { if (sent && moveSelected) move(point); });
+        else if (moveSelected) move(point);
+        else { errorMessage = 'Only castles and barracks have rally points.'; display(); }
       } else if (placing() || rallyPlacement || editingWall !== null) cancelPlacement();
       else if (point && self()?.role === 'army') move(point);
       focusTyping();

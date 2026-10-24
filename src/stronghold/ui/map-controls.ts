@@ -5,6 +5,7 @@ import { buildingMarkup, relayPreviewMarkup } from './battlefield.ts';
 import { setAttribute } from './dom-updates.ts';
 import { playerTheme } from './player-theme.ts';
 import { buildingFootprint, WALL_HALF_WIDTH } from '../domain/navigation.ts';
+import { supportsRally } from '../domain/training.ts';
 
 export type PlacementKind = Extract<BuildingKind, 'relay' | 'barracks' | 'tower' | 'wall'>;
 const WALL_OUTLINE_HEIGHT = WALL_HALF_WIDTH * 2 + 9;
@@ -92,7 +93,8 @@ export function createMapControls(map: SVGSVGElement) {
     },
     buildingSelection(snapshot: StrongholdSnapshot, ids: ReadonlySet<number>): void {
       buildingSelection.innerHTML = snapshot.buildings.filter(building => ids.has(building.id) && !building.enemy && building.hp > 0).map(building => {
-        const box = buildingFootprint(snapshot, building), rally = building.rally ?? (building.kind === 'barracks' ? snapshot.rally : null);
+        const box = buildingFootprint(snapshot, building);
+        const rally = supportsRally(building) ? building.rally ?? (building.kind === 'barracks' ? snapshot.rally : null) : null;
         return `<g data-selected-building="${building.id}"><rect transform="translate(${box.x} ${box.y}) rotate(${box.rotation})" x="${-box.halfX - 4}" y="${-box.halfY - 4}" width="${box.halfX * 2 + 8}" height="${box.halfY * 2 + 8}" fill="${highlight}" fill-opacity=".15" stroke="${ink}" stroke-width="2"/>
           ${rally ? `<path d="M${building.x} ${building.y}L${rally.x} ${rally.y}" stroke="${ink}" stroke-width="2" stroke-dasharray="5 4"/><g transform="translate(${rally.x} ${rally.y})" data-building-rally="${building.id}"><path d="M0 8V-14L15 -8L0 -2" fill="${highlight}" stroke="${ink}" stroke-width="2"/></g>` : ''}</g>`;
       }).join('');

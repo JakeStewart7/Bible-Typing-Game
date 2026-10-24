@@ -52,7 +52,7 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
     nodes: seasonalNodes(startingSeason),
     upgrades: { economy: 0, production: 0, defenses: 0 },
     technology: { economy: 0, warrior: 0, archer: 0, catapult: 0, 'tower-1': 0, 'tower-2': 0, 'tower-3': 0 },
-    rally: { x: 500, y: 450 }, message: '', events: [{ id: 1, elapsed: 0, playerId: null, text: 'Game started' }],
+    rally: null, message: '', events: [{ id: 1, elapsed: 0, playerId: null, text: 'Game started' }],
     computersPaused: options.computersPaused,
     roleTasks: {
       economy: createRoleTasks({ action: 'worker', constructionTier: 1, upgradeTarget: 'economy' }),

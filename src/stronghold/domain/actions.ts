@@ -9,7 +9,7 @@ import { spawnWave } from './combat.ts';
 import { creditResources, daylight, DAY_SECONDS, NIGHT_SECONDS, SEASON_BONUSES, SEASON_LABELS, seasonalNodes } from './environment.ts';
 import { tierProgress } from './tier-progress.ts';
 import { buildingFootprint, footprintCorners, footprintsOverlap, unitSpawnPoint } from './navigation.ts';
-import { isArmyUnit, queuedUnits, trainingBarracks, TRAINING_SECONDS } from './training.ts';
+import { isArmyUnit, queuedUnits, supportsRally, trainingBarracks, TRAINING_SECONDS } from './training.ts';
 
 type ActionWorld = Pick<StrongholdState, 'tier' | 'resources' | 'units' | 'technology' | 'buildings'>;
 type TaskPlayer = Pick<Participant, 'role' | 'action' | 'constructionTier' | 'upgradeTarget' | 'work'>;
@@ -284,6 +284,7 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     if (!command.ids.length || command.ids.length > 64) throw new Error('Select friendly buildings first.');
     const buildings = command.ids.map(id => state.buildings.find(building => building.id === id && !building.enemy && building.hp > 0));
     if (buildings.some(building => !building)) throw new Error('Select only friendly buildings.');
+    if (buildings.some(building => building && !supportsRally(building))) throw new Error('Only castles and barracks have rally points.');
     for (const building of buildings) if (building) building.rally = { ...command.point };
     playerEvent(state, player, 'set building Rally points');
     return;
@@ -292,7 +293,7 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
   if (!validPoint(command.point)) throw new Error('Choose a location inside the battlefield.');
   if (command.type === 'RALLY') {
     state.rally = { ...command.point };
-    for (const building of state.buildings) if (!building.enemy && building.hp > 0) building.rally = { ...command.point };
+    for (const building of state.buildings) if (!building.enemy && building.hp > 0 && supportsRally(building)) building.rally = { ...command.point };
     playerEvent(state, player, 'set Rally point');
     return;
   }

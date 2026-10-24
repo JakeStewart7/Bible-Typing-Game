@@ -251,7 +251,8 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
       && !building.enemy && building.hp > 0));
     renderNodes(snapshot.nodes); renderChunks(snapshot.chunks);
     renderBuildings(snapshot.buildings); renderUnits(snapshot.units);
-    position(rally, snapshot.rally);
+    setAttribute(rally, 'visibility', snapshot.rally ? 'visible' : 'hidden');
+    if (snapshot.rally) position(rally, snapshot.rally);
   };
   return Object.assign(render, { reset(): void {
     previousUnits.clear();

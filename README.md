@@ -382,12 +382,15 @@ a phrase already in progress at either transition. Enemy waves add ranged and si
 base develops. Select troops with
 click/Shift-click, drag a selection rectangle (Shift adds to the selection), or
 **Select all troops**, then **right-click** the battlefield or use **Defend** / **Assault
-base**. Click or Shift-click friendly buildings to select them, then right-click
-to set their individual rally points. Barracks send newly trained units to their
-own rally; a castle rally also directs newly recruited gatherers and builders
-before they resume automatic work. Unit Control's **Rally all buildings** applies
-one rally point to all friendly buildings and becomes the default for future
-barracks. Mixed unit/building selections both move units and update building
+base**. No rally point is set at the start: troops stay near their barracks
+unless fighting or explicitly ordered elsewhere. Click or Shift-click friendly
+castles or barracks, then right-click to set individual rally points. Barracks
+send newly trained units to their own rally; a castle rally also directs newly
+recruited gatherers and builders before they resume automatic work.
+Unit Control's **Rally production** applies a shared rally to castles and barracks
+and becomes the fallback for future barracks. Towers, walls and relays cannot
+receive rally points and never show rally flags or lines.
+Mixed unit/building selections both move units and update eligible building
 rallies on right-click. **Ctrl+Tab / Ctrl+Shift+Tab** cycle roles forwards/backwards
 when the browser delivers those keys to the game; role buttons remain available
 in browsers that reserve these shortcuts for tab switching.

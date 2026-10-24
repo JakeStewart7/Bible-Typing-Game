@@ -1,4 +1,4 @@
-import { CATAPULT_WINDUP_SECONDS, distance, ENEMY_BASE, TOWER_STRENGTH_MULTIPLIER, UNIT_CAPS, UNIT_RULES } from './rules.ts';
+import { CATAPULT_WINDUP_SECONDS, distance, TOWER_STRENGTH_MULTIPLIER, UNIT_CAPS, UNIT_RULES } from './rules.ts';
 import { moveUnitToward, wallApproach, wallBetween } from './navigation.ts';
 import { addBuilding, addUnit } from './state.ts';
 import { towerUpgrade, unitUpgrade } from './technology.ts';
@@ -141,7 +141,8 @@ export function updateCombat(state: StrongholdState, seconds: number): void {
   state.buildings = state.buildings.filter(building => building.hp > 0 || building.kind === 'castle' || building.kind === 'enemy-base');
 }
 
-export function rallyArmy(state: StrongholdState, point = ENEMY_BASE): void {
+export function rallyArmy(state: StrongholdState, point: Point | null): void {
+  if (!point) return;
   for (const unit of state.units) {
     if (isFighter(unit) && !unit.manualMove) unit.destination = { ...point };
   }

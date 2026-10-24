@@ -500,7 +500,7 @@ test('Stronghold paid queues train FIFO at matching barracks, pay only once and 
   }
 });
 
-test('Stronghold selected building rallies are independent and Unit Control can override every friendly building', () => {
+test('Stronghold selected production rallies are independent and Unit Control never gives towers a rally', () => {
   const state = createStronghold({ resources: 1000, length: 'medium', computersPaused: true });
   const player = state.players[0]!, castle = state.buildings.find(building => building.kind === 'castle')!;
   state.tier = 3;
@@ -524,9 +524,25 @@ test('Stronghold selected building rallies are independent and Unit Control can 
   executeCommand(state, player, { type: 'ROLE', role: 'army' });
   executeCommand(state, player, { type: 'RALLY', point: all });
   equal(state.rally, all);
-  for (const building of state.buildings) equal(building.rally, building.enemy ? null : all);
+  for (const building of state.buildings) equal(building.rally,
+    !building.enemy && (building.kind === 'castle' || building.kind === 'barracks') ? all : null);
   const future = addBuilding(state, 'barracks', { x: 600, y: 500 }, true, false, 1);
   equal(future.rally ?? state.rally, all);
+});
+
+test('Stronghold has no default rally or implicit movement orders and rejects tower rallies atomically', () => {
+  const state = createStronghold({ resources: 1000, length: 'medium', computersPaused: false });
+  const player = state.players[0]!;
+  equal(state.rally, null);
+  equal(state.buildings.every(building => building.rally === null), true);
+  const warriors = state.units.filter(unit => unit.kind === 'warrior');
+  advanceStronghold(state, .1);
+  equal(warriors.every(unit => unit.destination === null), true);
+  const tower = addBuilding(state, 'tower', { x: 350, y: 400 }, true);
+  const barracks = addBuilding(state, 'barracks', { x: 700, y: 500 }, true);
+  const before = structuredClone(state);
+  rejects(() => executeCommand(state, player, { type: 'RALLY', ids: [barracks.id, tower.id], point: { x: 500, y: 300 } }), 'Only castles and barracks');
+  equal(state, before);
 });
 
 test('Stronghold castle rally points direct freshly typed gatherers and builders without replacing their automatic jobs permanently', () => {

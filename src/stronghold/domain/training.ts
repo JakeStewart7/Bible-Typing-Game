@@ -2,6 +2,9 @@ import { MIN_TIER } from './rules.ts';
 import type { ArmyUnitKind, Building, StrongholdState } from './types.ts';
 
 export const TRAINING_SECONDS = 12;
+export function supportsRally(building: Pick<Building, 'kind'>): boolean {
+  return building.kind === 'castle' || building.kind === 'barracks';
+}
 export function isArmyUnit(action: string): action is ArmyUnitKind {
   return action === 'warrior' || action === 'archer' || action === 'catapult';
 }

@@ -111,7 +111,8 @@ function produceArmy(state: StrongholdState, seconds: number): void {
     const spawn = unitSpawnPoint(state, barracks, unitRadius(order));
     if (!spawn) continue;
     const unit = addUnit(state, order.kind, spawn);
-    unit.destination = { ...(barracks.rally ?? state.rally) };
+    const rally = barracks.rally ?? state.rally;
+    unit.destination = rally ? { ...rally } : null;
     const owner = state.players.find(player => player.id === order.playerId);
     recordEvent(state, `${owner ? `Player ${state.players.indexOf(owner) + 1}` : 'Barracks'} created ${ENTITY_LABELS[order.kind]}`, order.playerId);
     barracks.trainingQueue.shift();

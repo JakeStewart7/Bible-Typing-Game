@@ -53,7 +53,7 @@ export type StrongholdState = {
   nodes: ResourceNode[]; chunks: ResourceChunk[]; nextId: number;
   upgrades: Record<'economy' | 'production' | 'defenses', number>;
   technology: Record<UpgradeTarget, number>;
-  rally: Point; message: string; events: StrongholdEvent[];
+  rally: Point | null; message: string; events: StrongholdEvent[];
   roleTasks: Record<Role, RoleTasks>; computersPaused: boolean;
 };
 export type StrongholdSnapshot = Omit<StrongholdState, 'players' | 'nextId'> & {
