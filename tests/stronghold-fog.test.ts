@@ -1,6 +1,6 @@
 import { equal, test } from './harness.ts';
 import { addBuilding, addUnit, createStronghold } from './stronghold-fixtures.ts';
-import { createFog, exploredPath, inVision, knownResourceNodes, updateFog, visionSources } from '../src/stronghold/domain/fog.ts';
+import { createFog, exploredPath, FOG_CELL_SIZE, inVision, knownResourceNodes, updateFog, visionSources } from '../src/stronghold/domain/fog.ts';
 import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
 import { placementProblem } from '../src/stronghold/domain/actions.ts';
 import { spawnWave, updateCombat } from '../src/stronghold/domain/combat.ts';
@@ -12,7 +12,7 @@ test('Stronghold starts with shared local vision and does not expose unexplored 
   const initial = engine.snapshot('you');
   equal(initial.units.length, 5);
   equal(initial.buildings.map(building => building.kind), ['castle']);
-  equal(initial.nodes.length > 0 && initial.nodes.length < 8, true);
+  equal(initial.nodes.length, 0);
   equal(initial.fog.buildings, []);
   equal(initial.fog.units, []);
   equal(inVision(initial.fog.sources, { x: 500, y: 595 }), true);
@@ -21,7 +21,7 @@ test('Stronghold starts with shared local vision and does not expose unexplored 
   initial.fog.explored.length = 0;
   initial.fog.sources[0]!.radius = 10000;
   equal(engine.snapshot('you').fog.explored.length > 0, true);
-  equal(engine.snapshot('you').fog.sources[0]!.radius, 120);
+  equal(engine.snapshot('you').fog.sources[0]!.radius, 80);
   const before = engine.snapshot('you').fog.explored.length;
   engine.send('you', { type: 'ROLE', role: 'army' });
   const worker = engine.snapshot('you').units.find(unit => unit.kind === 'worker')!;
@@ -39,12 +39,35 @@ test('Stronghold sight comes from living units and completed buildings, never en
   const tower = addBuilding(state, 'tower', { x: 500, y: 300 });
   addBuilding(state, 'enemy-base', { x: 900, y: 100 }, true, true);
   equal(visionSources(state).length, 1);
-  equal(inVision(visionSources(state), { x: 219.99, y: 100 }), true);
-  equal(inVision(visionSources(state), { x: 220, y: 100 }), false);
+  equal(inVision(visionSources(state), { x: 179.99, y: 100 }), true);
+  equal(inVision(visionSources(state), { x: 180, y: 100 }), false);
   tower.progress = 1;
   equal(inVision(visionSources(state), { x: 719.99, y: 300 }), true);
   worker.hp = 0; tower.hp = 0;
   equal(visionSources(state), []);
+});
+
+test('Stronghold every unit formation sees two fog blocks less while building sight remains unchanged', () => {
+  const state = createStronghold();
+  state.buildings = [];
+  for (const [kind, previous] of [['worker', 120], ['builder', 120], ['warrior', 150],
+    ['archer', 180], ['catapult', 210], ['invader', 150]] as const) {
+    state.units = [];
+    addUnit(state, kind, { x: 400, y: 300 });
+    equal(visionSources(state, kind === 'invader')[0]?.radius, previous - 2 * FOG_CELL_SIZE);
+  }
+  for (const [formation, previous] of [['warrior', 150], ['archer', 180], ['catapult', 210]] as const) {
+    state.units = [];
+    addUnit(state, 'invader', { x: 400, y: 300 }, formation);
+    equal(visionSources(state, true)[0]?.radius, previous - 2 * FOG_CELL_SIZE);
+  }
+  state.units = [];
+  for (const [kind, radius] of [['castle', 200], ['enemy-base', 200], ['barracks', 160],
+    ['tower', 220], ['relay', 120], ['wall', 80]] as const) {
+    state.buildings = [];
+    const building = addBuilding(state, kind, { x: 400, y: 300 }, true, kind === 'enemy-base');
+    equal(visionSources(state, building.enemy)[0]?.radius, radius);
+  }
 });
 
 test('Stronghold fog freezes last-seen positions and health and clears stale memories only on rediscovery', () => {

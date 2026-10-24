@@ -251,8 +251,9 @@ Zoom and pan do not change world coordinates or speed.
 Shift-drag retains additive army selection.
 
 Fog of war shares vision across the whole team. Units explore the map and
-completed friendly buildings reveal nearby ground. Gatherers/builders see 120
-map units; warriors 150, archers 180 and catapults 210. Castles reveal 200,
+completed friendly buildings reveal nearby ground. Gatherers/builders see 80
+map units; warriors 110, archers 140 and catapults 170. Unit sight is reduced by
+two 20-unit fog blocks; enemy formations use the same sight ranges. Castles reveal 200,
 barracks 160, towers 220, relays 120 and walls 80.
 Current sight, unexplored ground and explored shadows share the same pixel grid.
 Unexplored ground is darkened rather than black; explored ground has a lighter

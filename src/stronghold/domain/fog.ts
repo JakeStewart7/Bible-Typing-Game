@@ -3,7 +3,7 @@ import type { BuildingKind, FogOfWar, Point, StrongholdState, UnitKind, VisionSo
 export const FOG_CELL_SIZE = 20;
 export const FOG_COLUMNS = 50;
 export const FOG_ROWS = 33;
-const UNIT_SIGHT: Record<UnitKind, number> = { worker: 120, builder: 120, warrior: 150, archer: 180, catapult: 210, invader: 150 };
+const UNIT_SIGHT: Record<UnitKind, number> = { worker: 80, builder: 80, warrior: 110, archer: 140, catapult: 170, invader: 110 };
 const BUILDING_SIGHT: Record<BuildingKind, number> = { castle: 200, 'enemy-base': 200, barracks: 160, tower: 220, relay: 120, wall: 80 };
 type World = Pick<StrongholdState, 'units' | 'buildings'>;
 
