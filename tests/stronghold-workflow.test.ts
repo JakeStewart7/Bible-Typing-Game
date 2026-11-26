@@ -9,7 +9,9 @@ import { PHRASE_LENGTHS, type Action, type Role, type UpgradeTarget, type UnitKi
 import { selectionBounds, troopsInRectangle } from '../src/stronghold/ui/map-controls.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
 import { playerCursor, playerTheme } from '../src/stronghold/ui/player-theme.ts';
-import { workProgress } from '../src/stronghold/ui/work-progress.ts';
+import { taskProgress, workProgress } from '../src/stronghold/ui/work-progress.ts';
+import { SEASON_BONUSES, typingSupplyBase } from '../src/stronghold/domain/environment.ts';
+import { SEASONS } from '../src/stronghold/domain/types.ts';
 import { equal, test } from './harness.ts';
 
 test('Stronghold completed entries, not partial typing, fill the shared task bar for every length', () => {
@@ -199,6 +201,38 @@ test('Stronghold one progress bar fills to 100 percent without completion counts
   equal(workProgress(32, 32).label, 'Ready');
   equal(workProgress(0, 32).label, '0%');
   equal(strongholdWorkspaceMarkup().includes('stronghold-ready-count'), false);
+});
+
+test('Stronghold Unit Control progress names the actual team supply reward including economy and season effects', () => {
+  for (const season of SEASONS) {
+    for (const economy of [0, 3]) {
+      const state = createStronghold({ resources: 0, length: 'short', computersPaused: true }, season);
+      const player = state.players[0]!;
+      executeCommand(state, player, { type: 'ROLE', role: 'army' });
+      state.upgrades.economy = economy;
+      const supplies = Math.round(typingSupplyBase(state) * SEASON_BONUSES[season].resources * 100) / 100;
+      player.work = 16;
+      const progress = taskProgress(player, taskWork(player), supplies);
+      equal(progress.label, `50% / +${supplies} team supplies`);
+      equal(progress.description.includes(`Each full bar adds ${supplies} shared supplies to the team.`), true);
+      for (let entry = 0; entry < 32 && state.resources === 0; entry++) {
+        executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+      }
+      equal(state.resources, supplies);
+    }
+  }
+});
+
+test('Stronghold task progress names recruits and distinguishes prepared buildings from finished construction', () => {
+  const player = createStronghold().players[0]!;
+  equal(taskProgress({ ...player, action: 'worker', work: 32 }, 64, 18).label, '50% / +1 gatherer');
+  equal(taskProgress({ ...player, action: 'builder', work: 64 }, 64, 18).label, 'Ready / +1 builder');
+  const tower = { ...player, action: 'tower' as const, constructionTier: 3, work: 75 };
+  equal(taskProgress(tower, taskWork(tower), 18).label, '50% / T3 tower');
+  equal(taskProgress({ ...tower, work: 150 }, taskWork(tower), 18).label, 'Place T3 tower');
+  const wall = taskProgress({ ...player, action: 'wall', work: 32 }, 32, 18);
+  equal(wall.label, 'Place wall');
+  equal(wall.description.includes('Click the map to place it; a builder finishes construction.'), true);
 });
 
 test('Stronghold free construction has proportional requirements, preserves word overflow and never accumulates further ready entries', () => {

@@ -74,14 +74,18 @@ A fully correct entry earns its character count,
 including spaces, times its length bonus; partial or incorrect text earns nothing.
 **Supplies, Gatherer, Barracks, Builder, Wall and Tower** use typing without
 spending supplies. Each typing tile has a thick, player-colored mini progress bar,
-not a money or Free badge. Selecting it shows that task's progress in the main
-player-colored experience bar. Bars have the same size: more expensive tasks
+not a money or Free badge. Selecting it shows that task's progress and team output in the main
+player-colored experience bar. Unit Control shows **+18 team supplies** per full
+bar at the base economy level, updated immediately for economy upgrades and
+seasonal resource bonuses. Recruiting bars name the unit they produce, and full
+construction bars say **Place** plus the prepared building. Hover or focus a bar
+for completion and placement details. Bars have the same size: more expensive tasks
 fill more slowly, with barracks and tower requirements proportional to their
 former supplies costs and construction tier. The UI shows percentages, not those
 internal character costs. Each role keeps independent progress for every typing task
 and building tier, even when that role becomes unoccupied.
 Switching tasks, roles or lengths and completing tier challenges preserves this
-work. A full construction bar shows **Ready**, without a stacked completion counter
+work. A full construction bar shows **Place** and the building name, without a stacked completion counter
 or cycling red layers. Excess from the entry that fills it carries into the next
 bar after placement; further entries while it is ready do not bank extra
 completions. Supplies, Gatherers and Builders execute automatically when their

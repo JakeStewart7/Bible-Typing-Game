@@ -6,7 +6,7 @@ import { ENTITY_LABELS, playerEvent, recordEvent } from './events.ts';
 import { PHRASE_LENGTHS, SEASONS, type Action, type BuildingKind, type Participant, type Point, type StrongholdCommand, type StrongholdState } from './types.ts';
 import { restoreRoleTask, saveRoleTask, taskKey } from './tasks.ts';
 import { spawnWave } from './combat.ts';
-import { creditResources, daylight, DAY_SECONDS, NIGHT_SECONDS, SEASON_BONUSES, SEASON_LABELS, seasonalNodes } from './environment.ts';
+import { creditResources, daylight, DAY_SECONDS, NIGHT_SECONDS, SEASON_BONUSES, SEASON_LABELS, seasonalNodes, typingSupplyBase } from './environment.ts';
 import { tierProgress } from './tier-progress.ts';
 import { buildingFootprint, footprintCorners, footprintsOverlap, nodeOverlapsFootprint, unitSpawnPoint } from './navigation.ts';
 import { isArmyUnit, queuedUnits, supportsRally, trainingBarracks, TRAINING_SECONDS } from './training.ts';
@@ -72,7 +72,7 @@ export function placementBlockers(state: ActionWorld, player: Pick<Participant, 
 
 function performAction(state: StrongholdState, player: Participant, action: Action, upgrade = player.upgradeTarget): void {
   if (action === 'resources') {
-    creditResources(state, 18 + state.upgrades.economy * 6);
+    creditResources(state, typingSupplyBase(state));
     playerEvent(state, player, 'gathered Supplies');
   } else if (action === 'upgrade') {
     applyUpgrade(state, { ...player, upgradeTarget: upgrade });

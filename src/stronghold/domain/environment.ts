@@ -17,6 +17,10 @@ export function creditResources(state: Pick<StrongholdState, 'resources' | 'seas
   state.resources = Math.round((state.resources + amount * SEASON_BONUSES[state.season].resources) * 100) / 100;
 }
 
+export function typingSupplyBase(state: Pick<StrongholdState, 'upgrades'>): number {
+  return 18 + state.upgrades.economy * 6;
+}
+
 const LAYOUTS: Record<Season, readonly (readonly [number, number])[]> = {
   spring: [[350, 515], [675, 530], [195, 400], [835, 375], [410, 335], [640, 300], [155, 235], [790, 180]],
   summer: [[290, 530], [730, 520], [200, 370], [840, 345], [370, 390], [680, 325], [145, 235], [805, 170]],

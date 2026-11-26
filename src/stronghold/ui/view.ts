@@ -13,9 +13,9 @@ import { renderTierChallenge } from './tier-view.ts';
 import { createEventLog } from './event-log.ts';
 import { createMapControls, readyBuilding } from './map-controls.ts';
 import { applyPlayerTheme, playerCursor } from './player-theme.ts';
-import { workProgress } from './work-progress.ts';
+import { taskProgress, workProgress } from './work-progress.ts';
 import { renderEnvironment } from './environment.ts';
-import { daylight } from '../domain/environment.ts';
+import { daylight, SEASON_BONUSES, typingSupplyBase } from '../domain/environment.ts';
 import { isArmyUnit, queuedUnits } from '../domain/training.ts';
 
 export function strongholdElements() {
@@ -168,7 +168,8 @@ export function renderStronghold(
     setText(entry.typed, player.typed);
     const locked = !challenge && actionUnlockProblem(snapshot, player);
     entry.typed.classList.toggle('is-hidden', Boolean(locked));
-    const bank = workProgress(player.work, taskWork(player));
+    const supplies = Math.round(typingSupplyBase(snapshot) * SEASON_BONUSES[snapshot.season].resources * 100) / 100;
+    const bank = taskProgress(player, taskWork(player), supplies);
     const goal = tierProgress(snapshot.players).goal;
     const percent = locked ? 0 : challenge ? player.contribution / goal * 100 : bank.percent;
     const displayPercent = challenge ? Math.round(percent * 10) / 10 : Math.round(percent);
@@ -177,7 +178,12 @@ export function renderStronghold(
     const progressBar = entry.progress.closest('[role="progressbar"]');
     if (progressBar) {
       setAttribute(progressBar, 'aria-valuenow', String(displayPercent));
+      setAttribute(progressBar, 'aria-label', challenge ? `Player ${snapshot.players.indexOf(player) + 1} shared tier contribution`
+        : `Player ${snapshot.players.indexOf(player) + 1} ${bank.label}`);
       setAttribute(progressBar, 'aria-valuetext', locked || (challenge ? `${displayPercent}% of shared tier progress` : bank.description));
+      const progressHelp = locked || (challenge ? `${displayPercent}% of shared tier progress` : bank.description);
+      setAttribute(progressBar, 'data-tooltip', progressHelp);
+      setAttribute(progressBar, 'aria-description', progressHelp);
       setAttribute(progressBar, 'aria-disabled', String(Boolean(locked)));
       progressBar.classList.toggle('is-tier-locked', Boolean(locked));
       progressBar.querySelector('[data-progress-lock]')?.classList.toggle('is-hidden', !locked);
