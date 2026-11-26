@@ -74,11 +74,11 @@ A fully correct entry earns its character count,
 including spaces, times its length bonus; partial or incorrect text earns nothing.
 **Supplies, Gatherer, Barracks, Builder, Wall and Tower** use typing without
 spending supplies. Each typing tile has a thick, player-colored mini progress bar,
-not a money or Free badge. Selecting it shows that task's progress and team output in the main
-player-colored experience bar. Unit Control shows **+18 team supplies** per full
-bar at the base economy level, updated immediately for economy upgrades and
-seasonal resource bonuses. Recruiting bars name the unit they produce, and full
-construction bars say **Place** plus the prepared building. Hover or focus a bar
+not a money or Free badge. The main player-colored bar shows **only its percentage**.
+Task buttons explain their output directly, such as **+1 Gatherer**, **+1 Builder**
+or **+18 Supplies**. Supply outputs update immediately for economy upgrades and
+seasonal resource bonuses, including the Unit Control supply summary.
+Prepared construction buttons change to **Place** plus the building name. Hover or focus a bar
 for completion and placement details. Bars have the same size: more expensive tasks
 fill more slowly, with barracks requirements proportional to their
 former supplies costs and construction tier. The UI shows percentages, not those
@@ -313,13 +313,17 @@ Combat units retain their familiar silhouettes and gain one dark chevron per
 purchased upgrade, including existing units and newly trained troops.
 Unavailable actions have visible reason badges: **Needs Tier #**, supply shortages,
 unfinished or missing barracks, population/building limits, missing builders,
-pauses and read-only computer controls. Tier requirements take priority over
+and pauses. Read-only teammate controls are explained on hover without repeating
+computer-status badges across the panel. Tier requirements take priority over
 shortages, including upgrade limits that require the next tier; maximum upgrades
 say **Max level**. Construction work can still be prepared before a builder is
 available, but ready placement waits for one. Ready construction tiles say
 **Place** and use a stronger player-colored highlight.
+Player panels show their names once, without extra ownership, computer or stopped
+captions. The local panel uses **Player 1** instead of a repeated **You** subtitle.
 The tier button shows only **Tier #** and its supply cost. Its blocking reason
-appears below the button; ready state is highlighted and remains cancellable.
+stays in hover/focus help rather than a floating shortage caption; ready state is
+highlighted and remains cancellable.
 Unit Control
 also uses Alt+1 for selection, Alt+2 for Defend, Alt+3 for Assault and Alt+4
 for rally placement. Keyboard actions restore typing focus.

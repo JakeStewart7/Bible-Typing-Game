@@ -25,7 +25,33 @@ export function taskProgress(player: Pick<Participant, 'action' | 'constructionT
     : `Each full bar recruits one ${target} for the team.`;
   return {
     ...progress,
-    label: construction && progress.percent === 100 ? `Place ${target}` : `${progress.label} / ${output}`,
+    label: `${Math.round(progress.percent)}%`,
+    output,
     description: `${progress.description}. Complete correct phrases to fill this bar. ${result}`
   };
+}
+
+export function taskButtonPresentation(task: Pick<Participant, 'action'>, name: string, supplies: number, ready = false) {
+  if (task.action === 'resources') return {
+    label: `+${supplies} Supplies`,
+    description: `Each full typing bar adds ${supplies} shared supplies to the team.`
+  };
+  if (task.action === 'tower' || task.action === 'barracks' || task.action === 'wall') return {
+    label: ready ? `Place ${name}` : `+1 ${name}`,
+    description: ready ? 'Ready to place. Select this task, then click the map; a builder finishes construction.'
+      : 'Fill the typing bar, then click the map to place one building. A builder finishes construction.'
+  };
+  if (task.action === 'worker' || task.action === 'builder') return {
+    label: `+1 ${name}`,
+    description: 'Each full typing bar recruits one unit for the team, without spending supplies.'
+  };
+  if (task.action === 'warrior' || task.action === 'archer' || task.action === 'catapult') return {
+    label: `+1 ${name}`,
+    description: 'Purchase one training order at a matching completed barracks. No typing required.'
+  };
+  if (task.action === 'relay') return {
+    label: 'Place Relay',
+    description: 'Select this button, then click the map to place a relay. No typing required.'
+  };
+  return { label: name, description: 'Purchase a team-wide upgrade. No typing required.' };
 }

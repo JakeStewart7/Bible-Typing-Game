@@ -213,7 +213,8 @@ test('Stronghold Unit Control progress names the actual team supply reward inclu
       const supplies = Math.round(typingSupplyBase(state) * SEASON_BONUSES[season].resources * 100) / 100;
       player.work = 16;
       const progress = taskProgress(player, taskWork(player), supplies);
-      equal(progress.label, `50% / +${supplies} team supplies`);
+      equal(progress.label, '50%');
+      equal(progress.output, `+${supplies} team supplies`);
       equal(progress.description.includes(`Each full bar adds ${supplies} shared supplies to the team.`), true);
       for (let entry = 0; entry < 32 && state.resources === 0; entry++) {
         executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
@@ -225,13 +226,14 @@ test('Stronghold Unit Control progress names the actual team supply reward inclu
 
 test('Stronghold task progress names recruits and distinguishes prepared buildings from finished construction', () => {
   const player = createStronghold().players[0]!;
-  equal(taskProgress({ ...player, action: 'worker', work: 32 }, 64, 18).label, '50% / +1 gatherer');
-  equal(taskProgress({ ...player, action: 'builder', work: 64 }, 64, 18).label, 'Ready / +1 builder');
+  equal(taskProgress({ ...player, action: 'worker', work: 32 }, 64, 18).label, '50%');
+  equal(taskProgress({ ...player, action: 'builder', work: 64 }, 64, 18).label, '100%');
   const tower = { ...player, action: 'tower' as const, constructionTier: 1, work: 25 };
-  equal(taskProgress(tower, taskWork(tower), 18).label, '50% / T1 tower');
-  equal(taskProgress({ ...tower, work: 50 }, taskWork(tower), 18).label, 'Place T1 tower');
+  equal(taskProgress(tower, taskWork(tower), 18).label, '50%');
+  equal(taskProgress({ ...tower, work: 50 }, taskWork(tower), 18).label, '100%');
+  equal(taskProgress(tower, taskWork(tower), 18).output, 'T1 tower');
   const wall = taskProgress({ ...player, action: 'wall', work: 32 }, 32, 18);
-  equal(wall.label, 'Place wall');
+  equal(wall.label, '100%');
   equal(wall.description.includes('Click the map to place it; a builder finishes construction.'), true);
 });
 

@@ -180,7 +180,6 @@
 .stronghold-tier.is-ready:not(:disabled) { background: #c3dba8; border-color: #4c7140; }
 .stronghold-tier > span { position: relative; display: block; }
 .stronghold-tier > span:not(.stronghold-cost) { font-size: 16px; }
-.stronghold-tier-blocker { position: absolute; top: calc(100% + 3px); left: 50%; transform: translateX(-50%); width: max-content; max-width: 160px; padding: 2px 5px; border: 1px solid #b79442; border-radius: 3px; background: #fff2ce; color: #533c16; font-size: 10px; line-height: 1.2; white-space: nowrap; }
 .stronghold-tier-progress { display: flex; flex: 0 0 40px; width: 100%; overflow: hidden; border: 4px solid #111; background: #ddd; }
 .stronghold-tier-progress > span { height: 100%; flex-shrink: 0; }
 .stronghold-tier:disabled { cursor: default; }
@@ -344,7 +343,6 @@
   .stronghold-command-bar { grid-template-columns: minmax(0, 1fr); grid-template-rows: 28px 28px 36px; grid-template-areas: "navigation" "utilities" "status"; gap: 3px 8px; padding: 6px 8px; }
   .stronghold-tier-mount { left: auto; right: 8px; transform: none; height: calc(var(--header-height) + 14px); }
   .stronghold-tier { height: 100%; }
-  .stronghold-tier-blocker { left: auto; right: 0; transform: none; }
   .stronghold-selection { top: calc(var(--header-height) + 48px); right: 8px; }
   .stronghold-map-toolbar, .stronghold-utilities { padding-right: 92px; }
   .stronghold-hud { gap: 12px; padding: 3px 6px; margin-right: 92px; }

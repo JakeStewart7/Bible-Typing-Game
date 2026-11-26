@@ -4,7 +4,8 @@ import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
 import { equal, test } from './harness.ts';
 import { PLAYER_COLORS } from '../src/stronghold/domain/types.ts';
 import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
-import { taskAvailability, tierAvailability } from '../src/stronghold/ui/view.ts';
+import { playerPanelName, taskAvailability, tierAvailability } from '../src/stronghold/ui/view.ts';
+import { taskButtonPresentation, taskProgress } from '../src/stronghold/ui/work-progress.ts';
 import { readyBuilding } from '../src/stronghold/ui/map-controls.ts';
 import { taskWork } from '../src/stronghold/domain/technology.ts';
 
@@ -173,7 +174,7 @@ test('Stronghold unavailable controls identify pauses, tier challenges, finished
   equal(taskAvailability(snapshot, player, selection, true).blocker?.label, 'Match over');
 });
 
-test('Stronghold tier button contains only the tier and price, with an explicit external blocker and ready semantics', () => {
+test('Stronghold tier button contains only the tier and price, keeping blockers in accessible help', () => {
   const markup = strongholdWorkspaceMarkup();
   const button = /id="stronghold-ready"[\s\S]*?<\/button>/.exec(markup)?.[0];
   if (!button) throw new Error('Missing tier button.');
@@ -182,7 +183,7 @@ test('Stronghold tier button contains only the tier and price, with an explicit 
   equal(button.includes('id="stronghold-tier-label">Tier 0'), true);
   equal(button.includes('id="stronghold-tier-price">300'), true);
   equal(button.includes('aria-pressed="false"'), true);
-  equal(markup.includes('id="stronghold-tier-blocker"'), true);
+  equal(markup.includes('id="stronghold-tier-blocker"'), false);
   equal((markup.match(/data-action-blocker/g) ?? []).length, 64);
   const snapshot = new StrongholdEngine({ resources: 50, length: 'short', computersPaused: true }).snapshot('you');
   const player = snapshot.players[0]!;
@@ -194,4 +195,40 @@ test('Stronghold tier button contains only the tier and price, with an explicit 
   equal(tierAvailability(snapshot, player, true).disabled, false);
   snapshot.tier = 3;
   equal(tierAvailability(snapshot, player, true).blocker?.label, 'Max tier');
+});
+
+test('Stronghold player panels show names once without redundant ownership or computer state captions', () => {
+  const state = createStronghold();
+  equal(state.players.map((player, index) => playerPanelName(player, index)), ['Player 1', 'Miriam', 'Caleb', 'Esther']);
+  for (const player of state.players) {
+    const original = playerPanelName(player, state.players.indexOf(player));
+    player.ready = true; player.simulated = !player.simulated;
+    equal(playerPanelName(player, state.players.indexOf(player)), original);
+  }
+  equal(playerPanelName({ name: 'Alex' }, 0), 'Alex');
+  const markup = strongholdWorkspaceMarkup();
+  for (const id of ['you', 'bot-1', 'bot-2', 'bot-3']) {
+    equal(markup.includes(`<h3 id="stronghold-name-${id}">`), true);
+    equal(markup.includes(`<small id="stronghold-name-${id}"`), false);
+    equal(markup.split(`id="stronghold-name-${id}"`).length, 2);
+  }
+});
+
+test('Stronghold work bars contain only percentages while buttons explain output and the next action', () => {
+  const player = createStronghold().players[0]!;
+  for (const action of ['worker', 'builder', 'resources', 'tower', 'barracks', 'wall'] as const) {
+    for (const work of [0, 16, 32, 64, 100]) {
+      equal(/^\d+%$/.test(taskProgress({ ...player, action, work }, 64, 21.6).label), true);
+    }
+  }
+  equal(taskButtonPresentation({ action: 'worker' }, 'Gatherer', 18).label, '+1 Gatherer');
+  equal(taskButtonPresentation({ action: 'builder' }, 'Builder', 18).label, '+1 Builder');
+  equal(taskButtonPresentation({ action: 'resources' }, 'Supplies', 21.6).label, '+21.6 Supplies');
+  equal(taskButtonPresentation({ action: 'tower' }, 'Tower T1', 18).label, '+1 Tower T1');
+  equal(taskButtonPresentation({ action: 'tower' }, 'Tower T1', 18, true).label, 'Place Tower T1');
+  equal(taskButtonPresentation({ action: 'barracks' }, 'Barracks T3', 18, true).label, 'Place Barracks T3');
+  equal(taskButtonPresentation({ action: 'warrior' }, 'Warrior', 18).label, '+1 Warrior');
+  equal(taskButtonPresentation({ action: 'warrior' }, 'Warrior', 18).description.includes('training order'), true);
+  equal(taskButtonPresentation({ action: 'relay' }, 'Relay', 18).label, 'Place Relay');
+  equal(taskButtonPresentation({ action: 'upgrade' }, 'Upgrade Economy', 18).label, 'Upgrade Economy');
 });
