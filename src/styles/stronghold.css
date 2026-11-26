@@ -199,7 +199,7 @@
 .stronghold-legend { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 0; font-weight: bold; }
 .stronghold-feedback { position: absolute; top: calc(var(--header-height) + 8px); left: 12px; max-width: min(600px, calc(100% - 200px)); z-index: 4; margin: 0; font-size: 12px; text-align: left; font-weight: bold; color: #273d32; background: #fcf5e4ed; padding: 4px 8px; border: 1px solid #a8996d; border-radius: 4px; }
 .stronghold-feedback:empty { display: none; }
-.stronghold-selection { position: absolute; top: calc(var(--header-height) + 8px); right: 12px; z-index: 4; margin: 0; padding: 4px 8px; border: 1px solid var(--player-bold); border-radius: 4px; background: #fcf5e4ed; color: var(--player-text); font-size: 11px; font-weight: bold; }
+.stronghold-selection { position: absolute; top: calc(var(--header-height) + 8px); right: 12px; z-index: 4; max-width: min(380px, calc(100% - 24px)); margin: 0; padding: 4px 8px; border: 1px solid var(--player-bold); border-radius: 4px; background: #fcf5e4ed; color: var(--player-text); font-size: 11px; font-weight: bold; text-align: right; }
 .stronghold-event-panel { position: absolute; bottom: calc(var(--deck-height) + var(--typing-height) + 8px); left: var(--squad-inset); width: min(18%, 285px); z-index: 4; }
 .stronghold-world-event { display: flex; justify-content: space-between; align-items: center; gap: 8px; border: 3px solid #7e3c96; background: #ddd0ee; color: #3b1d4b; padding: 7px 10px; margin-bottom: 12px; font-size: 16px; }
 .stronghold-world-event span { flex-shrink: 0; font-size: 14px; font-weight: bold; }
@@ -233,6 +233,10 @@
 .stronghold-role-buttons button[aria-pressed="true"] { border-color: var(--player-bold); background: var(--player-fill); outline: 1px solid var(--player-bold); }
 .stronghold-role-buttons button:disabled { opacity: .5; }
 .stronghold-role-buttons button[aria-pressed="true"]:disabled { opacity: 1; }
+.stronghold-role-caption { display: none; font: var(--stronghold-font-weight) 11px/1.1 var(--stronghold-font); white-space: nowrap; }
+.stronghold-player.is-you .stronghold-role-buttons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: min(248px, 100%); }
+.stronghold-player.is-you .stronghold-role-buttons button { width: 100%; height: 44px; min-height: 44px; gap: 2px; }
+.stronghold-player.is-you .stronghold-role-caption { display: block; }
 .stronghold-player-progress { position: relative; height: 20px; flex: 0 0 20px; align-self: stretch; min-width: 0; max-width: 100%; border: 2px solid var(--player-color); padding: 1px 0; margin: 4px 0; background: white; overflow: hidden; }
 .stronghold-progress-label { position: absolute; inset: 0; display: grid; place-items: center; color: var(--player-text); font-size: clamp(9px, 1.05vw, 11px); line-height: 1; text-shadow: 0 1px #fff; pointer-events: none; }
 .stronghold-player-progress.is-tier-locked { border-color: #8f9992; background: #e1e4e1; }
@@ -337,6 +341,9 @@
   .stronghold-atmosphere-controls { gap: 3px; }
   .stronghold-atmosphere-controls input { width: 40px; }
   .stronghold-upgrade-tile small { font-size: 8px; }
+  .stronghold-player.is-you .stronghold-role-buttons { display: flex; width: auto; }
+  .stronghold-player.is-you .stronghold-role-buttons button { width: 26px; height: 26px; min-height: 26px; gap: 0; }
+  .stronghold-player.is-you .stronghold-role-caption { display: none; }
 }
 @media (max-width: 760px) {
   .stronghold-screen { --header-height: 112px; --deck-height: clamp(280px, 40dvh, 360px); --squad-inset: 8px; }

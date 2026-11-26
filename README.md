@@ -85,7 +85,7 @@ former supplies costs and construction tier. The UI shows percentages, not those
 internal character costs. Each role keeps independent progress for every typing task
 and building tier, even when that role becomes unoccupied.
 Switching tasks, roles or lengths and completing tier challenges preserves this
-work. A full construction bar shows **Place** and the building name, without a stacked completion counter
+work. At 100%, the construction button shows **Place** and the building name, without a stacked completion counter
 or cycling red layers. Excess from the entry that fills it carries into the next
 bar after placement; further entries while it is ready do not bank extra
 completions. Supplies, Gatherers and Builders execute automatically when their
@@ -321,6 +321,12 @@ available, but ready placement waits for one. Ready construction tiles say
 **Place** and use a stronger player-colored highlight.
 Player panels show their names once, without extra ownership, computer or stopped
 captions. The local panel uses **Player 1** instead of a repeated **You** subtitle.
+The local role buttons have visible captions on wider screens and purpose-specific
+hover/focus help; narrow layouts retain the compact icons so actions stay reachable.
+Map selections explain the next move, rally or individual tower-upgrade action,
+using the same upgrade blockers as the purchase buttons. These hints yield to errors
+and placement controls. Placement prompts name the building and the next click;
+wall placement and editing also show the relevant scroll-to-rotate instruction.
 The tier button shows only **Tier #** and its supply cost. Its blocking reason
 stays in hover/focus help rather than a floating shortage caption; ready state is
 highlighted and remains cancellable.

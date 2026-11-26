@@ -2,9 +2,9 @@ import { createGame, type Game } from '../../game/state.ts';
 import { requireElement } from '../../shared/dom.ts';
 import { renderTypingExperience, updateTypingInput } from '../../typing/session.ts';
 import { PHRASE_LENGTHS, ROLES, SEASONS, STARTING_ENTITIES, type Point, type StrongholdCommand, type StrongholdConnection, type StrongholdSnapshot } from '../domain/types.ts';
-import { ACTION_LABELS, distance, WALL_ROTATION_STEP } from '../domain/rules.ts';
+import { distance, WALL_ROTATION_STEP } from '../domain/rules.ts';
 import { renderStronghold, strongholdElements } from './view.ts';
-import { mapPoint, readyBuilding, troopsInRectangle, type PlacementKind } from './map-controls.ts';
+import { mapPoint, placementPrompt, readyBuilding, selectionGuidance, troopsInRectangle, type PlacementKind } from './map-controls.ts';
 import { setAttribute, setText } from './dom-updates.ts';
 import { validateDeveloperOptions, type DeveloperOptions } from '../infrastructure/developer-options.ts';
 import { wheelZoom } from './map-camera.ts';
@@ -92,7 +92,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     const kind = placing();
     const problem = elements.mapControls.ghost(snapshot, kind, cursor, wallRotation);
     elements.mapControls.buildingSelection(snapshot, selectedBuildings);
-    if (kind) setText(placementLabel, problem ?? `${ACTION_LABELS[kind]}${kind === 'wall' ? `: ${wallRotation} deg` : ''}`);
+    if (kind) setText(placementLabel, problem ?? placementPrompt(kind, self()?.constructionTier ?? 1, wallRotation));
     elements.placement.classList.toggle('is-invalid', Boolean(problem));
     elements.mapControls.wallSelection(running() ? selectedWall() ?? null : null);
     if (!running() || snapshot.phase !== 'playing') elements.mapControls.moveIndicator(null);
@@ -128,8 +128,8 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     const wall = selectedWall();
     if (!wall) editingWall = null;
     const kind = placing();
-    setText(placementLabel, wall ? `Wall: ${wall.rotation ?? 0} deg`
-      : kind ? `${ACTION_LABELS[kind]}${kind === 'wall' ? `: ${wallRotation} deg` : ''}` : 'Place building');
+    setText(placementLabel, wall ? `Wall: ${wall.rotation ?? 0} deg / Scroll to rotate`
+      : kind ? placementPrompt(kind, player?.constructionTier ?? 1, wallRotation) : 'Place building');
     const placementHelp = wall ? 'Scroll to rotate the wall. Done or Escape finishes editing.'
       : `Click the map to place.${kind === 'wall' ? ' Scroll to rotate the wall.' : ''} Escape or right-click cancels.`;
     setAttribute(placementLabel, 'data-tooltip', placementHelp);
@@ -140,10 +140,9 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     setAttribute(cancelPlacementButton, 'aria-description', cancelHelp);
     if (wall && running()) elements.placement.classList.remove('is-hidden');
     renderMapPreview();
-    setText(elements.selection, selectedBuildings.size
-      ? `${selected.size} units, ${selectedBuildings.size} buildings selected` : `${selected.size} selected`);
+    setText(elements.selection, selectionGuidance(snapshot, selected, selectedBuildings, running()));
     elements.selection.classList.toggle('is-hidden', snapshot.phase !== 'playing' || (!selected.size && !selectedBuildings.size)
-      || Boolean(kind || wall || rallyPlacement));
+      || Boolean(errorMessage || kind || wall || rallyPlacement));
     const selecting = drag?.moved && running() && snapshot.phase === 'playing' && !placing() && !rallyPlacement;
     elements.mapControls.selection(selecting ? drag?.start ?? null : null, selecting ? drag?.end ?? null : null);
     const feedback = errorMessage || (paused ? 'Paused' : rallyPlacement ? 'Set rally point' : snapshot.phase === 'tier-up' ? '' : snapshot.message);

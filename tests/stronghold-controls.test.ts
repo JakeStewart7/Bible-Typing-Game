@@ -2,6 +2,7 @@ import { arrowPan, typingLengthKey, nextTaskIndex, actionShortcutKey, taskShortc
 import { cameraBounds } from '../src/stronghold/ui/map-camera.ts';
 import { buildingMarkup, unitMarkup, unitMotionTransform } from '../src/stronghold/ui/battlefield.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
+import { placementPrompt, selectionGuidance } from '../src/stronghold/ui/map-controls.ts';
 import { addBuilding, addUnit, createStronghold } from './stronghold-fixtures.ts';
 import { PHRASE_LENGTHS, PLAYER_COLORS, ROLES } from '../src/stronghold/domain/types.ts';
 import { DEFAULT_DEVELOPER_OPTIONS, DEFAULT_MAP_ZOOM, validateDeveloperOptions } from '../src/stronghold/infrastructure/developer-options.ts';
@@ -56,7 +57,10 @@ test('Stronghold role icon buttons replace dropdowns and expose selected-state s
     }
   }
   equal((markup.match(/data-role-button=/g) ?? []).length, 16);
-  equal((markup.match(/aria-pressed="false" data-tooltip="(?:Economy|Army|Unit Control[^"]*|Defenses)"/g) ?? []).length, 16);
+  equal((markup.match(/aria-pressed="false" data-tooltip="(?:Economy|Army|Unit Control|Defenses)\. [^"]*"/g) ?? []).length, 16);
+  for (const label of ['Economy', 'Army', 'Control', 'Defenses']) {
+    equal(markup.includes(`class="stronghold-role-caption" aria-hidden="true">${label}</span>`), true);
+  }
   equal(markup.includes('id="stronghold-timer" datetime="PT0S">0:00</time>'), true);
 });
 
@@ -67,6 +71,69 @@ test('Stronghold selection feedback is visible independently of the Unit Control
   equal(orders.includes('id="stronghold-selection"'), false);
   equal(markup.includes('id="stronghold-selection" class="stronghold-selection is-hidden"'), true);
   equal(markup.includes('In any role, left-click or drag to select friendly units'), true);
+});
+
+test('Stronghold selected units and production buildings explain their immediate right-click action in every role', () => {
+  const state = createStronghold();
+  const unit = addUnit(state, 'worker', { x: 500, y: 300 });
+  const castle = state.buildings.find(building => building.kind === 'castle');
+  if (!castle) throw new Error('Missing castle.');
+  const snapshot = { ...state, selfId: 'you', players: state.players.map(player => ({ ...player, progress: 0 })) };
+  const self = snapshot.players.find(player => player.id === 'you');
+  if (!self) throw new Error('Missing local player.');
+  for (const role of ROLES) {
+    self.role = role;
+    equal(selectionGuidance(snapshot, new Set(), new Set()), '');
+    equal(selectionGuidance(snapshot, new Set([unit.id]), new Set()), '1 unit selected / Right-click to move');
+    equal(selectionGuidance(snapshot, new Set(), new Set([castle.id])), '1 building selected / Right-click to set rally');
+    equal(selectionGuidance(snapshot, new Set([unit.id]), new Set([castle.id])), '1 unit, 1 building selected / Right-click to move and set rallies');
+    equal(selectionGuidance(snapshot, new Set([unit.id]), new Set(), false), '1 unit selected / Resume to issue orders');
+  }
+  const relay = addBuilding(state, 'relay', { x: 650, y: 300 }, true);
+  equal(selectionGuidance(snapshot, new Set(), new Set([relay.id])), '1 building selected');
+});
+
+test('Stronghold selected towers explain upgrades and their authoritative blockers without changing selection', () => {
+  const state = createStronghold();
+  const tower = addBuilding(state, 'tower', { x: 500, y: 300 }, true);
+  const snapshot = { ...state, selfId: 'you', nodes: [], buildings: [tower],
+    players: state.players.map(player => ({ ...player, progress: 0 })) };
+  const self = snapshot.players.find(player => player.id === 'you');
+  if (!self) throw new Error('Missing local player.');
+  const buildings = new Set([tower.id]), units = new Set<number>();
+  equal(selectionGuidance(snapshot, units, buildings), '1 building selected / Switch to Defenses to upgrade a selected tower.');
+  self.role = 'defenses';
+  equal(selectionGuidance(snapshot, units, buildings), '1 building selected / Unlock team Tier 2 before buying this tower upgrade.');
+  snapshot.tier = 2; snapshot.resources = 1000;
+  tower.progress = 0;
+  equal(selectionGuidance(snapshot, units, buildings), '1 building selected / Wait for a builder to finish this tower before upgrading it.');
+  snapshot.units = [];
+  equal(selectionGuidance(snapshot, units, buildings), '1 building selected / Recruit a builder in Defenses first.');
+  tower.progress = 1;
+  equal(selectionGuidance(snapshot, units, buildings), '1 building selected / Choose Upgrade to T2 below');
+  snapshot.resources = 0;
+  equal(selectionGuidance(snapshot, units, buildings), '1 building selected / Need 125 shared supplies to upgrade this tower.');
+  snapshot.resources = 1000;
+  const relay = addBuilding(state, 'relay', { x: 500, y: 300 }, true);
+  snapshot.buildings.push(relay);
+  equal(selectionGuidance(snapshot, units, buildings), '1 building selected / The upgraded tower is larger. Leave room around buildings, resource nodes and map edges.');
+  snapshot.buildings = [tower]; tower.tier = 2;
+  equal(selectionGuidance(snapshot, units, buildings), '1 building selected / Unlock team Tier 3 before buying this tower upgrade.');
+  snapshot.tier = 3;
+  equal(selectionGuidance(snapshot, units, buildings), '1 building selected / Choose Upgrade to T3 below');
+  tower.tier = 3;
+  equal(selectionGuidance(snapshot, units, buildings), '1 building selected / Maximum tower tier');
+  const second = addBuilding(state, 'tower', { x: 650, y: 300 }, true);
+  snapshot.buildings.push(second); buildings.add(second.id);
+  equal(selectionGuidance(snapshot, units, buildings), '2 buildings selected / Select one tower to upgrade');
+  equal([...buildings], [tower.id, second.id]);
+});
+
+test('Stronghold placement prompts name the next click and show rotation only for walls', () => {
+  equal(placementPrompt('relay', 1), 'Click map to place Relay');
+  equal(placementPrompt('tower', 1), 'Click map to place Tower T1');
+  equal(placementPrompt('barracks', 2), 'Click map to place Barracks T2');
+  equal(placementPrompt('wall', 1, 22.5), 'Click map to place Wall / Scroll to rotate (22.5 deg)');
 });
 
 test('Stronghold map entities retain accessible descriptions without delayed native SVG tooltips', () => {
