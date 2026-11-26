@@ -296,7 +296,10 @@ illegal sites. Click to place, or use Alt+arrow keys and Alt+Enter. Escape or
 without losing work. Relays cost 30 supplies. Other buildings need their
 work bar filled first. Builders construct and repair automatically. Gatherers strike
 resource nodes, collect a blue chunk (standard) or purple chunk (rich), then carry
-it to the nearest completed relay or castle before harvesting again. Relays forward deposited
+it to the nearest completed relay or castle before harvesting again. They approach
+an unloading edge even on diagonal returns or when a resource node blocks the
+nearest approach, instead of stopping outside contact range at a padded corner.
+Manual orders into the castle use the same reachable edge. Relays forward deposited
 chunks to the castle through links no more than 155 map units apart; destroying a
 relay interrupts deliveries until the route is restored. Cargo keeps its origin
 color while carried, regardless of mining upgrades, and sit ahead of the gatherer

@@ -177,7 +177,8 @@ function approach(point: Point, obstacle: Obstacle): Point {
 export function movementDestination(world: World, unit: Unit, target: Point): Point {
   let result = target;
   for (const obstacle of layoutFor(world, unitRadius(unit)).obstacles) {
-    if (obstacle.hard && contains(result, obstacle)) result = approach(unit, obstacle);
+    if (obstacle.hard && contains(result, obstacle)) result = obstacle.wall
+      ? buildingApproach(world, unit, obstacle.wall) : approach(unit, obstacle);
   }
   return result;
 }
@@ -185,12 +186,20 @@ export function buildingApproach(world: World, unit: Unit, building: Building): 
   const layout = layoutFor(world, unitRadius(unit));
   const obstacle = layout.obstacles.find(obstacle => obstacle.wall === building);
   if (!obstacle) return building;
+  const footprint = buildingFootprint(world, building);
   const preferred = approach(unit, obstacle);
   const free = (point: Point) => validPoint(point) && !layout.obstacles.some(other => other.hard && contains(point, other));
-  if (free(preferred)) return preferred;
-  const points = [-1, 0, 1].flatMap(x => [-1, 0, 1].filter(y => x || y).map(y => {
-    const dx = x * (obstacle.halfX + .01), dy = y * (obstacle.halfY + .01);
-    return { x: obstacle.x + dx * obstacle.cosine - dy * obstacle.sine, y: obstacle.y + dx * obstacle.sine + dy * obstacle.cosine };
+  if (free(preferred) && distanceToFootprint(preferred, footprint) <= unitRadius(unit) + .02) return preferred;
+  // Padded corners are collision-safe, but outside a gatherer's unloading range.
+  const p = local(unit, obstacle);
+  const points = [-1, 1].flatMap(side => [
+    ...[-footprint.halfY, Math.max(-footprint.halfY, Math.min(footprint.halfY, p.y)), footprint.halfY]
+      .map(y => ({ x: side * (obstacle.halfX + .01), y })),
+    ...[-footprint.halfX, Math.max(-footprint.halfX, Math.min(footprint.halfX, p.x)), footprint.halfX]
+      .map(x => ({ x, y: side * (obstacle.halfY + .01) }))
+  ]).map(point => ({
+    x: obstacle.x + point.x * obstacle.cosine - point.y * obstacle.sine,
+    y: obstacle.y + point.x * obstacle.sine + point.y * obstacle.cosine
   }));
   return points.filter(free).sort((a, b) => distance(unit, a) - distance(unit, b))[0] ?? preferred;
 }
