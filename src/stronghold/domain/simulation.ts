@@ -3,8 +3,8 @@ import { rallyArmy, spawnWave, updateCombat } from './combat.ts';
 import { updateLogistics } from './logistics.ts';
 import { assignPhrase } from './phrases.ts';
 import { addUnit } from './state.ts';
-import { isTypingAction, MIN_TIER, TIER_MAX, UNIT_CAPS } from './rules.ts';
-import { taskWork } from './technology.ts';
+import { isTypingAction, MIN_TIER, TIER_COSTS, TIER_MAX } from './rules.ts';
+import { taskCost, taskWork } from './technology.ts';
 import { ENTITY_LABELS, recordEvent } from './events.ts';
 import type { Action, Participant, Point, StrongholdState } from './types.ts';
 import { updateWorldEvent } from './world-events.ts';
@@ -18,6 +18,7 @@ const BOT_RELAY_SITES = [
   { x: 390, y: 390 }, { x: 650, y: 390 }, { x: 650, y: 255 },
   { x: 140, y: 340 }, { x: 140, y: 215 }, { x: 770, y: 240 }
 ];
+const ASSAULT_FORCE = 8;
 function nextRelaySite(state: StrongholdState): Point | undefined {
   const sources = visionSources(state);
   return BOT_RELAY_SITES.find(site => {
@@ -50,6 +51,11 @@ function botAction(state: StrongholdState, player: Participant): Action {
   }
   const troop = botTroop(state);
   if (state.tier < MIN_TIER[troop]) return 'resources';
+  const tierCost = TIER_COSTS[state.tier];
+  const force = state.units.filter(unit => unit.hp > 0 && ['warrior', 'archer', 'catapult'].includes(unit.kind)).length
+    + queuedUnits(state, 'warrior') + queuedUnits(state, 'archer') + queuedUnits(state, 'catapult');
+  if (tierCost !== undefined && force >= ASSAULT_FORCE
+    && state.resources < tierCost + taskCost({ ...player, action: troop })) return 'resources';
   if (!state.buildings.some(building => building.kind === 'barracks' && building.hp > 0 && building.tier === MIN_TIER[troop])) return 'barracks';
   return troop;
 }
@@ -63,7 +69,7 @@ function updateBot(state: StrongholdState, player: Participant, seconds: number)
     if (player.role === 'army') {
       if (!humanOnRole) {
         const soldiers = state.units.filter(unit => ['warrior', 'archer', 'catapult'].includes(unit.kind));
-        rallyArmy(state, state.tier >= 2 && soldiers.length >= 8 ? { x: 500, y: 100 } : state.rally);
+        rallyArmy(state, state.tier >= 2 && soldiers.length >= ASSAULT_FORCE ? { x: 500, y: 100 } : state.rally);
       }
     }
     const action = humanOnRole ? player.action : botAction(state, player);
@@ -111,7 +117,7 @@ function produceArmy(state: StrongholdState, seconds: number): void {
     if (state.computersPaused && state.players.some(player => player.id === order.playerId && player.simulated)) continue;
     barracks.cooldown = Math.max(0, barracks.cooldown - seconds);
     if (barracks.cooldown < 1e-9) barracks.cooldown = 0;
-    if (barracks.cooldown > 0 || state.units.filter(unit => unit.kind === order.kind && unit.hp > 0).length >= UNIT_CAPS[order.kind]) continue;
+    if (barracks.cooldown > 0) continue;
     const spawn = unitSpawnPoint(state, barracks, unitRadius(order));
     if (!spawn) continue;
     const unit = addUnit(state, order.kind, spawn);

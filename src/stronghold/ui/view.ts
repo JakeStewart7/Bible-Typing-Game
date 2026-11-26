@@ -1,5 +1,5 @@
 import { requireElement } from '../../shared/dom.ts';
-import { ACTION_LABELS, BUILDING_CAPS, EVENT_LABELS, isTypingAction, ROLE_ACTIONS, TIER_COSTS, TIER_MAX, UNIT_CAPS } from '../domain/rules.ts';
+import { ACTION_LABELS, EVENT_LABELS, isTypingAction, ROLE_ACTIONS, TIER_COSTS, TIER_MAX } from '../domain/rules.ts';
 import { tierProgress } from '../domain/tier-progress.ts';
 import { taskCost, taskWork, TOWER_UPGRADE_COSTS } from '../domain/technology.ts';
 import { actionBlocker, actionRequiredTier, actionUnlockProblem, constructionBlocker, towerUpgradeBlocker, type ActionBlocker } from '../domain/actions.ts';
@@ -13,11 +13,31 @@ import { renderTierChallenge } from './tier-view.ts';
 import { createEventLog } from './event-log.ts';
 import { createMapControls, readyBuilding } from './map-controls.ts';
 import { applyPlayerTheme, playerCursor } from './player-theme.ts';
-import { taskButtonPresentation, taskProgress, workProgress } from './work-progress.ts';
+import { taskButtonPresentation, taskHelpers, taskProgress, workProgress } from './work-progress.ts';
 import { renderEnvironment } from './environment.ts';
 import { daylight, SEASON_BONUSES, typingSupplyBase } from '../domain/environment.ts';
 import { isArmyUnit, queuedUnits, TRAINING_SECONDS } from '../domain/training.ts';
 
+function taskIndicatorElements(element: Element) {
+  const strip = element.querySelector<HTMLElement>('[data-task-players]');
+  if (!strip) throw new Error('Missing Stronghold task-player indicators.');
+  return { strip, markers: [...strip.querySelectorAll<HTMLElement>('[data-task-player]')] };
+}
+function renderTaskIndicators(indicators: ReturnType<typeof taskIndicatorElements>, snapshot: StrongholdSnapshot,
+  owner: StrongholdSnapshot['players'][number], role: StrongholdSnapshot['players'][number]['role'], task: TaskSelection): string {
+  const helpers = taskHelpers(snapshot.players, owner.id, role, task);
+  const active = new Set([owner.id, ...helpers.map(player => player.id)]);
+  for (const marker of indicators.markers) {
+    const player = snapshot.players.find(player => player.id === marker.dataset.taskPlayer);
+    if (!player) throw new Error('Missing Stronghold task-indicator player.');
+    setAttribute(marker, 'style', `visibility:${active.has(player.id) ? 'visible' : 'hidden'};background:${player.color}`);
+  }
+  const help = helpers.length ? `Also selecting: ${helpers.map(player => playerPanelName(player, snapshot.players.findIndex(candidate => candidate.id === player.id))).join(', ')}.` : '';
+  const description = `${playerPanelName(owner, snapshot.players.indexOf(owner))}'s panel color.${help ? ' ' + help : ''}`;
+  setAttribute(indicators.strip, 'aria-label', description);
+  setAttribute(indicators.strip, 'data-tooltip', description);
+  return help;
+}
 export function strongholdElements() {
   const map = document.getElementById('stronghold-map');
   if (!(map instanceof SVGSVGElement)) throw new Error('Missing Stronghold battlefield SVG.');
@@ -33,23 +53,24 @@ export function strongholdElements() {
         const label = button.querySelector<HTMLElement>('.stronghold-action-label');
         const blocker = button.querySelector<HTMLElement>('[data-action-blocker]');
         if (!label || !blocker) throw new Error('Missing Stronghold action feedback.');
-        return { element: button, action, label: label.textContent ?? ACTION_LABELS[action], labelElement: label, blockerElement: blocker,
+        return { element: button, action, label: label.textContent ?? ACTION_LABELS[action], labelElement: label, blockerElement: blocker, indicators: taskIndicatorElements(button),
           miniBar: button.querySelector<HTMLElement>('[data-task-progress]'),
           miniFill: button.querySelector<HTMLElement>('[data-task-fill]'), lockIcon: button.querySelector<SVGElement>('[data-tier-lock]'),
           tier: button.dataset.tier ? Number(button.dataset.tier) : undefined,
           upgrade: UPGRADE_TARGETS.find(target => target === button.dataset.strongholdUpgrade), minimumTier: Number(button.dataset.minTier) };
       });
       const towerUpgrades = [...element.querySelectorAll<HTMLButtonElement>('[data-tower-upgrade]')].map((button): {
-        element: HTMLButtonElement; tier: 2 | 3; blocker: HTMLElement;
+        element: HTMLButtonElement; tier: 2 | 3; blocker: HTMLElement; indicators: ReturnType<typeof taskIndicatorElements>;
       } => {
         const tier = Number(button.dataset.towerUpgrade);
         const blocker = button.querySelector<HTMLElement>('[data-tower-blocker]');
         if ((tier !== 2 && tier !== 3) || !blocker) throw new Error('Invalid Stronghold tower upgrade control.');
-        return { element: button, tier, blocker };
+        return { element: button, tier, blocker, indicators: taskIndicatorElements(button) };
       });
       const towerStatus = element.querySelector<HTMLElement>('[data-tower-status]');
       if (role === 'defenses' && !towerStatus) throw new Error('Missing Stronghold tower selection status.');
-      return { role, element, buttons, towerUpgrades, towerStatus, supplyOutput: element.querySelector<HTMLElement>('[data-supply-output]') };
+      return { role, element, buttons, towerUpgrades, towerStatus, supplyOutput: element.querySelector<HTMLElement>('[data-supply-output]'),
+        supplyIndicators: role === 'army' ? taskIndicatorElements(element) : undefined };
     });
     return { id, card, groups, roleButtons: ROLES.map(role => {
       const element = requireElement(`stronghold-role-${id}-${role}`, HTMLButtonElement);
@@ -205,8 +226,8 @@ export function renderStronghold(
     setAttribute(button, 'data-tooltip', description);
     setAttribute(button, 'aria-description', description);
   }
-  text('stronghold-tower-count', `${snapshot.buildings.filter(building => building.kind === 'tower' && !building.enemy && building.hp > 0).length}/${BUILDING_CAPS.tower}`);
-  for (const kind of ['warrior', 'archer', 'catapult', 'builder', 'worker'] as const) text(`stronghold-${kind}-count`, `${snapshot.units.filter(unit => unit.kind === kind && unit.hp > 0).length}/${UNIT_CAPS[kind]}`);
+  text('stronghold-tower-count', String(snapshot.buildings.filter(building => building.kind === 'tower' && !building.enemy && building.hp > 0).length));
+  for (const kind of ['warrior', 'archer', 'catapult', 'builder', 'worker'] as const) text(`stronghold-${kind}-count`, String(snapshot.units.filter(unit => unit.kind === kind && unit.hp > 0).length));
   text('stronghold-tier-label', `Tier ${snapshot.tier}`);
   const ready = requireElement('stronghold-ready', HTMLButtonElement);
   const tier = tierAvailability(snapshot, self, running);
@@ -287,6 +308,10 @@ export function renderStronghold(
   for (const entry of elements.playerCards) {
     const player = snapshot.players.find(candidate => candidate.id === entry.id);
     if (!player) continue;
+    if (entry.actions.dataset.role !== player.role) {
+      setAttribute(entry.actions, 'data-role', player.role);
+      entry.actions.scrollTop = 0;
+    }
     const own = player.id === self.id;
     applyPlayerTheme(entry.card, player.color);
     entry.card.classList.toggle('is-you', own);
@@ -337,8 +362,12 @@ export function renderStronghold(
         const description = `Each completed typing bar contributes ${supplies} shared supplies while you command the army.`;
         setAttribute(group.supplyOutput, 'data-tooltip', description);
         setAttribute(group.supplyOutput, 'aria-description', description);
+        if (group.supplyIndicators) renderTaskIndicators(group.supplyIndicators, snapshot, player, group.role,
+          { action: 'resources', constructionTier: 1, upgradeTarget: 'economy' });
       }
       for (const button of group.towerUpgrades) {
+        renderTaskIndicators(button.indicators, snapshot, player, group.role,
+          { action: 'tower', constructionTier: button.tier, upgradeTarget: player.upgradeTarget });
         const availability = selectedTowerAvailability(snapshot, player, selectedBuildings, button.tier, running);
         button.element.disabled = availability.disabled;
         button.element.classList.toggle('is-unavailable', availability.disabled);
@@ -365,7 +394,7 @@ export function renderStronghold(
         if (population && (button.action === 'worker' || button.action === 'builder' || isArmyUnit(button.action))) {
           const kind = button.action;
           const count = snapshot.units.filter(unit => unit.kind === kind && unit.hp > 0).length;
-          setText(population, `${count}/${UNIT_CAPS[kind]}`);
+          setText(population, String(count));
         }
         if (isArmyUnit(button.action)) {
           const queued = button.element.querySelector('[data-training-queued]');
@@ -392,7 +421,8 @@ export function renderStronghold(
         setAttribute(button.element, 'aria-pressed', String(selectedAction));
         const detail = cost > 0 ? `Costs ${cost} shared supplies.` : 'No supply cost.';
         const training = isArmyUnit(button.action) ? ` Training takes ${TRAINING_SECONDS} seconds.` : '';
-        const description = `${presentation.description} ${detail}${training}${availability.description ? ' ' + availability.description : ''}`;
+        const helpers = renderTaskIndicators(button.indicators, snapshot, player, group.role, selection);
+        const description = `${presentation.description} ${detail}${training}${availability.description ? ' ' + availability.description : ''}${helpers ? ' ' + helpers : ''}`;
         setAttribute(button.element, 'aria-description', description);
         setAttribute(button.element, 'data-tooltip', `${button.label}. ${description} (Alt+${button.element.dataset.shortcut})`);
         if (button.miniBar && button.miniFill) {

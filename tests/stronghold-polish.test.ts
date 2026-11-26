@@ -5,7 +5,7 @@ import { connectedRelays, relayNeighbors, updateLogistics } from '../src/strongh
 import { buildingFootprint, footprintCorners, moveUnitToward, unitRadius, unitSpawnPoint, wallBetween, wallContains, WALL_HALF_WIDTH } from '../src/stronghold/domain/navigation.ts';
 import { assignPhrase, TIER_WORD_POOLS } from '../src/stronghold/domain/phrases.ts';
 import { tierProgress } from '../src/stronghold/domain/tier-progress.ts';
-import { BASE, CATAPULT_WINDUP_SECONDS, distance, MIN_TIER, TEXT_LENGTH_RANGES, UNIT_CAPS, UNIT_RULES } from '../src/stronghold/domain/rules.ts';
+import { BASE, CATAPULT_WINDUP_SECONDS, distance, MIN_TIER, TEXT_LENGTH_RANGES, UNIT_RULES } from '../src/stronghold/domain/rules.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { addBuilding, addUnit, createStronghold } from './stronghold-fixtures.ts';
 import { queuedUnits, TRAINING_SECONDS } from '../src/stronghold/domain/training.ts';
@@ -22,7 +22,7 @@ function rejects(run: () => void, text: string): void {
   throw new Error(`Expected rejection: ${text}`);
 }
 
-test('Stronghold Gatherer is the initial economy task and typed builders and gatherers spawn distinctly up to their caps', () => {
+test('Stronghold Gatherer is the initial economy task and typed workers recruit beyond their former caps', () => {
   for (const kind of ['worker', 'builder'] as const) for (const length of PHRASE_LENGTHS) {
     const state = createStronghold({ resources: 0, length, computersPaused: true }, 'summer');
     const player = state.players[0]!;
@@ -32,12 +32,14 @@ test('Stronghold Gatherer is the initial economy task and typed builders and gat
     equal(player.action, kind);
     const start = state.units.filter(unit => unit.kind === kind).length;
     let entries = 0;
-    while (state.units.filter(unit => unit.kind === kind).length < UNIT_CAPS[kind]) {
-      if (++entries > 400) throw new Error('Recruitment did not reach its cap.');
+    while (state.units.filter(unit => unit.kind === kind).length < (kind === 'worker' ? 14 : 6)) {
+      if (++entries > 400) throw new Error('Recruitment did not pass its former cap.');
       const before = state.units.length, work = player.work + phraseWork(player);
-      const remaining = UNIT_CAPS[kind] - state.units.filter(unit => unit.kind === kind && unit.hp > 0).length;
       executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
-      equal(state.units.length, before + Math.min(remaining, Math.floor(work / taskWork(player))));
+      equal(state.units.length, before + Math.floor(work / taskWork(player)));
+      for (const unit of state.units.slice(before)) {
+        unit.x = 100 + unit.id % 20 * 30; unit.y = 250 + Math.floor(unit.id / 20) * 30;
+      }
       equal(state.resources, 0);
     }
     const recruited = state.units.filter(unit => unit.kind === kind).slice(start);
@@ -45,12 +47,9 @@ test('Stronghold Gatherer is the initial economy task and typed builders and gat
       equal(state.units.every(other => other.id === unit.id || distance(unit, other) >= 20), true);
     }
     const count = state.units.length;
-    for (let entry = 0; entry < 40; entry++) executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
-    equal(state.units.length, count);
-    const lost = state.units.find(unit => unit.kind === kind)!;
-    lost.hp = 0;
+    player.work = taskWork(player) - phraseWork(player);
     executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
-    equal(state.units.filter(unit => unit.kind === kind && unit.hp > 0).length, UNIT_CAPS[kind]);
+    equal(state.units.length, count + 1);
   }
 });
 
@@ -634,7 +633,7 @@ test('Stronghold placement identifies buildings but allows units inside tier-sca
   equal(footprintCorners(box).length, 4);
 });
 
-test('Stronghold troop queues balance matching barracks, count against caps and stop when destroyed', () => {
+test('Stronghold troop queues balance matching barracks without population caps and stop when destroyed', () => {
   const state = createStronghold({ resources: 2000, length: 'medium', computersPaused: true });
   state.tier = 1;
   const player = state.players[0]!;
@@ -642,11 +641,12 @@ test('Stronghold troop queues balance matching barracks, count against caps and 
   const first = addBuilding(state, 'barracks', { x: 600, y: 550 }, true);
   const second = addBuilding(state, 'barracks', { x: 700, y: 550 }, true);
   addBuilding(state, 'barracks', { x: 800, y: 550 }, true, false, 2);
-  for (let count = 2; count < UNIT_CAPS.warrior; count++) executeCommand(state, player, { type: 'ACTION', action: 'warrior' });
+  for (let count = 0; count < 16; count++) executeCommand(state, player, { type: 'ACTION', action: 'warrior' });
   equal(first.trainingQueue.length, 8); equal(second.trainingQueue.length, 8);
   const resources = state.resources;
-  rejects(() => executeCommand(state, player, { type: 'ACTION', action: 'warrior' }), 'population limit');
-  equal(state.resources, resources);
+  executeCommand(state, player, { type: 'ACTION', action: 'warrior' });
+  equal(first.trainingQueue.length, 9); equal(second.trainingQueue.length, 8);
+  equal(state.resources, resources - 60);
   first.hp = 0; second.hp = 0;
   for (let second = 0; second < 20; second++) advanceStronghold(state, 1);
   equal(state.units.filter(unit => unit.kind === 'warrior').length, 2);
@@ -699,7 +699,7 @@ test('Stronghold towers retain a simple T silhouette with subtly increasing size
   for (const [index, markup] of towers.entries()) {
     equal(markup.includes(`data-tower-tier="${index + 1}"`), true);
     equal(markup.includes('data-health'), true);
-    equal(markup.includes('data-attack'), true);
+    equal(markup.includes('data-attack'), false);
     equal(markup.includes('M-7 5L6 -6'), false);
   }
   equal(towers[0]!.includes('M-16 -10L-26 -18'), false);

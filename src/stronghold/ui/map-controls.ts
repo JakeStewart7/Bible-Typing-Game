@@ -20,7 +20,10 @@ export function selectionGuidance(snapshot: StrongholdSnapshot, units: ReadonlyS
   if (!running) return `${count} / Resume to issue orders`;
   const selected = snapshot.buildings.filter(building => buildings.has(building.id));
   const rally = selected.some(supportsRally);
-  if (units.size) return `${count} / Right-click to move${rally ? ' and set rallies' : ''}`;
+  if (units.size) {
+    const builder = snapshot.units.some(unit => units.has(unit.id) && unit.kind === 'builder');
+    return `${count} / Right-click to move${builder ? ' or build/repair a friendly building' : ''}${rally ? ' and set rallies' : ''}`;
+  }
   if (rally) return `${count} / Right-click to set rally`;
   if (buildings.size === 1 && selected[0]?.kind === 'tower') {
     const tower = selected[0];

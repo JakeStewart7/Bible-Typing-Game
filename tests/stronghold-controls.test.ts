@@ -1,6 +1,6 @@
 import { arrowPan, typingLengthKey, nextTaskIndex, actionShortcutKey, taskShortcut } from '../src/stronghold/ui/keyboard.ts';
 import { cameraBounds } from '../src/stronghold/ui/map-camera.ts';
-import { buildingMarkup, unitMarkup, unitMotionTransform } from '../src/stronghold/ui/battlefield.ts';
+import { actionEffectMarkup, buildingMarkup, unitMarkup, unitMotionTransform } from '../src/stronghold/ui/battlefield.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
 import { placementPrompt, selectionGuidance } from '../src/stronghold/ui/map-controls.ts';
 import { addBuilding, addUnit, createStronghold } from './stronghold-fixtures.ts';
@@ -57,6 +57,7 @@ test('Stronghold role icon buttons replace dropdowns and expose selected-state s
     }
   }
   equal((markup.match(/data-role-button=/g) ?? []).length, 16);
+  equal((markup.match(/class="stronghold-player-overview"/g) ?? []).length, 4);
   equal((markup.match(/aria-pressed="false" data-tooltip="(?:Economy|Army|Unit Control|Defenses)\. [^"]*"/g) ?? []).length, 16);
   for (const label of ['Economy', 'Army', 'Control', 'Defenses']) {
     equal(markup.includes(`class="stronghold-role-caption" aria-hidden="true">${label}</span>`), true);
@@ -70,7 +71,7 @@ test('Stronghold selection feedback is visible independently of the Unit Control
   if (!orders) throw new Error('Missing Unit Control orders.');
   equal(orders.includes('id="stronghold-selection"'), false);
   equal(markup.includes('id="stronghold-selection" class="stronghold-selection is-hidden"'), true);
-  equal(markup.includes('In any role, left-click or drag to select friendly units'), true);
+  equal(markup.includes('Click or drag to select units in any role'), true);
 });
 
 test('Stronghold selected units and production buildings explain their immediate right-click action in every role', () => {
@@ -183,31 +184,23 @@ test('Stronghold work effects use silver sparks instead of the copper and ember 
   }
   for (const kind of ['warrior', 'archer', 'catapult', 'invader'] as const) {
     const markup = unitMarkup(addUnit(state, kind, { x: 100, y: 100 }), false);
-    equal(markup.includes('data-attack'), true);
+    equal(markup.includes('data-attack'), false);
     equal(markup.includes('data-work'), false);
-    equal(markup.includes('#483526'), kind !== 'invader');
-    equal(markup.includes('#ed914c'), true);
   }
-  equal(buildingMarkup(addBuilding(state, 'tower', { x: 200, y: 100 })).includes('data-attack'), true);
+  equal(buildingMarkup(addBuilding(state, 'tower', { x: 200, y: 100 })).includes('data-attack'), false);
   equal(buildingMarkup(addBuilding(state, 'barracks', { x: 300, y: 100 })).includes('height="6"'), true);
 });
 
-test('Stronghold enemy attacks retain the explosion without beam, trail or slash lines', () => {
-  const state = createStronghold();
-  const enemies = ([null, 'warrior', 'archer', 'catapult'] as const).map(formation =>
-    unitMarkup(addUnit(state, 'invader', { x: 100, y: 100 }, formation), false));
-  enemies.push(buildingMarkup(addBuilding(state, 'tower', { x: 200, y: 100 }, true, true)));
-  for (const markup of enemies) {
+test('Stronghold both teams use visible attack beams and distinct enemy coloring', () => {
+  for (const enemy of [false, true]) {
+    const markup = actionEffectMarkup(false, enemy);
     equal(markup.includes('data-impact'), true);
     equal(markup.includes('fill="#9c572d"'), true);
-    equal(markup.includes('data-beam'), false);
-    equal(markup.includes('data-trail'), false);
+    equal(markup.includes('data-beam'), true);
+    equal(markup.includes('data-trail'), true);
+    equal(markup.includes(enemy ? '#ff5969' : '#ed914c'), true);
     equal(markup.includes('#fff1d2'), false);
   }
-  const friendly = unitMarkup(addUnit(state, 'warrior', { x: 300, y: 100 }), false);
-  equal(friendly.includes('data-beam'), true);
-  equal(friendly.includes('data-trail'), true);
-  equal(friendly.includes('#fff1d2'), false);
 });
 
 test('Stronghold wall visuals are 25 percent thicker and match collision thickness including their border', () => {

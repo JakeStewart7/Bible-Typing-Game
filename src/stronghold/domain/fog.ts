@@ -14,7 +14,14 @@ export function visionSources(world: World, enemy = false): VisionSource[] {
     })),
     ...world.buildings.filter(building => building.hp > 0 && building.enemy === enemy && building.progress === 1).map(building => ({
       id: `building-${building.id}`, x: building.x, y: building.y, radius: BUILDING_SIGHT[building.kind]
-    }))
+    })),
+    ...(!enemy ? [
+      ...world.units.filter(unit => unit.kind === 'invader' && unit.hp > 0 && unit.attackTarget !== null && unit.cooldown > 0)
+        .map(unit => ({ id: `firing-unit-${unit.id}`, x: unit.x, y: unit.y, radius: 50 })),
+      ...world.buildings.filter(building => building.enemy && building.hp > 0 && building.progress === 1
+        && building.attackTarget !== null && building.cooldown > 0)
+        .map(building => ({ id: `firing-building-${building.id}`, x: building.x, y: building.y, radius: 50 }))
+    ] : [])
   ];
 }
 export function inVision(sources: readonly VisionSource[], point: Point): boolean {

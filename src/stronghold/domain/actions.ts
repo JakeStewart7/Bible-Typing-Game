@@ -1,6 +1,6 @@
 import { assignPhrase, copyRoleTask } from './phrases.ts';
 import { addBuilding, addUnit } from './state.ts';
-import { ACTION_LABELS, BASE, BUILDING_CAPS, isTypingAction, MIN_TIER, ROLE_ACTIONS, ROLE_LABELS, TIER_COSTS, TIER_MAX, UNIT_CAPS, validPoint, WALL_ROTATION_STEP } from './rules.ts';
+import { BASE, BUILDING_CAPS, distance, isTypingAction, MIN_TIER, ROLE_ACTIONS, ROLE_LABELS, TIER_COSTS, TIER_MAX, validPoint, WALL_ROTATION_STEP } from './rules.ts';
 import { applyUpgrade, phraseWork, taskCost, taskWork, towerHealth, TOWER_UPGRADE_COSTS, upgradeLimit, UPGRADE_OPTIONS } from './technology.ts';
 import { ENTITY_LABELS, playerEvent, recordEvent } from './events.ts';
 import { PHRASE_LENGTHS, SEASONS, type Action, type BuildingKind, type Participant, type Point, type StrongholdCommand, type StrongholdState } from './types.ts';
@@ -9,7 +9,7 @@ import { spawnWave } from './combat.ts';
 import { creditResources, daylight, DAY_SECONDS, NIGHT_SECONDS, SEASON_BONUSES, SEASON_LABELS, seasonalNodes, typingSupplyBase } from './environment.ts';
 import { tierProgress } from './tier-progress.ts';
 import { buildingFootprint, footprintCorners, footprintsOverlap, nodeOverlapsFootprint, unitSpawnPoint } from './navigation.ts';
-import { isArmyUnit, queuedUnits, supportsRally, trainingBarracks, TRAINING_SECONDS } from './training.ts';
+import { isArmyUnit, supportsRally, trainingBarracks, TRAINING_SECONDS } from './training.ts';
 import { inVision, visionSources } from './fog.ts';
 
 type ActionWorld = Pick<StrongholdState, 'tier' | 'resources' | 'units' | 'technology' | 'buildings' | 'nodes'>;
@@ -50,9 +50,6 @@ export function actionBlocker(state: ActionWorld, player: TaskPlayer, action: Ac
     }
   }
   if (action === 'worker' || action === 'builder' || action === 'warrior' || action === 'archer' || action === 'catapult') {
-    const queued = isArmyUnit(action) ? queuedUnits(state, action) : 0;
-    const count = state.units.filter(unit => unit.kind === action && unit.hp > 0).length + queued;
-    if (count >= UNIT_CAPS[action]) return { kind: 'limit', label: `Limit ${count}/${UNIT_CAPS[action]}`, description: `${ACTION_LABELS[action]} population limit reached.` };
     if ((action === 'worker' || action === 'builder') && !unitSpawnPoint(state, BASE)) {
       return { kind: 'space', label: 'Clear castle space', description: 'Clear space near the castle to recruit another unit.' };
     }
@@ -78,6 +75,7 @@ export function constructionBlocker(state: ActionWorld, kind: Extract<BuildingKi
   if (!state.units.some(unit => unit.kind === 'builder' && unit.hp > 0)) {
     return { kind: 'builder', label: 'Needs builder', description: 'Recruit a builder in Defenses first.' };
   }
+  if (kind === 'tower') return null;
   const count = state.buildings.filter(building => building.kind === kind && !building.enemy && building.hp > 0).length;
   return count >= BUILDING_CAPS[kind] ? { kind: 'limit', label: `Limit ${count}/${BUILDING_CAPS[kind]}`, description: 'Building limit reached.' } : null;
 }
@@ -382,12 +380,27 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     playerEvent(state, player, 'set Rally point');
     return;
   }
-  if (command.ids.length > 52) throw new Error('Too many units selected.');
   for (const id of command.ids) {
     const unit = state.units.find(candidate => candidate.id === id);
     if (!unit || unit.hp <= 0 || unit.kind === 'invader') throw new Error('Select only friendly units.');
   }
-  for (const unit of state.units) if (command.ids.includes(unit.id)) {
+  const selected = new Set(command.ids);
+  const project = command.buildingId === undefined ? undefined
+    : state.buildings.find(building => building.id === command.buildingId && !building.enemy && building.hp > 0
+      && (building.progress < 1 || building.hp < building.maxHp));
+  if (command.buildingId !== undefined && !project) throw new Error('Choose an unfinished or damaged friendly building.');
+  const builder = project ? state.units.filter(unit => selected.has(unit.id) && unit.kind === 'builder')
+    .sort((a, b) => distance(a, project) - distance(b, project) || a.id - b.id)[0] : undefined;
+  if (project && !builder) throw new Error('Select a builder first.');
+  if (project && builder) for (const unit of state.units) {
+    if (unit.kind === 'builder' && unit.task === project.id) unit.task = null;
+  }
+  for (const unit of state.units) if (selected.has(unit.id)) {
+    if (unit === builder && project) {
+      unit.destination = null; unit.manualMove = false; unit.task = project.id;
+      unit.idleTime = null; unit.cooldown = 0; unit.attackTarget = null;
+      continue;
+    }
     unit.destination = { ...command.point };
     unit.manualMove = true;
     unit.attackTarget = null;

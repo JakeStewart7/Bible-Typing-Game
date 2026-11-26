@@ -8,7 +8,7 @@ import { DAY_SECONDS, daylight, seasonalNodes } from '../src/stronghold/domain/e
 import { equal, test } from './harness.ts';
 import { AppStorage } from '../src/persistence/storage.ts';
 import { DEFAULT_DEVELOPER_OPTIONS, readDeveloperOptions, writeDeveloperOptions } from '../src/stronghold/infrastructure/developer-options.ts';
-import { DEFAULT_STARTING_COUNTS, isMatchOptions, STARTING_LIMITS } from '../src/stronghold/domain/options.ts';
+import { DEFAULT_STARTING_COUNTS, isMatchOptions } from '../src/stronghold/domain/options.ts';
 import { distance } from '../src/stronghold/domain/rules.ts';
 import { unitRadius } from '../src/stronghold/domain/navigation.ts';
 import { phraseWork, taskWork } from '../src/stronghold/domain/technology.ts';
@@ -57,9 +57,9 @@ test('Stronghold tier challenges require 300, 600 and 1500 supplies and charge e
   }
 });
 
-test('Stronghold starting forces honor zero and maximum counts with clear spawn positions', () => {
+test('Stronghold starting forces allow counts beyond old caps with clear spawn positions', () => {
   const none = { worker: 0, builder: 0, warrior: 0, tower: 0, archer: 0, catapult: 0 };
-  for (const startingCounts of [none, DEFAULT_STARTING_COUNTS, STARTING_LIMITS]) {
+  for (const startingCounts of [none, DEFAULT_STARTING_COUNTS, { worker: 13, builder: 5, warrior: 19, tower: 9, archer: 13, catapult: 7 }]) {
     const state = createStronghold({ ...DEFAULT_DEVELOPER_OPTIONS, tier: 3, startingCounts });
     for (const kind of STARTING_ENTITIES) {
       equal(kind === 'tower' ? state.buildings.filter(building => building.kind === kind && !building.enemy).length
@@ -71,7 +71,7 @@ test('Stronghold starting forces honor zero and maximum counts with clear spawn 
     }
     equal(state.buildings.filter(building => building.kind === 'tower' && building.enemy).length, 2);
   }
-  for (const value of [null, [], { worker: -1 }, { builder: 5 }, { tower: 9 }, { warrior: 19 }, { archer: 1.5 }, { catapult: '2' }, { unknown: 1 }]) {
+  for (const value of [null, [], { worker: -1 }, { builder: Infinity }, { tower: NaN }, { warrior: Number.MAX_SAFE_INTEGER + 1 }, { archer: 1.5 }, { catapult: '2' }, { unknown: 1 }]) {
     equal(isMatchOptions({ ...DEFAULT_DEVELOPER_OPTIONS, startingCounts: value }), false);
   }
 });

@@ -287,10 +287,10 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   function armyIds(): number[] {
     return snapshot?.units.filter(unit => unit.hp > 0 && isArmyUnit(unit.kind)).map(unit => unit.id) ?? [];
   }
-  function move(point: Point, all = false): void {
+  function move(point: Point, all = false, buildingId?: number): void {
     const ids = all ? armyIds() : [...selected];
     if (ids.length === 0) { errorMessage = 'Select friendly units first, or use Select all troops.'; display(); focusTyping(); return; }
-    void send({ type: 'MOVE', ids, point }).then(sent => {
+    void send({ type: 'MOVE', ids, point, buildingId }).then(sent => {
       if (sent && running() && snapshot?.phase === 'playing') elements.mapControls.moveIndicator(point);
     });
   }
@@ -374,7 +374,12 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     if (event.button === 2) {
       event.preventDefault(); clearDrag();
       const point = mapPoint(elements.map, event.clientX, event.clientY);
-      if (point && selectedBuildings.size && !placing() && !rallyPlacement) {
+      const target = event.target instanceof Element ? event.target.closest('[data-building]') : null;
+      const project = snapshot.buildings.find(building => building.id === Number(target?.getAttribute('data-building'))
+        && !building.enemy && building.hp > 0 && (building.progress < 1 || building.hp < building.maxHp));
+      const hasBuilder = snapshot.units.some(unit => selected.has(unit.id) && unit.kind === 'builder' && unit.hp > 0);
+      if (point && project && hasBuilder && !placing() && !rallyPlacement) move(point, false, project.id);
+      else if (point && selectedBuildings.size && !placing() && !rallyPlacement) {
         const rallyIds = snapshot.buildings.filter(building => selectedBuildings.has(building.id) && supportsRally(building)).map(building => building.id);
         const moveSelected = selected.size > 0;
         if (rallyIds.length) void send({ type: 'RALLY', ids: rallyIds, point }).then(sent => { if (sent && moveSelected) move(point); });
@@ -568,7 +573,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     if (event.key === 'Tab' && !event.altKey && !event.ctrlKey && !event.metaKey && player && snapshot.phase === 'playing') {
       const own = elements.playerCards.find(card => card.id === player.id);
       const active = document.activeElement;
-      const inTasks = active instanceof Element && Boolean(own?.actions.contains(active));
+      const inTasks = active instanceof Element && Boolean(active.closest('.stronghold-actions, .stronghold-army-orders') && own?.actions.contains(active));
       if (active === elements.input || active === elements.map || elements.length.contains(active) || inTasks) {
         const tier = snapshot.tier;
         const tasks = own?.groups.find(group => group.role === player.role)?.buttons

@@ -79,7 +79,7 @@ export type StrongholdCommand =
   | { type: 'PLACE'; kind: 'relay' | 'barracks' | 'tower' | 'wall'; point: Point; rotation?: number }
   | { type: 'ROTATE_WALL'; id: number; direction?: 1 | -1 }
   | { type: 'UPGRADE_TOWER'; id: number; tier: 2 | 3 }
-  | { type: 'MOVE'; ids: number[]; point: Point }
+  | { type: 'MOVE'; ids: number[]; point: Point; buildingId?: number }
   | { type: 'RALLY'; point: Point; ids?: number[] };
 export interface StrongholdConnection {
   subscribe(listener: (snapshot: StrongholdSnapshot) => void): () => void;

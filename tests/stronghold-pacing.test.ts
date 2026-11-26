@@ -20,7 +20,7 @@ test('Stronghold opening waves give a full minute to prepare, fewer invaders and
     equal(state.waveIn, Math.max(65, 95 - wave * 2));
   }
   for (let index = 0; index < 5; index++) spawnWave(state);
-  equal(state.units.filter(unit => unit.kind === 'invader').length, 40);
+  equal(state.units.filter(unit => unit.kind === 'invader').length, 72);
 });
 
 test('Stronghold starting warriors hold off both opening waves without reinforcements or computer help', () => {

@@ -27,11 +27,8 @@ export const MIN_TIER: Record<Action, number> = {
   resources: 0, worker: 0, relay: 0, barracks: 1, warrior: 1, archer: 2,
   catapult: 3, builder: 0, tower: 1, wall: 0, upgrade: 0
 };
-export const UNIT_CAPS: Record<UnitKind, number> = {
-  worker: 12, builder: 4, warrior: 18, archer: 12, catapult: 6, invader: 40
-};
-export const BUILDING_CAPS: Record<BuildingKind, number> = {
-  castle: 1, 'enemy-base': 1, relay: 16, barracks: 6, tower: 8, wall: 16
+export const BUILDING_CAPS: Record<Exclude<BuildingKind, 'tower'>, number> = {
+  castle: 1, 'enemy-base': 1, relay: 16, barracks: 6, wall: 16
 };
 export const UNIT_RULES: Record<UnitKind, { hp: number; speed: number; damage: number; range: number }> = {
   worker: { hp: 50, speed: 13, damage: 0, range: 0 },
@@ -41,6 +38,9 @@ export const UNIT_RULES: Record<UnitKind, { hp: number; speed: number; damage: n
   catapult: { hp: 180, speed: 8, damage: 18, range: 165 },
   invader: { hp: 150, speed: 19, damage: 8, range: 26 }
 };
+export function towerRange(tier: number): number {
+  return UNIT_RULES.archer.range + 5 + Math.min(3, Math.max(1, tier)) * 5;
+}
 export const UNIT_HEALTH_MULTIPLIER = 2;
 export const CATAPULT_WINDUP_SECONDS = .8;
 export const WALL_ROTATION_STEP = 22.5;

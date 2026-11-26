@@ -6,7 +6,7 @@ import { DEFAULT_MATCH_OPTIONS, DEFAULT_STARTING_COUNTS, validateMatchOptions } 
 import type { ArmyUnitKind, Building, BuildingKind, Participant, Point, Season, StrongholdMatchOptions, StrongholdState, Unit, UnitKind } from './types.ts';
 import { DAY_SECONDS, randomSeason, seasonalNodes } from './environment.ts';
 import { PLAYER_COLORS, STARTING_ENTITIES } from './types.ts';
-import { unitRadius, unitSpawnClear } from './navigation.ts';
+import { buildingSpawnPoint, unitRadius, unitSpawnClear } from './navigation.ts';
 import { createFog, updateFog } from './fog.ts';
 
 export function addUnit(state: StrongholdState, kind: UnitKind, point: Point, formation: ArmyUnitKind | null = null): Unit {
@@ -68,8 +68,14 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
   addBuilding(state, 'tower', { x: 420, y: 125 }, true, true);
   addBuilding(state, 'tower', { x: 580, y: 125 }, true, true);
   const counts = { ...DEFAULT_STARTING_COUNTS, ...options.startingCounts };
+  const towerSites = [
+    ...Array.from({ length: 16 }, (_, index) => ({ x: 340 + index % 4 * 100, y: 390 - Math.floor(index / 4) * 80 })),
+    ...Array.from({ length: 120 }, (_, index) => ({ x: 80 + index % 15 * 60, y: 150 + Math.floor(index / 15) * 60 }))
+  ];
   for (let index = 0; index < counts.tower; index++) {
-    addBuilding(state, 'tower', { x: 340 + index % 4 * 100, y: 390 - Math.floor(index / 4) * 80 }, true);
+    const point = buildingSpawnPoint(state, { kind: 'tower', tier: 1, enemy: false }, towerSites);
+    if (!point) throw new Error('Not enough space for starting towers.');
+    addBuilding(state, 'tower', point, true);
   }
   const original: Partial<Record<UnitKind, Point[]>> = {
     worker: [{ x: 440, y: 560 }, { x: 560, y: 560 }], builder: [{ x: 500, y: 540 }],

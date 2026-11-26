@@ -1,5 +1,11 @@
 import type { Participant } from '../domain/types.ts';
 
+export function taskHelpers(players: readonly Pick<Participant, 'id' | 'name' | 'color' | 'role' | 'action' | 'constructionTier' | 'upgradeTarget'>[], ownerId: string, role: Participant['role'],
+  task: Pick<Participant, 'action' | 'constructionTier' | 'upgradeTarget'>) {
+  return players.filter(player => player.id !== ownerId && player.role === role && player.action === task.action
+    && (!(task.action === 'tower' || task.action === 'barracks') || player.constructionTier === task.constructionTier)
+    && (task.action !== 'upgrade' || player.upgradeTarget === task.upgradeTarget));
+}
 export function workProgress(work: number, required: number) {
   const percent = Math.min(100, Math.max(0, work / required * 100));
   return {
@@ -38,22 +44,22 @@ export function taskButtonPresentation(task: Pick<Participant, 'action' | 'const
   };
   if (task.action === 'tower' || task.action === 'barracks' || task.action === 'wall') return {
     label: ready ? `Place ${name}` : `+1 ${name}`,
-    description: `${task.action === 'tower' ? 'Automatically fires at nearby enemies. Select a completed tower to upgrade it.'
+    description: `${task.action === 'tower' ? 'Automatically fires at enemies. Select a completed tower to upgrade it.'
       : task.action === 'wall' ? 'Blocks enemy movement and protects your base. Scroll to rotate during placement.'
-      : `Trains ${task.constructionTier === 1 ? 'Warriors' : task.constructionTier === 2 ? 'Archers' : 'Catapults'}. Each barracks tier trains its own troop type.`} ${ready
-      ? 'Ready: click the map to place it. A builder finishes construction.'
-      : 'Type to prepare it, then click the map to place it. A builder finishes construction.'}`
+      : `Trains ${task.constructionTier === 1 ? 'Warriors' : task.constructionTier === 2 ? 'Archers' : 'Catapults'}.`} ${ready
+      ? 'Ready to place. Builders finish construction.'
+      : 'Type, then place. Builders finish construction.'}`
   };
   if (task.action === 'worker' || task.action === 'builder') return {
     label: `+1 ${name}`,
     description: `${task.action === 'worker' ? 'Automatically collects supplies and delivers them to a castle or relay.'
-      : 'Automatically constructs placed buildings and repairs damaged defenses.'} Each full typing bar recruits one.`
+      : 'Automatically constructs and repairs buildings.'} Type to recruit one.`
   };
   if (task.action === 'warrior' || task.action === 'archer' || task.action === 'catapult') return {
     label: `+1 ${name}`,
     description: `${task.action === 'warrior' ? 'Melee troop for close-range combat.'
       : task.action === 'archer' ? 'Ranged troop that attacks from a distance.'
-      : 'Slow siege unit. Deals extra damage to buildings and reduced damage to troops.'} Purchase one training order at a completed T${task.action === 'warrior' ? 1 : task.action === 'archer' ? 2 : 3} Barracks.`
+      : 'Slow siege unit. Deals extra damage to buildings; weaker against troops.'} Buy one training order at T${task.action === 'warrior' ? 1 : task.action === 'archer' ? 2 : 3} Barracks.`
   };
   if (task.action === 'relay') return {
     label: 'Place Relay',

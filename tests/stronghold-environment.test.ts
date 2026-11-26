@@ -253,6 +253,13 @@ test('Stronghold weather uses a fixed small decorative particle pool instead of 
   }
 });
 
+test('Stronghold weather positions stay inside the battlefield when decimal rounding approaches an edge', () => {
+  const markup = weatherMarkup(() => .999999);
+  equal(markup.includes('--weather-x:100.00%'), false);
+  equal(markup.includes('--weather-y:100.00%'), false);
+  equal((markup.match(/--weather-x:99\.99%/g) ?? []).length, WEATHER_PARTICLE_COUNT);
+});
+
 test('Stronghold spring flowers share one randomly chosen breeze direction across the particle pool', () => {
   const directions = [0, .25, .5, .75].map(sample => {
     const markup = weatherMarkup(() => sample);
@@ -288,9 +295,9 @@ test('Stronghold spring and summer have smaller naturally spaced screen-effect p
     return seed / 4294967296;
   });
   equal(SPRING_PARTICLE_COUNT, 18);
-  equal(SUMMER_PARTICLE_COUNT, 32);
+  equal(SUMMER_PARTICLE_COUNT, 64);
   equal((markup.match(/data-spring-hidden/g) ?? []).length, WEATHER_PARTICLE_COUNT - SPRING_PARTICLE_COUNT);
-  equal((markup.match(/data-summer-hidden/g) ?? []).length, WEATHER_PARTICLE_COUNT - SUMMER_PARTICLE_COUNT);
+  equal((markup.match(/data-fall-winter-hidden/g) ?? []).length, 16);
   const points = [...markup.matchAll(/--weather-x:([\d.]+)%;--weather-y:([\d.]+)%/g)]
     .map(match => ({ x: Number(match[1]), y: Number(match[2]) }));
   for (const [index, point] of points.slice(0, SUMMER_PARTICLE_COUNT).entries()) {

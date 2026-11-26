@@ -336,7 +336,7 @@ test('Stronghold only the six typing actions have mini experience bars instead o
   }
 });
 
-test('Stronghold free builders and walls retain only one full bar and placement resets progress', () => {
+test('Stronghold free builders recruit without caps while walls retain one prepared placement', () => {
   const state = createStronghold();
   const player = state.players[0];
   if (!player) throw new Error('Missing player.');
@@ -345,12 +345,14 @@ test('Stronghold free builders and walls retain only one full bar and placement 
   executeCommand(state, player, { type: 'ACTION', action: 'builder' });
   let builderWork = 0, builders = 1;
   for (let entry = 0; entry < 40; entry++) {
-    if (builderWork < 64) builderWork = Math.round((builderWork + phraseWork(player)) * 100) / 100;
-    if (builderWork >= 64 && builders < 4) { builderWork = Math.round((builderWork - 64) * 100) / 100; builders++; }
+    builderWork = Math.round((builderWork + phraseWork(player)) * 100) / 100;
+    while (builderWork >= 64) { builderWork = Math.round((builderWork - 64) * 100) / 100; builders++; }
     executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
     equal(player.work, builderWork);
+    state.units.filter(unit => unit.kind === 'builder').forEach((unit, index) => { unit.x = 100 + index * 25; unit.y = 300; });
   }
-  equal(state.units.filter(unit => unit.kind === 'builder').length, 4);
+  equal(state.units.filter(unit => unit.kind === 'builder').length, builders);
+  equal(builders > 4, true);
   equal(player.work, builderWork);
   equal(state.resources, 0);
   executeCommand(state, player, { type: 'ACTION', action: 'wall' });

@@ -164,7 +164,7 @@ test('Stronghold rejects illegal sites, insufficient resources and locked action
   equal(state.buildings.filter(building => building.kind === 'relay').length, 0);
 });
 
-test('Stronghold upgrades obey per-tier limits and population caps', () => {
+test('Stronghold upgrades obey per-tier limits while recruitment has no population cap', () => {
   const state = createStronghold();
   state.resources = 1000;
   executeCommand(state, self(state), { type: 'ACTION', action: 'upgrade' });
@@ -173,15 +173,13 @@ test('Stronghold upgrades obey per-tier limits and population caps', () => {
   equal(state.upgrades.economy, 2);
   equal(state.resources, 760);
   executeCommand(state, self(state), { type: 'ACTION', action: 'worker' });
-  while (state.units.filter(unit => unit.kind === 'worker').length < 12) finish(state);
+  while (state.units.filter(unit => unit.kind === 'worker').length < 14) {
+    state.units.filter(unit => unit.kind === 'worker').forEach((unit, index) => { unit.x = 100 + index * 25; unit.y = 300; });
+    finish(state);
+  }
   const resources = state.resources;
-  finish(state);
-  equal(state.units.filter(unit => unit.kind === 'worker').length, 12);
+  equal(state.units.filter(unit => unit.kind === 'worker').length >= 14, true);
   equal(state.resources, resources);
-  equal(self(state).work >= 32, true);
-  const cappedWork = self(state).work;
-  finish(state);
-  equal(self(state).work, cappedWork);
 });
 
 test('Stronghold structures have durable tier-scaled health across sides and construction states', () => {

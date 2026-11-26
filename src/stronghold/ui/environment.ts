@@ -3,9 +3,10 @@ import type { Season, StrongholdSnapshot } from '../domain/types.ts';
 import { setAttribute, setText } from './dom-updates.ts';
 
 export const AUTUMN_LEAF_COLORS: readonly string[] = Object.freeze(['#c84b3d', '#e78b32', '#e4bc4c', '#8b5d3d']);
-export const WEATHER_PARTICLE_COUNT = 48;
+export const WEATHER_PARTICLE_COUNT = 64;
 export const SPRING_PARTICLE_COUNT = 18;
-export const SUMMER_PARTICLE_COUNT = 32;
+export const SUMMER_PARTICLE_COUNT = 64;
+export const FALL_WINTER_PARTICLE_COUNT = 48;
 
 export function seasonEffect(season: Season): { label: string; description: string } {
   const bonuses = SEASON_BONUSES[season];
@@ -43,7 +44,7 @@ export function weatherMarkup(random: () => number = Math.random): string {
     const duration = 9 + index % 4 * 1.5;
     const color = colors[index];
     if (!color) throw new Error('Leaf colors require a random value from zero up to, but not including, one.');
-    return `<i class="stronghold-weather-particle" style="--leaf-color:${color};--weather-x:${point.x.toFixed(2)}%;--weather-y:${point.y.toFixed(2)}%;--weather-delay:-${(index / WEATHER_PARTICLE_COUNT * duration).toFixed(2)}s;--weather-duration:${duration}s;--weather-drift:${index % 2 ? 16 : -12}px"${index >= SUMMER_PARTICLE_COUNT ? ' data-summer-hidden' : ''}${index >= SPRING_PARTICLE_COUNT ? ' data-spring-hidden' : ''}></i>`;
+    return `<i class="stronghold-weather-particle" style="--leaf-color:${color};--weather-x:${Math.min(99.99, point.x).toFixed(2)}%;--weather-y:${Math.min(99.99, point.y).toFixed(2)}%;--weather-delay:-${(index / WEATHER_PARTICLE_COUNT * duration).toFixed(2)}s;--weather-duration:${duration}s;--weather-drift:${index % 2 ? 16 : -12}px"${index >= FALL_WINTER_PARTICLE_COUNT ? ' data-fall-winter-hidden' : ''}${index >= SPRING_PARTICLE_COUNT ? ' data-spring-hidden' : ''}></i>`;
   }).join('')}</div></div>`;
 }
 

@@ -49,6 +49,14 @@ export function distanceToFootprint(point: Point, box: Footprint): number {
 export function nodeOverlapsFootprint(node: ResourceNode, box: Footprint): boolean {
   return distanceToFootprint(node, box) < resourceNodeRadius(node) - 1e-7;
 }
+export function buildingSpawnPoint(world: World, building: Pick<Building, 'kind' | 'tier' | 'enemy' | 'rotation'>, sites: readonly Point[]): Point | undefined {
+  return sites.find(point => {
+    const footprint = buildingFootprint(world, { ...building, ...point });
+    return footprintCorners(footprint).every(validPoint)
+      && world.buildings.every(other => other.hp <= 0 || !footprintsOverlap(footprint, buildingFootprint(world, other)))
+      && world.nodes.every(node => !nodeOverlapsFootprint(node, footprint));
+  });
+}
 export function wallLocal(point: Point, wall: Point & { rotation?: number }): Point {
   const angle = (wall.rotation ?? 0) * Math.PI / 180;
   const x = point.x - wall.x, y = point.y - wall.y;

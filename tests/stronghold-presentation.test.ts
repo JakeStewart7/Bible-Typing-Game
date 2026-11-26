@@ -5,7 +5,7 @@ import { equal, test } from './harness.ts';
 import { PLAYER_COLORS } from '../src/stronghold/domain/types.ts';
 import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
 import { playerPanelName, taskAvailability, tierAvailability } from '../src/stronghold/ui/view.ts';
-import { taskButtonPresentation, taskProgress } from '../src/stronghold/ui/work-progress.ts';
+import { taskButtonPresentation, taskHelpers, taskProgress } from '../src/stronghold/ui/work-progress.ts';
 import { readyBuilding } from '../src/stronghold/ui/map-controls.ts';
 import { taskWork } from '../src/stronghold/domain/technology.ts';
 
@@ -118,7 +118,7 @@ test('Stronghold tier locks take precedence over shortages and explain the next 
   equal(taskAvailability(economy, economy.players[0]!, upgrade, true).blocker?.label, 'Max level');
 });
 
-test('Stronghold troop availability distinguishes missing barracks, construction, shortages and queued population limits', () => {
+test('Stronghold troop availability distinguishes missing barracks, construction and shortages without queue caps', () => {
   const engine = new StrongholdEngine({ resources: 0, tier: 1, length: 'short', computersPaused: true });
   engine.send('you', { type: 'ROLE', role: 'production' });
   const snapshot = engine.snapshot('you'), player = snapshot.players[0]!;
@@ -135,10 +135,12 @@ test('Stronghold troop availability distinguishes missing barracks, construction
   equal(taskAvailability(snapshot, player, selection, true).blocker, null);
   barracks.trainingQueue = Array.from({ length: 16 }, () => ({ kind: 'warrior', playerId: 'you' }));
   snapshot.resources = 0;
-  equal(taskAvailability(snapshot, player, selection, true).blocker?.label, 'Limit 18/18');
+  equal(taskAvailability(snapshot, player, selection, true).blocker?.label, '60 supplies short');
+  snapshot.resources = 60;
+  equal(taskAvailability(snapshot, player, selection, true).disabled, false);
 });
 
-test('Stronghold construction can bank work without builders but ready placement explains builder and building caps', () => {
+test('Stronghold construction can bank work without builders and towers have no count cap', () => {
   const engine = new StrongholdEngine({ resources: 0, tier: 1, length: 'short', computersPaused: true });
   engine.send('you', { type: 'ROLE', role: 'defenses' });
   engine.send('you', { type: 'ACTION', action: 'tower', tier: 1 });
@@ -155,9 +157,9 @@ test('Stronghold construction can bank work without builders but ready placement
   equal(taskAvailability(snapshot, player, selection, true).ready, true);
   equal(readyBuilding(snapshot), 'tower');
   for (let count = 0; count < 8; count++) snapshot.buildings.push(addBuilding(state, 'tower', { x: 300 + count * 40, y: 400 }, false));
-  equal(taskAvailability(snapshot, player, selection, true).blocker?.label, 'Limit 8/8');
-  equal(taskAvailability(snapshot, player, selection, true).disabled, true);
-  equal(readyBuilding(snapshot), null);
+  equal(taskAvailability(snapshot, player, selection, true).blocker, null);
+  equal(taskAvailability(snapshot, player, selection, true).disabled, false);
+  equal(readyBuilding(snapshot), 'tower');
 });
 
 test('Stronghold unavailable controls identify pauses, tier challenges, finished matches and teammate ownership', () => {
@@ -252,6 +254,22 @@ test('Stronghold task tooltips describe distinct abilities, barracks specializat
   }
 });
 
+test('Stronghold task indicators match other players by role, activity, building tier and upgrade target', () => {
+  const state = createStronghold(), owner = state.players[0]!, helper = state.players[1]!;
+  helper.role = owner.role; helper.action = owner.action;
+  equal(taskHelpers(state.players, owner.id, owner.role, owner).map(player => player.id), [helper.id]);
+  helper.role = 'defenses';
+  equal(taskHelpers(state.players, owner.id, owner.role, owner), []);
+  owner.role = helper.role; owner.action = helper.action = 'tower';
+  helper.constructionTier = 2;
+  equal(taskHelpers(state.players, owner.id, owner.role, owner), []);
+  owner.constructionTier = 2;
+  equal(taskHelpers(state.players, owner.id, owner.role, owner).map(player => player.id), [helper.id]);
+  owner.action = helper.action = 'upgrade'; helper.upgradeTarget = 'warrior';
+  equal(taskHelpers(state.players, owner.id, owner.role, owner), []);
+  equal(strongholdWorkspaceMarkup().includes('data-task-player="you"'), true);
+});
+
 test('Stronghold construction bars and builder descriptions show the remaining job rather than full health', () => {
   const state = createStronghold();
   const project = addBuilding(state, 'wall', { x: 500, y: 400 });
@@ -265,7 +283,8 @@ test('Stronghold construction bars and builder descriptions show the remaining j
   equal(unitDescription(builder, 0, project).includes('75% left'), true);
   equal(buildingDescription(project).includes('75% left'), true);
   equal(buildingMarkup(project).includes('data-construction-fill'), true);
-  equal(unitMarkup(builder, false).includes('data-construction-left'), true);
+  equal(unitMarkup(builder, false).includes('data-construction-fill'), true);
+  equal(buildingMarkup(project).includes('data-construction-left'), false);
   equal(buildingMarkup(project, false).includes('data-construction'), false);
   equal(unitMarkup(builder, false, false).includes('data-construction'), false);
 });
@@ -273,7 +292,7 @@ test('Stronghold construction bars and builder descriptions show the remaining j
 test('Stronghold map and control tooltips explain gameplay instead of repeating labels', () => {
   const state = createStronghold();
   const purposes = { worker: 'harvests supplies', builder: 'constructs placed buildings', warrior: 'close-range combat',
-    archer: 'attacks from a distance', catapult: 'Strong against buildings', invader: 'advancing on your castle' };
+    archer: '120-unit reach', catapult: 'Strong against buildings', invader: 'advancing on your castle' };
   for (const kind of ['worker', 'builder', 'warrior', 'archer', 'catapult', 'invader'] as const) {
     const unit = addUnit(state, kind, { x: 500, y: 400 });
     equal(unitDescription(unit).includes(purposes[kind]), true);
