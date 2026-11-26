@@ -20,7 +20,7 @@ test('Stronghold opening waves give a full minute to prepare, fewer invaders and
     equal(state.waveIn, Math.max(65, 95 - wave * 2));
   }
   for (let index = 0; index < 5; index++) spawnWave(state);
-  equal(state.units.filter(unit => unit.kind === 'invader').length, 40);
+  equal(state.units.filter(unit => unit.kind === 'invader').length, 72);
 });
 
 test('Stronghold starting warriors hold off both opening waves without reinforcements or computer help', () => {
@@ -86,7 +86,7 @@ test('Stronghold durable units use formation-specific fair movement speeds on bo
     archer: [16, 210], catapult: [8, 360], invader: [19, 300] } as const;
   const state = createStronghold(undefined, 'fall');
   state.units = [];
-  state.nodes = [{ id: 100, x: 100, y: 500, remaining: 100, rich: false }];
+  state.nodes = [{ id: 100, x: 100, y: 500, remaining: 100, rich: false, cooldown: 0 }];
   addBuilding(state, 'barracks', { x: 200, y: 500 });
   for (const kind of ['worker', 'builder', 'warrior', 'archer', 'catapult', 'invader'] as const) {
     equal(UNIT_RULES[kind].speed, balanced[kind][0]);
@@ -161,7 +161,7 @@ test('Stronghold gatherers and builders follow move orders then resume nearest w
     executeCommand(state, player, { type: 'ROLE', role: 'army' });
     state.units = [];
     const unit = addUnit(state, kind, { x: 500, y: 300 });
-    state.nodes = [{ id: 100, x: 560, y: 300, rich: false, remaining: 100 }];
+    state.nodes = [{ id: 100, x: 560, y: 300, rich: false, remaining: 100, cooldown: 0 }];
     const project = addBuilding(state, 'barracks', { x: 530, y: 300 });
     const point = { x: 500, y: 300 + UNIT_RULES[kind].speed };
     executeCommand(state, player, { type: 'MOVE', ids: [unit.id], point });
@@ -197,7 +197,7 @@ test('Stronghold manual gatherer movement keeps carried supplies attached and re
   if (!player) throw new Error('Missing player.');
   state.units = [];
   const worker = addUnit(state, 'worker', { x: 500, y: 500 });
-  state.nodes = [{ id: 100, x: 500, y: 464, rich: false, remaining: 100 }];
+  state.nodes = [{ id: 100, x: 500, y: 464, rich: false, remaining: 100, cooldown: 0 }];
   updateLogistics(state, .1);
   executeCommand(state, player, { type: 'ROLE', role: 'army' });
   executeCommand(state, player, { type: 'MOVE', ids: [worker.id], point: { x: 450, y: 500 } });
@@ -289,28 +289,28 @@ test('Stronghold builders release completed or destroyed jobs before the next ne
 test('Stronghold gatherers carry a single harvested chunk before returning to a resource node', () => {
   const state = createStronghold();
   state.units = [];
-  state.nodes = [{ id: 100, x: 500, y: 500, remaining: 100, rich: false }];
+  state.nodes = [{ id: 100, x: 500, y: 500, remaining: 100, rich: false, cooldown: 0 }];
   const worker = addUnit(state, 'worker', { x: 500, y: 500 });
   updateLogistics(state, .1);
   equal(state.resources, 50);
-  equal(state.nodes[0]?.remaining, 96);
+  equal(state.nodes[0]?.remaining, 97);
   equal(state.chunks[0]?.carrier, worker.id);
   equal(worker.attackTarget, { x: 500, y: 500 });
   updateLogistics(state, 1);
   equal(state.chunks.length, 1);
   equal(state.chunks[0]?.y, worker.y);
-  equal(state.nodes[0]?.remaining, 96);
+  equal(state.nodes[0]?.remaining, 97);
   equal(state.resources, 50);
   for (let step = 0; step < 300 && state.resources === 50; step++) updateLogistics(state, .1);
-  equal(state.resources, 54);
+  equal(state.resources, 53);
   equal(state.chunks.length, 0);
-  equal(state.nodes[0]?.remaining, 96);
+  equal(state.nodes[0]?.remaining, 97);
 });
 
 test('Stronghold gatherers choose the nearest completed depot and reroute when it is destroyed', () => {
   const state = createStronghold();
   state.units = [];
-  state.nodes = [{ id: 100, x: 500, y: 300, remaining: 100, rich: false }];
+  state.nodes = [{ id: 100, x: 500, y: 300, remaining: 100, rich: false, cooldown: 0 }];
   const relay = addBuilding(state, 'relay', { x: 500, y: 350 }, true);
   addBuilding(state, 'relay', { x: 500, y: 301 });
   const worker = addUnit(state, 'worker', { x: 500, y: 300 });
@@ -334,15 +334,15 @@ test('Stronghold gatherers choose the nearest completed depot and reroute when i
 test('Stronghold dropped cargo survives a gatherer death and routes without duplicate supplies', () => {
   const state = createStronghold();
   state.units = [];
-  state.nodes = [{ id: 100, x: 500, y: 540, remaining: 100, rich: false }];
+  state.nodes = [{ id: 100, x: 500, y: 540, remaining: 100, rich: false, cooldown: 0 }];
   const worker = addUnit(state, 'worker', { x: 500, y: 540 });
   updateLogistics(state, .1);
   worker.hp = 0;
   for (let step = 0; step < 20; step++) updateLogistics(state, .1);
   equal(state.chunks.length, 0);
-  equal(state.resources, 54);
+  equal(state.resources, 53);
   updateLogistics(state, 1);
-  equal(state.resources, 54);
+  equal(state.resources, 53);
 });
 
 test('Stronghold role members keep private text and share completed work and placement without duplicate costs', () => {
@@ -385,7 +385,7 @@ test('Stronghold role members keep private text and share completed work and pla
     sharedWork = Math.round((sharedWork + phraseWork(you)) * 100) / 100;
     executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
   }
-  equal(state.resources, 68);
+  equal(state.resources, 58);
   equal(you.work, Math.round((sharedWork - 32) * 100) / 100);
   equal(you.phraseId > oldId, true);
   let rejected = false;
@@ -396,16 +396,16 @@ test('Stronghold role members keep private text and share completed work and pla
   executeCommand(state, you, { type: 'ROLE', role: 'defenses' });
   executeCommand(state, teammate, { type: 'ROLE', role: 'defenses' });
   executeCommand(state, you, { type: 'LENGTH', length: 'medium' });
-  executeCommand(state, you, { type: 'ACTION', action: 'tower', tier: 2 });
-  executeCommand(state, teammate, { type: 'ACTION', action: 'tower', tier: 2 });
+  executeCommand(state, you, { type: 'ACTION', action: 'tower', tier: 1 });
+  executeCommand(state, teammate, { type: 'ACTION', action: 'tower', tier: 1 });
   let towerWork = phraseWork(you);
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
   equal(teammate.actionPhrases, 1);
   for (const player of [teammate, you, teammate, you, teammate]) {
-    if (towerWork < 100) towerWork = Math.round((towerWork + phraseWork(player)) * 100) / 100;
+    if (towerWork < 50) towerWork = Math.round((towerWork + phraseWork(player)) * 100) / 100;
     executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
   }
-  while (towerWork < 100) {
+  while (towerWork < 50) {
     towerWork = Math.round((towerWork + phraseWork(you)) * 100) / 100;
     executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
   }
@@ -416,7 +416,7 @@ test('Stronghold role members keep private text and share completed work and pla
   executeCommand(state, you, { type: 'TYPE', phraseId: constructionId, text: constructionPhrase.slice(0, 3) });
   executeCommand(state, teammate, { type: 'PLACE', kind: 'tower', point: { x: 450, y: 500 } });
   equal(state.resources, 500);
-  equal(you.work, Math.round((towerWork - 100) * 100) / 100);
+  equal(you.work, Math.round((towerWork - 50) * 100) / 100);
   equal(you.actionPhrases, 0);
   equal(you.typed, constructionPhrase.slice(0, 3));
   equal(you.phraseId, constructionId);

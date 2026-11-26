@@ -1,5 +1,25 @@
 import { advanceEnemy, buyUpgrade, completeDefense, createDefenseState, typeCharacter } from '../src/game/minigame.ts';
+import { practiceWorkspaceMarkup } from '../src/ui/practice-workspace.ts';
 import { equal, test } from './harness.ts';
+
+test('arcade explanations become tooltips while upgrade prices and levels remain visible', () => {
+  const markup = practiceWorkspaceMarkup('');
+  for (const [kind, price, explanation] of [
+    ['power', 35, 'Word Power increases volley damage.'],
+    ['ward', 45, 'Stone Ward reduces fortress damage.'],
+    ['slow', 55, 'Still Waters slows approaching foes.']
+  ] as const) {
+    const button = new RegExp(`<button data-upgrade="${kind}"[\\s\\S]*?<\\/button>`).exec(markup)?.[0];
+    if (!button) throw new Error(`Missing ${kind} upgrade.`);
+    const visible = button.replace(/<[^>]*>/g, '');
+    equal(button.includes(`title="${explanation}"`), true);
+    equal(visible.includes(`${price} faith`), true);
+    equal(visible.includes('Lv 0'), true);
+    equal(visible.includes(explanation), false);
+  }
+  equal(markup.includes('aria-label="Arcade battlefield" title="Type correctly to send light across the field." tabindex="0"'), true);
+  equal(markup.includes('id="battle-message" class="battle-message"></div>'), true);
+});
 
 test('defense typing earns faith and damages enemies', () => {
   const state = createDefenseState();

@@ -1,5 +1,5 @@
-import { connectedRelays, relayNeighbors } from '../domain/logistics.ts';
-import { distance, RELAY_RANGE } from '../domain/rules.ts';
+import { connectedRelays, relayNeighbors, resourcePackAmount } from '../domain/logistics.ts';
+import { distance, RELAY_RANGE, RESOURCE_GATHER_COOLDOWN, towerRange, UNIT_RULES } from '../domain/rules.ts';
 import { buildingScale, unitUpgrade } from '../domain/technology.ts';
 import type { Building, Point, ResourceChunk, ResourceNode, StrongholdSnapshot, Unit } from '../domain/types.ts';
 import { createSvgLayer, setAttribute, setText } from './dom-updates.ts';
@@ -8,21 +8,76 @@ import { TRAINING_SECONDS } from '../domain/training.ts';
 import { WALL_HALF_WIDTH } from '../domain/navigation.ts';
 import { exploredPath, visibleCells } from '../domain/fog.ts';
 
+export function constructionProgress(building: Pick<Building, 'progress'>) {
+  const percent = Math.min(100, Math.max(0, building.progress * 100));
+  const remaining = Math.ceil(100 - percent);
+  return { percent, remaining, label: `${remaining}% left`, description: `${remaining}% left to build.` };
+}
+function buildingName(building: Pick<Building, 'kind' | 'tier' | 'enemy'>): string {
+  const names = { castle: 'Castle', 'enemy-base': 'Enemy base', relay: 'Relay', wall: 'Wall',
+    tower: `Tower T${building.tier}`, barracks: `Barracks T${building.tier}` };
+  return `${building.enemy && building.kind !== 'enemy-base' ? 'Enemy ' : ''}${names[building.kind]}`;
+}
+export function buildingDescription(building: Building): string {
+  const purpose = building.kind === 'castle' ? 'Your base receives delivered supplies. Protect it to stay in the battle.'
+    : building.kind === 'enemy-base' ? 'Destroy this stronghold to win.'
+    : building.kind === 'tower' ? `Automatically attacks opposing troops within ${towerRange(building.tier)} units.`
+    : building.kind === 'wall' ? building.enemy ? 'Blocks your troops. Destroy it or find a route around it.' : 'Blocks enemy movement. Select and scroll to rotate.'
+    : building.kind === 'relay' ? 'Forwards delivered supplies through connected relays to the castle.'
+    : `Trains ${building.tier === 1 ? 'Warriors' : building.tier === 2 ? 'Archers' : 'Catapults'} from purchased orders.${building.enemy ? '' : ' Right-click while selected to set its rally.'}`;
+  const progress = building.progress < 1 ? ` ${constructionProgress(building).label} to build.` : '';
+  const order = building.trainingQueue[0];
+  const training = order ? ` Training ${order.kind}: ${Math.ceil(building.cooldown)}s left; ${building.trainingQueue.length} queued.` : '';
+  return `${buildingName(building)}. ${purpose} ${Math.ceil(building.hp)}/${building.maxHp} HP.${progress}${training}`;
+}
+export function unitDescription(unit: Unit, upgradeLevel = 0, project?: Building): string {
+  const names = { worker: 'Gatherer', builder: 'Builder', warrior: 'Warrior', archer: 'Archer', catapult: 'Catapult', invader: 'Invader' };
+  const kind = unit.formation ?? unit.kind;
+  const purposes = {
+    worker: 'Automatically harvests supplies and delivers them to a castle or relay.',
+    builder: 'Automatically constructs placed buildings and repairs damaged defenses.',
+    warrior: 'Melee troop for close-range combat.',
+    archer: `Ranged troop with ${UNIT_RULES.archer.range}-unit reach.`,
+    catapult: 'Slow siege unit. Strong against buildings, weaker against troops.',
+    invader: 'Enemy melee troop advancing on your castle.'
+  };
+  const job = unit.kind === 'builder' && project ? ` Assigned to ${project.progress < 1 ? 'build' : 'repair'} ${buildingName(project)}.${project.progress < 1 ? ` ${constructionProgress(project).label}.` : ''}` : '';
+  return `${unit.kind === 'invader' && unit.formation ? 'Enemy ' : ''}${names[kind]}. ${purposes[kind]} ${Math.ceil(unit.hp)}/${unit.maxHp} HP.${upgradeLevel ? ` Upgrade ${upgradeLevel}.` : ''}${job}`;
+}
+export function resourceNodeDescription(state: Pick<StrongholdSnapshot, 'upgrades'>, node: ResourceNode): string {
+  if (node.remaining <= 0) return 'Depleted resource node. Gatherers must find another source.';
+  return `${node.rich ? 'Rich' : 'Standard'} resource node. ${Math.ceil(node.remaining)} base supplies remaining. Packs yield ${resourcePackAmount(state, node)} before seasonal bonuses. One harvest every ${RESOURCE_GATHER_COOLDOWN}s per node.`;
+}
+function constructionBarMarkup(y: number, width: number): string {
+  return `<g data-construction data-width="${width}" visibility="hidden" role="progressbar" aria-label="Building construction" aria-valuemin="0" aria-valuemax="100">
+    <rect x="${-width / 2}" y="${y}" width="${width}" height="3" fill="#1d3029"/>
+    <rect data-construction-fill x="${-width / 2}" y="${y}" width="0" height="3" fill="#a6ed89"/><desc></desc></g>`;
+}
+function renderConstructionProgress(element: Element, project?: Building): void {
+  const bar = child(element, '[data-construction]');
+  setAttribute(bar, 'visibility', project && project.progress < 1 ? 'visible' : 'hidden');
+  if (!project || project.progress === 1) return;
+  const progress = constructionProgress(project);
+  setAttribute(child(bar, '[data-construction-fill]'), 'width', String(Number(bar.getAttribute('data-width')) * progress.percent / 100));
+  setAttribute(bar, 'aria-valuenow', String(100 - progress.remaining));
+  setAttribute(bar, 'aria-valuetext', progress.description);
+  describe(bar, `${buildingName(project)}. ${progress.description}`);
+}
 function health(hp: number, max: number, y: number, width = 26): string {
-  return `<rect x="${-width / 2}" y="${y}" width="${width}" height="3" fill="#1d3029"/><rect data-health x="${-width / 2}" y="${y}" width="${width * Math.max(0, hp / max)}" height="3" fill="#a6ed89"/>`;
+  return `<g data-health-bar><rect x="${-width / 2}" y="${y}" width="${width}" height="3" fill="#1d3029"/><rect data-health x="${-width / 2}" y="${y}" width="${width * Math.max(0, hp / max)}" height="3" fill="#a6ed89"/></g>`;
 }
 function actionActive(entity: Unit | Building): boolean {
   return entity.attackTarget !== null && entity.cooldown > (entity.kind === 'worker' ? 2.72 : .72);
 }
-function actionEffectMarkup(working = false, enemy = false): string {
+export function actionEffectMarkup(working = false, enemy = false): string {
   if (working) return `<g data-work visibility="hidden" pointer-events="none" filter="url(#stronghold-work-glow)">
     <path data-beam fill="none" stroke="#dce7f0" stroke-width="1.5" stroke-dasharray="3 5"/>
     <g data-impact><circle r="7" fill="#eef5ff" fill-opacity=".18" stroke="#c5d2dc" stroke-width="1.5"/>
       <path d="M-11 0H-7 M7 0H11 M0 -11V-7 M0 7V11" stroke="#fff" stroke-width="2"/>
       <rect x="-2" y="-2" width="4" height="4" fill="#fff"/></g></g>`;
   return `<g data-attack visibility="hidden" pointer-events="none">
-    ${enemy ? '' : `<path data-trail fill="none" stroke="#483526" stroke-width="5" stroke-linejoin="bevel"/>
-    <path data-beam fill="none" stroke="#ed914c" stroke-width="2" stroke-linejoin="bevel" filter="url(#stronghold-attack-glow)"/>`}
+    <path data-trail fill="none" stroke="${enemy ? '#870018' : '#483526'}" stroke-width="5" stroke-linejoin="bevel"/>
+    <path data-beam fill="none" stroke="${enemy ? '#ff5969' : '#ed914c'}" stroke-width="2" stroke-linejoin="bevel" filter="url(#stronghold-attack-glow)"/>
     <g data-impact filter="url(#stronghold-attack-glow)">
       <path d="M0 -11L3 -4L10 -7L6 0L11 4L4 5L0 12L-3 5L-11 7L-6 0L-11 -4L-4 -5Z" fill="#9c572d" fill-opacity=".55" stroke="#ed914c" stroke-width="1.5"/>
     </g></g>`;
@@ -44,17 +99,31 @@ export function unitMotionTransform(unit: Unit, previous: Point | undefined, ela
   }
   return `translate(0 ${stride * 1.5}) rotate(${stride * 5})`;
 }
-export function unitMarkup(unit: Unit, selected: boolean, showHealth = true): string {
+function upgradeMarks(level: number, y = 0): string {
+  return `<g data-upgrade-level="${level}" fill="none" stroke="#263442" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${Array.from({ length: level }, (_, index) => {
+    const x = (index - (level - 1) / 2) * 4;
+    return `<path data-upgrade-mark="${index + 1}" d="M${x - 1.5} ${y + 2}L${x} ${y - 2}L${x + 1.5} ${y + 2}"/>`;
+  }).join('')}</g>`;
+}
+function warriorArmor(level: number): string {
+  if (!level) return '';
+  return `<g data-warrior-armor="${level}" fill="${level === 3 ? '#e0e6ec' : '#b8c4cf'}" stroke="${level === 3 ? '#cf9700' : '#65727e'}" stroke-width="1">
+    <path d="M-6 -6H6V3L3 7H-3L-6 3Z"/><path d="M0 -5V5" fill="none"/>
+    ${level >= 2 ? '<path d="M-10 -8H-5V-3H-10ZM5 -8H10V-3H5Z"/>' : ''}
+    ${level === 3 ? '<path d="M-7 -9H7V-6H-7Z"/>' : ''}</g>`;
+}
+export function unitMarkup(unit: Unit, selected: boolean, showHealth = true, upgradeLevel = 0): string {
   const siege = (unit.formation ?? unit.kind) === 'catapult';
-  const fill = unit.kind === 'invader' ? '#870018' : '#b18b45', stroke = unit.kind === 'invader' ? '#ff1726' : '#654717';
-  const shape = siege ? `<g data-catapult><rect x="-16" y="2" width="32" height="10" rx="2" fill="${fill}" stroke="${stroke}" stroke-width="2"/><circle cx="-11" cy="13" r="5" fill="#27323a" stroke="${stroke}" stroke-width="2"/><circle cx="11" cy="13" r="5" fill="#27323a" stroke="${stroke}" stroke-width="2"/><path d="M-10 2L0 -10L10 2Z" fill="${fill}" stroke="${stroke}" stroke-width="2"/><g data-catapult-arm><path d="M-9 4L13 -19" stroke="${stroke}" stroke-width="5"/><path d="M7 -21L17 -13L20 -21Z" fill="${unit.kind === 'invader' ? '#ff1726' : '#e7c76e'}" stroke="${stroke}" stroke-width="2"/></g></g>`
+  const level = unit.kind === 'warrior' || unit.kind === 'archer' || unit.kind === 'catapult' ? upgradeLevel : 0;
+  const fill = unit.kind === 'invader' ? '#870018' : '#fff8dc', stroke = unit.kind === 'invader' ? '#ff1726' : '#65727e';
+  const shape = siege ? `<g data-catapult><rect x="-14" y="2" width="28" height="9" fill="${fill}" stroke="${stroke}" stroke-width="2"/><circle cx="-10" cy="12" r="4" fill="${stroke}"/><circle cx="10" cy="12" r="4" fill="${stroke}"/><path d="M-9 2L0 -10L9 2Z" fill="${unit.kind === 'invader' ? fill : '#dce2e8'}" stroke="${stroke}" stroke-width="2"/><g data-catapult-arm><path d="M-8 4L12 -17" stroke="${unit.kind === 'invader' ? stroke : '#b88051'}" stroke-width="4"/><circle cx="13" cy="-18" r="4" fill="${unit.kind === 'invader' ? '#ff1726' : '#c3c3c3'}" stroke="${stroke}" stroke-width="1.5"/></g></g>`
     : unit.kind === 'worker' ? '<circle r="8" fill="#fff" stroke="#b88051" stroke-width="2"/>'
     : unit.kind === 'builder' ? '<path d="M0 -11 L10 8 L-10 8 Z" fill="#cec0df" stroke="#a64caf" stroke-width="2"/>'
     : unit.kind === 'warrior' ? '<rect x="-8" y="-8" width="16" height="16" fill="#dce2e8" stroke="#65727e" stroke-width="2"/>'
     : unit.kind === 'archer' ? '<path d="M0 -10 L8 0 L0 10 L-8 0 Z" fill="#9ed7e6" stroke="#00aeef" stroke-width="2"/>'
     : unit.formation === 'archer' ? '<path d="M0 -10 L8 0 L0 10 L-8 0 Z" fill="#870018" stroke="#ff1726" stroke-width="2"/>'
     : '<rect x="-8" y="-8" width="16" height="16" fill="#870018" stroke="#ff1726" stroke-width="2"/>';
-  return `${actionEffectMarkup(unit.kind === 'worker' || unit.kind === 'builder', unit.kind === 'invader')}<circle data-selected r="${siege ? 27 : 16}" fill="none" stroke="#fff" stroke-width="2" visibility="${selected ? 'visible' : 'hidden'}"/><g data-visual>${shape}</g>${showHealth ? health(unit.hp, unit.maxHp, siege ? 23 : 13, siege ? 34 : 20) : ''}<desc>${unit.kind}${unit.formation ? ' ' + unit.formation : ''}${showHealth ? `: ${Math.ceil(unit.hp)} HP` : ', last seen'}</desc>`;
+  return `${unit.kind === 'worker' || unit.kind === 'builder' ? actionEffectMarkup(true) : ''}<circle data-selected r="${siege ? 27 : 16}" fill="none" stroke="#fff" stroke-width="2" visibility="${selected ? 'visible' : 'hidden'}"/><g data-visual>${shape}${unit.kind === 'warrior' ? warriorArmor(level) : ''}${level ? upgradeMarks(level, siege ? 7 : 0) : ''}</g>${showHealth ? health(unit.hp, unit.maxHp, siege ? 23 : 13, siege ? 34 : 20) : ''}${showHealth && unit.kind === 'builder' ? constructionBarMarkup(18, 20) : ''}<desc>${showHealth ? unitDescription(unit, level) : `${unit.kind}, last seen`}</desc>`;
 }
 export function buildingMarkup(building: Building, showHealth = true): string {
   const color = building.enemy ? '#870018' : building.kind === 'relay' ? '#b0b0b0' : '#c3c3c3';
@@ -63,13 +132,14 @@ export function buildingMarkup(building: Building, showHealth = true): string {
     : building.kind === 'relay' ? `<path d="M-4 16 L-4 -7 L-9 -12 L0 -18 L9 -12 L4 -7 L4 16 Z" fill="${color}" stroke="#7f7f7f" stroke-width="2"/>`
     : building.kind === 'wall' ? `<rect data-wall-shape transform="rotate(${building.rotation ?? 0})" x="-23" y="${-WALL_HALF_WIDTH + 1.5}" width="46" height="${WALL_HALF_WIDTH * 2 - 3}" fill="${building.enemy ? color : '#ffdb58'}" stroke="${building.enemy ? '#ff1726' : '#e8ad23'}" stroke-width="3"/>`
     : `<rect x="${-size}" y="${-size}" width="${size * 2}" height="${size * 2}" fill="${color}" stroke="${building.enemy ? '#ff1726' : '#7f7f7f'}" stroke-width="4"/>`;
-  return `${actionEffectMarkup(false, building.enemy)}${shape}${showHealth ? health(building.hp, building.maxHp, building.kind === 'tower' ? 26 : size + 6, size * 2) : ''}<desc></desc>${building.kind === 'barracks' ? `<text data-tier y="5" text-anchor="middle" fill="#111" font-size="16">T${building.tier}</text>${showHealth ? `<g data-training><rect x="-17" y="26" width="34" height="8" fill="#23372e"/><rect x="-16" y="27" width="32" height="6" fill="#333"/><rect data-training-fill x="-16" y="27" width="0" height="6" fill="#a6ed89"/><text data-training-count y="43" text-anchor="middle" fill="#111" stroke="white" stroke-width="2" paint-order="stroke" font-size="12"></text></g>` : ''}` : ''}`;
+  return `${shape}${showHealth ? health(building.hp, building.maxHp, building.kind === 'tower' ? 26 : size + 6, size * 2) : ''}<desc>${showHealth ? buildingDescription(building) : `${buildingName(building)}, last seen`}</desc>${showHealth ? constructionBarMarkup(building.kind === 'tower' ? 26 : size + 6, size * 2) : ''}${building.kind === 'barracks' ? `<text data-tier y="5" text-anchor="middle" fill="#111" font-size="16">T${building.tier}</text>${showHealth ? `<g data-training><rect x="-17" y="26" width="34" height="8" fill="#23372e"/><rect x="-16" y="27" width="32" height="6" fill="#333"/><rect data-training-fill x="-16" y="27" width="0" height="6" fill="#a6ed89"/><text data-training-count y="43" text-anchor="middle" fill="#111" stroke="white" stroke-width="2" paint-order="stroke" font-size="12"></text></g>` : ''}` : ''}`;
 }
 function towerMarkup(building: Building): string {
   const outline = building.enemy ? '#ff1726' : '#cf9700';
   const fill = building.enemy ? '#870018' : building.tier === 1 ? '#fff8dc' : building.tier === 2 ? '#d6dce3' : '#677584';
   return `<g data-tower-tier="${building.tier}" transform="scale(${1 + (building.tier - 1) * .15})"><path d="M-13 -18H13V-9H6V19H-6V-9H-13Z" fill="${fill}" stroke="${outline}" stroke-width="2.5" stroke-linejoin="round"/>
-    <path d="M0 -2V8" stroke="#263442" stroke-width="4"/></g>`;
+    <path d="M0 -2V8" stroke="#263442" stroke-width="4"/>
+    <g stroke="${building.enemy ? '#ffd0d4' : building.tier === 3 ? '#eef2f6' : '#263442'}" stroke-width="2">${Array.from({ length: building.tier }, (_, index) => `<path data-tower-band="${index + 1}" d="M-5 ${14 - index * 4}H5"/>`).join('')}</g></g>`;
 }
 export function relayPreviewMarkup(snapshot: Pick<StrongholdSnapshot, 'buildings'>, point: Point, sourceId?: number): string {
   const connected = connectedRelays(snapshot);
@@ -116,8 +186,9 @@ function child(element: Element, selector: string): Element {
   return found;
 }
 function describe(element: Element, description: string): void {
-  setText(child(element, 'desc'), description);
+  setText(child(element, ':scope > desc'), description);
   setAttribute(element, 'data-tooltip', description);
+  setAttribute(element, 'aria-description', description);
 }
 function position(element: Element, point: { x: number; y: number }, scale = 1): void {
   setAttribute(element, 'transform', `translate(${point.x} ${point.y}) scale(${scale})`);
@@ -134,7 +205,7 @@ function renderActionEffect(element: Element, entity: Unit | Building, scale: nu
     const beam = child(effect, '[data-beam]');
     setAttribute(beam, 'd', `M0 0L${x} ${y}`);
     setAttribute(beam, 'stroke-dashoffset', String(reducedMotion ? 0 : -elapsed * 24 % 8));
-  } else if (entity.kind !== 'invader' && !('enemy' in entity && entity.enemy)) {
+  } else {
     const beam = child(effect, '[data-beam]');
     const reach = Math.max(1, Math.hypot(x, y));
     const offsetX = -y / reach * 3, offsetY = x / reach * 3;
@@ -146,8 +217,8 @@ function renderActionEffect(element: Element, entity: Unit | Building, scale: nu
   setAttribute(effect, 'opacity', String(reducedMotion ? 1 : working ? .8 + pulse * .2 : 1 - pulse * .7));
   setAttribute(child(effect, '[data-impact]'), 'transform', `translate(${x} ${y}) rotate(${working ? reducedMotion ? 0 : elapsed * 100 % 360 : Math.atan2(y, x) * 180 / Math.PI}) scale(${1 + pulse * (working ? .15 : .6)})`);
 }
-export function createBattlefieldRenderer(map: SVGSVGElement) {
-  map.innerHTML = `<defs>
+export function battlefieldMarkup(): string {
+  return `<defs>
     <filter id="stronghold-resource-glow" x="-100%" y="-100%" width="300%" height="300%"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#effff2" flood-opacity=".95"/></filter>
     <filter id="stronghold-work-glow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="1.5" flood-color="#f0f5ff" flood-opacity=".7"/></filter>
     <filter id="stronghold-attack-glow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="1.8" flood-color="#ed914c" flood-opacity=".8"/></filter>
@@ -161,29 +232,38 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     <mask id="stronghold-fog-unexplored" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="650" style="mask-type:luminance">
       <rect width="1000" height="650" fill="white"/><path data-explored fill="black"/><use href="#stronghold-vision-cells" fill="black"/>
     </mask></defs>
+    <g data-layer="remembered-nodes" pointer-events="none" aria-hidden="true" opacity=".7"></g>
     <g data-layer="memories" mask="url(#stronghold-fog-shadow)" pointer-events="none" aria-hidden="true" opacity=".7">
-      <g data-layer="remembered-nodes"></g><g data-layer="remembered-buildings"></g><g data-layer="remembered-units"></g>
+      <g data-layer="remembered-buildings"></g><g data-layer="remembered-units"></g>
     </g>
-    <g data-layer="visible-world" mask="url(#stronghold-current-sight)">
-      <g data-layer="coverage" pointer-events="none"></g><g data-layer="links" pointer-events="none"></g><g data-layer="nodes"></g><g data-layer="chunks" pointer-events="none"></g><g data-layer="buildings"></g><g data-layer="units"></g>
+    <g data-layer="visible-world">
+      <g mask="url(#stronghold-current-sight)"><g data-layer="coverage" pointer-events="none"></g><g data-layer="links" pointer-events="none"></g></g>
+      <g data-layer="nodes"></g>
+      <g mask="url(#stronghold-current-sight)"><g data-layer="chunks" pointer-events="none"></g><g data-layer="buildings"></g><g data-layer="units"></g></g>
     </g>
     <g data-layer="fog" pointer-events="none" aria-hidden="true">
       <rect width="1000" height="650" fill="#14231b" fill-opacity=".3" mask="url(#stronghold-fog-shadow)"/>
       <rect width="1000" height="650" fill="#14231b" fill-opacity=".5" mask="url(#stronghold-fog-unexplored)"/>
     </g>
-    <g data-layer="rally" data-tooltip="Production rally point"><path d="M0 14V-15l20 7-20 7" fill="#e7d98b" stroke="#e7d98b" opacity=".6"/><desc>Production rally point</desc></g>`;
+    <g data-layer="attacks" pointer-events="none" aria-hidden="true"></g>
+    <g data-layer="rally" data-tooltip="Shared rally point. Newly trained troops move here unless their barracks has its own rally."><path d="M0 14V-15l20 7-20 7" fill="#e7d98b" stroke="#e7d98b" opacity=".6"/><desc>Shared rally point for newly trained troops</desc></g>`;
+}
+export function createBattlefieldRenderer(map: SVGSVGElement) {
+  map.innerHTML = battlefieldMarkup();
   function layer(name: string): SVGGElement {
     const found = map.querySelector(`[data-layer="${name}"]`);
     if (!(found instanceof SVGGElement)) throw new Error(`Missing Stronghold SVG layer: ${name}`);
     return found;
   }
   let selection: ReadonlySet<number> = new Set();
-  let technology: Pick<StrongholdSnapshot, 'technology'> | null = null;
+  let technology: Pick<StrongholdSnapshot, 'technology' | 'upgrades'> | null = null;
   let elapsed = 0;
   let selectionColor = '#ffb3c9';
   const previousUnits = new Map<number, Point>();
   const unitDirections = new Map<number, Point>();
   let connectedRelayIds = new Set<number>();
+  let projects = new Map<number, Building>();
+  let selectedProjects = new Set<number>();
   const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
   const visible = child(map, '[data-visible]');
   const renderRememberedUnits = createSvgLayer<Unit>(layer('remembered-units'), unit => unitMarkup(unit, false, false),
@@ -204,14 +284,17 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
   const renderCoverage = createSvgLayer<Building>(layer('coverage'), () =>
     `<circle data-relay-radius r="${RELAY_RANGE}" fill="#8ce4db" fill-opacity=".035" stroke="#b4ede2" stroke-opacity=".3" stroke-width="1" stroke-dasharray="4 5"/>`,
   (element, building) => { position(element, building); setAttribute(element, 'data-relay-source', String(building.id)); });
-  const renderUnits = createSvgLayer<Unit>(layer('units'), unit => unitMarkup(unit, false), (element, unit) => {
+  const renderUnits = createSvgLayer<Unit>(layer('units'), unit => {
+    if (!technology) throw new Error('Missing Stronghold technology snapshot.');
+    return unitMarkup(unit, false, true, unitUpgrade(technology, unit));
+  }, (element, unit) => {
     if (!technology) throw new Error('Missing Stronghold technology snapshot.');
     const level = unitUpgrade(technology, unit);
     const scale = 1 + level * .08;
     position(element, unit, scale);
     setAttribute(child(element, '[data-visual]'), 'transform', unitMotionTransform(unit, previousUnits.get(unit.id), elapsed, motionPreference.matches));
     previousUnits.set(unit.id, { x: unit.x, y: unit.y });
-    renderActionEffect(element, unit, scale, elapsed, motionPreference.matches);
+    if (unit.kind === 'worker' || unit.kind === 'builder') renderActionEffect(element, unit, scale, elapsed, motionPreference.matches);
     setAttribute(element, 'data-unit', String(unit.id));
     setAttribute(element, 'class', 'stronghold-map-unit');
     setAttribute(child(element, '[data-selected]'), 'visibility', selection.has(unit.id) ? 'visible' : 'hidden');
@@ -221,8 +304,13 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     setAttribute(child(element, '[data-health]'), 'width', String(((unit.formation ?? unit.kind) === 'catapult' ? 34 : 20) * Math.max(0, unit.hp / unit.maxHp)));
     const arm = element.querySelector('[data-catapult-arm]');
     if (arm) setAttribute(arm, 'transform', `rotate(${-unit.attackWindup * 12})`);
-    describe(element, `${unit.kind}${unit.formation ? ' ' + unit.formation : ''}: ${Math.ceil(unit.hp)} HP / upgrade ${level}`);
-  }, unit => `${unit.kind}/${unit.formation}`);
+    const project = unit.kind === 'builder' && unit.task !== null ? projects.get(unit.task) : undefined;
+    describe(element, unitDescription(unit, level, project));
+    if (unit.kind === 'builder') renderConstructionProgress(element, selection.has(unit.id) ? project : undefined);
+  }, unit => {
+    if (!technology) throw new Error('Missing Stronghold technology snapshot.');
+    return `${unit.kind}/${unit.formation}/${unitUpgrade(technology, unit)}`;
+  });
   const renderBuildings = createSvgLayer<Building>(layer('buildings'), buildingMarkup, (element, building) => {
     if (!technology) throw new Error('Missing Stronghold technology snapshot.');
     const scale = buildingScale(technology, building);
@@ -230,11 +318,12 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     setAttribute(element, 'data-building', String(building.id));
     const wallShape = element.querySelector('[data-wall-shape]');
     if (wallShape) setAttribute(wallShape, 'transform', `rotate(${building.rotation ?? 0})`);
-    renderActionEffect(element, building, scale, elapsed, motionPreference.matches);
     setAttribute(element, 'opacity', building.progress < 1 ? String(.3 + building.progress * .7) : '1');
     const width = building.kind === 'castle' || building.kind === 'enemy-base' ? 68 : 28;
+    setAttribute(child(element, '[data-health-bar]'), 'visibility', building.progress < 1 ? 'hidden' : 'visible');
     setAttribute(child(element, '[data-health]'), 'width', String(width * Math.max(0, building.hp / building.maxHp)));
-    describe(element, `${building.kind} / T${building.tier}: ${Math.ceil(building.hp)} HP, ${Math.round(building.progress * 100)}% built${building.kind === 'wall' && !building.enemy ? '. Defenses: click to select; Rotate or Alt+R turns the wall. Shift-click rotates immediately.' : ''}`);
+    describe(element, buildingDescription(building));
+    renderConstructionProgress(element, selectedProjects.has(building.id) ? undefined : building);
     const tier = element.querySelector('[data-tier]');
     if (tier) setText(tier, `T${building.tier}`);
     const training = element.querySelector('[data-training]');
@@ -243,14 +332,21 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
       setAttribute(training, 'visibility', order ? 'visible' : 'hidden');
       setAttribute(child(training, '[data-training-fill]'), 'width', String(order ? 32 * Math.max(0, 1 - building.cooldown / TRAINING_SECONDS) : 0));
       setText(child(training, '[data-training-count]'), order ? `${order.kind}: ${building.trainingQueue.length} queued` : '');
-      if (order) describe(element, `T${building.tier} Barracks: ${order.kind}, ${Math.ceil(building.cooldown)}s remaining; ${building.trainingQueue.length} queued`);
     }
   }, building => `${building.kind}/${building.enemy}/${building.tier}`);
+  const renderAttacks = createSvgLayer<Unit | Building>(layer('attacks'),
+    entity => actionEffectMarkup(false, entity.kind === 'invader' || ('enemy' in entity && entity.enemy)),
+    (element, entity) => {
+      position(element, entity);
+      setAttribute(element, 'data-attacker', String(entity.id));
+      renderActionEffect(element, entity, 1, elapsed, motionPreference.matches);
+    }, entity => String(entity.kind === 'invader' || ('enemy' in entity && entity.enemy)));
   const renderNodes = createSvgLayer<ResourceNode>(layer('nodes'), node =>
     `<circle r="${node.rich ? 27 : 24}" stroke="${node.rich ? '#a64caf' : '#00aeef'}" stroke-width="3"/><desc></desc>`, (element, node) => {
     position(element, node);
     setAttribute(child(element, 'circle'), 'fill', node.remaining <= 0 ? '#aaa' : node.rich ? '#ccc0e0' : '#9ed7e6');
-    describe(element, `${node.rich ? 'Rich' : 'Standard'} resource node: ${Math.ceil(node.remaining)} remaining`);
+    if (!technology) throw new Error('Missing Stronghold technology snapshot.');
+    describe(element, resourceNodeDescription(technology, node));
   }, node => String(node.rich));
   const transporting = (chunk: ResourceChunk) => chunk.carrier === null && chunk.target !== null && connectedRelayIds.has(chunk.target);
   const renderChunks = createSvgLayer<ResourceChunk>(layer('chunks'), chunk => resourceChunkMarkup(chunk, transporting(chunk)), (element, chunk) => {
@@ -265,6 +361,10 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
   const render = (snapshot: StrongholdSnapshot, selected: ReadonlySet<number>): void => {
     selection = selected;
     technology = snapshot;
+    projects = new Map(snapshot.buildings.filter(building => !building.enemy && building.hp > 0
+      && (building.progress < 1 || building.hp < building.maxHp)).map(building => [building.id, building]));
+    selectedProjects = new Set(snapshot.units.flatMap(unit => unit.kind === 'builder' && unit.hp > 0
+      && selection.has(unit.id) && unit.task !== null ? [unit.task] : []));
     elapsed = snapshot.elapsed;
     setAttribute(visible, 'd', exploredPath(visibleCells(snapshot.fog.sources)));
     if (exploredCount !== snapshot.fog.explored.length) {
@@ -295,6 +395,8 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
       && !building.enemy && building.hp > 0));
     renderNodes(snapshot.nodes); renderChunks(snapshot.chunks);
     renderBuildings(snapshot.buildings); renderUnits(snapshot.units);
+    renderAttacks([...snapshot.units, ...snapshot.buildings].filter(entity => entity.hp > 0 && entity.attackTarget !== null
+      && entity.kind !== 'worker' && entity.kind !== 'builder' && actionActive(entity)));
     setAttribute(rally, 'visibility', snapshot.rally ? 'visible' : 'hidden');
     if (snapshot.rally) position(rally, snapshot.rally);
   };

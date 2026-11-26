@@ -49,14 +49,14 @@ export function initControls(config: AppConfig) {
             <div id="settings-menu" class="settings-menu is-hidden">
               <header><div><small>Preferences</small><strong>App settings</strong></div></header>
               <div class="setting-row">
-                <div><strong>Cursor smoothing</strong><small>Animate the typing cursor between characters</small></div>
-                <button id="cursor-smoothing-toggle" class="sound-switch" aria-label="Toggle cursor smoothing" aria-pressed="true"><i></i><span>On</span></button>
+                <div><strong>Cursor smoothing</strong></div>
+                <button id="cursor-smoothing-toggle" class="sound-switch" aria-label="Toggle cursor smoothing" aria-pressed="true" title="Animate the typing cursor between characters."><i></i><span>On</span></button>
               </div>
               <div class="setting-row">
-                <div><strong>Sound effects</strong><small>Typing and completion feedback</small></div>
-                <button id="sound-toggle" class="sound-switch" aria-label="Toggle sound effects" aria-pressed="true"><i></i><span>On</span></button>
+                <div><strong>Sound effects</strong></div>
+                <button id="sound-toggle" class="sound-switch" aria-label="Toggle sound effects" aria-pressed="true" title="Typing and completion feedback."><i></i><span>On</span></button>
               </div>
-              <div class="setting-row music-setting"><div><strong>Background music</strong><small>Playback and volume</small></div><div id="music-slot"></div></div>
+              <div class="setting-row music-setting" title="Control music playback and volume."><div><strong>Background music</strong></div><div id="music-slot"></div></div>
             </div>
           </div>
         </div>
@@ -66,34 +66,34 @@ export function initControls(config: AppConfig) {
         <aside id="mode-sidebar" class="mode-sidebar" aria-label="Game modes">
           <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Collapse navigation" aria-controls="mode-sidebar" aria-expanded="true"><span aria-hidden="true">‹</span><b>Hide menu</b></button>
           <div class="sidebar-heading">Modes</div>
-          <button class="mode-nav active" data-workspace="campaign" aria-label="Journey" title="Journey"><span>✦</span><div><strong>Journey</strong><small id="sidebar-campaign-progress">0 / 0 passages</small></div></button>
-          <button class="mode-nav" data-workspace="practice" aria-label="Practice" title="Practice"><span>⌨</span><div><strong>Practice</strong><small>Practice with text guidance</small></div></button>
-          <button class="mode-nav" data-workspace="defense" data-mode="defense" aria-label="Arcade" title="Arcade"><span>◇</span><div><strong>Arcade</strong><small>Repel the shadows</small></div></button>
-          <button class="mode-nav" data-workspace="multiplayer" aria-label="Together" title="Together"><span>◎</span><div><strong>Together</strong><small>Type and recall as a group</small></div></button>
-          <button class="mode-nav" data-workspace="stronghold" aria-label="Stronghold" title="Stronghold"><span>♜</span><div><strong>Stronghold</strong><small>Build and defend together</small></div></button>
+          <button class="mode-nav active" data-workspace="campaign" aria-label="Journey" title="Complete Scripture passage by passage."><span>✦</span><div><strong>Journey</strong><small id="sidebar-campaign-progress">0 / 0 passages</small></div></button>
+          <button class="mode-nav" data-workspace="practice" aria-label="Practice" title="Practice with text guidance."><span>⌨</span><div><strong>Practice</strong></div></button>
+          <button class="mode-nav" data-workspace="defense" data-mode="defense" aria-label="Arcade" title="Type accurately to repel the shadows."><span>◇</span><div><strong>Arcade</strong></div></button>
+          <button class="mode-nav" data-workspace="multiplayer" aria-label="Together" title="Type and recall as a group."><span>◎</span><div><strong>Together</strong></div></button>
+          <button class="mode-nav" data-workspace="stronghold" aria-label="Stronghold" title="Build and defend together."><span>♜</span><div><strong>Stronghold</strong></div></button>
         </aside>
         <div class="page-viewport">
       <section id="home-screen" class="app-page home-screen">
         <div class="home-menu">
           <h1>Biblical Typology</h1>
           <div class="home-mode-grid" role="navigation" aria-label="Game modes">
-            <button class="home-mode home-mode--journey" type="button" data-home-workspace="campaign">
+            <button class="home-mode home-mode--journey" type="button" data-home-workspace="campaign" title="Complete Scripture passage by passage.">
               <span class="home-mode-icon" aria-hidden="true">✦</span>
               <span class="home-mode-copy"><strong>Journey</strong></span>
             </button>
-            <button class="home-mode home-mode--practice" type="button" data-home-workspace="practice">
+            <button class="home-mode home-mode--practice" type="button" data-home-workspace="practice" title="Practice with text guidance.">
               <span class="home-mode-icon" aria-hidden="true">⌨</span>
               <span class="home-mode-copy"><strong>Practice</strong></span>
             </button>
-            <button class="home-mode home-mode--arcade" type="button" data-home-workspace="defense" data-home-mode="defense">
+            <button class="home-mode home-mode--arcade" type="button" data-home-workspace="defense" data-home-mode="defense" title="Type accurately to repel the shadows.">
               <span class="home-mode-icon" aria-hidden="true">◇</span>
               <span class="home-mode-copy"><strong>Arcade</strong></span>
             </button>
-            <button class="home-mode home-mode--together" type="button" data-home-workspace="multiplayer">
+            <button class="home-mode home-mode--together" type="button" data-home-workspace="multiplayer" title="Type and recall as a group.">
               <span class="home-mode-icon" aria-hidden="true">◎</span>
               <span class="home-mode-copy"><strong>Together</strong></span>
             </button>
-            <button class="home-mode home-mode--stronghold" type="button" data-home-workspace="stronghold">
+            <button class="home-mode home-mode--stronghold" type="button" data-home-workspace="stronghold" title="Build and defend together.">
               <span class="home-mode-icon" aria-hidden="true">♜</span>
               <span class="home-mode-copy"><strong>Stronghold</strong></span>
             </button>
@@ -114,7 +114,7 @@ export function initControls(config: AppConfig) {
       <section id="campaign-screen" class="app-page campaign-screen is-hidden">
         ${menuNavigationMarkup()}
         <header class="page-header campaign-header">
-          <div><div class="eyebrow">The Scripture Journey</div><h2>Journey</h2><p>Complete every passage, chapter, and book—one comfortable session at a time.</p></div>
+          <div><div class="eyebrow">The Scripture Journey</div><h2 title="Complete passages, chapters, and books at your own pace.">Journey</h2></div>
           <div class="campaign-summary"><strong id="campaign-total-stars">0 light</strong><span id="campaign-total-progress">0 of 0 passages</span></div>
         </header>
         <div class="campaign-toolbar">

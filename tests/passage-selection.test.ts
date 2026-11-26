@@ -3,6 +3,7 @@ import { getSampleVerseNumbers } from '../src/bible-api.ts';
 import { chooseRandomVerseRange, chooseVerseRange, filterEndVerses, isValidPassageSelection, normalizeVerseNumbers } from '../src/passage-selector.ts';
 import { getVerseCount, VERSE_COUNTS } from '../src/verse-counts.ts';
 import { createChapterReader, nextChapterReaderRange } from '../src/typing/chapter-reader.ts';
+import { practiceWorkspaceMarkup } from '../src/ui/practice-workspace.ts';
 import { equal, test } from './harness.ts';
 
 test('canonical Bible metadata covers all books', () => {
@@ -10,6 +11,21 @@ test('canonical Bible metadata covers all books', () => {
   equal(getChapterCount('Genesis'), 50);
   equal(getChapterCount('Psalms'), 150);
   equal(getChapterCount('Revelation'), 22);
+});
+
+test('practice picker and recall instructions move to tooltips without removing labels or actions', () => {
+  const markup = practiceWorkspaceMarkup('');
+  const visible = markup.replace(/<[^>]*>/g, '');
+  equal(visible.includes('Pick a book, chapter, and verse range.'), false);
+  equal(visible.includes('Practice saved passages in order.'), false);
+  equal(markup.includes('title="Pick a book, chapter, and verse range, then open the reader."'), true);
+  equal(markup.includes('title="Practice saved passages in order." tabindex="0"'), true);
+  equal(visible.includes('Open chapter reader'), true);
+  equal(visible.includes('Recall playlists'), true);
+  for (const percent of [100, 75, 50, 25, 0]) {
+    equal(markup.includes(`(${percent}% text visible)"`), true);
+    equal(markup.includes(`data-text-visibility="${percent}"`), true);
+  }
 });
 
 test('API verse metadata is normalized and deduplicated', () => {

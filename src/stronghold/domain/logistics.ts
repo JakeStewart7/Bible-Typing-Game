@@ -1,4 +1,4 @@
-import { distance, moveToward, RELAY_RANGE, UNIT_RULES } from './rules.ts';
+import { distance, moveToward, RELAY_RANGE, RESOURCE_GATHER_COOLDOWN, RESOURCE_PACK_BASE, UNIT_RULES } from './rules.ts';
 import type { Building, Point, ResourceChunk, ResourceNode, StrongholdState, Unit } from './types.ts';
 import { ENTITY_LABELS, recordEvent } from './events.ts';
 import { buildingApproach, buildingFootprint, distanceToFootprint, movementDestination, moveUnitToward, resourceNodeRadius, unitRadius, wallApproach } from './navigation.ts';
@@ -57,9 +57,14 @@ function depositCargo(state: StrongholdState, worker: Unit, cargo: ResourceChunk
   cargo.y = depot.y;
   cargo.target = depot.id;
 }
+export function resourcePackAmount(state: Pick<StrongholdState, 'upgrades'>, node: Pick<ResourceNode, 'remaining' | 'rich'>): number {
+  return Math.min(node.remaining, RESOURCE_PACK_BASE * (node.rich ? 2 : 1) + state.upgrades.economy * 2);
+}
 function harvestNode(state: StrongholdState, worker: Unit, node: ResourceNode): void {
-  const amount = Math.min(node.remaining, (node.rich ? 8 : 4) + state.upgrades.economy * 2);
+  if (node.remaining <= 0 || node.cooldown > 1e-9) return;
+  const amount = resourcePackAmount(state, node);
   node.remaining -= amount;
+  node.cooldown = RESOURCE_GATHER_COOLDOWN;
   if (node.remaining === 0) recordEvent(state, 'Resource node depleted');
   state.chunks.push({ id: state.nextId++, x: worker.x, y: worker.y, amount, rich: node.rich, target: null, carrier: worker.id });
   worker.attackTarget = { x: node.x, y: node.y };
@@ -170,6 +175,7 @@ function updateBuilders(state: StrongholdState, seconds: number): void {
 }
 
 export function updateLogistics(state: StrongholdState, seconds: number): void {
+  for (const node of state.nodes) node.cooldown = Math.max(0, node.cooldown - seconds);
   for (const unit of state.units) {
     if (unit.hp <= 0) continue;
     if (unit.kind === 'worker') updateWorker(state, unit, seconds);

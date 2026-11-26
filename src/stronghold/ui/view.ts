@@ -1,23 +1,43 @@
 import { requireElement } from '../../shared/dom.ts';
-import { BUILDING_CAPS, EVENT_LABELS, ROLE_ACTIONS, TIER_COSTS, TIER_MAX, UNIT_CAPS } from '../domain/rules.ts';
+import { ACTION_LABELS, EVENT_LABELS, isTypingAction, ROLE_ACTIONS, TIER_COSTS, TIER_MAX } from '../domain/rules.ts';
 import { tierProgress } from '../domain/tier-progress.ts';
-import { taskCost, taskWork, upgradeLimit } from '../domain/technology.ts';
-import { actionProblem, actionUnlockProblem } from '../domain/actions.ts';
+import { taskCost, taskWork, TOWER_UPGRADE_COSTS } from '../domain/technology.ts';
+import { actionBlocker, actionRequiredTier, actionUnlockProblem, constructionBlocker, towerUpgradeBlocker, type ActionBlocker } from '../domain/actions.ts';
 import { taskKey } from '../domain/tasks.ts';
-import { PHRASE_LENGTHS, ROLES, UPGRADE_TARGETS, type StrongholdSnapshot } from '../domain/types.ts';
+import { PHRASE_LENGTHS, ROLES, UPGRADE_TARGETS, type StrongholdSnapshot, type TaskSelection } from '../domain/types.ts';
 import { createMapCamera } from './map-camera.ts';
 import { createBattlefieldRenderer } from './battlefield.ts';
 import { setAttribute, setText } from './dom-updates.ts';
-import { PLAYER_IDS } from './workspace.ts';
+import { LENGTH_CONTROL_HELP, lengthTooltip, orderTooltip, PLAYER_IDS } from './workspace.ts';
 import { renderTierChallenge } from './tier-view.ts';
 import { createEventLog } from './event-log.ts';
 import { createMapControls, readyBuilding } from './map-controls.ts';
 import { applyPlayerTheme, playerCursor } from './player-theme.ts';
-import { workProgress } from './work-progress.ts';
+import { taskButtonPresentation, taskHelpers, taskProgress, workProgress } from './work-progress.ts';
 import { renderEnvironment } from './environment.ts';
-import { daylight } from '../domain/environment.ts';
-import { isArmyUnit, queuedUnits } from '../domain/training.ts';
+import { daylight, SEASON_BONUSES, typingSupplyBase } from '../domain/environment.ts';
+import { isArmyUnit, queuedUnits, TRAINING_SECONDS } from '../domain/training.ts';
 
+function taskIndicatorElements(element: Element) {
+  const strip = element.querySelector<HTMLElement>('[data-task-players]');
+  if (!strip) throw new Error('Missing Stronghold task-player indicators.');
+  return { strip, markers: [...strip.querySelectorAll<HTMLElement>('[data-task-player]')] };
+}
+function renderTaskIndicators(indicators: ReturnType<typeof taskIndicatorElements>, snapshot: StrongholdSnapshot,
+  owner: StrongholdSnapshot['players'][number], role: StrongholdSnapshot['players'][number]['role'], task: TaskSelection): string {
+  const helpers = taskHelpers(snapshot.players, owner.id, role, task);
+  const active = new Set([owner.id, ...helpers.map(player => player.id)]);
+  for (const marker of indicators.markers) {
+    const player = snapshot.players.find(player => player.id === marker.dataset.taskPlayer);
+    if (!player) throw new Error('Missing Stronghold task-indicator player.');
+    setAttribute(marker, 'style', `visibility:${active.has(player.id) ? 'visible' : 'hidden'};background:${player.color}`);
+  }
+  const help = helpers.length ? `Also selecting: ${helpers.map(player => playerPanelName(player, snapshot.players.findIndex(candidate => candidate.id === player.id))).join(', ')}.` : '';
+  const description = `${playerPanelName(owner, snapshot.players.indexOf(owner))}'s panel color.${help ? ' ' + help : ''}`;
+  setAttribute(indicators.strip, 'aria-label', description);
+  setAttribute(indicators.strip, 'data-tooltip', description);
+  return help;
+}
 export function strongholdElements() {
   const map = document.getElementById('stronghold-map');
   if (!(map instanceof SVGSVGElement)) throw new Error('Missing Stronghold battlefield SVG.');
@@ -30,14 +50,32 @@ export function strongholdElements() {
       const buttons = [...element.querySelectorAll<HTMLButtonElement>('[data-action]')].map(button => {
         const action = ROLE_ACTIONS[role].find(candidate => candidate === button.dataset.action);
         if (!action) throw new Error('Unknown Stronghold action button.');
-        return { element: button, action, miniBar: button.querySelector<HTMLElement>('[data-task-progress]'),
+        const label = button.querySelector<HTMLElement>('.stronghold-action-label');
+        const blocker = button.querySelector<HTMLElement>('[data-action-blocker]');
+        if (!label || !blocker) throw new Error('Missing Stronghold action feedback.');
+        return { element: button, action, label: label.textContent ?? ACTION_LABELS[action], labelElement: label, blockerElement: blocker, indicators: taskIndicatorElements(button),
+          miniBar: button.querySelector<HTMLElement>('[data-task-progress]'),
           miniFill: button.querySelector<HTMLElement>('[data-task-fill]'), lockIcon: button.querySelector<SVGElement>('[data-tier-lock]'),
           tier: button.dataset.tier ? Number(button.dataset.tier) : undefined,
           upgrade: UPGRADE_TARGETS.find(target => target === button.dataset.strongholdUpgrade), minimumTier: Number(button.dataset.minTier) };
       });
-      return { role, element, buttons };
+      const towerUpgrades = [...element.querySelectorAll<HTMLButtonElement>('[data-tower-upgrade]')].map((button): {
+        element: HTMLButtonElement; tier: 2 | 3; blocker: HTMLElement; indicators: ReturnType<typeof taskIndicatorElements>;
+      } => {
+        const tier = Number(button.dataset.towerUpgrade);
+        const blocker = button.querySelector<HTMLElement>('[data-tower-blocker]');
+        if ((tier !== 2 && tier !== 3) || !blocker) throw new Error('Invalid Stronghold tower upgrade control.');
+        return { element: button, tier, blocker, indicators: taskIndicatorElements(button) };
+      });
+      const towerStatus = element.querySelector<HTMLElement>('[data-tower-status]');
+      if (role === 'defenses' && !towerStatus) throw new Error('Missing Stronghold tower selection status.');
+      return { role, element, buttons, towerUpgrades, towerStatus, supplyOutput: element.querySelector<HTMLElement>('[data-supply-output]'),
+        supplyIndicators: role === 'army' ? taskIndicatorElements(element) : undefined };
     });
-    return { id, card, groups, roleButtons: ROLES.map(role => ({ role, element: requireElement(`stronghold-role-${id}-${role}`, HTMLButtonElement) })),
+    return { id, card, groups, roleButtons: ROLES.map(role => {
+      const element = requireElement(`stronghold-role-${id}-${role}`, HTMLButtonElement);
+      return { role, element, help: element.dataset.tooltip ?? '' };
+    }),
       name: requireElement(`stronghold-name-${id}`, HTMLElement),
       typed: requireElement(`stronghold-typed-${id}`, HTMLElement), progress: requireElement(`stronghold-progress-${id}`, HTMLElement),
       progressLabel: requireElement(`stronghold-progress-label-${id}`, HTMLElement),
@@ -54,6 +92,8 @@ export function strongholdElements() {
     typedBar: requireElement('stronghold-typed-bar', HTMLElement), progressFill: requireElement('stronghold-typing-progress', HTMLElement),
     typing: requireElement('stronghold-typing', HTMLElement), typedArea: requireElement('stronghold-typed-area', HTMLElement),
     typingLock: requireElement('stronghold-typing-lock', HTMLElement),
+    typingLockLabel: requireElement('stronghold-typing-lock-label', HTMLElement),
+    devStatus: requireElement('stronghold-dev-status', HTMLElement),
     privateTyping: requireElement('stronghold-private', HTMLElement), privateSlot: requireElement('stronghold-private-slot', HTMLElement),
     length: requireElement('stronghold-length', HTMLElement),
     lengthOptions: PHRASE_LENGTHS.map(length => ({ length, element: requireElement(`stronghold-length-${length}`, HTMLButtonElement) })),
@@ -65,11 +105,67 @@ export function strongholdElements() {
     nextNight: requireElement('stronghold-next-night', HTMLButtonElement),
     nextDay: requireElement('stronghold-next-day', HTMLButtonElement),
     orders: requireElement('stronghold-army-orders', HTMLElement), placement: requireElement('stronghold-placement', HTMLElement),
+    selection: requireElement('stronghold-selection', HTMLElement),
     dialog: requireElement('stronghold-tier-dialog', HTMLDialogElement), tierSlot: requireElement('stronghold-tier-typing-slot', HTMLElement),
     feedback: requireElement('stronghold-feedback', HTMLElement)
   };
 }
 export type StrongholdElements = ReturnType<typeof strongholdElements>;
+export function playerPanelName(player: Pick<StrongholdSnapshot['players'][number], 'name'>, index: number): string {
+  return player.name === 'You' ? `Player ${index + 1}` : player.name;
+}
+type ControlBlocker = ActionBlocker | { kind: 'paused' | 'phase' | 'teammate'; label: string; description: string };
+function controlBlocker(snapshot: StrongholdSnapshot, player: StrongholdSnapshot['players'][number], running: boolean): ControlBlocker | null {
+  if (snapshot.phase === 'won' || snapshot.phase === 'lost') return { kind: 'phase', label: 'Match over', description: 'Start a new game to use these controls.' };
+  if (snapshot.phase === 'tier-up') return { kind: 'phase', label: 'Tier challenge', description: 'Finish the shared tier challenge before changing tasks or issuing battlefield orders.' };
+  if (!running) return { kind: 'paused', label: 'Paused', description: 'Resume gameplay before using this control.' };
+  return player.id !== snapshot.selfId ? { kind: 'teammate', label: player.simulated ? 'Computer' : 'Teammate',
+    description: `${player.name}'s controls are read-only. Use your own role buttons.` } : null;
+}
+export function taskAvailability(snapshot: StrongholdSnapshot, player: StrongholdSnapshot['players'][number], selection: TaskSelection, running: boolean) {
+  const context = controlBlocker(snapshot, player, running);
+  const problem = actionBlocker(snapshot, { ...player, ...selection }, selection.action);
+  const construction = selection.action === 'tower' || selection.action === 'barracks' || selection.action === 'wall';
+  const placement = selection.action === 'relay' || selection.action === 'tower' || selection.action === 'barracks' || selection.action === 'wall'
+    ? constructionBlocker(snapshot, selection.action) : null;
+  const requirement = problem ?? placement;
+  const key = taskKey(selection);
+  const work = key === taskKey(player) ? player.work : snapshot.roleTasks[player.role].progress[key]?.work ?? 0;
+  const prepared = construction && work >= taskWork(selection);
+  const recruitment = selection.action === 'worker' || selection.action === 'builder';
+  const selectionBlocked = Boolean(problem) && (!isTypingAction(selection.action) || recruitment || problem?.kind === 'tier' || problem?.kind === 'role');
+  // Construction work can be prepared without a builder; placement cannot.
+  const placementBlocked = Boolean(placement) && (selection.action === 'relay' || prepared);
+  return {
+    disabled: Boolean(context) || selectionBlocked || placementBlocked,
+    ready: prepared && !requirement && !context,
+    requirement,
+    blocker: requirement ?? context,
+    description: [requirement?.description, context?.description].filter(Boolean).join(' ')
+  };
+}
+export function tierAvailability(snapshot: StrongholdSnapshot, player: StrongholdSnapshot['players'][number], running: boolean): {
+  cost: number; disabled: boolean; blocker: ControlBlocker | null; description: string;
+} {
+  const cost = TIER_COSTS[snapshot.tier] ?? 0;
+  const context = controlBlocker(snapshot, player, running);
+  const limit: ControlBlocker | null = snapshot.tier >= TIER_MAX ? { kind: 'limit', label: 'Max tier', description: 'The highest tier is already unlocked.' } : null;
+  const shortage = Math.ceil(cost - snapshot.resources);
+  const supplies: ControlBlocker | null = !player.ready && shortage > 0
+    ? { kind: 'supplies', label: `${shortage} supplies short`, description: `Need ${cost} shared supplies to advance; ${Math.floor(snapshot.resources)} available, ${shortage} short.` } : null;
+  const blocker = limit ?? context ?? supplies;
+  const action = limit ? 'All tiers are unlocked.' : player.ready ? 'Cancel your ready state.'
+    : `Ready up for a shared typing challenge. Completing it unlocks Tier ${snapshot.tier + 1}; the team pays ${cost} supplies when it starts.`;
+  return { cost, disabled: Boolean(blocker), blocker, description: `${blocker ? blocker.description + ' ' : ''}${action}` };
+}
+export function selectedTowerAvailability(snapshot: StrongholdSnapshot, player: StrongholdSnapshot['players'][number],
+  selectedBuildings: ReadonlySet<number>, tier: 2 | 3, running: boolean) {
+  const tower = selectedBuildings.size === 1 ? snapshot.buildings.find(building => selectedBuildings.has(building.id)
+    && building.kind === 'tower' && !building.enemy && building.hp > 0) : undefined;
+  const blocker = controlBlocker(snapshot, player, running) ?? towerUpgradeBlocker(snapshot, player, tower?.id ?? null, tier);
+  return { tower, blocker, disabled: Boolean(blocker),
+    description: `Upgrade only the selected tower to T${tier}: more health, damage and range. Costs ${TOWER_UPGRADE_COSTS[tier]} supplies and needs room for a larger footprint.${blocker ? ' ' + blocker.description : ''}` };
+}
 const textElements = new Map<string, HTMLElement>();
 export function formatBattleTime(elapsed: number): string {
   const seconds = Math.floor(elapsed);
@@ -82,7 +178,7 @@ function text(id: string, value: string): void {
 }
 export function renderStronghold(
   elements: StrongholdElements, snapshot: StrongholdSnapshot, selected: ReadonlySet<number>, running: boolean, paused: boolean,
-  relayPlacement = false, placementCancelled = false, rallyPlacement = false, shown = true
+  relayPlacement = false, placementCancelled = false, rallyPlacement = false, shown = true, selectedBuildings: ReadonlySet<number> = new Set()
 ): void {
   const self = snapshot.players.find(player => player.id === snapshot.selfId);
   const ownCard = elements.playerCards.find(card => card.id === snapshot.selfId);
@@ -95,13 +191,28 @@ export function renderStronghold(
   const army = self.role === 'army' && !challenge;
   elements.nextWave.disabled = !running || snapshot.phase !== 'playing';
   const environmentDisabled = !running || snapshot.phase !== 'playing';
+  const context = controlBlocker(snapshot, self, running);
   const period = daylight(snapshot.environmentElapsed).period;
   setText(elements.timer, formatBattleTime(snapshot.elapsed));
   setAttribute(elements.timer, 'datetime', `PT${Math.floor(snapshot.elapsed)}S`);
   elements.devSeason.disabled = environmentDisabled;
+  setText(elements.devStatus, environmentDisabled ? context?.label ?? '' : '');
+  elements.devStatus.classList.toggle('is-hidden', !environmentDisabled);
+  setAttribute(elements.devStatus, 'aria-description', environmentDisabled ? context?.description ?? '' : '');
   if (elements.devSeason.value !== snapshot.season) elements.devSeason.value = snapshot.season;
   elements.nextNight.disabled = environmentDisabled || period === 'night';
   elements.nextDay.disabled = environmentDisabled || period === 'day';
+  setText(elements.nextNight, period === 'night' ? 'Already night' : 'Skip to Night');
+  setText(elements.nextDay, period === 'day' ? 'Already day' : 'Skip to Day');
+  for (const [element, description] of [
+    [elements.devSeason, environmentDisabled ? context?.description ?? '' : 'Preview a season and its effects in the current match.'],
+    [elements.nextWave, environmentDisabled ? context?.description ?? '' : 'Start the next enemy wave.'],
+    [elements.nextNight, environmentDisabled ? context?.description ?? '' : period === 'night' ? 'It is already night.' : 'Skip the environment clock to night without advancing battle time.'],
+    [elements.nextDay, environmentDisabled ? context?.description ?? '' : period === 'day' ? 'It is already day.' : 'Skip the environment clock to day without advancing battle time.']
+  ] as const) {
+    setAttribute(element, 'data-tooltip', description);
+    setAttribute(element, 'aria-description', description);
+  }
   text('stronghold-resources', String(Math.floor(snapshot.resources)));
   text('stronghold-event', EVENT_LABELS[snapshot.event]);
   text('stronghold-event-time', `${Math.ceil(snapshot.eventIn)}s`);
@@ -110,20 +221,33 @@ export function renderStronghold(
     setText(button, snapshot.computersPaused ? 'Resume computers' : 'Stop computers');
     setAttribute(button, 'aria-pressed', String(snapshot.computersPaused));
     button.disabled = !running || terminal;
+    const description = button.disabled ? terminal ? 'Start a new game to control the computers.' : 'Resume gameplay before controlling the computers.'
+      : 'Pause or resume simulated teammates and their training queues without stopping the battlefield or human typing.';
+    setAttribute(button, 'data-tooltip', description);
+    setAttribute(button, 'aria-description', description);
   }
-  text('stronghold-tower-count', `${snapshot.buildings.filter(building => building.kind === 'tower' && !building.enemy && building.hp > 0).length}/${BUILDING_CAPS.tower}`);
-  for (const kind of ['warrior', 'archer', 'catapult', 'builder', 'worker'] as const) text(`stronghold-${kind}-count`, `${snapshot.units.filter(unit => unit.kind === kind && unit.hp > 0).length}/${UNIT_CAPS[kind]}`);
+  text('stronghold-tower-count', String(snapshot.buildings.filter(building => building.kind === 'tower' && !building.enemy && building.hp > 0).length));
+  for (const kind of ['warrior', 'archer', 'catapult', 'builder', 'worker'] as const) text(`stronghold-${kind}-count`, String(snapshot.units.filter(unit => unit.kind === kind && unit.hp > 0).length));
   text('stronghold-tier-label', `Tier ${snapshot.tier}`);
-  text('stronghold-tier-action', self.ready ? 'Ready!' : snapshot.tier === TIER_MAX ? 'Max Tier' : 'Tier Up');
   const ready = requireElement('stronghold-ready', HTMLButtonElement);
-  const tierCost = TIER_COSTS[snapshot.tier] ?? 0;
-  text('stronghold-tier-price', String(tierCost));
+  const tier = tierAvailability(snapshot, self, running);
+  text('stronghold-tier-price', String(tier.cost));
   requireElement('stronghold-tier-cost', HTMLElement).classList.toggle('is-hidden', snapshot.tier >= TIER_MAX);
-  const readyDisabled = terminal || challenge || snapshot.tier >= TIER_MAX || (!self.ready && snapshot.resources < tierCost);
-  if (ready.disabled !== readyDisabled) ready.disabled = readyDisabled;
-  ready.setAttribute('aria-label', `Tier ${snapshot.tier}. ${self.ready ? 'Cancel ready' : `Ready up for ${tierCost} shared supplies`}`);
+  if (ready.disabled !== tier.disabled) ready.disabled = tier.disabled;
+  setAttribute(ready, 'aria-label', `Tier ${snapshot.tier}. ${tier.description}`);
+  setAttribute(ready, 'aria-pressed', String(self.ready));
+  setAttribute(ready, 'data-tooltip', tier.description);
+  setAttribute(ready, 'aria-description', tier.description);
+  ready.classList.toggle('is-ready', self.ready && !challenge);
   text('stronghold-pause', paused ? 'Resume' : 'Pause');
   text('stronghold-tier-pause', paused ? 'Resume challenge' : 'Pause challenge');
+  for (const id of ['stronghold-pause', 'stronghold-tier-pause']) {
+    const button = requireElement(id, HTMLButtonElement);
+    const description = paused ? 'Resume the battle or tier challenge from where you paused.'
+      : 'Pause the battle and typing without losing progress.';
+    setAttribute(button, 'data-tooltip', description);
+    setAttribute(button, 'aria-description', description);
+  }
   elements.renderBattlefield(snapshot, selected);
   elements.renderEventLog(snapshot);
   requireElement('stronghold-outcome', HTMLElement).classList.toggle('is-hidden', !terminal);
@@ -131,7 +255,18 @@ export function renderStronghold(
   text('stronghold-outcome-copy', snapshot.message);
   if (elements.orders.parentElement !== ownCard.actions) ownCard.actions.append(elements.orders);
   elements.orders.classList.toggle('is-hidden', !army || terminal);
-  for (const button of elements.orders.querySelectorAll<HTMLButtonElement>('button')) button.disabled = !running || !army || terminal;
+  const troops = snapshot.units.filter(unit => unit.hp > 0 && isArmyUnit(unit.kind)).length;
+  for (const button of elements.orders.querySelectorAll<HTMLButtonElement>('button')) {
+    const noTroops = button.id !== 'stronghold-rally' && troops === 0;
+    button.disabled = !running || !army || terminal || noTroops;
+    const blocker = button.querySelector('[data-order-blocker]');
+    if (!blocker) throw new Error('Missing Stronghold order feedback.');
+    setText(blocker, context?.label ?? (noTroops ? 'No troops' : ''));
+    blocker.classList.toggle('is-hidden', !context && !noTroops);
+    const description = `${orderTooltip(button.id)}${context ? ' ' + context.description : noTroops ? ' Train combat troops in Army first.' : ''}`;
+    setAttribute(button, 'data-tooltip', `${description} (Alt+${button.dataset.shortcut})`);
+    setAttribute(button, 'aria-description', description);
+  }
   setAttribute(requireElement('stronghold-rally', HTMLButtonElement), 'aria-pressed', String(rallyPlacement));
   elements.privateTyping.classList.toggle('is-hidden', terminal);
   const placing = running && !challenge && !placementCancelled && (relayPlacement || readyBuilding(snapshot) !== null);
@@ -143,6 +278,13 @@ export function renderStronghold(
   }
   elements.placement.classList.toggle('is-hidden', !placing || terminal);
   const typingLocked = !challenge && Boolean(actionUnlockProblem(snapshot, self));
+  setText(elements.typingLockLabel, `Needs Tier ${actionRequiredTier(self)}`);
+  const typingDescription = !running ? 'Resume gameplay before typing.' : terminal ? 'Start a new game to type.'
+    : typingLocked ? actionUnlockProblem(snapshot, self) ?? '' : 'Complete the phrase exactly to contribute typing work to the team.';
+  setAttribute(elements.input, 'aria-description', typingDescription);
+  setAttribute(elements.input, 'placeholder', !running ? 'Paused' : terminal ? 'Match over' : typingLocked ? `Needs Tier ${actionRequiredTier(self)}` : 'Type here');
+  setAttribute(elements.typingLock, 'data-tooltip', typingLocked ? typingDescription : '');
+  setAttribute(elements.typingLock, 'aria-description', typingLocked ? typingDescription : '');
   elements.typing.classList.toggle('is-tier-locked', typingLocked);
   elements.typingLock.classList.toggle('is-hidden', !typingLocked);
   elements.typingLock.querySelector('[data-typing-lock]')?.classList.remove('is-hidden');
@@ -150,25 +292,41 @@ export function renderStronghold(
   if (elements.input.disabled !== inputDisabled) elements.input.disabled = inputDisabled;
   setAttribute(elements.length, 'aria-activedescendant', `stronghold-length-${self.length}`);
   setAttribute(elements.length, 'aria-disabled', String(!running || terminal));
+  const lengthHelp = !running ? 'Resume gameplay before changing text length.' : terminal ? 'Start a new game to change text length.' : LENGTH_CONTROL_HELP;
+  setAttribute(elements.length, 'data-tooltip', lengthHelp);
+  setAttribute(elements.length, 'aria-description', lengthHelp);
   for (const option of elements.lengthOptions) {
     const offset = PHRASE_LENGTHS.indexOf(self.length) - PHRASE_LENGTHS.indexOf(option.length);
     option.element.style.setProperty('--length-offset', String(offset));
     option.element.style.setProperty('--length-opacity', offset === 0 ? '1' : Math.abs(offset) === 1 ? '.4' : '.18');
     setAttribute(option.element, 'aria-selected', String(option.length === self.length));
     option.element.disabled = !running || terminal;
+    const description = !running || terminal ? lengthHelp : lengthTooltip(option.length);
+    setAttribute(option.element, 'data-tooltip', description);
+    setAttribute(option.element, 'aria-description', description);
   }
-  text('stronghold-selection', `${selected.size} selected / ${snapshot.units.filter(unit => unit.kind !== 'invader').length} friendly units`);
   for (const entry of elements.playerCards) {
     const player = snapshot.players.find(candidate => candidate.id === entry.id);
     if (!player) continue;
+    if (entry.actions.dataset.role !== player.role) {
+      setAttribute(entry.actions, 'data-role', player.role);
+      entry.actions.scrollTop = 0;
+    }
     const own = player.id === self.id;
     applyPlayerTheme(entry.card, player.color);
     entry.card.classList.toggle('is-you', own);
-    setText(entry.name, `${own ? 'You' : `${player.name}, simulated teammate`}${player.ready && !challenge ? ', ready' : ''}`);
+    const playerContext = controlBlocker(snapshot, player, running);
+    const name = playerPanelName(player, snapshot.players.indexOf(player));
+    setText(entry.name, name);
+    setAttribute(entry.card, 'aria-label', `${name}, ${own ? 'your' : 'read-only teammate'} controls`);
     setText(entry.typed, player.typed);
     const locked = !challenge && actionUnlockProblem(snapshot, player);
     entry.typed.classList.toggle('is-hidden', Boolean(locked));
-    const bank = workProgress(player.work, taskWork(player));
+    const supplies = Math.round(typingSupplyBase(snapshot) * SEASON_BONUSES[snapshot.season].resources * 100) / 100;
+    const bank = taskProgress(player, taskWork(player), supplies);
+    const construction = (player.action === 'tower' || player.action === 'barracks' || player.action === 'wall') && bank.percent === 100
+      ? constructionBlocker(snapshot, player.action) : null;
+    const blockedTask = !challenge ? actionBlocker(snapshot, player, player.action) ?? construction : null;
     const goal = tierProgress(snapshot.players).goal;
     const percent = locked ? 0 : challenge ? player.contribution / goal * 100 : bank.percent;
     const displayPercent = challenge ? Math.round(percent * 10) / 10 : Math.round(percent);
@@ -177,57 +335,96 @@ export function renderStronghold(
     const progressBar = entry.progress.closest('[role="progressbar"]');
     if (progressBar) {
       setAttribute(progressBar, 'aria-valuenow', String(displayPercent));
-      setAttribute(progressBar, 'aria-valuetext', locked || (challenge ? `${displayPercent}% of shared tier progress` : bank.description));
+      setAttribute(progressBar, 'aria-label', challenge ? `${name} shared tier contribution` : `${name}: ${bank.output}`);
+      const condition = locked || blockedTask?.description;
+      const progressHelp = challenge ? `${displayPercent}% of shared tier progress. Complete your text to help unlock the next team tier.`
+        : `${bank.description}${condition ? ' ' + condition : ''}`;
+      setAttribute(progressBar, 'aria-valuetext', progressHelp);
+      setAttribute(progressBar, 'data-tooltip', progressHelp);
+      setAttribute(progressBar, 'aria-description', progressHelp);
       setAttribute(progressBar, 'aria-disabled', String(Boolean(locked)));
       progressBar.classList.toggle('is-tier-locked', Boolean(locked));
       progressBar.querySelector('[data-progress-lock]')?.classList.toggle('is-hidden', !locked);
     }
-    const recruitCount = player.action === 'worker' || player.action === 'builder'
-      ? snapshot.units.filter(unit => unit.kind === player.action && unit.hp > 0).length : null;
-    const recruitLimit = player.action === 'worker' || player.action === 'builder' ? UNIT_CAPS[player.action] : null;
-    const recruitCapped = recruitCount !== null && recruitLimit !== null && recruitCount >= recruitLimit;
-    setText(entry.progressLabel, locked ? 'Tier 1' : challenge ? `${displayPercent}%` : recruitCapped ? `Limit ${recruitCount}/${recruitLimit}` : bank.label);
+    setText(entry.progressLabel, `${displayPercent}%`);
     const roleDisabled = !own || challenge || terminal || !running;
     for (const button of entry.roleButtons) {
       setAttribute(button.element, 'aria-pressed', String(button.role === player.role));
       button.element.disabled = roleDisabled;
+      const description = `${button.help}${playerContext ? ' ' + playerContext.description : ''}`;
+      setAttribute(button.element, 'data-tooltip', description);
+      setAttribute(button.element, 'aria-description', description);
     }
     for (const group of entry.groups) {
       group.element.classList.toggle('is-hidden', group.role !== player.role);
+      if (group.supplyOutput) {
+        setText(group.supplyOutput, `+${supplies} Supplies`);
+        const description = `Each completed typing bar contributes ${supplies} shared supplies while you command the army.`;
+        setAttribute(group.supplyOutput, 'data-tooltip', description);
+        setAttribute(group.supplyOutput, 'aria-description', description);
+        if (group.supplyIndicators) renderTaskIndicators(group.supplyIndicators, snapshot, player, group.role,
+          { action: 'resources', constructionTier: 1, upgradeTarget: 'economy' });
+      }
+      for (const button of group.towerUpgrades) {
+        renderTaskIndicators(button.indicators, snapshot, player, group.role,
+          { action: 'tower', constructionTier: button.tier, upgradeTarget: player.upgradeTarget });
+        const availability = selectedTowerAvailability(snapshot, player, selectedBuildings, button.tier, running);
+        button.element.disabled = availability.disabled;
+        button.element.classList.toggle('is-unavailable', availability.disabled);
+        button.element.classList.toggle('is-unaffordable', snapshot.resources < TOWER_UPGRADE_COSTS[button.tier]);
+        button.element.classList.toggle('is-tier-locked', availability.blocker?.kind === 'tier');
+        button.element.querySelector('[data-tier-lock]')?.classList.toggle('is-hidden', availability.blocker?.kind !== 'tier');
+        setAttribute(button.element, 'data-blocker', availability.blocker?.kind ?? '');
+        setText(button.blocker, availability.blocker?.label ?? '');
+        button.blocker.classList.toggle('is-hidden', !availability.blocker || availability.blocker.kind === 'teammate');
+        setAttribute(button.element, 'data-tooltip', `${availability.description} (Alt+${button.element.dataset.shortcut})`);
+        setAttribute(button.element, 'aria-description', availability.description);
+        if (group.towerStatus) {
+          setText(group.towerStatus, own && availability.tower ? `Selected T${availability.tower.tier} tower` : '');
+          group.towerStatus.classList.toggle('is-hidden', !own || !availability.tower);
+        }
+      }
       for (const button of group.buttons) {
-        const capped = button.upgrade ? snapshot.technology[button.upgrade] >= upgradeLimit(snapshot.tier, button.upgrade) : false;
         const selection = { action: button.action, constructionTier: button.tier ?? 1, upgradeTarget: button.upgrade ?? player.upgradeTarget };
+        const availability = taskAvailability(snapshot, player, selection, running);
         const cost = taskCost(selection);
         const unaffordable = snapshot.resources < cost;
         button.element.classList.toggle('is-unaffordable', unaffordable);
-        const recruitment = button.action === 'worker' || button.action === 'builder';
-        const purchaseProblem = button.miniBar && !recruitment ? null : actionProblem(snapshot, { ...player, ...selection }, button.action);
         const population = button.element.querySelector('[data-unit-population]');
         if (population && (button.action === 'worker' || button.action === 'builder' || isArmyUnit(button.action))) {
           const kind = button.action;
           const count = snapshot.units.filter(unit => unit.kind === kind && unit.hp > 0).length;
-          setText(population, `${count}/${UNIT_CAPS[kind]}`);
+          setText(population, String(count));
         }
         if (isArmyUnit(button.action)) {
           const queued = button.element.querySelector('[data-training-queued]');
-          if (queued) setText(queued, `${queuedUnits(snapshot, button.action)} queued`);
+          if (queued) {
+            const count = queuedUnits(snapshot, button.action);
+            setText(queued, `${count} queued`);
+            queued.classList.toggle('is-hidden', count === 0);
+          }
         }
-        const tierLocked = snapshot.tier < button.minimumTier;
-        button.element.classList.toggle('is-unavailable', tierLocked || capped || Boolean(purchaseProblem));
+        const tierLocked = availability.requirement?.kind === 'tier';
+        button.element.classList.toggle('is-unavailable', availability.disabled);
         button.element.classList.toggle('is-tier-locked', tierLocked);
         button.lockIcon?.classList.toggle('is-hidden', !tierLocked);
-        const disabled = !own || !running || challenge || terminal || tierLocked || capped || (Boolean(purchaseProblem) && button.action !== 'relay');
-        if (button.element.disabled !== disabled) button.element.disabled = disabled;
+        if (button.element.disabled !== availability.disabled) button.element.disabled = availability.disabled;
+        button.element.classList.toggle('is-ready', availability.ready);
+        setAttribute(button.element, 'data-blocker', availability.blocker?.kind ?? '');
+        setText(button.blockerElement, availability.blocker?.label ?? '');
+        button.blockerElement.classList.toggle('is-hidden', !availability.blocker || availability.blocker.kind === 'teammate');
+        const presentation = taskButtonPresentation(selection, button.label, supplies, availability.ready);
+        if (button.action !== 'upgrade') setText(button.labelElement, presentation.label);
         const selectedAction = own && relayPlacement ? button.action === 'relay' : Boolean(button.miniBar) && button.action === player.action
           && (!button.tier || button.tier === player.constructionTier) && (!button.upgrade || button.upgrade === player.upgradeTarget);
         button.element.classList.toggle('selected', selectedAction);
         setAttribute(button.element, 'aria-pressed', String(selectedAction));
-        const label = button.element.querySelector('.stronghold-action-label')?.textContent ?? button.action;
-        const description = unaffordable ? `Need ${cost} shared supplies; ${Math.floor(snapshot.resources)} available (${Math.ceil(cost - snapshot.resources)} short).`
-          : tierLocked ? `Requires Tier ${button.minimumTier}.`
-          : purchaseProblem ?? (cost > 0 ? `Costs ${cost} shared supplies.` : 'Complete phrases to prepare this task.');
+        const detail = cost > 0 ? `Costs ${cost} shared supplies.` : 'No supply cost.';
+        const training = isArmyUnit(button.action) ? ` Training takes ${TRAINING_SECONDS} seconds.` : '';
+        const helpers = renderTaskIndicators(button.indicators, snapshot, player, group.role, selection);
+        const description = `${presentation.description} ${detail}${training}${availability.description ? ' ' + availability.description : ''}${helpers ? ' ' + helpers : ''}`;
         setAttribute(button.element, 'aria-description', description);
-        setAttribute(button.element, 'data-tooltip', `${label}. ${description} (Alt+${button.element.dataset.shortcut})`);
+        setAttribute(button.element, 'data-tooltip', `${button.label}. ${description} (Alt+${button.element.dataset.shortcut})`);
         if (button.miniBar && button.miniFill) {
           const saved = snapshot.roleTasks[group.role].progress[taskKey(selection)];
           const progress = workProgress(saved?.work ?? 0, taskWork(selection));

@@ -1,7 +1,7 @@
-import { BASE, CATAPULT_WINDUP_SECONDS, distance, UNIT_CAPS, UNIT_RULES } from './rules.ts';
-import { buildingApproach, buildingFootprint, distanceToFootprint, movementDestination, moveUnitToward, wallApproach, wallBetween } from './navigation.ts';
+import { BASE, CATAPULT_WINDUP_SECONDS, distance, towerRange, UNIT_RULES } from './rules.ts';
+import { buildingApproach, buildingFootprint, buildingSpawnPoint, distanceToFootprint, movementDestination, moveUnitToward, wallApproach, wallBetween, wallContains } from './navigation.ts';
 import { addBuilding, addUnit } from './state.ts';
-import { towerUpgrade, unitUpgrade } from './technology.ts';
+import { unitUpgrade } from './technology.ts';
 import { ENTITY_LABELS, recordEvent } from './events.ts';
 import type { Building, Point, StrongholdState, Unit, VisionSource } from './types.ts';
 import { inVision, visionSources } from './fog.ts';
@@ -70,13 +70,17 @@ function updateUnit(state: StrongholdState, unit: Unit, seconds: number, sources
     if (unit.kind === 'invader') moveUnitToward(state, unit, unit.destination ?? BASE, seconds * rule.speed);
     return;
   }
+  const obstruction = wallBetween(state, unit, target);
+  if (obstruction && obstruction.enemy === (unit.kind !== 'invader') && wallContains(target, obstruction)) target = obstruction;
   const targetWall = 'enemy' in target && target.kind === 'wall' ? target : undefined;
   const approach = targetWall ? wallApproach(unit, targetWall) : 'enemy' in target ? buildingApproach(state, unit, target) : target;
   const blocked = wallBetween(state, unit, target, targetWall);
   if (distance(unit, approach) > (targetWall ? 1 : rule.range) || blocked) {
-    if (moveUnitToward(state, unit, approach, seconds * rule.speed)) moving();
+    const previous = { x: unit.x, y: unit.y };
+    moveUnitToward(state, unit, approach, seconds * rule.speed);
+    if (distance(unit, previous) > 1e-7) moving();
     else if (unit.kind === 'invader') {
-      const wall = closest(unit, buildings.filter(building => building.kind === 'wall'));
+      const wall = blocked && !blocked.enemy ? blocked : closest(unit, buildings.filter(building => building.kind === 'wall'));
       if (wall && 'enemy' in wall) {
         const point = wallApproach(unit, wall);
         if (distance(unit, point) <= 1) {
@@ -94,8 +98,7 @@ function updateUnit(state: StrongholdState, unit: Unit, seconds: number, sources
 export function spawnWave(state: StrongholdState): void {
   state.wave++;
   const amount = Math.min(12, Math.ceil(state.wave / 2));
-  const remaining = UNIT_CAPS.invader - state.units.filter(unit => unit.kind === 'invader').length;
-  for (let index = 0; index < Math.min(amount, remaining); index++) {
+  for (let index = 0; index < amount; index++) {
     const side = index % 3;
     const formation = state.wave >= 6 && index % 5 === 0 ? 'catapult' : state.wave >= 3 && index % 3 === 0 ? 'archer' : null;
     addUnit(state, 'invader', {
@@ -110,10 +113,15 @@ export function spawnWave(state: StrongholdState): void {
     const base = state.buildings.find(building => building.kind === 'enemy-base');
     const sources = visionSources(state);
     if (base) { base.tier++; if (inVision(sources, base)) recordEvent(state, 'Enemy base upgraded'); }
-    if (state.buildings.filter(building => building.enemy && building.kind === 'tower').length < 6) {
-      const tower = addBuilding(state, 'tower', { x: 280 + (state.wave % 5) * 95, y: 190 }, true, true);
+    const preferred = { x: 280 + (state.wave % 5) * 95, y: 190 };
+    const point = buildingSpawnPoint(state, { kind: 'tower', tier: Math.max(1, state.tier), enemy: true }, [
+      preferred,
+      ...Array.from({ length: 60 }, (_, index) => ({ x: 80 + index % 15 * 60, y: 145 + Math.floor(index / 15) * 60 }))
+    ]);
+    if (point) {
+      const tower = addBuilding(state, 'tower', point, true, true);
       if (inVision(sources, tower)) recordEvent(state, 'Enemy created Tower');
-    }
+    } else if (inVision(sources, preferred)) recordEvent(state, 'Enemy tower reinforcement blocked: no clear space.');
   }
 }
 
@@ -126,8 +134,8 @@ export function updateCombat(state: StrongholdState, seconds: number): void {
     tower.cooldown = Math.max(0, tower.cooldown - seconds);
     const target = closest(tower, state.units.filter(unit => (unit.kind === 'invader') !== tower.enemy
       && inVision(tower.enemy ? enemyVision : friendlyVision, unit)
-      && distance(unit, tower) <= 150 + tower.tier * 15));
-    const damage = 8 + tower.tier * 4 + (tower.enemy ? 0 : towerUpgrade(state, tower.tier) * 2);
+      && distance(unit, tower) <= towerRange(tower.tier)));
+    const damage = 8 + tower.tier * 4;
     if (target) attack(tower, target, damage);
   }
   const enemyBase = state.buildings.find(building => building.kind === 'enemy-base');

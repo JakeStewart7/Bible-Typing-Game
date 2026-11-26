@@ -1,4 +1,4 @@
-import { actionProblem, placementBlockers, placementProblem } from '../domain/actions.ts';
+import { actionProblem, constructionBlocker, placementBlockers, placementProblem, towerUpgradeBlocker } from '../domain/actions.ts';
 import { buildingScale, taskWork } from '../domain/technology.ts';
 import type { Building, BuildingKind, Point, StrongholdSnapshot, Unit } from '../domain/types.ts';
 import { buildingMarkup, relayPreviewMarkup } from './battlefield.ts';
@@ -9,10 +9,41 @@ import { supportsRally } from '../domain/training.ts';
 
 export type PlacementKind = Extract<BuildingKind, 'relay' | 'barracks' | 'tower' | 'wall'>;
 const WALL_OUTLINE_HEIGHT = WALL_HALF_WIDTH * 2 + 9;
+export function placementPrompt(kind: PlacementKind, tier: number, rotation = 0): string {
+  const names = { relay: 'Relay', tower: `Tower T${tier}`, barracks: `Barracks T${tier}`, wall: 'Wall' };
+  return `Click map to place ${names[kind]}${kind === 'wall' ? ` / Scroll to rotate (${rotation} deg)` : ''}`;
+}
+export function selectionGuidance(snapshot: StrongholdSnapshot, units: ReadonlySet<number>, buildings: ReadonlySet<number>, running = true): string {
+  if (!units.size && !buildings.size) return '';
+  const count = units.size && buildings.size ? `${units.size} unit${units.size === 1 ? '' : 's'}, ${buildings.size} building${buildings.size === 1 ? '' : 's'} selected`
+    : units.size ? `${units.size} unit${units.size === 1 ? '' : 's'} selected` : `${buildings.size} building${buildings.size === 1 ? '' : 's'} selected`;
+  if (!running) return `${count} / Resume to issue orders`;
+  const selected = snapshot.buildings.filter(building => buildings.has(building.id));
+  const rally = selected.some(supportsRally);
+  if (units.size) {
+    const builder = snapshot.units.some(unit => units.has(unit.id) && unit.kind === 'builder');
+    return `${count} / Right-click to move${builder ? ' or build/repair a friendly building' : ''}${rally ? ' and set rallies' : ''}`;
+  }
+  if (rally) return `${count} / Right-click to set rally`;
+  if (buildings.size === 1 && selected[0]?.kind === 'tower') {
+    const tower = selected[0];
+    const self = snapshot.players.find(player => player.id === snapshot.selfId);
+    if (!self) throw new Error('Stronghold snapshot has no local player.');
+    if (tower.tier === 3) return `${count} / Maximum tower tier`;
+    const tier = tower.tier === 1 ? 2 : 3;
+    const blocker = towerUpgradeBlocker(snapshot, self, tower.id, tier);
+    const construction = blocker?.kind === 'construction' ? constructionBlocker(snapshot, 'tower') : null;
+    const instruction = construction?.kind === 'builder' ? construction.description
+      : blocker?.description ?? `Choose Upgrade to T${tier} below`;
+    return `${count} / ${instruction}`;
+  }
+  return selected.length && selected.every(building => building.kind === 'tower') ? `${count} / Select one tower to upgrade` : count;
+}
 export function readyBuilding(snapshot: StrongholdSnapshot): PlacementKind | null {
   const self = snapshot.players.find(player => player.id === snapshot.selfId);
   if (!self || snapshot.phase !== 'playing' || self.work < taskWork(self) || actionProblem(snapshot, self, self.action)) return null;
-  return self.action === 'barracks' || self.action === 'tower' || self.action === 'wall' ? self.action : null;
+  return (self.action === 'barracks' || self.action === 'tower' || self.action === 'wall') && !constructionBlocker(snapshot, self.action)
+    ? self.action : null;
 }
 export function selectionBounds(start: Point, end: Point) {
   return { x: Math.min(start.x, end.x), y: Math.min(start.y, end.y), width: Math.abs(end.x - start.x), height: Math.abs(end.y - start.y) };

@@ -1,12 +1,12 @@
 import { BASE, CATAPULT_WINDUP_SECONDS, ENEMY_BASE, UNIT_HEALTH_MULTIPLIER, UNIT_RULES } from './rules.ts';
 import { assignPhrase } from './phrases.ts';
-import { unitUpgrade } from './technology.ts';
+import { towerHealth, unitUpgrade } from './technology.ts';
 import { createRoleTasks } from './tasks.ts';
 import { DEFAULT_MATCH_OPTIONS, DEFAULT_STARTING_COUNTS, validateMatchOptions } from './options.ts';
 import type { ArmyUnitKind, Building, BuildingKind, Participant, Point, Season, StrongholdMatchOptions, StrongholdState, Unit, UnitKind } from './types.ts';
 import { DAY_SECONDS, randomSeason, seasonalNodes } from './environment.ts';
 import { PLAYER_COLORS, STARTING_ENTITIES } from './types.ts';
-import { unitRadius, unitSpawnClear } from './navigation.ts';
+import { buildingSpawnPoint, unitRadius, unitSpawnClear } from './navigation.ts';
 import { createFog, updateFog } from './fog.ts';
 
 export function addUnit(state: StrongholdState, kind: UnitKind, point: Point, formation: ArmyUnitKind | null = null): Unit {
@@ -17,10 +17,10 @@ export function addUnit(state: StrongholdState, kind: UnitKind, point: Point, fo
   return unit;
 }
 export function addBuilding(
-  state: StrongholdState, kind: BuildingKind, point: Point, complete = false, enemy = false, tier = Math.max(1, state.tier)
+  state: StrongholdState, kind: BuildingKind, point: Point, complete = false, enemy = false, tier = kind === 'tower' && !enemy ? 1 : Math.max(1, state.tier)
 ): Building {
   const hp = kind === 'castle' || kind === 'enemy-base' ? 4000 : kind === 'wall' ? 440
-    : kind === 'tower' ? 600 + 200 * Math.max(0, tier - 1)
+    : kind === 'tower' ? towerHealth(tier)
     : kind === 'barracks' ? 320 + 100 * Math.max(0, tier - 1) : 240;
   const building: Building = {
     ...point, id: state.nextId++, kind, hp, maxHp: hp, tier,
@@ -48,19 +48,19 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
     players: roster.map(player => ({
       ...player, action: player.role === 'economy' ? 'worker' : player.role === 'defenses' ? 'builder' : player.role === 'production' ? 'barracks' : 'resources',
       phrase: '', typed: '', phraseId: 0, completed: 0, ready: false, contribution: 0, typingCredit: 0,
-      constructionTier: 1, upgradeTarget: player.role === 'production' ? 'warrior' : player.role === 'defenses' ? 'tower-1' : 'economy',
+      constructionTier: 1, upgradeTarget: player.role === 'production' ? 'warrior' : 'economy',
       actionPhrases: 0, work: 0, length: options.length
     })),
     nodes: seasonalNodes(startingSeason),
     upgrades: { economy: 0, production: 0, defenses: 0 },
-    technology: { economy: 0, warrior: 0, archer: 0, catapult: 0, 'tower-1': 0, 'tower-2': 0, 'tower-3': 0 },
+    technology: { economy: 0, warrior: 0, archer: 0, catapult: 0 },
     rally: null, message: '', events: [{ id: 1, elapsed: 0, playerId: null, text: 'Game started' }],
     computersPaused: options.computersPaused,
     roleTasks: {
       economy: createRoleTasks({ action: 'worker', constructionTier: 1, upgradeTarget: 'economy' }),
       production: createRoleTasks({ action: 'barracks', constructionTier: 1, upgradeTarget: 'warrior' }),
       army: createRoleTasks({ action: 'resources', constructionTier: 1, upgradeTarget: 'economy' }),
-      defenses: createRoleTasks({ action: 'builder', constructionTier: 1, upgradeTarget: 'tower-1' })
+      defenses: createRoleTasks({ action: 'builder', constructionTier: 1, upgradeTarget: 'economy' })
     }
   };
   addBuilding(state, 'castle', BASE, true);
@@ -68,8 +68,14 @@ export function createStronghold(options: StrongholdMatchOptions = DEFAULT_MATCH
   addBuilding(state, 'tower', { x: 420, y: 125 }, true, true);
   addBuilding(state, 'tower', { x: 580, y: 125 }, true, true);
   const counts = { ...DEFAULT_STARTING_COUNTS, ...options.startingCounts };
+  const towerSites = [
+    ...Array.from({ length: 16 }, (_, index) => ({ x: 340 + index % 4 * 100, y: 390 - Math.floor(index / 4) * 80 })),
+    ...Array.from({ length: 120 }, (_, index) => ({ x: 80 + index % 15 * 60, y: 150 + Math.floor(index / 15) * 60 }))
+  ];
   for (let index = 0; index < counts.tower; index++) {
-    addBuilding(state, 'tower', { x: 340 + index % 4 * 100, y: 390 - Math.floor(index / 4) * 80 }, true);
+    const point = buildingSpawnPoint(state, { kind: 'tower', tier: 1, enemy: false }, towerSites);
+    if (!point) throw new Error('Not enough space for starting towers.');
+    addBuilding(state, 'tower', point, true);
   }
   const original: Partial<Record<UnitKind, Point[]>> = {
     worker: [{ x: 440, y: 560 }, { x: 560, y: 560 }], builder: [{ x: 500, y: 540 }],

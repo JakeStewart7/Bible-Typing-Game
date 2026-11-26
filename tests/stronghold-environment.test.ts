@@ -5,7 +5,7 @@ import { moveUnitToward } from '../src/stronghold/domain/navigation.ts';
 import { updateLogistics } from '../src/stronghold/domain/logistics.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
-import { AUTUMN_LEAF_COLORS, SPRING_PARTICLE_COUNT, SUMMER_PARTICLE_COUNT, WEATHER_PARTICLE_COUNT, weatherMarkup } from '../src/stronghold/ui/environment.ts';
+import { AUTUMN_LEAF_COLORS, seasonEffect, SPRING_PARTICLE_COUNT, SUMMER_PARTICLE_COUNT, WEATHER_PARTICLE_COUNT, weatherMarkup } from '../src/stronghold/ui/environment.ts';
 import { executeCommand } from '../src/stronghold/domain/actions.ts';
 import { seasonalTrack } from '../src/stronghold/audio/catalog.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
@@ -86,7 +86,7 @@ test('Stronghold seasonal layouts only move resource nodes and keep their counts
     equal(state.season, season);
     equal(state.nodes.length, 8);
     equal(state.nodes.filter(node => node.rich).length, 2);
-    equal(state.nodes.reduce((sum, node) => sum + node.remaining, 0), 7200);
+    equal(state.nodes.reduce((sum, node) => sum + node.remaining, 0), 4800);
     equal(new Set(state.nodes.map(node => node.id)).size, 8);
     equal(state.units, original.units);
     equal(state.buildings, original.buildings);
@@ -101,7 +101,7 @@ test('Stronghold seasonal layouts only move resource nodes and keep their counts
     }
     layouts.add(JSON.stringify(state.nodes.map(node => [node.x, node.y])));
     state.nodes[0]!.remaining = 0;
-    equal(seasonalNodes(season)[0]?.remaining, 800);
+    equal(seasonalNodes(season)[0]?.remaining, 600);
   }
   equal(layouts.size, 4);
 });
@@ -224,6 +224,21 @@ test('Stronghold dev markup provides live season, day and night controls separat
   equal(markup.includes('Skip to Day'), true);
 });
 
+test('Stronghold seasonal effects stay visible and explain the affected income, work and unit sides', () => {
+  equal(seasonEffect('spring').label, 'Supplies +20%');
+  equal(seasonEffect('summer').label, 'Unit speed +15%');
+  equal(seasonEffect('fall').label, 'Typing work +15%');
+  equal(seasonEffect('winter').label, 'Unit speed -15% / Supplies -20%');
+  for (const season of ['spring', 'winter'] as const) equal(seasonEffect(season).description.includes('Gathered and typed shared supplies'), true);
+  for (const season of ['summer', 'winter'] as const) equal(seasonEffect(season).description.includes('All friendly and enemy units'), true);
+  equal(seasonEffect('fall').description.includes('shared tier contributions'), true);
+  const markup = strongholdWorkspaceMarkup();
+  const hud = /<aside class="stronghold-hud"[\s\S]*?<\/aside>/.exec(markup)?.[0];
+  if (!hud) throw new Error('Missing Stronghold HUD.');
+  equal(hud.includes('id="stronghold-season"'), true);
+  equal(hud.includes('aria-label="Seasonal effects" aria-live="polite" tabindex="0"'), true);
+});
+
 test('Stronghold weather uses a fixed small decorative particle pool instead of growing the DOM', () => {
   const markup = weatherMarkup();
   equal((markup.match(/class="stronghold-weather-particle"/g) ?? []).length, WEATHER_PARTICLE_COUNT);
@@ -236,6 +251,13 @@ test('Stronghold weather uses a fixed small decorative particle pool instead of 
     equal(positions.length, WEATHER_PARTICLE_COUNT);
     equal(new Set(positions.map(position => Math.floor(position / 25))).size, 4);
   }
+});
+
+test('Stronghold weather positions stay inside the battlefield when decimal rounding approaches an edge', () => {
+  const markup = weatherMarkup(() => .999999);
+  equal(markup.includes('--weather-x:100.00%'), false);
+  equal(markup.includes('--weather-y:100.00%'), false);
+  equal((markup.match(/--weather-x:99\.99%/g) ?? []).length, WEATHER_PARTICLE_COUNT);
 });
 
 test('Stronghold spring flowers share one randomly chosen breeze direction across the particle pool', () => {
@@ -273,9 +295,9 @@ test('Stronghold spring and summer have smaller naturally spaced screen-effect p
     return seed / 4294967296;
   });
   equal(SPRING_PARTICLE_COUNT, 18);
-  equal(SUMMER_PARTICLE_COUNT, 32);
+  equal(SUMMER_PARTICLE_COUNT, 64);
   equal((markup.match(/data-spring-hidden/g) ?? []).length, WEATHER_PARTICLE_COUNT - SPRING_PARTICLE_COUNT);
-  equal((markup.match(/data-summer-hidden/g) ?? []).length, WEATHER_PARTICLE_COUNT - SUMMER_PARTICLE_COUNT);
+  equal((markup.match(/data-fall-winter-hidden/g) ?? []).length, 16);
   const points = [...markup.matchAll(/--weather-x:([\d.]+)%;--weather-y:([\d.]+)%/g)]
     .map(match => ({ x: Number(match[1]), y: Number(match[2]) }));
   for (const [index, point] of points.slice(0, SUMMER_PARTICLE_COUNT).entries()) {
@@ -303,8 +325,8 @@ test('Stronghold seasonal movement applies equally to every friendly unit and en
 
 test('Stronghold seasonal resource value applies once to typed supplies and castle deliveries, including upgrades', () => {
   for (const [season, typed, upgraded, delivered] of [
-    ['spring', 21.6, 57.6, 69.6], ['summer', 18, 48, 58],
-    ['fall', 18, 48, 58], ['winter', 14.4, 38.4, 46.4]
+    ['spring', 9.6, 33.6, 45.6], ['summer', 8, 28, 38],
+    ['fall', 8, 28, 38], ['winter', 6.4, 22.4, 30.4]
   ] as const) {
     const state = createStronghold({ resources: 0, length: 'short', computersPaused: true }, season);
     const player = state.players[0]!;

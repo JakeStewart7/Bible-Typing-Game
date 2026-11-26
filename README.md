@@ -1,12 +1,20 @@
 # Bible-Typing-Game
 A typing game for the Bible.
 
+## Interface help
+
+Mode descriptions, settings explanations, passage-picker guidance, recall options,
+Arcade upgrade effects and Together rules live in hover/focus tooltips rather than
+repeated inline captions. Labels, prices, levels, timers, errors and active
+gameplay status remain visible. Memory visibility buttons describe their preset
+and percentage; Together's input also exposes the typing rule to screen readers.
+
 ## Stronghold
 
 Choose **Stronghold** from the main menu or sidebar to play a local cooperative
 typing strategy game with three simulated teammates. The full-screen battlefield
 follows the Paint design: borderless bright-green map, gray castle, colored shape-coded
-units, upper-right population/resource HUD, central hexagonal **Tier Up** button,
+units, upper-right population/resource HUD, central tier-and-cost button,
 and four colored player panels along the bottom. Switch Player 1's role with the
 resource circle (Economy), outline sword (Army), cursor (Unit Control), and castle (Defenses) buttons.
 Players on the same role choose their tasks independently. Players working on the
@@ -22,11 +30,19 @@ changes, map gestures and new entries, without interrupting an open dropdown.
 Unit Control can also type for supplies, and typing stays available while a
 building is ready for placement or your tier contribution is finished.
 Pause, hidden/inactive gameplay, a finished match, or a tier-locked task disable the input.
+Unit Control instructions and text-length shortcuts appear in hover/focus tooltips,
+not repeated player-panel text. Placement banners name the prepared building and
+wall angle; their tooltips explain placement, rotation and cancellation. Tier
+challenges keep their percentage and pause state visible, with rules on the
+focusable shared bar. Costs, task progress, lock reasons and selection counts stay
+on screen; **Help** retains the full controls and rules.
 Mistyped letters in both the prompt and input have vibrant player-colored
 highlighting and an underline, without a strike-through obscuring the letters;
 correct letters remain unmarked in the input.
-Unit Control can select and move gatherers and builders as well as troops.
-Its four outlined command tiles show selection, defense, assault and building-rally
+Every role can click, Shift-click or drag to select and right-click to move
+gatherers, builders and troops. Switching typing roles keeps your selection, and
+the map shows selection counts in every role.
+Unit Control's four outlined command tiles show selection, defense, assault and building-rally
 icons, with numbered shortcuts and a highlighted rally-targeting state.
 Economy starts with **Gatherer** selected. Recruitment tiles show living units
 on the field separately from troop queues; the HUD includes all five friendly
@@ -58,14 +74,18 @@ A fully correct entry earns its character count,
 including spaces, times its length bonus; partial or incorrect text earns nothing.
 **Supplies, Gatherer, Barracks, Builder, Wall and Tower** use typing without
 spending supplies. Each typing tile has a thick, player-colored mini progress bar,
-not a money or Free badge. Selecting it shows that task's progress in the main
-player-colored experience bar. Bars have the same size: more expensive tasks
-fill more slowly, with barracks and tower requirements proportional to their
+not a money or Free badge. The main player-colored bar shows **only its percentage**.
+Task buttons explain their output directly, such as **+1 Gatherer**, **+1 Builder**
+or **+8 Supplies**. Supply outputs update immediately for economy upgrades and
+seasonal resource bonuses, including the Unit Control supply summary.
+Prepared construction buttons change to **Place** plus the building name. Hover or focus a bar
+for completion and placement details. Bars have the same size: more expensive tasks
+fill more slowly, with barracks requirements proportional to their
 former supplies costs and construction tier. The UI shows percentages, not those
 internal character costs. Each role keeps independent progress for every typing task
 and building tier, even when that role becomes unoccupied.
 Switching tasks, roles or lengths and completing tier challenges preserves this
-work. A full construction bar shows **Ready**, without a stacked completion counter
+work. At 100%, the construction button shows **Place** and the building name, without a stacked completion counter
 or cycling red layers. Excess from the entry that fills it carries into the next
 bar after placement; further entries while it is ready do not bank extra
 completions. Supplies, Gatherers and Builders execute automatically when their
@@ -74,8 +94,9 @@ bars fill and retain entry overflow. Blocked tasks retain their earned progress.
 respectively. Supplies are paid when queued, with no typing required; the selected
 typing task and private input stay untouched. Each barracks trains one unit every
 24 seconds, spawning it beside that barracks and moving only if a rally was set.
-Multiple matching barracks balance new orders by queue length. Queued units count
-toward population limits. Buttons show queue counts; barracks show their current
+Multiple matching barracks balance new orders by queue length. Neither team has
+unit or tower count limits; costs, training times and map space still apply.
+Buttons show queue counts; barracks show their current
 unit and training progress. Empty barracks do not produce or spend supplies.
 Destroyed barracks lose their remaining orders. Upgrades remain immediate purchases.
 Relays also use supplies without typing, paid when their map location is placed.
@@ -104,8 +125,9 @@ the building's required tier.
 **Dev options** sets the starting computer state, default text length, default player
 color (red, blue, yellow or green), starting
 supplies (0-10,000), starting tier (0-3), and starting counts for Gatherers, Builders,
-Warriors, Towers, Archers and Catapults, from zero up to their normal population
-limits. Starting towers use the selected starting tier (at least T1); starting
+Warriors, Towers, Archers and Catapults as nonnegative whole numbers without per-kind
+limits. Starting forces must fit in clear map space. Friendly starting towers are
+always T1, ready for individual upgrades; starting
 troops may be supplied before their normal recruitment unlock. You can also choose
 the starting season (or Random each game) and day/night. Valid field changes save automatically in this
 browser, even without pressing Apply. **Apply & new game** starts a fresh match.
@@ -134,11 +156,11 @@ Shots have a one-second cooldown; catapults also need their initial 0.8-second
 windup. Siege shots deal 1.5x damage to buildings and half damage to units, so
 siege needs an escort rather than replacing front-line troops.
 Gatherers and builders require 64 typing work each; barracks require 60 per tier
-and towers 50 per tier. Supplies and walls still require 32 work. All troop
+and T1 towers 50 work. Supplies and walls still require 32 work. All troop
 queues take 24 seconds per unit. Troop upgrades add 30 health and 1 damage per
 level, emphasizing survival rather than burst damage.
 T1/T2/T3 towers have 600/800/1,000 health and deal 12/16/20 damage per shot,
-with +2 damage per friendly tower upgrade. Enemy towers use the same base
+through individual tier upgrades. Enemy towers use the same base
 damage, without an escalating wave bonus. Barracks have 320/420/520 health,
 walls 440 and relays 240. Both bases retain 4,000 health.
 Tower attack ranges and one-second firing intervals are unchanged.
@@ -152,15 +174,16 @@ are possible. Selecting a fixed starting season or using the live season preview
 saves that preference for future matches; choose **Random each game** to restore
 random selection. Only resource
 node positions change: every layout keeps six standard nodes, two rich nodes,
-and 7,200 total supplies, with the same bases, troops and rules. Spring uses light
+and 4,800 total supplies, with the same bases, troops and rules. Spring uses light
 green grass and pastel flowers fading in and out along one shared, randomly chosen
 breeze direction, with a faster drift. Summer uses deep green grass and light motes
 blowing right, smoothly easing up and down and pulsing as they catch the light.
 Fall uses light brown ground and slowly falling autumn-colored triangles that sway
 back and forth; winter has blue-white ground and snow circles that fade before
 reaching the bottom. Leaves randomly use red, orange, yellow
-or brown. A fixed pool of 48 decorative particles stays in screen space, independent
-of map pan and zoom. Spring shows just 18 flowers and summer 32 motes, with
+or brown. A fixed pool of 64 decorative particles stays in screen space, independent
+of map pan and zoom. Spring shows 18 flowers, summer 64 smaller motes, and fall/winter
+48 particles, with
 randomized, well-spaced starting positions rather than regular diagonal patterns.
 Animation phases are staggered; flowers and motes are spread across both axes
 rather than falling from the top. Weather is clipped to the battlefield and
@@ -173,6 +196,9 @@ uniformly dimming the screen. Pausing, tabbing away and tier challenges
 freeze the environment clock; new games start in daylight.
 Seasons also change gameplay: summer makes every friendly and enemy unit 15%
 faster; winter makes all units 15% slower and resource income worth 20% less.
+The HUD keeps the season and its active modifiers visible below the population
+counts; hover or focus that status for the affected income sources, typing tasks,
+and unit sides. Changes appear immediately, including live season previews.
 Spring increases resource income by 20%. Resource value applies once when
 supplies are credited, both from typing and from delivered cargo, including
 economy upgrades. Cargo and existing supplies are not rewritten on a season change.
@@ -245,17 +271,21 @@ Hovering near a map edge does not scroll.
 Hold the **arrow keys** to pan; diagonal combinations work and opposite keys cancel.
 Right-click issues movement orders or cancels placement; it never pans.
 Successful movement orders briefly mark their destination with a player-colored
-click pulse; reduced-motion mode uses only a fade.
+click pulse instead of adding an event-log entry; reduced-motion mode uses only a fade.
 The three farthest-out views are removed; pan to reach distant ground.
 Zoom and pan do not change world coordinates or speed.
 Shift-drag retains additive army selection.
 
 Fog of war shares vision across the whole team. Units explore the map and
 completed friendly buildings reveal nearby ground. Gatherers/builders see 80
-map units; warriors 110, archers 140 and catapults 170. Unit sight is reduced by
-two 20-unit fog blocks; enemy formations use the same sight ranges. Castles reveal 200,
+map units; warriors 110, archers 140 and catapults 170. Enemy formations use the
+same sight ranges. Castles reveal 200,
 barracks 160, towers 220, relays 120 and walls 80.
-Current sight, unexplored ground and explored shadows share the same pixel grid.
+Current sight, unexplored ground and explored shadows share a **5-unit pixel grid**,
+four times finer on each axis and sixteen times denser than the previous 20-unit
+blocks, without increasing physical sight ranges. The grid covers the actual
+1000-by-650 map. Visible and remembered resource circles are not clipped by terrain
+masks; their full silhouettes remain underneath the fog shading.
 Unexplored ground is darkened rather than black; explored ground has a lighter
 shadow. Resource nodes, enemy buildings and enemy troops remain as frozen,
 non-interactive last-seen silhouettes without health bars until you revisit. Hidden movement,
@@ -276,13 +306,49 @@ Economy orders its options **Gatherer, Relay, Supplies**, then Upgrade.
 The compact forest-green and brass command bar reserves more room for the map.
 All four player panels stay within the bottom dock; narrow
 screens use a two-by-two layout, with scrolling inside action lists when needed.
+Short windows use a compact, horizontally scrolling player dock rather than
+collapsing the activity area. Player names, roles and progress remain pinned while
+their activities scroll.
 **Tab** cycles forward through the current role's unlocked typing and placement tasks;
 **Shift+Tab** cycles backward, wrapping at either end and returning focus to typing.
 Locked tasks, troop purchases and upgrades are excluded, so cycling never spends supplies.
 Unit Control explicitly reminds players that typing produces shared supplies.
 Tab retains normal focus navigation in menus, dropdowns, Dev options and tier challenges.
 Button shortcuts appear instantly on hover rather than taking up tile space.
-Tier-locked actions use gray styling and a lock icon. Unit Control
+Combat units retain simple geometric silhouettes and gain upgrade marks, including
+existing units and newly trained troops. Warriors add a breastplate, shoulder armor,
+then gold-trimmed armor and a helmet. Catapults use a compact stone-and-timber siege cart.
+Unavailable actions have visible reason badges: **Needs Tier #**, supply shortages,
+unfinished or missing barracks, limits on other building types, missing builders,
+and pauses. Read-only teammate controls are explained on hover without repeating
+computer-status badges across the panel. Tier requirements take priority over
+shortages, including upgrade limits that require the next tier; maximum upgrades
+say **Max level**. Construction work can still be prepared before a builder is
+available, but ready placement waits for one. Ready construction tiles say
+**Place** and use a stronger player-colored highlight.
+Player panels show their names once, without extra ownership, computer or stopped
+captions. The local panel uses **Player 1** instead of a repeated **You** subtitle.
+Player headers, full-width role controls, main progress bars and action rows share
+aligned grid slots. Activity rows reserve consistent positions for labels,
+progress or costs, blockers and teamwork indicators. Role buttons have visible
+captions on wider screens; narrow layouts retain compact icons.
+Each activity always shows its panel owner's color underneath. Other players'
+colors appear when they select the same activity, including the same construction
+tier or upgrade target. Hover/focus help names the teammates rather than relying
+on color alone.
+Tooltips explain each unit, building, order and upgrade rather than only repeating
+its label. They include relevant costs, training times and live blockers.
+Map selections explain the next move, rally or individual tower-upgrade action,
+using the same upgrade blockers as the purchase buttons. These hints yield to errors
+and placement controls. Placement prompts name the building and the next click;
+wall placement and editing also show the relevant scroll-to-rotate instruction.
+The tier button shows only **Tier #** and its supply cost. Its blocking reason
+stays in hover/focus help rather than a floating shortage caption; ready state is
+highlighted and remains cancellable.
+These choices follow [Xbox's UI-context guidance](https://learn.microsoft.com/en-us/xbox/accessibility/xbox-accessibility-guidelines/114)
+and [recognition over recall](https://www.nngroup.com/articles/recognition-and-recall/):
+keep actionable states visible, controls predictable and explanations contextual.
+Unit Control
 also uses Alt+1 for selection, Alt+2 for Defend, Alt+3 for Assault and Alt+4
 for rally placement. Keyboard actions restore typing focus.
 
@@ -296,7 +362,10 @@ illegal sites. Click to place, or use Alt+arrow keys and Alt+Enter. Escape or
 without losing work. Relays cost 30 supplies. Other buildings need their
 work bar filled first. Builders construct and repair automatically. Gatherers strike
 resource nodes, collect a blue chunk (standard) or purple chunk (rich), then carry
-it to the nearest completed relay or castle before harvesting again. Relays forward deposited
+it to the nearest completed relay or castle before harvesting again. They approach
+an unloading edge even on diagonal returns or when a resource node blocks the
+nearest approach, instead of stopping outside contact range at a padded corner.
+Manual orders into the castle use the same reachable edge. Relays forward deposited
 chunks to the castle through links no more than 155 map units apart; destroying a
 relay interrupts deliveries until the route is restored. Cargo keeps its origin
 color while carried, regardless of mining upgrades, and sit ahead of the gatherer
@@ -309,15 +378,25 @@ castle itself. A green preview reaches the castle network; amber dashed links
 are disconnected or planned. Radius rings use world units
 and remain accurate while zooming. Unfinished relays can preview potential
 connections but do not deliver resources until construction finishes.
-Towers retain the simple T1 silhouette, growing subtly larger and darker at T2/T3.
+Towers retain the simple T silhouette, growing subtly larger and darker at T2/T3.
+One, two or three horizontal bands identify their tier without relying on color alone.
 Attack impacts retain their explosion without the extra crossing slash lines.
+Unfinished buildings show thin construction strips in the same position and style
+as health bars, without visible text. Hover/focus help gives the remaining work.
+Selecting an assigned builder moves that job bar beside the worker instead of
+duplicating it on the site. These track actual building work, not the health bar or
+the typing work used to prepare the blueprint, and disappear when construction finishes.
 
 Units prefer routes around all living buildings, including unfinished structures.
 Buildings may be placed over units; those units can move out, and units may pass
 through ordinary buildings when no route around exists rather than becoming trapped.
 Resource circles (including depleted nodes) and both castles are always solid.
-Gatherers harvest immediately on touching a node's visible border, without a
-harvest cooldown, and touching a completed castle credits supplies immediately.
+Each resource node starts with **600 base supplies** and permits one harvest every
+**0.8 seconds**, shared by all gatherers touching that node. Standard packs start
+at **3 supplies**, rich packs at **6**; economy upgrades add 2 per pack, and seasonal
+resource bonuses apply on delivery. The final pack cannot exceed the node's remaining supplies.
+Gatherers harvest on touching an available node's visible border, and
+touching a completed castle credits supplies immediately.
 Contact pickup/delivery also works during manual orders and idle waiting.
 They stay outside the solid borders; builders repair
 castles from outside, and melee troops attack their outer edges.
@@ -348,8 +427,8 @@ castle health, wave countdown and season/day labels are
 omitted. Weather, day/night lighting and Dev previews still work.
 **Help** contains the map key and instructions. On narrow screens the
 player panels scroll instead of shrinking their text.
-The castle is a clean square; towers progress from a simple T shape to fortified,
-armed silhouettes, while the compact HUD keeps its T-shaped tower icon.
+The castle is a clean square; towers keep their T shape with distinct tier bands,
+while the compact HUD keeps its T-shaped tower icon.
 Friendly and opposing units of the same formation share base health, damage,
 range and speed; enemy waves no longer add hidden health or damage bonuses.
 Movement remains slow, and troop upgrades still improve your units.
@@ -411,10 +490,18 @@ and shortage. The state updates as supplies arrive.
 | Warrior / Archer / Catapult | 60 / 100 / 180 |
 | Economy upgrade | 120 |
 | Warrior / Archer / Catapult upgrade | 60 / 100 / 160 |
-| T1 / T2 / T3 tower upgrade | 75 / 125 / 180 |
+| Selected tower to T2 / T3 | 125 / 180 |
 Separate tiles let you
-build tier 1, 2 or 3 barracks and towers. Higher-tier construction fills more
+build tier 1, 2 or 3 barracks. Higher-tier barracks construction fills more
 slowly; queued troop purchases require only supplies, not typing.
+Defenses has one **Tower T1** construction tile. Build and finish a tower, select
+it on the map, then purchase **Upgrade to T2** (125 supplies) and **Upgrade to T3**
+(180 supplies). Team Tier 2/3 must be unlocked first, and T3 requires that tower
+to be T2. Each purchase affects only the selected tower, never the whole team.
+New towers always start at T1. Upgrading increases health by 200 without erasing
+existing damage or typing progress. Larger upgraded footprints must fit around
+nearby buildings, resource nodes and map edges; buttons explain every blocker.
+Escape cancels ready placement so you can select an existing tower instead.
 The simulated Army teammate builds matching barracks and queues a mixed army.
 **Stop computers** pauses simulated teammates' typing, construction
 choices and army orders, along with training their queued requests.
@@ -423,7 +510,7 @@ can still type. **Resume computers** continues them without catching up missed
 typing time. The toggle is also available during tier challenges.
 Higher-tier barracks and towers have more health, and troop upgrades enlarge
 their map icons as well as improving their combat stats.
-Each troop type and tower tier has its own resource-funded upgrade button and
+Each troop type has its own resource-funded upgrade button and
 once-per-tier limit beginning at its unlock tier. Economy gets two upgrades at
 tier 0 and one additional upgrade per subsequent tier. World events begin at
 **1:00, 3:00, 5:00**, and subsequent odd minutes of active battle time, each
@@ -434,7 +521,12 @@ base develops. Select troops with
 click/Shift-click, drag a selection rectangle (Shift adds to the selection), or
 **Select all troops**, then **right-click** the battlefield or use **Defend** / **Assault
 base**. No rally point is set at the start: troops stay near their barracks
-unless fighting or explicitly ordered elsewhere. Click or Shift-click friendly
+unless fighting or explicitly ordered elsewhere. Select a builder in any role,
+then right-click an unfinished or damaged friendly building to assign construction
+or repair. The nearest selected builder takes over that job; other selected units
+move normally. Movement and builder assignments do not add log entries, and the
+event overlay allows clicks through to the battlefield.
+Click or Shift-click friendly
 castles or barracks, then right-click to set individual rally points. Barracks
 send newly trained units to their own rally; a castle rally also directs newly
 recruited gatherers and builders before they resume automatic work.
@@ -449,6 +541,10 @@ Manual movement takes priority over enemy pursuit and automatic rally orders
 until arrival, allowing troops to retreat from combat; normal fighting then resumes.
 Warriors prioritize nearby enemy towers over the enemy castle once movement
 orders finish, while still defending themselves against nearby enemy troops.
+Attackers reveal their firing position briefly, and both teams' attack beams remain
+visible through fog. Towers reach 130/135/140 map units at T1/T2/T3, slightly beyond
+the archer's 120. Enemies attack a blocking opposing wall when a target is embedded
+inside it rather than idling at the wall edge; avoidable walls remain navigable.
 No coordinate fields are needed. Destroy the enemy
 stronghold before invading waves destroy yours.
 Left-clicking empty ground clears the selection without moving units.

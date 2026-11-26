@@ -4,7 +4,7 @@ import { SEASON_MUSIC } from '../audio/catalog.ts';
 
 export function creditsMarkup(): string {
   return `<dialog id="stronghold-credits" class="stronghold-credits-dialog" aria-labelledby="stronghold-credits-title">
-    <header><h2 id="stronghold-credits-title">Stronghold credits</h2><button id="stronghold-close-credits" type="button">Back to game</button></header>
+    <header><h2 id="stronghold-credits-title">Stronghold credits</h2><button id="stronghold-close-credits" type="button" title="Close the credits and return to the battle.">Back to game</button></header>
     <h3>Seasonal soundtrack</h3>
     <p>Selected track: <strong id="stronghold-current-track"></strong></p>
     <p>All music below by Kevin MacLeod (incompetech.com).</p>

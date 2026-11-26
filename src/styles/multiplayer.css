@@ -123,7 +123,6 @@
 .peer-caret > span { position: absolute; bottom: calc(100% + .2rem); left: 0; padding: .12rem .3rem; border-radius: .3rem; color: white; background: var(--peer-color); font: 700 .58rem Manrope; white-space: nowrap; }
 .multiplayer-screen .hud { margin: 1rem 0 0; }
 .multiplayer-screen .progress-track { margin: 1rem 0; }
-.phase-help { margin-bottom: 0; color: var(--muted); font-size: var(--text-small); }
 .guess-grid { display: grid; grid-template-columns: 2fr repeat(3, 1fr); gap: .75rem; margin-top: 1.25rem; }
 .guess-grid label { display: grid; gap: .35rem; }
 .guess-grid button { grid-column: 1 / -1; justify-self: end; }

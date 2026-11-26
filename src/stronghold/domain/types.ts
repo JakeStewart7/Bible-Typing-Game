@@ -15,7 +15,7 @@ export type StrongholdMatchOptions = {
 export type Point = { x: number; y: number };
 export type UnitKind = 'worker' | 'builder' | 'warrior' | 'archer' | 'catapult' | 'invader';
 export type ArmyUnitKind = 'warrior' | 'archer' | 'catapult';
-export const UPGRADE_TARGETS = ['economy', 'warrior', 'archer', 'catapult', 'tower-1', 'tower-2', 'tower-3'] as const;
+export const UPGRADE_TARGETS = ['economy', 'warrior', 'archer', 'catapult'] as const;
 export type UpgradeTarget = typeof UPGRADE_TARGETS[number];
 export type BuildingKind = 'castle' | 'enemy-base' | 'relay' | 'barracks' | 'tower' | 'wall';
 export type Phase = 'playing' | 'tier-up' | 'won' | 'lost';
@@ -33,7 +33,7 @@ export type Building = Point & {
   trainingQueue: { kind: ArmyUnitKind; playerId: string }[];
   rally: Point | null;
 };
-export type ResourceNode = Point & { id: number; rich: boolean; remaining: number };
+export type ResourceNode = Point & { id: number; rich: boolean; remaining: number; cooldown: number };
 export type ResourceChunk = Point & { id: number; amount: number; rich: boolean; target: number | null; carrier: number | null };
 export type VisionSource = Point & { id: string; radius: number };
 export type FogOfWar = {
@@ -78,7 +78,8 @@ export type StrongholdCommand =
   | { type: 'READY'; ready: boolean }
   | { type: 'PLACE'; kind: 'relay' | 'barracks' | 'tower' | 'wall'; point: Point; rotation?: number }
   | { type: 'ROTATE_WALL'; id: number; direction?: 1 | -1 }
-  | { type: 'MOVE'; ids: number[]; point: Point }
+  | { type: 'UPGRADE_TOWER'; id: number; tier: 2 | 3 }
+  | { type: 'MOVE'; ids: number[]; point: Point; buildingId?: number }
   | { type: 'RALLY'; point: Point; ids?: number[] };
 export interface StrongholdConnection {
   subscribe(listener: (snapshot: StrongholdSnapshot) => void): () => void;

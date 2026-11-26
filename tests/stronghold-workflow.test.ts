@@ -9,7 +9,9 @@ import { PHRASE_LENGTHS, type Action, type Role, type UpgradeTarget, type UnitKi
 import { selectionBounds, troopsInRectangle } from '../src/stronghold/ui/map-controls.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
 import { playerCursor, playerTheme } from '../src/stronghold/ui/player-theme.ts';
-import { workProgress } from '../src/stronghold/ui/work-progress.ts';
+import { taskProgress, workProgress } from '../src/stronghold/ui/work-progress.ts';
+import { SEASON_BONUSES, typingSupplyBase } from '../src/stronghold/domain/environment.ts';
+import { SEASONS } from '../src/stronghold/domain/types.ts';
 import { equal, test } from './harness.ts';
 
 test('Stronghold completed entries, not partial typing, fill the shared task bar for every length', () => {
@@ -69,7 +71,7 @@ test('Stronghold role mates have private text lengths and contribute their own c
   executeCommand(state, teammate, { type: 'TYPE', phraseId: teammate.phraseId, text: teammate.phrase });
   equal(you.work, overflow);
   equal(teammate.work, overflow);
-  equal(state.resources, 50 + rewards * 18);
+  equal(state.resources, 50 + rewards * 8);
 });
 
 test('Stronghold role mates keep independent task choices and private input while sharing matching work', () => {
@@ -133,7 +135,7 @@ test('Stronghold four players on one role keep unique phrases and private typing
       executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
     }
     equal(state.players.every(player => player.work === expected), true);
-    equal(state.resources, 50 + rewards * 18);
+    equal(state.resources, 50 + rewards * 8);
   }
 });
 
@@ -201,11 +203,45 @@ test('Stronghold one progress bar fills to 100 percent without completion counts
   equal(strongholdWorkspaceMarkup().includes('stronghold-ready-count'), false);
 });
 
+test('Stronghold Unit Control progress names the actual team supply reward including economy and season effects', () => {
+  for (const season of SEASONS) {
+    for (const economy of [0, 3]) {
+      const state = createStronghold({ resources: 0, length: 'short', computersPaused: true }, season);
+      const player = state.players[0]!;
+      executeCommand(state, player, { type: 'ROLE', role: 'army' });
+      state.upgrades.economy = economy;
+      const supplies = Math.round(typingSupplyBase(state) * SEASON_BONUSES[season].resources * 100) / 100;
+      player.work = 16;
+      const progress = taskProgress(player, taskWork(player), supplies);
+      equal(progress.label, '50%');
+      equal(progress.output, `+${supplies} team supplies`);
+      equal(progress.description.includes(`Each full bar adds ${supplies} shared supplies to the team.`), true);
+      for (let entry = 0; entry < 32 && state.resources === 0; entry++) {
+        executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
+      }
+      equal(state.resources, supplies);
+    }
+  }
+});
+
+test('Stronghold task progress names recruits and distinguishes prepared buildings from finished construction', () => {
+  const player = createStronghold().players[0]!;
+  equal(taskProgress({ ...player, action: 'worker', work: 32 }, 64, 18).label, '50%');
+  equal(taskProgress({ ...player, action: 'builder', work: 64 }, 64, 18).label, '100%');
+  const tower = { ...player, action: 'tower' as const, constructionTier: 1, work: 25 };
+  equal(taskProgress(tower, taskWork(tower), 18).label, '50%');
+  equal(taskProgress({ ...tower, work: 50 }, taskWork(tower), 18).label, '100%');
+  equal(taskProgress(tower, taskWork(tower), 18).output, 'T1 tower');
+  const wall = taskProgress({ ...player, action: 'wall', work: 32 }, 32, 18);
+  equal(wall.label, '100%');
+  equal(wall.description.includes('Click the map to place it; a builder finishes construction.'), true);
+});
+
 test('Stronghold free construction has proportional requirements, preserves word overflow and never accumulates further ready entries', () => {
   equal(PHRASE_LENGTHS.map(length => TEXT_LENGTH_RANGES[length]), [[1, 5], [6, 11], [12, 24], [25, 40]]);
   equal(PHRASE_LENGTHS.map(length => TEXT_LENGTH_BONUSES[length]), [1, 1.1, 1.25, 1.5]);
   for (const tier of [1, 2, 3]) {
-    equal(taskWork({ action: 'tower', constructionTier: tier }), 50 * tier);
+    equal(taskWork({ action: 'tower', constructionTier: tier }), 50);
     equal(taskWork({ action: 'barracks', constructionTier: tier }), 60 * tier);
   }
   const state = createStronghold();
@@ -240,10 +276,7 @@ test('Stronghold paid troop queues and upgrades never spend or change typing pro
     { role: 'economy', action: 'upgrade', cost: 120, upgrade: 'economy' },
     { role: 'production', action: 'upgrade', cost: 60, upgrade: 'warrior' },
     { role: 'production', action: 'upgrade', cost: 100, upgrade: 'archer' },
-    { role: 'production', action: 'upgrade', cost: 160, upgrade: 'catapult' },
-    { role: 'defenses', action: 'upgrade', cost: 75, upgrade: 'tower-1' },
-    { role: 'defenses', action: 'upgrade', cost: 125, upgrade: 'tower-2' },
-    { role: 'defenses', action: 'upgrade', cost: 180, upgrade: 'tower-3' }
+    { role: 'production', action: 'upgrade', cost: 160, upgrade: 'catapult' }
   ];
   for (const purchase of cases) {
     const state = createStronghold();
@@ -303,7 +336,7 @@ test('Stronghold only the six typing actions have mini experience bars instead o
   }
 });
 
-test('Stronghold free builders and walls retain only one full bar and placement resets progress', () => {
+test('Stronghold free builders recruit without caps while walls retain one prepared placement', () => {
   const state = createStronghold();
   const player = state.players[0];
   if (!player) throw new Error('Missing player.');
@@ -312,12 +345,14 @@ test('Stronghold free builders and walls retain only one full bar and placement 
   executeCommand(state, player, { type: 'ACTION', action: 'builder' });
   let builderWork = 0, builders = 1;
   for (let entry = 0; entry < 40; entry++) {
-    if (builderWork < 64) builderWork = Math.round((builderWork + phraseWork(player)) * 100) / 100;
-    if (builderWork >= 64 && builders < 4) { builderWork = Math.round((builderWork - 64) * 100) / 100; builders++; }
+    builderWork = Math.round((builderWork + phraseWork(player)) * 100) / 100;
+    while (builderWork >= 64) { builderWork = Math.round((builderWork - 64) * 100) / 100; builders++; }
     executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
     equal(player.work, builderWork);
+    state.units.filter(unit => unit.kind === 'builder').forEach((unit, index) => { unit.x = 100 + index * 25; unit.y = 300; });
   }
-  equal(state.units.filter(unit => unit.kind === 'builder').length, 4);
+  equal(state.units.filter(unit => unit.kind === 'builder').length, builders);
+  equal(builders > 4, true);
   equal(player.work, builderWork);
   equal(state.resources, 0);
   executeCommand(state, player, { type: 'ACTION', action: 'wall' });
@@ -367,7 +402,7 @@ test('Stronghold army control can always type for shared supplies', () => {
     engine.send('you', { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
   }
   const snapshot = engine.snapshot('you');
-  equal(snapshot.resources, 68);
+  equal(snapshot.resources, 58);
   equal(snapshot.players.filter(player => player.role === 'army').every(player => player.work === Math.round((work - 32) * 100) / 100), true);
   equal(snapshot.players.every(player => player.id === 'you' || player.phrase === ''), true);
 });

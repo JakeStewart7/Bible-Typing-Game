@@ -1,7 +1,8 @@
 import { arrowPan, typingLengthKey, nextTaskIndex, actionShortcutKey, taskShortcut } from '../src/stronghold/ui/keyboard.ts';
 import { cameraBounds } from '../src/stronghold/ui/map-camera.ts';
-import { buildingMarkup, unitMarkup, unitMotionTransform } from '../src/stronghold/ui/battlefield.ts';
+import { actionEffectMarkup, buildingMarkup, unitMarkup, unitMotionTransform } from '../src/stronghold/ui/battlefield.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
+import { placementPrompt, selectionGuidance } from '../src/stronghold/ui/map-controls.ts';
 import { addBuilding, addUnit, createStronghold } from './stronghold-fixtures.ts';
 import { PHRASE_LENGTHS, PLAYER_COLORS, ROLES } from '../src/stronghold/domain/types.ts';
 import { DEFAULT_DEVELOPER_OPTIONS, DEFAULT_MAP_ZOOM, validateDeveloperOptions } from '../src/stronghold/infrastructure/developer-options.ts';
@@ -34,7 +35,8 @@ test('Stronghold task cycling wraps forwards and backwards without treating paid
   equal(markup.includes('aria-keyshortcuts="PageUp PageDown"'), true);
   equal(markup.includes('Command desk'), false);
   equal(markup.includes('Tab: switch task / Arrows: pan'), false);
-  equal(markup.indexOf('class="stronghold-length-keys"') < markup.indexOf('id="stronghold-length"'), true);
+  equal(markup.includes('class="stronghold-length-keys"'), false);
+  equal(markup.includes('title="Click a text length. Page Up selects longer text; Page Down selects shorter text."'), true);
 });
 
 test('Stronghold places input before the prompt and replaces tier labels with accessible lock icons', () => {
@@ -42,8 +44,8 @@ test('Stronghold places input before the prompt and replaces tier labels with ac
   equal(markup.indexOf('id="stronghold-input"') < markup.indexOf('id="stronghold-phrase"'), true);
   equal(markup.includes('Place at T1'), false);
   equal(markup.includes('data-tier-lock'), true);
-  equal(markup.includes('<span>PgUp</span><span>PgDn</span>'), true);
-  equal(markup.includes('data-tooltip="Defend (Alt+2)"'), true);
+  equal(markup.includes('<span>PgUp</span><span>PgDn</span>'), false);
+  equal(markup.includes('data-tooltip="Gather all friendly combat troops in front of your castle to defend the approach. (Alt+2)"'), true);
 });
 
 test('Stronghold role icon buttons replace dropdowns and expose selected-state semantics for every player', () => {
@@ -55,8 +57,84 @@ test('Stronghold role icon buttons replace dropdowns and expose selected-state s
     }
   }
   equal((markup.match(/data-role-button=/g) ?? []).length, 16);
-  equal((markup.match(/aria-pressed="false" data-tooltip="(?:Economy|Army|Unit Control|Defenses)"/g) ?? []).length, 16);
+  equal((markup.match(/class="stronghold-player-overview"/g) ?? []).length, 4);
+  equal((markup.match(/aria-pressed="false" data-tooltip="(?:Economy|Army|Unit Control|Defenses)\. [^"]*"/g) ?? []).length, 16);
+  for (const label of ['Economy', 'Army', 'Control', 'Defenses']) {
+    equal(markup.includes(`class="stronghold-role-caption" aria-hidden="true">${label}</span>`), true);
+  }
   equal(markup.includes('id="stronghold-timer" datetime="PT0S">0:00</time>'), true);
+});
+
+test('Stronghold selection feedback is visible independently of the Unit Control panel', () => {
+  const markup = strongholdWorkspaceMarkup();
+  const orders = /<section id="stronghold-army-orders"[\s\S]*?<\/section>/.exec(markup)?.[0];
+  if (!orders) throw new Error('Missing Unit Control orders.');
+  equal(orders.includes('id="stronghold-selection"'), false);
+  equal(markup.includes('id="stronghold-selection" class="stronghold-selection is-hidden"'), true);
+  equal(markup.includes('Click or drag to select units in any role'), true);
+});
+
+test('Stronghold selected units and production buildings explain their immediate right-click action in every role', () => {
+  const state = createStronghold();
+  const unit = addUnit(state, 'worker', { x: 500, y: 300 });
+  const castle = state.buildings.find(building => building.kind === 'castle');
+  if (!castle) throw new Error('Missing castle.');
+  const snapshot = { ...state, selfId: 'you', players: state.players.map(player => ({ ...player, progress: 0 })) };
+  const self = snapshot.players.find(player => player.id === 'you');
+  if (!self) throw new Error('Missing local player.');
+  for (const role of ROLES) {
+    self.role = role;
+    equal(selectionGuidance(snapshot, new Set(), new Set()), '');
+    equal(selectionGuidance(snapshot, new Set([unit.id]), new Set()), '1 unit selected / Right-click to move');
+    equal(selectionGuidance(snapshot, new Set(), new Set([castle.id])), '1 building selected / Right-click to set rally');
+    equal(selectionGuidance(snapshot, new Set([unit.id]), new Set([castle.id])), '1 unit, 1 building selected / Right-click to move and set rallies');
+    equal(selectionGuidance(snapshot, new Set([unit.id]), new Set(), false), '1 unit selected / Resume to issue orders');
+  }
+  const relay = addBuilding(state, 'relay', { x: 650, y: 300 }, true);
+  equal(selectionGuidance(snapshot, new Set(), new Set([relay.id])), '1 building selected');
+});
+
+test('Stronghold selected towers explain upgrades and their authoritative blockers without changing selection', () => {
+  const state = createStronghold();
+  const tower = addBuilding(state, 'tower', { x: 500, y: 300 }, true);
+  const snapshot = { ...state, selfId: 'you', nodes: [], buildings: [tower],
+    players: state.players.map(player => ({ ...player, progress: 0 })) };
+  const self = snapshot.players.find(player => player.id === 'you');
+  if (!self) throw new Error('Missing local player.');
+  const buildings = new Set([tower.id]), units = new Set<number>();
+  equal(selectionGuidance(snapshot, units, buildings), '1 building selected / Switch to Defenses to upgrade a selected tower.');
+  self.role = 'defenses';
+  equal(selectionGuidance(snapshot, units, buildings), '1 building selected / Unlock team Tier 2 before buying this tower upgrade.');
+  snapshot.tier = 2; snapshot.resources = 1000;
+  tower.progress = 0;
+  equal(selectionGuidance(snapshot, units, buildings), '1 building selected / Wait for a builder to finish this tower before upgrading it.');
+  snapshot.units = [];
+  equal(selectionGuidance(snapshot, units, buildings), '1 building selected / Recruit a builder in Defenses first.');
+  tower.progress = 1;
+  equal(selectionGuidance(snapshot, units, buildings), '1 building selected / Choose Upgrade to T2 below');
+  snapshot.resources = 0;
+  equal(selectionGuidance(snapshot, units, buildings), '1 building selected / Need 125 shared supplies to upgrade this tower.');
+  snapshot.resources = 1000;
+  const relay = addBuilding(state, 'relay', { x: 500, y: 300 }, true);
+  snapshot.buildings.push(relay);
+  equal(selectionGuidance(snapshot, units, buildings), '1 building selected / The upgraded tower is larger. Leave room around buildings, resource nodes and map edges.');
+  snapshot.buildings = [tower]; tower.tier = 2;
+  equal(selectionGuidance(snapshot, units, buildings), '1 building selected / Unlock team Tier 3 before buying this tower upgrade.');
+  snapshot.tier = 3;
+  equal(selectionGuidance(snapshot, units, buildings), '1 building selected / Choose Upgrade to T3 below');
+  tower.tier = 3;
+  equal(selectionGuidance(snapshot, units, buildings), '1 building selected / Maximum tower tier');
+  const second = addBuilding(state, 'tower', { x: 650, y: 300 }, true);
+  snapshot.buildings.push(second); buildings.add(second.id);
+  equal(selectionGuidance(snapshot, units, buildings), '2 buildings selected / Select one tower to upgrade');
+  equal([...buildings], [tower.id, second.id]);
+});
+
+test('Stronghold placement prompts name the next click and show rotation only for walls', () => {
+  equal(placementPrompt('relay', 1), 'Click map to place Relay');
+  equal(placementPrompt('tower', 1), 'Click map to place Tower T1');
+  equal(placementPrompt('barracks', 2), 'Click map to place Barracks T2');
+  equal(placementPrompt('wall', 1, 22.5), 'Click map to place Wall / Scroll to rotate (22.5 deg)');
 });
 
 test('Stronghold map entities retain accessible descriptions without delayed native SVG tooltips', () => {
@@ -106,31 +184,23 @@ test('Stronghold work effects use silver sparks instead of the copper and ember 
   }
   for (const kind of ['warrior', 'archer', 'catapult', 'invader'] as const) {
     const markup = unitMarkup(addUnit(state, kind, { x: 100, y: 100 }), false);
-    equal(markup.includes('data-attack'), true);
+    equal(markup.includes('data-attack'), false);
     equal(markup.includes('data-work'), false);
-    equal(markup.includes('#483526'), kind !== 'invader');
-    equal(markup.includes('#ed914c'), true);
   }
-  equal(buildingMarkup(addBuilding(state, 'tower', { x: 200, y: 100 })).includes('data-attack'), true);
+  equal(buildingMarkup(addBuilding(state, 'tower', { x: 200, y: 100 })).includes('data-attack'), false);
   equal(buildingMarkup(addBuilding(state, 'barracks', { x: 300, y: 100 })).includes('height="6"'), true);
 });
 
-test('Stronghold enemy attacks retain the explosion without beam, trail or slash lines', () => {
-  const state = createStronghold();
-  const enemies = ([null, 'warrior', 'archer', 'catapult'] as const).map(formation =>
-    unitMarkup(addUnit(state, 'invader', { x: 100, y: 100 }, formation), false));
-  enemies.push(buildingMarkup(addBuilding(state, 'tower', { x: 200, y: 100 }, true, true)));
-  for (const markup of enemies) {
+test('Stronghold both teams use visible attack beams and distinct enemy coloring', () => {
+  for (const enemy of [false, true]) {
+    const markup = actionEffectMarkup(false, enemy);
     equal(markup.includes('data-impact'), true);
     equal(markup.includes('fill="#9c572d"'), true);
-    equal(markup.includes('data-beam'), false);
-    equal(markup.includes('data-trail'), false);
+    equal(markup.includes('data-beam'), true);
+    equal(markup.includes('data-trail'), true);
+    equal(markup.includes(enemy ? '#ff5969' : '#ed914c'), true);
     equal(markup.includes('#fff1d2'), false);
   }
-  const friendly = unitMarkup(addUnit(state, 'warrior', { x: 300, y: 100 }), false);
-  equal(friendly.includes('data-beam'), true);
-  equal(friendly.includes('data-trail'), true);
-  equal(friendly.includes('#fff1d2'), false);
 });
 
 test('Stronghold wall visuals are 25 percent thicker and match collision thickness including their border', () => {
@@ -168,7 +238,7 @@ test('Stronghold military panels omit Supplies and every remaining task has a ma
   const markup = strongholdWorkspaceMarkup();
   const player = /<section class="stronghold-player" data-player="you">([\s\S]*?)<\/section>/.exec(markup)?.[1];
   if (!player) throw new Error('Missing Player 1 markup.');
-  const counts = { economy: 4, production: 9, army: 0, defenses: 8 };
+  const counts = { economy: 4, production: 9, army: 0, defenses: 5 };
   for (const [index, role] of ROLES.entries()) {
     const start = player.indexOf(`data-role="${role}"`);
     const next = ROLES[index + 1];
