@@ -193,6 +193,9 @@ uniformly dimming the screen. Pausing, tabbing away and tier challenges
 freeze the environment clock; new games start in daylight.
 Seasons also change gameplay: summer makes every friendly and enemy unit 15%
 faster; winter makes all units 15% slower and resource income worth 20% less.
+The HUD keeps the season and its active modifiers visible below the population
+counts; hover or focus that status for the affected income sources, typing tasks,
+and unit sides. Changes appear immediately, including live season previews.
 Spring increases resource income by 20%. Resource value applies once when
 supplies are credited, both from typing and from delivered cargo, including
 economy upgrades. Cargo and existing supplies are not rewritten on a season change.

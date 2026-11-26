@@ -150,7 +150,8 @@
 .stronghold-credit-tracks { list-style: none; padding: 0; }
 .stronghold-credit-tracks li { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; border-top: 1px solid #bbb; padding: 10px 0; }
 .stronghold-credit-tracks span { color: #444; }
-.stronghold-hud { grid-area: status; min-width: 0; display: flex; align-items: center; border: 1px solid #a9996b66; border-radius: 1px; background: #0f271c55; padding: 4px 9px; }
+.stronghold-hud { grid-area: status; min-width: 0; display: flex; flex-direction: column; justify-content: center; align-items: stretch; gap: 3px; border: 1px solid #a9996b66; border-radius: 1px; background: #0f271c55; padding: 4px 9px; }
+.stronghold-season { color: #f4d785; font-size: 11px; line-height: 1.2; text-align: right; }
 .stronghold-populations { display: flex; width: 100%; justify-content: space-between; gap: 8px; align-items: center; }
 .stronghold-populations > span { display: flex; gap: 5px; align-items: center; font-size: 13px; white-space: nowrap; }
 .stronghold-populations > .stronghold-supplies { color: #aff0ff; padding-right: 10px; border-right: 1px solid #a7cfcb55; font-size: 16px; }
@@ -352,6 +353,8 @@
   .stronghold-atmosphere-controls button { min-height: 22px; padding-inline: 4px; }
   .stronghold-atmosphere-controls input { width: 32px; }
   .stronghold-populations { flex-wrap: wrap; justify-content: flex-start; gap: 2px 8px; }
+  .stronghold-hud { padding: 2px 4px; gap: 2px; }
+  .stronghold-season { font-size: 10px; }
   .stronghold-populations > span { font-size: 10px; }
   .stronghold-symbol { width: 12px; height: 12px; flex-basis: 12px; }
   .stronghold-map-toolbar button, .stronghold-map-toolbar .back-to-menu { font-size: 10px; padding-inline: 5px; }

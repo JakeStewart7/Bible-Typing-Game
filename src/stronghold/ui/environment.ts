@@ -1,11 +1,30 @@
-import { daylight } from '../domain/environment.ts';
-import type { StrongholdSnapshot } from '../domain/types.ts';
-import { setAttribute } from './dom-updates.ts';
+import { daylight, SEASON_BONUSES, SEASON_LABELS } from '../domain/environment.ts';
+import type { Season, StrongholdSnapshot } from '../domain/types.ts';
+import { setAttribute, setText } from './dom-updates.ts';
 
 export const AUTUMN_LEAF_COLORS: readonly string[] = Object.freeze(['#c84b3d', '#e78b32', '#e4bc4c', '#8b5d3d']);
 export const WEATHER_PARTICLE_COUNT = 48;
 export const SPRING_PARTICLE_COUNT = 18;
 export const SUMMER_PARTICLE_COUNT = 32;
+
+export function seasonEffect(season: Season): { label: string; description: string } {
+  const bonuses = SEASON_BONUSES[season];
+  const effects: string[] = [], details: string[] = [];
+  const change = (value: number): string => `${value > 1 ? '+' : ''}${Math.round((value - 1) * 100)}%`;
+  if (bonuses.movement !== 1) {
+    effects.push(`Unit speed ${change(bonuses.movement)}`);
+    details.push(`All friendly and enemy units move ${Math.abs(Math.round((bonuses.movement - 1) * 100))}% ${bonuses.movement > 1 ? 'faster' : 'slower'}.`);
+  }
+  if (bonuses.resources !== 1) {
+    effects.push(`Supplies ${change(bonuses.resources)}`);
+    details.push(`Gathered and typed shared supplies are worth ${Math.abs(Math.round((bonuses.resources - 1) * 100))}% ${bonuses.resources > 1 ? 'more' : 'less'}.`);
+  }
+  if (bonuses.typing !== 1) {
+    effects.push(`Typing work ${change(bonuses.typing)}`);
+    details.push(`Completed typing tasks and shared tier contributions earn ${Math.round((bonuses.typing - 1) * 100)}% more work.`);
+  }
+  return { label: effects.join(' / '), description: `${SEASON_LABELS[season]}. ${details.join(' ')}` };
+}
 
 export function weatherMarkup(random: () => number = Math.random): string {
   const breeze = random() * Math.PI * 2;
@@ -30,6 +49,12 @@ export function weatherMarkup(random: () => number = Math.random): string {
 
 export function renderEnvironment(screen: HTMLElement, snapshot: Pick<StrongholdSnapshot, 'season' | 'environmentElapsed' | 'phase'>, running: boolean): void {
   const light = daylight(snapshot.environmentElapsed);
+  const indicator = screen.querySelector('#stronghold-season');
+  if (!indicator) throw new Error('Missing Stronghold seasonal effects indicator.');
+  const effect = seasonEffect(snapshot.season);
+  setText(indicator, `${SEASON_LABELS[snapshot.season]}: ${effect.label}`);
+  setAttribute(indicator, 'data-tooltip', effect.description);
+  setAttribute(indicator, 'aria-description', effect.description);
   setAttribute(screen, 'data-season', snapshot.season);
   setAttribute(screen, 'data-period', light.period);
   setAttribute(screen, 'data-weather-running', String(running && snapshot.phase === 'playing'));

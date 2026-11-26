@@ -5,7 +5,7 @@ import { moveUnitToward } from '../src/stronghold/domain/navigation.ts';
 import { updateLogistics } from '../src/stronghold/domain/logistics.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
-import { AUTUMN_LEAF_COLORS, SPRING_PARTICLE_COUNT, SUMMER_PARTICLE_COUNT, WEATHER_PARTICLE_COUNT, weatherMarkup } from '../src/stronghold/ui/environment.ts';
+import { AUTUMN_LEAF_COLORS, seasonEffect, SPRING_PARTICLE_COUNT, SUMMER_PARTICLE_COUNT, WEATHER_PARTICLE_COUNT, weatherMarkup } from '../src/stronghold/ui/environment.ts';
 import { executeCommand } from '../src/stronghold/domain/actions.ts';
 import { seasonalTrack } from '../src/stronghold/audio/catalog.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
@@ -222,6 +222,21 @@ test('Stronghold dev markup provides live season, day and night controls separat
   }
   equal(markup.includes('Skip to Night'), true);
   equal(markup.includes('Skip to Day'), true);
+});
+
+test('Stronghold seasonal effects stay visible and explain the affected income, work and unit sides', () => {
+  equal(seasonEffect('spring').label, 'Supplies +20%');
+  equal(seasonEffect('summer').label, 'Unit speed +15%');
+  equal(seasonEffect('fall').label, 'Typing work +15%');
+  equal(seasonEffect('winter').label, 'Unit speed -15% / Supplies -20%');
+  for (const season of ['spring', 'winter'] as const) equal(seasonEffect(season).description.includes('Gathered and typed shared supplies'), true);
+  for (const season of ['summer', 'winter'] as const) equal(seasonEffect(season).description.includes('All friendly and enemy units'), true);
+  equal(seasonEffect('fall').description.includes('shared tier contributions'), true);
+  const markup = strongholdWorkspaceMarkup();
+  const hud = /<aside class="stronghold-hud"[\s\S]*?<\/aside>/.exec(markup)?.[0];
+  if (!hud) throw new Error('Missing Stronghold HUD.');
+  equal(hud.includes('id="stronghold-season"'), true);
+  equal(hud.includes('aria-label="Seasonal effects" aria-live="polite" tabindex="0"'), true);
 });
 
 test('Stronghold weather uses a fixed small decorative particle pool instead of growing the DOM', () => {

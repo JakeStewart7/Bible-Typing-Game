@@ -86,6 +86,7 @@ export function strongholdWorkspaceMarkup(): string {
           <span title="Builders"><span class="sr-only">Builders: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--builder"></i><b id="stronghold-builder-count">1/4</b></span>
           <span title="Gatherers"><span class="sr-only">Gatherers: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--worker"></i><b id="stronghold-worker-count">2/12</b></span>
         </div>
+        <span id="stronghold-season" class="stronghold-season" aria-label="Seasonal effects" aria-live="polite" tabindex="0"></span>
       </aside>
       <div class="stronghold-utilities">
       <span class="stronghold-match-clock" title="Battle time; pauses during tier challenges"><span class="sr-only">Battle time: </span><time id="stronghold-timer" datetime="PT0S">0:00</time></span>
