@@ -309,6 +309,8 @@ Locked tasks, troop purchases and upgrades are excluded, so cycling never spends
 Unit Control explicitly reminds players that typing produces shared supplies.
 Tab retains normal focus navigation in menus, dropdowns, Dev options and tier challenges.
 Button shortcuts appear instantly on hover rather than taking up tile space.
+Combat units retain their familiar silhouettes and gain one dark chevron per
+purchased upgrade, including existing units and newly trained troops.
 Unavailable actions have visible reason badges: **Needs Tier #**, supply shortages,
 unfinished or missing barracks, population/building limits, missing builders,
 pauses and read-only computer controls. Tier requirements take priority over

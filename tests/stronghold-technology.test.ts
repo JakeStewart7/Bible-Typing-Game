@@ -6,6 +6,23 @@ import type { Participant, StrongholdState } from '../src/stronghold/domain/type
 import { equal, test } from './harness.ts';
 import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
 import { TRAINING_SECONDS } from '../src/stronghold/domain/training.ts';
+import { unitMarkup } from '../src/stronghold/ui/battlefield.ts';
+
+test('Stronghold combat units gain a visible rank mark for every purchased upgrade without changing their silhouettes', () => {
+  const state = createStronghold();
+  for (const kind of ['warrior', 'archer', 'catapult'] as const) {
+    const unit = addUnit(state, kind, { x: 500, y: 400 });
+    for (let level = 0; level <= upgradeLimit(3, kind); level++) {
+      const markup = unitMarkup(unit, false, true, level);
+      equal((markup.match(/data-upgrade-mark=/g) ?? []).length, level);
+      equal(markup.includes('data-health'), true);
+      equal(markup.includes(kind === 'warrior' ? 'width="16"' : kind === 'archer' ? 'L0 10' : 'data-catapult-arm'), true);
+    }
+  }
+  for (const kind of ['worker', 'builder', 'invader'] as const) {
+    equal(unitMarkup(addUnit(state, kind, { x: 500, y: 400 }), false, true, 3).includes('data-upgrade-mark'), false);
+  }
+});
 
 function self(state: StrongholdState): Participant {
   const player = state.players.find(candidate => candidate.id === 'you');
