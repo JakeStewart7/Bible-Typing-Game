@@ -76,7 +76,7 @@ including spaces, times its length bonus; partial or incorrect text earns nothin
 spending supplies. Each typing tile has a thick, player-colored mini progress bar,
 not a money or Free badge. The main player-colored bar shows **only its percentage**.
 Task buttons explain their output directly, such as **+1 Gatherer**, **+1 Builder**
-or **+18 Supplies**. Supply outputs update immediately for economy upgrades and
+or **+8 Supplies**. Supply outputs update immediately for economy upgrades and
 seasonal resource bonuses, including the Unit Control supply summary.
 Prepared construction buttons change to **Place** plus the building name. Hover or focus a bar
 for completion and placement details. Bars have the same size: more expensive tasks

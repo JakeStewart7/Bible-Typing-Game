@@ -71,7 +71,7 @@ function roleActions(role: Role): string {
     <div class="stronghold-build-row">${task('tower', 'Tower T1', 1)}</div>
     <small data-tower-status class="stronghold-player-status is-hidden"></small>
     <div class="stronghold-build-row">${towerUpgrade(2, taskShortcut(index++))}${towerUpgrade(3, taskShortcut(index++))}</div>`;
-  return '<div class="stronghold-supply-summary"><span class="stronghold-action-label" data-supply-output>+18 Supplies</span></div>';
+  return '<div class="stronghold-supply-summary"><span class="stronghold-action-label" data-supply-output>+8 Supplies</span></div>';
 }
 function playerCard(id: string, index: number): string {
   return `<section class="stronghold-player" data-player="${id}">

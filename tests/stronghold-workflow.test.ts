@@ -71,7 +71,7 @@ test('Stronghold role mates have private text lengths and contribute their own c
   executeCommand(state, teammate, { type: 'TYPE', phraseId: teammate.phraseId, text: teammate.phrase });
   equal(you.work, overflow);
   equal(teammate.work, overflow);
-  equal(state.resources, 50 + rewards * 18);
+  equal(state.resources, 50 + rewards * 8);
 });
 
 test('Stronghold role mates keep independent task choices and private input while sharing matching work', () => {
@@ -135,7 +135,7 @@ test('Stronghold four players on one role keep unique phrases and private typing
       executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
     }
     equal(state.players.every(player => player.work === expected), true);
-    equal(state.resources, 50 + rewards * 18);
+    equal(state.resources, 50 + rewards * 8);
   }
 });
 
@@ -400,7 +400,7 @@ test('Stronghold army control can always type for shared supplies', () => {
     engine.send('you', { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
   }
   const snapshot = engine.snapshot('you');
-  equal(snapshot.resources, 68);
+  equal(snapshot.resources, 58);
   equal(snapshot.players.filter(player => player.role === 'army').every(player => player.work === Math.round((work - 32) * 100) / 100), true);
   equal(snapshot.players.every(player => player.id === 'you' || player.phrase === ''), true);
 });

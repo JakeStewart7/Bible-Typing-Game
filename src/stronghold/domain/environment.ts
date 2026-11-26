@@ -19,7 +19,7 @@ export function creditResources(state: Pick<StrongholdState, 'resources' | 'seas
 }
 
 export function typingSupplyBase(state: Pick<StrongholdState, 'upgrades'>): number {
-  return 18 + state.upgrades.economy * 6;
+  return 8 + state.upgrades.economy * 6;
 }
 
 const LAYOUTS: Record<Season, readonly (readonly [number, number])[]> = {

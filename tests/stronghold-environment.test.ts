@@ -318,8 +318,8 @@ test('Stronghold seasonal movement applies equally to every friendly unit and en
 
 test('Stronghold seasonal resource value applies once to typed supplies and castle deliveries, including upgrades', () => {
   for (const [season, typed, upgraded, delivered] of [
-    ['spring', 21.6, 57.6, 69.6], ['summer', 18, 48, 58],
-    ['fall', 18, 48, 58], ['winter', 14.4, 38.4, 46.4]
+    ['spring', 9.6, 33.6, 45.6], ['summer', 8, 28, 38],
+    ['fall', 8, 28, 38], ['winter', 6.4, 22.4, 30.4]
   ] as const) {
     const state = createStronghold({ resources: 0, length: 'short', computersPaused: true }, season);
     const player = state.players[0]!;

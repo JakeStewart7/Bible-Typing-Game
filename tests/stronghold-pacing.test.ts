@@ -385,7 +385,7 @@ test('Stronghold role members keep private text and share completed work and pla
     sharedWork = Math.round((sharedWork + phraseWork(you)) * 100) / 100;
     executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
   }
-  equal(state.resources, 68);
+  equal(state.resources, 58);
   equal(you.work, Math.round((sharedWork - 32) * 100) / 100);
   equal(you.phraseId > oldId, true);
   let rejected = false;
