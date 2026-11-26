@@ -157,7 +157,7 @@ export function renderStronghold(
     setAttribute(option.element, 'aria-selected', String(option.length === self.length));
     option.element.disabled = !running || terminal;
   }
-  text('stronghold-selection', `${selected.size} selected / ${snapshot.units.filter(unit => unit.kind !== 'invader').length} friendly units`);
+  text('stronghold-selection', `${selected.size} selected`);
   for (const entry of elements.playerCards) {
     const player = snapshot.players.find(candidate => candidate.id === entry.id);
     if (!player) continue;

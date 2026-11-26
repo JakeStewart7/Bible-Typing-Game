@@ -63,6 +63,24 @@ test('Stronghold concise controls retain accessible labels and essential costs',
   for (const [name, color] of Object.entries(PLAYER_COLORS)) equal(markup.includes(`<option value="${color}">${name}</option>`), true);
 });
 
+test('Stronghold repeated instructions live in focusable tooltips rather than player panels', () => {
+  const markup = strongholdWorkspaceMarkup();
+  const cards = [...markup.matchAll(/<section class="stronghold-player"[\s\S]*?<\/section>/g)];
+  equal(cards.length, 4);
+  for (const [card] of cards) {
+    const visible = card.replace(/<[^>]*>/g, '');
+    equal(visible.includes('Typing produces shared supplies.'), false);
+    equal(visible.includes('Right-click to move.'), false);
+    equal(visible.includes('Supplies'), true);
+    equal(card.includes('data-tooltip="Unit Control. Typing produces shared supplies.'), true);
+  }
+  equal(markup.includes('id="stronghold-placement-label" tabindex="0"'), true);
+  equal(markup.includes('aria-label="Current selection" title="Right-click'), true);
+  equal(markup.includes('aria-label="Shared tier challenge progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0"'), true);
+  equal(markup.includes('Army unlocks at Tier 1'), true);
+  equal(markup.includes('stronghold-guide-content'), true);
+});
+
 test('Stronghold compact command bar retains unique controls and leaves the map and player panels outside it', () => {
   const markup = strongholdWorkspaceMarkup();
   const bar = markup.match(/<header class="stronghold-command-bar"[\s\S]*?<\/header>/)?.[0];

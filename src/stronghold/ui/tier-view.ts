@@ -41,7 +41,10 @@ export function renderTierChallenge(elements: StrongholdElements, snapshot: Stro
     setText(entry.typed, player.typed);
   });
   const characters = snapshot.tier === 0 ? 'Letters' : snapshot.tier === 1 ? 'Letters and numbers' : 'Letters, numbers and punctuation';
-  setText(requireElement('stronghold-tier-description', HTMLElement), `${paused ? 'Paused. ' : ''}${percent}% complete. ${characters}. Complete phrases to fill the shared bar.`);
+  const instructions = `${characters}. Complete phrases to fill the shared bar. Anyone can contribute; the battlefield is paused.`;
+  setAttribute(sharedBar, 'data-tooltip', instructions);
+  setAttribute(sharedBar, 'aria-description', instructions);
+  setText(requireElement('stronghold-tier-description', HTMLElement), `${paused ? 'Paused. ' : ''}${percent}% complete.`);
   if (snapshot.phase === 'tier-up' && shown) {
     setText(requireElement('stronghold-tier-title', HTMLElement), `Tier ${snapshot.tier} to Tier ${snapshot.tier + 1}`);
     if (elements.privateTyping.parentElement !== elements.tierSlot) elements.tierSlot.append(elements.privateTyping);

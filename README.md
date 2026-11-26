@@ -22,6 +22,12 @@ changes, map gestures and new entries, without interrupting an open dropdown.
 Unit Control can also type for supplies, and typing stays available while a
 building is ready for placement or your tier contribution is finished.
 Pause, hidden/inactive gameplay, a finished match, or a tier-locked task disable the input.
+Unit Control instructions and text-length shortcuts appear in hover/focus tooltips,
+not repeated player-panel text. Placement banners name the prepared building and
+wall angle; their tooltips explain placement, rotation and cancellation. Tier
+challenges keep their percentage and pause state visible, with rules on the
+focusable shared bar. Costs, task progress, lock reasons and selection counts stay
+on screen; **Help** retains the full controls and rules.
 Mistyped letters in both the prompt and input have vibrant player-colored
 highlighting and an underline, without a strike-through obscuring the letters;
 correct letters remain unmarked in the input.

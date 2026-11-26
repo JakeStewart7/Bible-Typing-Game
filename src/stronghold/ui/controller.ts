@@ -5,7 +5,8 @@ import { PHRASE_LENGTHS, ROLES, SEASONS, STARTING_ENTITIES, type Point, type Str
 import { distance, WALL_ROTATION_STEP } from '../domain/rules.ts';
 import { renderStronghold, strongholdElements } from './view.ts';
 import { mapPoint, readyBuilding, troopsInRectangle, type PlacementKind } from './map-controls.ts';
-import { setText } from './dom-updates.ts';
+import { setAttribute, setText } from './dom-updates.ts';
+import { ENTITY_LABELS } from '../domain/events.ts';
 import { validateDeveloperOptions, type DeveloperOptions } from '../infrastructure/developer-options.ts';
 import { wheelZoom } from './map-camera.ts';
 import { actionShortcutKey, arrowPan, nextTaskIndex, typingLengthKey } from './keyboard.ts';
@@ -92,7 +93,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     const kind = placing();
     const problem = elements.mapControls.ghost(snapshot, kind, cursor, wallRotation);
     elements.mapControls.buildingSelection(snapshot, selectedBuildings);
-    if (kind) setText(placementLabel, problem ?? (kind === 'wall' ? `Wall: ${wallRotation} deg. Scroll to rotate; click to place.` : 'Click the map to place.'));
+    if (kind) setText(placementLabel, problem ?? `Place ${ENTITY_LABELS[kind]}${kind === 'wall' ? `: ${wallRotation} deg` : ''}`);
     elements.placement.classList.toggle('is-invalid', Boolean(problem));
     elements.mapControls.wallSelection(running() ? selectedWall() ?? null : null);
     if (!running() || snapshot.phase !== 'playing' || self()?.role !== 'army') elements.mapControls.moveIndicator(null);
@@ -127,15 +128,26 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     music.update(snapshot.season, snapshot.environmentElapsed, running() && snapshot.phase !== 'won' && snapshot.phase !== 'lost');
     const wall = selectedWall();
     if (!wall) editingWall = null;
-    setText(placementLabel, wall ? `Wall: ${wall.rotation ?? 0} deg. Scroll to rotate.`
-      : placing() === 'wall' ? `Wall: ${wallRotation} deg. Scroll to rotate; click to place.` : 'Click the map to place.');
+    const kind = placing();
+    setText(placementLabel, wall ? `Wall: ${wall.rotation ?? 0} deg`
+      : kind ? `Place ${ENTITY_LABELS[kind]}${kind === 'wall' ? `: ${wallRotation} deg` : ''}` : 'Place building');
+    const placementHelp = wall ? 'Scroll to rotate the wall. Done or Escape finishes editing.'
+      : `Click the map to place.${kind === 'wall' ? ' Scroll to rotate the wall.' : ''} Escape or right-click cancels.`;
+    setAttribute(placementLabel, 'data-tooltip', placementHelp);
+    setAttribute(placementLabel, 'aria-description', placementHelp);
     setText(cancelPlacementButton, wall ? 'Done' : 'Cancel');
+    const cancelHelp = wall ? 'Finish editing the wall (Escape).' : 'Cancel placement (Escape or right-click).';
+    setAttribute(cancelPlacementButton, 'data-tooltip', cancelHelp);
+    setAttribute(cancelPlacementButton, 'aria-description', cancelHelp);
     if (wall && running()) elements.placement.classList.remove('is-hidden');
     renderMapPreview();
-    if (selectedBuildings.size) setText(requireElement('stronghold-selection', HTMLElement), `${selected.size} units / ${selectedBuildings.size} buildings selected`);
+    if (selectedBuildings.size) setText(requireElement('stronghold-selection', HTMLElement), `${selected.size} units, ${selectedBuildings.size} buildings selected`);
     const selecting = drag?.moved && self()?.role === 'army' && !placing() && !rallyPlacement;
     elements.mapControls.selection(selecting ? drag?.start ?? null : null, selecting ? drag?.end ?? null : null);
-    const feedback = errorMessage || (paused ? 'Paused' : rallyPlacement ? 'Click the map to set the rally point. Escape cancels.' : snapshot.message);
+    const feedback = errorMessage || (paused ? 'Paused' : rallyPlacement ? 'Set rally point' : snapshot.phase === 'tier-up' ? '' : snapshot.message);
+    const feedbackHelp = !errorMessage && rallyPlacement && !paused ? 'Click the map to set the rally point. Escape or right-click cancels.' : '';
+    setAttribute(elements.feedback, 'data-tooltip', feedbackHelp);
+    setAttribute(elements.feedback, 'aria-description', feedbackHelp);
     setText(elements.feedback, feedback);
     elements.feedback.classList.toggle('is-hidden', !feedback || Boolean(placing() && !errorMessage));
     if (errorMessage && !wall) elements.placement.classList.add('is-hidden');

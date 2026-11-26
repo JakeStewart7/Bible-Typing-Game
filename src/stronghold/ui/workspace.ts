@@ -11,6 +11,7 @@ import { isArmyUnit } from '../domain/training.ts';
 import { UNIT_CONTROL_ICON } from './player-theme.ts';
 
 export const PLAYER_IDS = ['you', 'bot-1', 'bot-2', 'bot-3'] as const;
+const UNIT_CONTROL_HELP = 'Typing produces shared supplies. Click or drag to select. Right-click to move. Shift adds units.';
 const ROLE_ICONS: Record<Exclude<Role, 'economy'>, string> = {
   production: '<path d="M7 15L17 3L22 2L21 7L11 19Z"/><path d="M4 13L13 22M4 22L8 18"/>',
   army: UNIT_CONTROL_ICON,
@@ -47,13 +48,13 @@ function roleActions(role: Role): string {
   if (role === 'defenses') return `<div class="stronghold-build-row">${task('builder', 'Builder')}${task('wall', 'Wall')}</div>
     <div class="stronghold-build-row">${[1, 2, 3].map(tier => task('tower', `Tower T${tier}`, tier)).join('')}</div>
     <div class="stronghold-build-row">${improvement('tower-1')}${improvement('tower-2')}${improvement('tower-3')}</div>`;
-  return '<p class="stronghold-army-help"><strong>Typing produces shared supplies.</strong><br>Click or drag to select. Right-click to move. Shift adds units.</p>';
+  return '<span class="stronghold-action-label">Supplies</span>';
 }
 function playerCard(id: string, index: number): string {
   return `<section class="stronghold-player" data-player="${id}">
     <div class="stronghold-player-frame">
       <header><h3>Player ${index + 1}</h3>
-      <div class="stronghold-role-buttons" role="group" aria-label="Player ${index + 1} role">${ROLES.map(role => `<button id="stronghold-role-${id}-${role}" type="button" data-role-button="${role}" aria-label="${ROLE_LABELS[role]}" aria-pressed="false" data-tooltip="${ROLE_LABELS[role]}">${role === 'economy' ? '<i class="stronghold-symbol stronghold-symbol--resource" aria-hidden="true"></i>' : `<svg viewBox="0 0 24 ${role === 'army' ? 30 : 24}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">${ROLE_ICONS[role]}</svg>`}</button>`).join('')}</div></header>
+      <div class="stronghold-role-buttons" role="group" aria-label="Player ${index + 1} role">${ROLES.map(role => `<button id="stronghold-role-${id}-${role}" type="button" data-role-button="${role}" aria-label="${ROLE_LABELS[role]}" aria-pressed="false" data-tooltip="${ROLE_LABELS[role]}${role === 'army' ? `. ${UNIT_CONTROL_HELP}` : ''}">${role === 'economy' ? '<i class="stronghold-symbol stronghold-symbol--resource" aria-hidden="true"></i>' : `<svg viewBox="0 0 24 ${role === 'army' ? 30 : 24}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">${ROLE_ICONS[role]}</svg>`}</button>`).join('')}</div></header>
       <small id="stronghold-name-${id}" class="sr-only"></small>
       <div class="stronghold-player-progress" role="progressbar" aria-label="Player ${index + 1} selected task progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="stronghold-work-track"><div id="stronghold-progress-${id}"></div></div><span id="stronghold-progress-label-${id}" class="stronghold-progress-label">0%</span>${lockIcon('data-progress-lock')}</div>
       <div class="stronghold-player-actions" id="stronghold-player-actions-${id}">${ROLES.map(role => `<div class="stronghold-actions" data-role="${role}">${roleActions(role)}</div>`).join('')}</div>
@@ -158,8 +159,7 @@ export function strongholdWorkspaceMarkup(): string {
       <div id="stronghold-private-slot">
         <section id="stronghold-private" class="stronghold-private" aria-label="Your private typing area">
           <div class="stronghold-length-panel"><span id="stronghold-length-label" class="sr-only">Text length</span>
-            <small class="stronghold-length-keys"><span>PgUp</span><span>PgDn</span></small>
-            <div id="stronghold-length" class="stronghold-length-wheel" role="listbox" aria-labelledby="stronghold-length-label" aria-activedescendant="stronghold-length-medium" aria-keyshortcuts="PageUp PageDown" tabindex="0">
+            <div id="stronghold-length" class="stronghold-length-wheel" role="listbox" aria-labelledby="stronghold-length-label" aria-activedescendant="stronghold-length-medium" aria-keyshortcuts="PageUp PageDown" title="Click a text length. Page Up selects longer text; Page Down selects shorter text." tabindex="0">
               ${PHRASE_LENGTHS.map(length => `<button id="stronghold-length-${length}" type="button" role="option" data-length="${length}" value="${length}" aria-selected="${length === 'medium'}" tabindex="-1">${LENGTH_LABELS[length]} <small class="stronghold-length-bonus">${TEXT_LENGTH_BONUSES[length]}x</small></button>`).join('')}
             </div>
           </div>
@@ -178,15 +178,15 @@ export function strongholdWorkspaceMarkup(): string {
         ${orderButton('select-army', 'Select all troops', 1, '<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/><rect x="7" y="7" width="4" height="4"/><rect x="13" y="13" width="4" height="4"/>')}
         ${orderButton('defend', 'Defend', 2, '<path d="M12 2L3 6v6c0 5 9 10 9 10s9-5 9-10V6Z"/><path d="M8 12l3 3 5-6"/>')}
         ${orderButton('assault', 'Assault base', 3, ROLE_ICONS.production)}
-        ${orderButton('rally', 'Rally production', 4, '<path d="M5 22V3l14 5-14 5"/><path d="M2 22h6"/>')}<p id="stronghold-selection"></p>
+        ${orderButton('rally', 'Rally production', 4, '<path d="M5 22V3l14 5-14 5"/><path d="M2 22h6"/>')}<p id="stronghold-selection" aria-label="Current selection" title="Right-click to move selected units or set rally points on selected castles and barracks. Shift adds to the selection." tabindex="0"></p>
       </section>
-      <div id="stronghold-placement" class="stronghold-placement is-hidden"><span id="stronghold-placement-label">Click the map to place.</span><button id="stronghold-cancel-placement" type="button">Cancel</button></div>
+      <div id="stronghold-placement" class="stronghold-placement is-hidden"><span id="stronghold-placement-label" tabindex="0">Place building</span><button id="stronghold-cancel-placement" type="button" title="Cancel placement with Escape or right-click.">Cancel</button></div>
     </div>
     ${creditsMarkup()}
     <dialog id="stronghold-tier-dialog" class="stronghold-tier-dialog">
       <div id="stronghold-tier-typing-slot"></div>
       <div class="stronghold-tier-status"><h2 id="stronghold-tier-title">Tier Up</h2><p id="stronghold-tier-description"></p><button id="stronghold-tier-pause" type="button">Pause challenge</button><button id="stronghold-tier-computers" type="button" aria-pressed="false">Stop computers</button></div>
-      <div id="stronghold-tier-progress" class="stronghold-tier-progress" role="progressbar" aria-label="Shared tier challenge progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+      <div id="stronghold-tier-progress" class="stronghold-tier-progress" role="progressbar" aria-label="Shared tier challenge progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0"></div>
       <div id="stronghold-tier-contributions" class="stronghold-tier-contributions"></div>
     </dialog>
   </section>`;

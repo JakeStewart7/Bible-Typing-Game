@@ -34,7 +34,8 @@ test('Stronghold task cycling wraps forwards and backwards without treating paid
   equal(markup.includes('aria-keyshortcuts="PageUp PageDown"'), true);
   equal(markup.includes('Command desk'), false);
   equal(markup.includes('Tab: switch task / Arrows: pan'), false);
-  equal(markup.indexOf('class="stronghold-length-keys"') < markup.indexOf('id="stronghold-length"'), true);
+  equal(markup.includes('class="stronghold-length-keys"'), false);
+  equal(markup.includes('title="Click a text length. Page Up selects longer text; Page Down selects shorter text."'), true);
 });
 
 test('Stronghold places input before the prompt and replaces tier labels with accessible lock icons', () => {
@@ -42,7 +43,7 @@ test('Stronghold places input before the prompt and replaces tier labels with ac
   equal(markup.indexOf('id="stronghold-input"') < markup.indexOf('id="stronghold-phrase"'), true);
   equal(markup.includes('Place at T1'), false);
   equal(markup.includes('data-tier-lock'), true);
-  equal(markup.includes('<span>PgUp</span><span>PgDn</span>'), true);
+  equal(markup.includes('<span>PgUp</span><span>PgDn</span>'), false);
   equal(markup.includes('data-tooltip="Defend (Alt+2)"'), true);
 });
 
@@ -55,7 +56,7 @@ test('Stronghold role icon buttons replace dropdowns and expose selected-state s
     }
   }
   equal((markup.match(/data-role-button=/g) ?? []).length, 16);
-  equal((markup.match(/aria-pressed="false" data-tooltip="(?:Economy|Army|Unit Control|Defenses)"/g) ?? []).length, 16);
+  equal((markup.match(/aria-pressed="false" data-tooltip="(?:Economy|Army|Unit Control[^"]*|Defenses)"/g) ?? []).length, 16);
   equal(markup.includes('id="stronghold-timer" datetime="PT0S">0:00</time>'), true);
 });
 
