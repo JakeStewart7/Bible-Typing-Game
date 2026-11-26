@@ -41,7 +41,7 @@ export function createDefenseView(elements: DefenseElements) {
     } else if (state.combo >= 8) {
       elements.message.textContent = `Light streak ×${state.combo} · empowered volley`;
     } else {
-      elements.message.textContent = 'Type correctly to send light across the field!';
+      elements.message.textContent = '';
     }
   }
 

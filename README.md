@@ -1,6 +1,14 @@
 # Bible-Typing-Game
 A typing game for the Bible.
 
+## Interface help
+
+Mode descriptions, settings explanations, passage-picker guidance, recall options,
+Arcade upgrade effects and Together rules live in hover/focus tooltips rather than
+repeated inline captions. Labels, prices, levels, timers, errors and active
+gameplay status remain visible. Memory visibility buttons describe their preset
+and percentage; Together's input also exposes the typing rule to screen readers.
+
 ## Stronghold
 
 Choose **Stronghold** from the main menu or sidebar to play a local cooperative

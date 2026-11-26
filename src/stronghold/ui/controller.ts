@@ -2,11 +2,10 @@ import { createGame, type Game } from '../../game/state.ts';
 import { requireElement } from '../../shared/dom.ts';
 import { renderTypingExperience, updateTypingInput } from '../../typing/session.ts';
 import { PHRASE_LENGTHS, ROLES, SEASONS, STARTING_ENTITIES, type Point, type StrongholdCommand, type StrongholdConnection, type StrongholdSnapshot } from '../domain/types.ts';
-import { distance, WALL_ROTATION_STEP } from '../domain/rules.ts';
+import { ACTION_LABELS, distance, WALL_ROTATION_STEP } from '../domain/rules.ts';
 import { renderStronghold, strongholdElements } from './view.ts';
 import { mapPoint, readyBuilding, troopsInRectangle, type PlacementKind } from './map-controls.ts';
 import { setAttribute, setText } from './dom-updates.ts';
-import { ENTITY_LABELS } from '../domain/events.ts';
 import { validateDeveloperOptions, type DeveloperOptions } from '../infrastructure/developer-options.ts';
 import { wheelZoom } from './map-camera.ts';
 import { actionShortcutKey, arrowPan, nextTaskIndex, typingLengthKey } from './keyboard.ts';
@@ -93,7 +92,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     const kind = placing();
     const problem = elements.mapControls.ghost(snapshot, kind, cursor, wallRotation);
     elements.mapControls.buildingSelection(snapshot, selectedBuildings);
-    if (kind) setText(placementLabel, problem ?? `Place ${ENTITY_LABELS[kind]}${kind === 'wall' ? `: ${wallRotation} deg` : ''}`);
+    if (kind) setText(placementLabel, problem ?? `${ACTION_LABELS[kind]}${kind === 'wall' ? `: ${wallRotation} deg` : ''}`);
     elements.placement.classList.toggle('is-invalid', Boolean(problem));
     elements.mapControls.wallSelection(running() ? selectedWall() ?? null : null);
     if (!running() || snapshot.phase !== 'playing' || self()?.role !== 'army') elements.mapControls.moveIndicator(null);
@@ -130,7 +129,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     if (!wall) editingWall = null;
     const kind = placing();
     setText(placementLabel, wall ? `Wall: ${wall.rotation ?? 0} deg`
-      : kind ? `Place ${ENTITY_LABELS[kind]}${kind === 'wall' ? `: ${wallRotation} deg` : ''}` : 'Place building');
+      : kind ? `${ACTION_LABELS[kind]}${kind === 'wall' ? `: ${wallRotation} deg` : ''}` : 'Place building');
     const placementHelp = wall ? 'Scroll to rotate the wall. Done or Escape finishes editing.'
       : `Click the map to place.${kind === 'wall' ? ' Scroll to rotate the wall.' : ''} Escape or right-click cancels.`;
     setAttribute(placementLabel, 'data-tooltip', placementHelp);

@@ -59,8 +59,6 @@
   border-top: 1px solid var(--page-border);
 }
 .lobby-roster-tools h4 { margin: 0; font-size: .9rem; }
-.lobby-roster-tools p, .lobby-settings-help { color: var(--muted); font-size: .8rem; line-height: 1.5; }
-.lobby-roster-tools p { margin: .35rem 0 0; }
 .multiplayer-room[data-phase="lobby"] .round-panel { min-height: 0; }
 #multiplayer-lobby-phase { align-self: start; min-width: 0; text-align: left; }
 #multiplayer-lobby-phase .room-settings { width: 100%; min-width: 0; padding: 0; border: 0; margin: 0; gap: 1rem; }

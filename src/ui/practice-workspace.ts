@@ -6,7 +6,7 @@ export function practiceWorkspaceMarkup(developerControls: string): string {
       <section id="passage-picker" class="passage-picker is-hidden" role="dialog" aria-modal="true" aria-labelledby="passage-picker-title">
         <div class="passage-picker-dialog">
           <header class="passage-picker-heading">
-            <div><h3 id="passage-picker-title">Choose a passage</h3><p>Pick a book, chapter, and verse range.</p></div>
+            <div><h3 id="passage-picker-title">Choose a passage</h3></div>
             <button id="close-passage-picker" class="ghost-btn" type="button">Close</button>
           </header>
           <div class="picker-translation"><label for="translation">Translation</label><select id="translation">
@@ -22,7 +22,7 @@ export function practiceWorkspaceMarkup(developerControls: string): string {
           <section class="picker-section"><div class="picker-section-heading"><h4>Verses</h4><span id="picker-range-label"></span></div><div id="picker-verse-grid" class="picker-verse-grid"></div></section>
           <div class="picker-actions">
             <div id="status" class="status" role="status"></div>
-            <button id="load-passage" class="primary-btn">Open chapter reader</button>
+            <button id="load-passage" class="primary-btn" title="Pick a book, chapter, and verse range, then open the reader.">Open chapter reader</button>
           </div>
           <div id="practice-library" class="memory-library is-hidden">
             <section><h4>Practice favorites</h4><div id="practice-favorites" class="memory-passage-list"></div></section>
@@ -31,7 +31,7 @@ export function practiceWorkspaceMarkup(developerControls: string): string {
           </div>
           <section id="playlist-library" class="playlist-library">
             <div class="playlist-title">
-              <div><h4>Recall playlists</h4><p>Practice saved passages in order.</p></div>
+              <div><h4 title="Practice saved passages in order." tabindex="0">Recall playlists</h4></div>
               <form id="playlist-create-form">
                 <label class="sr-only" for="playlist-name">New playlist name</label>
                 <input id="playlist-name" maxlength="80" placeholder="New playlist name" required>
@@ -52,17 +52,17 @@ export function practiceWorkspaceMarkup(developerControls: string): string {
             <div class="resource"><span>⚔</span><div><strong id="wave-count">1</strong><small>Wave</small></div></div>
             <div class="resource"><span>✓</span><div><strong id="defeated-count">0</strong><small>Defeated</small></div></div>
           </div>
-          <div class="battlefield">
+          <div class="battlefield" role="region" aria-label="Arcade battlefield" title="Type correctly to send light across the field." tabindex="0">
             <div class="sky-decoration">✦　·　✧　　　·　✦</div>
             <div class="shadow-gate">⚑</div>
             <div id="battle-path" class="battle-path"></div>
             <div class="fortress" title="Your fortress"><span>♜</span><i></i></div>
-            <div id="battle-message" class="battle-message">Type correctly to send light across the field!</div>
+            <div id="battle-message" class="battle-message"></div>
           </div>
           <div class="upgrade-dock">
-            <button data-upgrade="power"><span>»</span><div><strong>Word Power</strong><small>More damage · <b data-cost="power">35</b> faith</small></div><i data-level="power">Lv 0</i></button>
-            <button data-upgrade="ward"><span>◇</span><div><strong>Stone Ward</strong><small>Less fortress damage · <b data-cost="ward">45</b> faith</small></div><i data-level="ward">Lv 0</i></button>
-            <button data-upgrade="slow"><span>❄</span><div><strong>Still Waters</strong><small>Slow approaching foes · <b data-cost="slow">55</b> faith</small></div><i data-level="slow">Lv 0</i></button>
+            <button data-upgrade="power" title="Word Power increases volley damage."><span>»</span><div><strong>Word Power</strong><small><b data-cost="power">35</b> faith</small></div><i data-level="power">Lv 0</i></button>
+            <button data-upgrade="ward" title="Stone Ward reduces fortress damage."><span>◇</span><div><strong>Stone Ward</strong><small><b data-cost="ward">45</b> faith</small></div><i data-level="ward">Lv 0</i></button>
+            <button data-upgrade="slow" title="Still Waters slows approaching foes."><span>❄</span><div><strong>Still Waters</strong><small><b data-cost="slow">55</b> faith</small></div><i data-level="slow">Lv 0</i></button>
           </div>
         </section>
         <div id="hud" class="hud"></div>
@@ -75,7 +75,7 @@ export function practiceWorkspaceMarkup(developerControls: string): string {
                 <legend>Memory mode</legend>
                 <div>
                   ${RECALL_VISIBILITY_PRESETS.map(({ visiblePercent, label }) =>
-                    `<button type="button" data-text-visibility="${visiblePercent}" aria-label="${label} (${visiblePercent}% text visible)" aria-pressed="${visiblePercent === 100}">${visiblePercent}%</button>`).join('')}
+                    `<button type="button" data-text-visibility="${visiblePercent}" aria-label="${label} (${visiblePercent}% text visible)" title="${label} (${visiblePercent}% text visible)" aria-pressed="${visiblePercent === 100}">${visiblePercent}%</button>`).join('')}
                 </div>
               </fieldset>
               <button id="focus-button" class="ghost-btn">Focus mode</button>

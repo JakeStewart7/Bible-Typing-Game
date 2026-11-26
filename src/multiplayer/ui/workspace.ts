@@ -48,8 +48,8 @@ export function multiplayerWorkspaceMarkup(): string {
             <div id="multiplayer-players" class="player-list" role="list"></div>
             <button id="multiplayer-finish-everyone" class="text-btn is-hidden" type="button">Finish everyone</button>
             <section class="lobby-roster-tools">
-              <div><h4>Simulated players</h4><p>Set each opponent's difficulty in their slot.</p></div>
-              <button id="multiplayer-add-bot" class="secondary-btn" type="button">Add simulated player</button>
+              <div><h4>Simulated players</h4></div>
+              <button id="multiplayer-add-bot" class="secondary-btn" type="button" title="Add an opponent, then set its difficulty in its player slot.">Add simulated player</button>
             </section>
             <section id="multiplayer-summary" class="match-summary is-hidden" aria-labelledby="multiplayer-summary-heading">
               <small>MATCH COMPLETE</small>
@@ -60,13 +60,12 @@ export function multiplayerWorkspaceMarkup(): string {
           <main class="surface round-panel">
             <section id="multiplayer-lobby-phase" class="round-phase">
               ${roomOptions('multiplayer-lobby', 'Lobby options')}
-              <p class="lobby-settings-help">The host controls these settings.</p>
               <div class="lobby-start">
                 <button id="multiplayer-start" class="primary-btn" type="button">Start round</button>
               </div>
             </section>
             <section id="multiplayer-typing-phase" class="round-phase is-hidden">
-              <div class="round-heading"><div><small>TYPE THE PASSAGE</small><h3>Everyone advances together</h3></div><span id="multiplayer-typing-progress">0%</span></div>
+              <div class="round-heading"><div><small>TYPE THE PASSAGE</small><h3>Everyone advances together</h3></div><span id="multiplayer-typing-progress" title="Your progress stops at the first incorrect character. The guessing phase begins when everyone finishes." tabindex="0">0%</span></div>
               <div id="multiplayer-hud" class="hud"></div>
               <div class="progress-track"><div id="multiplayer-progress-fill"></div></div>
               <div id="multiplayer-passage" class="text-display multiplayer-passage" tabindex="0" aria-label="Passage to type"></div>
@@ -93,19 +92,17 @@ export function multiplayerWorkspaceMarkup(): string {
                   <label>Chapter<input id="multiplayer-guess-chapter" type="number" min="1"></label>
                   <label>First verse<input id="multiplayer-guess-start" type="number" min="1"></label>
                   <label>Last verse<input id="multiplayer-guess-end" type="number" min="1"></label>
-                  <button id="multiplayer-submit-guess" class="primary-btn" type="submit">Lock in answer</button>
+                  <button id="multiplayer-submit-guess" class="primary-btn" type="submit" title="Your latest draft is submitted automatically when time runs out.">Lock in answer</button>
                 </form>
-                <p class="phase-help">Your latest draft is submitted automatically when time runs out.</p>
               </section>
               <label class="sr-only" for="multiplayer-input">Type the passage</label>
               <div class="typed-area">
                 <div id="multiplayer-typed-bar" class="typed-bar" aria-hidden="true"></div>
-                <input id="multiplayer-input" class="typing-input" autocomplete="off" autocapitalize="off" spellcheck="false">
+                <input id="multiplayer-input" class="typing-input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-description="Your progress stops at the first incorrect character. The guessing phase begins when everyone finishes.">
               </div>
               <div class="typing-footer">
                 <button id="multiplayer-focus" class="text-btn" type="button" aria-pressed="false">Focus mode</button>
               </div>
-              <p class="phase-help">Your progress stops at the first incorrect character. The guessing phase begins when everyone finishes.</p>
             </section>
             <section id="multiplayer-reveal-phase" class="round-phase is-hidden">
               <span class="phase-icon" aria-hidden="true">✦</span>
@@ -123,7 +120,7 @@ export function multiplayerWorkspaceMarkup(): string {
 
 function roomOptions(prefix: string, legend: string, includeRounds = true): string {
   return `<fieldset class="room-settings">
-    <legend>${legend}</legend>
+    <legend title="The host controls these settings." tabindex="0">${legend}</legend>
     <label for="${prefix}-length">Passage length
       <select id="${prefix}-length">${passageLengthOptions()}</select>
     </label>
