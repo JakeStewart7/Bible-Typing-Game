@@ -1,8 +1,8 @@
 import type { BuildingKind, FogOfWar, Point, StrongholdState, UnitKind, VisionSource } from './types.ts';
 
-export const FOG_CELL_SIZE = 20;
-export const FOG_COLUMNS = 50;
-export const FOG_ROWS = 33;
+export const FOG_CELL_SIZE = 5;
+export const FOG_COLUMNS = Math.ceil(1000 / FOG_CELL_SIZE);
+export const FOG_ROWS = Math.ceil(650 / FOG_CELL_SIZE);
 const UNIT_SIGHT: Record<UnitKind, number> = { worker: 80, builder: 80, warrior: 110, archer: 140, catapult: 170, invader: 110 };
 const BUILDING_SIGHT: Record<BuildingKind, number> = { castle: 200, 'enemy-base': 200, barracks: 160, tower: 220, relay: 120, wall: 80 };
 type World = Pick<StrongholdState, 'units' | 'buildings'>;
@@ -27,17 +27,25 @@ function seesCell(source: VisionSource, x: number, y: number): boolean {
   return dx * dx + dy * dy < source.radius ** 2;
 }
 export function visibleCells(sources: readonly VisionSource[]): number[] {
-  const cells = new Set<number>();
+  const visible = new Uint8Array(FOG_COLUMNS * FOG_ROWS);
+  const cells: number[] = [];
   for (const source of sources) {
     const minX = Math.max(0, Math.floor((source.x - source.radius) / FOG_CELL_SIZE));
     const maxX = Math.min(FOG_COLUMNS - 1, Math.floor((source.x + source.radius) / FOG_CELL_SIZE));
     const minY = Math.max(0, Math.floor((source.y - source.radius) / FOG_CELL_SIZE));
     const maxY = Math.min(FOG_ROWS - 1, Math.floor((source.y + source.radius) / FOG_CELL_SIZE));
-    for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
-      if (seesCell(source, x, y)) cells.add(y * FOG_COLUMNS + x);
+    for (let y = minY; y <= maxY; y++) {
+      const row = y * FOG_COLUMNS;
+      for (let x = minX; x <= maxX; x++) {
+        const cell = row + x;
+        if (!visible[cell] && seesCell(source, x, y)) {
+          visible[cell] = 1;
+          cells.push(cell);
+        }
+      }
     }
   }
-  return [...cells];
+  return cells;
 }
 export function createFog(): FogOfWar {
   return { sources: [], explored: [], units: [], buildings: [], nodes: [] };

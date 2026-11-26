@@ -146,8 +146,8 @@ function renderActionEffect(element: Element, entity: Unit | Building, scale: nu
   setAttribute(effect, 'opacity', String(reducedMotion ? 1 : working ? .8 + pulse * .2 : 1 - pulse * .7));
   setAttribute(child(effect, '[data-impact]'), 'transform', `translate(${x} ${y}) rotate(${working ? reducedMotion ? 0 : elapsed * 100 % 360 : Math.atan2(y, x) * 180 / Math.PI}) scale(${1 + pulse * (working ? .15 : .6)})`);
 }
-export function createBattlefieldRenderer(map: SVGSVGElement) {
-  map.innerHTML = `<defs>
+export function battlefieldMarkup(): string {
+  return `<defs>
     <filter id="stronghold-resource-glow" x="-100%" y="-100%" width="300%" height="300%"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#effff2" flood-opacity=".95"/></filter>
     <filter id="stronghold-work-glow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="1.5" flood-color="#f0f5ff" flood-opacity=".7"/></filter>
     <filter id="stronghold-attack-glow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="1.8" flood-color="#ed914c" flood-opacity=".8"/></filter>
@@ -161,17 +161,23 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     <mask id="stronghold-fog-unexplored" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="650" style="mask-type:luminance">
       <rect width="1000" height="650" fill="white"/><path data-explored fill="black"/><use href="#stronghold-vision-cells" fill="black"/>
     </mask></defs>
+    <g data-layer="remembered-nodes" pointer-events="none" aria-hidden="true" opacity=".7"></g>
     <g data-layer="memories" mask="url(#stronghold-fog-shadow)" pointer-events="none" aria-hidden="true" opacity=".7">
-      <g data-layer="remembered-nodes"></g><g data-layer="remembered-buildings"></g><g data-layer="remembered-units"></g>
+      <g data-layer="remembered-buildings"></g><g data-layer="remembered-units"></g>
     </g>
-    <g data-layer="visible-world" mask="url(#stronghold-current-sight)">
-      <g data-layer="coverage" pointer-events="none"></g><g data-layer="links" pointer-events="none"></g><g data-layer="nodes"></g><g data-layer="chunks" pointer-events="none"></g><g data-layer="buildings"></g><g data-layer="units"></g>
+    <g data-layer="visible-world">
+      <g mask="url(#stronghold-current-sight)"><g data-layer="coverage" pointer-events="none"></g><g data-layer="links" pointer-events="none"></g></g>
+      <g data-layer="nodes"></g>
+      <g mask="url(#stronghold-current-sight)"><g data-layer="chunks" pointer-events="none"></g><g data-layer="buildings"></g><g data-layer="units"></g></g>
     </g>
     <g data-layer="fog" pointer-events="none" aria-hidden="true">
       <rect width="1000" height="650" fill="#14231b" fill-opacity=".3" mask="url(#stronghold-fog-shadow)"/>
       <rect width="1000" height="650" fill="#14231b" fill-opacity=".5" mask="url(#stronghold-fog-unexplored)"/>
     </g>
     <g data-layer="rally" data-tooltip="Production rally point"><path d="M0 14V-15l20 7-20 7" fill="#e7d98b" stroke="#e7d98b" opacity=".6"/><desc>Production rally point</desc></g>`;
+}
+export function createBattlefieldRenderer(map: SVGSVGElement) {
+  map.innerHTML = battlefieldMarkup();
   function layer(name: string): SVGGElement {
     const found = map.querySelector(`[data-layer="${name}"]`);
     if (!(found instanceof SVGGElement)) throw new Error(`Missing Stronghold SVG layer: ${name}`);

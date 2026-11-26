@@ -275,10 +275,14 @@ Shift-drag retains additive army selection.
 
 Fog of war shares vision across the whole team. Units explore the map and
 completed friendly buildings reveal nearby ground. Gatherers/builders see 80
-map units; warriors 110, archers 140 and catapults 170. Unit sight is reduced by
-two 20-unit fog blocks; enemy formations use the same sight ranges. Castles reveal 200,
+map units; warriors 110, archers 140 and catapults 170. Enemy formations use the
+same sight ranges. Castles reveal 200,
 barracks 160, towers 220, relays 120 and walls 80.
-Current sight, unexplored ground and explored shadows share the same pixel grid.
+Current sight, unexplored ground and explored shadows share a **5-unit pixel grid**,
+four times finer on each axis and sixteen times denser than the previous 20-unit
+blocks, without increasing physical sight ranges. The grid covers the actual
+1000-by-650 map. Visible and remembered resource circles are not clipped by terrain
+masks; their full silhouettes remain underneath the fog shading.
 Unexplored ground is darkened rather than black; explored ground has a lighter
 shadow. Resource nodes, enemy buildings and enemy troops remain as frozen,
 non-interactive last-seen silhouettes without health bars until you revisit. Hidden movement,

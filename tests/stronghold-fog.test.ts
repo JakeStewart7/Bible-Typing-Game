@@ -1,11 +1,62 @@
 import { equal, test } from './harness.ts';
 import { addBuilding, addUnit, createStronghold } from './stronghold-fixtures.ts';
-import { createFog, exploredPath, FOG_CELL_SIZE, inVision, knownResourceNodes, updateFog, visionSources } from '../src/stronghold/domain/fog.ts';
+import { createFog, exploredPath, FOG_CELL_SIZE, FOG_COLUMNS, FOG_ROWS, inVision, knownResourceNodes, updateFog, visibleCells, visionSources } from '../src/stronghold/domain/fog.ts';
 import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
 import { placementProblem } from '../src/stronghold/domain/actions.ts';
 import { spawnWave, updateCombat } from '../src/stronghold/domain/combat.ts';
 import { updateLogistics } from '../src/stronghold/domain/logistics.ts';
 import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
+import { battlefieldMarkup } from '../src/stronghold/ui/battlefield.ts';
+
+test('Stronghold fog subdivides each old block into sixteen cells and stops at the actual map edges', () => {
+  equal(FOG_CELL_SIZE, 5);
+  equal((20 / FOG_CELL_SIZE) ** 2, 16);
+  equal(FOG_COLUMNS, 200);
+  equal(FOG_ROWS, 130);
+  const sources = [{ id: 'whole-map', x: 500, y: 325, radius: 10000 }];
+  const cells = visibleCells(sources);
+  equal(cells.length, 200 * 130);
+  equal(Math.min(...cells), 0);
+  equal(Math.max(...cells), 25999);
+  equal(inVision(sources, { x: 999.99, y: 649.99 }), true);
+  equal(inVision(sources, { x: 1000, y: 649 }), false);
+  equal(inVision(sources, { x: 999, y: 650 }), false);
+  equal(inVision(sources, { x: -.01, y: 0 }), false);
+  equal(exploredPath(cells).split('Z').filter(Boolean).length, 130);
+  equal(exploredPath([25999]), 'M995 645h5v5h-5Z');
+});
+
+test('Stronghold resource circles remain outside terrain masks while enemy layers stay clipped below fog shading', () => {
+  const markup = battlefieldMarkup(), masks: boolean[] = [];
+  const layers = new Map<string, boolean>();
+  for (const match of markup.matchAll(/<\/?g\b[^>]*>/g)) {
+    const tag = match[0];
+    if (tag.startsWith('</')) { masks.pop(); continue; }
+    masks.push(tag.includes(' mask='));
+    const name = /data-layer="([^"]+)"/.exec(tag)?.[1];
+    if (name) layers.set(name, masks.some(Boolean));
+    if (name === 'remembered-nodes') {
+      equal(tag.includes('pointer-events="none"'), true);
+      equal(tag.includes('aria-hidden="true"'), true);
+      equal(tag.includes('opacity=".7"'), true);
+    }
+  }
+  for (const name of ['nodes', 'remembered-nodes']) equal(layers.get(name), false);
+  for (const name of ['units', 'buildings', 'remembered-units', 'remembered-buildings']) equal(layers.get(name), true);
+  equal(markup.indexOf('data-layer="remembered-nodes"') < markup.indexOf('data-layer="fog"'), true);
+  equal(markup.indexOf('data-layer="nodes"') < markup.indexOf('data-layer="fog"'), true);
+  equal(markup.indexOf('data-layer="links"') < markup.indexOf('data-layer="nodes"'), true);
+  equal(masks.length, 0);
+});
+
+test('Stronghold overlapping sight sources retain unique cells in first-sighting order', () => {
+  const first = { id: 'first', x: 400, y: 300, radius: 120 };
+  const second = { id: 'second', x: 450, y: 340, radius: 110 };
+  const initial = visibleCells([first]), seen = new Set(initial);
+  const later = visibleCells([second]);
+  equal(later.some(cell => seen.has(cell)), true);
+  equal(visibleCells([first, second, first]), [...initial, ...later.filter(cell => !seen.has(cell))]);
+});
 
 test('Stronghold starts with shared local vision and does not expose unexplored live entities', () => {
   const engine = new StrongholdEngine({ resources: 50, length: 'short', computersPaused: true, season: 'summer' });
@@ -47,19 +98,19 @@ test('Stronghold sight comes from living units and completed buildings, never en
   equal(visionSources(state), []);
 });
 
-test('Stronghold every unit formation sees two fog blocks less while building sight remains unchanged', () => {
+test('Stronghold finer fog preserves every unit formation and building physical sight range', () => {
   const state = createStronghold();
   state.buildings = [];
   for (const [kind, previous] of [['worker', 120], ['builder', 120], ['warrior', 150],
     ['archer', 180], ['catapult', 210], ['invader', 150]] as const) {
     state.units = [];
     addUnit(state, kind, { x: 400, y: 300 });
-    equal(visionSources(state, kind === 'invader')[0]?.radius, previous - 2 * FOG_CELL_SIZE);
+    equal(visionSources(state, kind === 'invader')[0]?.radius, previous - 40);
   }
   for (const [formation, previous] of [['warrior', 150], ['archer', 180], ['catapult', 210]] as const) {
     state.units = [];
     addUnit(state, 'invader', { x: 400, y: 300 }, formation);
-    equal(visionSources(state, true)[0]?.radius, previous - 2 * FOG_CELL_SIZE);
+    equal(visionSources(state, true)[0]?.radius, previous - 40);
   }
   state.units = [];
   for (const [kind, radius] of [['castle', 200], ['enemy-base', 200], ['barracks', 160],
@@ -159,7 +210,7 @@ test('Stronghold explored terrain stays remembered without vision and uses compa
   updateFog(state);
   equal(state.fog.sources, []);
   equal(state.fog.explored, before);
-  equal(exploredPath([0, 1, 2, 50]), 'M0 0h60v20h-60ZM0 20h20v20h-20Z');
+  equal(exploredPath([0, 1, 2, FOG_COLUMNS]), 'M0 0h15v5h-15ZM0 5h5v5h-5Z');
 });
 
 test('Stronghold computer builders choose visible clear sites rather than repeatedly building on resource nodes', () => {
@@ -168,6 +219,7 @@ test('Stronghold computer builders choose visible clear sites rather than repeat
   state.waveIn = 10000;
   for (const player of state.players) player.simulated = player.role === 'defenses';
   addUnit(state, 'builder', { x: 600, y: 500 });
+  addUnit(state, 'warrior', { x: 400, y: 450 });
   const player = state.players.find(player => player.role === 'defenses')!;
   player.action = 'tower'; player.work = 50;
   // The original preferred tower site intersects this season's rich resource node.
