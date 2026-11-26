@@ -14,29 +14,72 @@ import { inVision, visionSources } from './fog.ts';
 
 type ActionWorld = Pick<StrongholdState, 'tier' | 'resources' | 'units' | 'technology' | 'buildings' | 'nodes'>;
 type TaskPlayer = Pick<Participant, 'role' | 'action' | 'constructionTier' | 'upgradeTarget' | 'work'>;
-export function actionUnlockProblem(state: Pick<StrongholdState, 'tier'>, task: Pick<Participant, 'action' | 'constructionTier' | 'upgradeTarget'> & Partial<Pick<Participant, 'role'>>): string | null {
-  const tier = Math.max(MIN_TIER[task.action], task.action === 'tower' || task.action === 'barracks' ? task.constructionTier
-    : task.action === 'upgrade' ? UPGRADE_OPTIONS[task.upgradeTarget].tier : 0);
-  if (state.tier < tier) return `Requires tier ${tier}. Ready up to advance together.`;
-  return task.role === 'production' && state.tier < 1 ? 'Requires tier 1. Army typing unlocks then.' : null;
+type UnlockTask = Pick<Participant, 'action' | 'constructionTier' | 'upgradeTarget'> & Partial<Pick<Participant, 'role'>>;
+export type ActionBlocker = {
+  kind: 'tier' | 'role' | 'supplies' | 'limit' | 'space' | 'barracks' | 'builder';
+  label: string; description: string; tier?: number;
+};
+export function actionRequiredTier(task: UnlockTask): number {
+  return Math.max(MIN_TIER[task.action], task.action === 'tower' || task.action === 'barracks' ? task.constructionTier
+    : task.action === 'upgrade' ? UPGRADE_OPTIONS[task.upgradeTarget].tier : 0, task.role === 'production' ? 1 : 0);
 }
-export function actionProblem(state: ActionWorld, player: TaskPlayer, action: Action): string | null {
-  if (!ROLE_ACTIONS[player.role].includes(action)) return 'This action belongs to another role.';
+export function actionUnlockProblem(state: Pick<StrongholdState, 'tier'>, task: UnlockTask): string | null {
+  const tier = actionRequiredTier(task);
+  if (state.tier >= tier) return null;
+  return task.role === 'production' && task.action === 'resources' ? 'Requires tier 1. Army typing unlocks then.'
+    : `Requires tier ${tier}. Ready up to advance together.`;
+}
+export function actionBlocker(state: ActionWorld, player: TaskPlayer, action: Action): ActionBlocker | null {
+  if (!ROLE_ACTIONS[player.role].includes(action)) return { kind: 'role', label: 'Other role', description: 'This action belongs to another role.' };
   const locked = actionUnlockProblem(state, { ...player, action });
-  if (locked) return locked;
-  if (state.resources < taskCost({ ...player, action })) return `Need ${taskCost({ ...player, action })} shared supplies.`;
+  if (locked) {
+    const tier = actionRequiredTier({ ...player, action });
+    return { kind: 'tier', tier, label: `Needs Tier ${tier}`, description: locked };
+  }
   if (action === 'upgrade') {
-    if (player.role === 'army') return 'Unit Control does not have typing upgrades.';
-    if (UPGRADE_OPTIONS[player.upgradeTarget].role !== player.role) return 'This upgrade belongs to another role.';
-    if (state.technology[player.upgradeTarget] >= upgradeLimit(state.tier, player.upgradeTarget)) return 'Upgrade limit reached for this tier.';
+    if (player.role === 'army') return { kind: 'role', label: 'Other role', description: 'Unit Control does not have typing upgrades.' };
+    if (UPGRADE_OPTIONS[player.upgradeTarget].role !== player.role) return { kind: 'role', label: 'Other role', description: 'This upgrade belongs to another role.' };
+    const level = state.technology[player.upgradeTarget];
+    if (level >= upgradeLimit(state.tier, player.upgradeTarget)) {
+      for (let tier = state.tier + 1; tier <= TIER_MAX; tier++) {
+        if (level < upgradeLimit(tier, player.upgradeTarget)) {
+          return { kind: 'tier', tier, label: `Needs Tier ${tier}`, description: `Upgrade limit reached for this tier. Requires tier ${tier} to upgrade again.` };
+        }
+      }
+      return { kind: 'limit', label: 'Max level', description: 'Upgrade limit reached for this tier. Maximum upgrade level reached.' };
+    }
   }
   if (action === 'worker' || action === 'builder' || action === 'warrior' || action === 'archer' || action === 'catapult') {
     const queued = isArmyUnit(action) ? queuedUnits(state, action) : 0;
-    if (state.units.filter(unit => unit.kind === action && unit.hp > 0).length + queued >= UNIT_CAPS[action]) return `${ACTION_LABELS[action]} population limit reached.`;
-    if ((action === 'worker' || action === 'builder') && !unitSpawnPoint(state, BASE)) return 'Clear space near the castle to recruit another unit.';
+    const count = state.units.filter(unit => unit.kind === action && unit.hp > 0).length + queued;
+    if (count >= UNIT_CAPS[action]) return { kind: 'limit', label: `Limit ${count}/${UNIT_CAPS[action]}`, description: `${ACTION_LABELS[action]} population limit reached.` };
+    if ((action === 'worker' || action === 'builder') && !unitSpawnPoint(state, BASE)) {
+      return { kind: 'space', label: 'Clear castle space', description: 'Clear space near the castle to recruit another unit.' };
+    }
   }
-  if (isArmyUnit(action) && !trainingBarracks(state, action)) return `Build and finish Tier ${MIN_TIER[action]} Barracks to queue ${action}s.`;
+  if (isArmyUnit(action) && !trainingBarracks(state, action)) {
+    const tier = MIN_TIER[action];
+    const started = state.buildings.some(building => building.kind === 'barracks' && !building.enemy && building.hp > 0 && building.tier === tier);
+    return { kind: 'barracks', label: `${started ? 'Finish' : 'Build'} T${tier} barracks`,
+      description: `Build and finish Tier ${tier} Barracks to queue ${action}s.` };
+  }
+  const cost = taskCost({ ...player, action });
+  if (state.resources < cost) {
+    const shortage = Math.ceil(cost - state.resources);
+    return { kind: 'supplies', label: `${shortage} supplies short`,
+      description: `Need ${cost} shared supplies. ${Math.floor(state.resources)} available; ${shortage} short.` };
+  }
   return null;
+}
+export function actionProblem(state: ActionWorld, player: TaskPlayer, action: Action): string | null {
+  return actionBlocker(state, player, action)?.description ?? null;
+}
+export function constructionBlocker(state: ActionWorld, kind: Extract<BuildingKind, 'relay' | 'barracks' | 'tower' | 'wall'>): ActionBlocker | null {
+  if (!state.units.some(unit => unit.kind === 'builder' && unit.hp > 0)) {
+    return { kind: 'builder', label: 'Needs builder', description: 'Recruit a builder in Defenses first.' };
+  }
+  const count = state.buildings.filter(building => building.kind === kind && !building.enemy && building.hp > 0).length;
+  return count >= BUILDING_CAPS[kind] ? { kind: 'limit', label: `Limit ${count}/${BUILDING_CAPS[kind]}`, description: 'Building limit reached.' } : null;
 }
 
 export function placementProblem(
@@ -52,8 +95,8 @@ export function placementProblem(
   if (kind !== 'relay' && (player.action !== kind || player.work < taskWork(player))) return 'Complete the construction work first.';
   const problem = actionProblem(state, player, kind);
   if (problem) return problem;
-  if (!state.units.some(unit => unit.kind === 'builder' && unit.hp > 0)) return 'Recruit a builder in Defenses first.';
-  if (state.buildings.filter(building => building.kind === kind && !building.enemy && building.hp > 0).length >= BUILDING_CAPS[kind]) return 'Building limit reached.';
+  const construction = constructionBlocker(state, kind);
+  if (construction) return construction.description;
   if (blockers.buildings.some(id => id !== excludeBuildingId)) return 'Leave space between buildings.';
   if (blockers.nodes.length) return 'Do not build over resource nodes.';
   if (point.y < 130) return 'The enemy stronghold cannot be used as a construction site.';
@@ -120,7 +163,8 @@ export function completePhrase(state: StrongholdState, player: Participant): voi
       return;
     }
     if (action === 'barracks' || action === 'tower' || action === 'wall') {
-      state.message = actionProblem(state, player, action) ?? 'Choose a location on the battlefield; builders will construct it.';
+      state.message = actionProblem(state, player, action) ?? constructionBlocker(state, action)?.description
+        ?? 'Choose a location on the battlefield; builders will construct it.';
       assignPhrase(state, player);
       return;
     }

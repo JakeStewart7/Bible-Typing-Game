@@ -14,7 +14,7 @@ and percentage; Together's input also exposes the typing rule to screen readers.
 Choose **Stronghold** from the main menu or sidebar to play a local cooperative
 typing strategy game with three simulated teammates. The full-screen battlefield
 follows the Paint design: borderless bright-green map, gray castle, colored shape-coded
-units, upper-right population/resource HUD, central hexagonal **Tier Up** button,
+units, upper-right population/resource HUD, central tier-and-cost button,
 and four colored player panels along the bottom. Switch Player 1's role with the
 resource circle (Economy), outline sword (Army), cursor (Unit Control), and castle (Defenses) buttons.
 Players on the same role choose their tasks independently. Players working on the
@@ -305,7 +305,16 @@ Locked tasks, troop purchases and upgrades are excluded, so cycling never spends
 Unit Control explicitly reminds players that typing produces shared supplies.
 Tab retains normal focus navigation in menus, dropdowns, Dev options and tier challenges.
 Button shortcuts appear instantly on hover rather than taking up tile space.
-Tier-locked actions use gray styling and a lock icon. Unit Control
+Unavailable actions have visible reason badges: **Needs Tier #**, supply shortages,
+unfinished or missing barracks, population/building limits, missing builders,
+pauses and read-only computer controls. Tier requirements take priority over
+shortages, including upgrade limits that require the next tier; maximum upgrades
+say **Max level**. Construction work can still be prepared before a builder is
+available, but ready placement waits for one. Ready construction tiles say
+**Place** and use a stronger player-colored highlight.
+The tier button shows only **Tier #** and its supply cost. Its blocking reason
+appears below the button; ready state is highlighted and remains cancellable.
+Unit Control
 also uses Alt+1 for selection, Alt+2 for Defend, Alt+3 for Assault and Alt+4
 for rally placement. Keyboard actions restore typing focus.
 

@@ -1,4 +1,4 @@
-import { actionProblem, placementBlockers, placementProblem } from '../domain/actions.ts';
+import { actionProblem, constructionBlocker, placementBlockers, placementProblem } from '../domain/actions.ts';
 import { buildingScale, taskWork } from '../domain/technology.ts';
 import type { Building, BuildingKind, Point, StrongholdSnapshot, Unit } from '../domain/types.ts';
 import { buildingMarkup, relayPreviewMarkup } from './battlefield.ts';
@@ -12,7 +12,8 @@ const WALL_OUTLINE_HEIGHT = WALL_HALF_WIDTH * 2 + 9;
 export function readyBuilding(snapshot: StrongholdSnapshot): PlacementKind | null {
   const self = snapshot.players.find(player => player.id === snapshot.selfId);
   if (!self || snapshot.phase !== 'playing' || self.work < taskWork(self) || actionProblem(snapshot, self, self.action)) return null;
-  return self.action === 'barracks' || self.action === 'tower' || self.action === 'wall' ? self.action : null;
+  return (self.action === 'barracks' || self.action === 'tower' || self.action === 'wall') && !constructionBlocker(snapshot, self.action)
+    ? self.action : null;
 }
 export function selectionBounds(start: Point, end: Point) {
   return { x: Math.min(start.x, end.x), y: Math.min(start.y, end.y), width: Math.abs(end.x - start.x), height: Math.abs(end.y - start.y) };

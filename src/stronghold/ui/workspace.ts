@@ -11,6 +11,7 @@ import { isArmyUnit } from '../domain/training.ts';
 import { UNIT_CONTROL_ICON } from './player-theme.ts';
 
 export const PLAYER_IDS = ['you', 'bot-1', 'bot-2', 'bot-3'] as const;
+export const LENGTH_CONTROL_HELP = 'Click a text length. Page Up selects longer text; Page Down selects shorter text.';
 const UNIT_CONTROL_HELP = 'Typing produces shared supplies. Click or drag to select. Right-click to move. Shift adds units.';
 const ROLE_ICONS: Record<Exclude<Role, 'economy'>, string> = {
   production: '<path d="M7 15L17 3L22 2L21 7L11 19Z"/><path d="M4 13L13 22M4 22L8 18"/>',
@@ -24,16 +25,16 @@ function costMarkup(value: number, id?: string): string {
   return `<span class="stronghold-cost"${id ? ` id="${id}"` : ''}><i class="stronghold-symbol stronghold-symbol--resource" aria-hidden="true"></i><span${id ? ' id="stronghold-tier-price"' : ''}>${value}</span><span class="sr-only"> supplies</span></span>`;
 }
 function orderButton(id: string, label: string, shortcut: number, icon: string): string {
-  return `<button id="stronghold-${id}" type="button" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}" data-tooltip="${label} (Alt+${shortcut})"${id === 'rally' ? ' aria-pressed="false"' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true">${icon}</svg><span>${label}</span><kbd aria-hidden="true">${shortcut}</kbd></button>`;
+  return `<button id="stronghold-${id}" type="button" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}" data-tooltip="${label} (Alt+${shortcut})"${id === 'rally' ? ' aria-pressed="false"' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true">${icon}</svg><span>${label}</span><small data-order-blocker class="stronghold-action-blocker is-hidden"></small><kbd aria-hidden="true">${shortcut}</kbd></button>`;
 }
 function tile(action: Action, label: string, tier: number | undefined, shortcut: string): string {
   return `<button type="button" class="stronghold-build-tile${COSTS[action] > 0 ? ' has-cost' : ''}" data-action="${action}"${tier ? ` data-tier="${tier}"` : ''} data-min-tier="${tier ?? MIN_TIER[action]}" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}">
-    ${lockIcon()}<span class="stronghold-action-label">${label}</span>${COSTS[action] > 0 ? costMarkup(COSTS[action] * (tier ?? 1)) : ''}${action === 'worker' || action === 'builder' || isArmyUnit(action) ? '<small data-unit-population></small>' : ''}${isArmyUnit(action) ? '<small data-training-queued>0 queued</small>' : ''}${isTypingAction(action) ? `<span class="stronghold-task-progress" data-task-progress role="progressbar" aria-label="${ACTION_LABELS[action]}${tier ? ` tier ${tier}` : ''} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span data-task-fill></span></span>` : ''}</button>`;
+    ${lockIcon()}<span class="stronghold-action-label">${label}</span>${COSTS[action] > 0 ? costMarkup(COSTS[action] * (tier ?? 1)) : ''}${action === 'worker' || action === 'builder' || isArmyUnit(action) ? '<small data-unit-population></small>' : ''}${isArmyUnit(action) ? '<small data-training-queued>0 queued</small>' : ''}${isTypingAction(action) ? `<span class="stronghold-task-progress" data-task-progress role="progressbar" aria-label="${ACTION_LABELS[action]}${tier ? ` tier ${tier}` : ''} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span data-task-fill></span></span>` : ''}<small data-action-blocker class="stronghold-action-blocker is-hidden"></small></button>`;
 }
 function upgrade(target: UpgradeTarget, shortcut: string): string {
   const option = UPGRADE_OPTIONS[target];
   return `<button type="button" class="stronghold-upgrade-tile has-cost" data-action="upgrade" data-stronghold-upgrade="${target}" data-min-tier="${option.tier}" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}">
-    ${lockIcon()}<span class="stronghold-action-label">Upgrade <span class="stronghold-upgrade-kind">${option.label}</span></span>${costMarkup(option.cost)}<small data-upgrade-level="${target}">Level 0</small></button>`;
+    ${lockIcon()}<span class="stronghold-action-label">Upgrade <span class="stronghold-upgrade-kind">${option.label}</span></span>${costMarkup(option.cost)}<small data-upgrade-level="${target}">Level 0</small><small data-action-blocker class="stronghold-action-blocker is-hidden"></small></button>`;
 }
 function roleActions(role: Role): string {
   let index = 0;
@@ -55,7 +56,7 @@ function playerCard(id: string, index: number): string {
     <div class="stronghold-player-frame">
       <header><h3>Player ${index + 1}</h3>
       <div class="stronghold-role-buttons" role="group" aria-label="Player ${index + 1} role">${ROLES.map(role => `<button id="stronghold-role-${id}-${role}" type="button" data-role-button="${role}" aria-label="${ROLE_LABELS[role]}" aria-pressed="false" data-tooltip="${ROLE_LABELS[role]}${role === 'army' ? `. ${UNIT_CONTROL_HELP}` : ''}">${role === 'economy' ? '<i class="stronghold-symbol stronghold-symbol--resource" aria-hidden="true"></i>' : `<svg viewBox="0 0 24 ${role === 'army' ? 30 : 24}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">${ROLE_ICONS[role]}</svg>`}</button>`).join('')}</div></header>
-      <small id="stronghold-name-${id}" class="sr-only"></small>
+      <small id="stronghold-name-${id}" class="stronghold-player-status"></small>
       <div class="stronghold-player-progress" role="progressbar" aria-label="Player ${index + 1} selected task progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0"><div class="stronghold-work-track"><div id="stronghold-progress-${id}"></div></div><span id="stronghold-progress-label-${id}" class="stronghold-progress-label">0%</span>${lockIcon('data-progress-lock')}</div>
       <div class="stronghold-player-actions" id="stronghold-player-actions-${id}">${ROLES.map(role => `<div class="stronghold-actions" data-role="${role}">${roleActions(role)}</div>`).join('')}</div>
       <div id="stronghold-typed-slot-${id}" class="stronghold-typed-slot"><p id="stronghold-typed-${id}" class="stronghold-peer-typed"></p></div>
@@ -75,7 +76,7 @@ export function strongholdWorkspaceMarkup(): string {
         <button id="stronghold-pause" type="button">Pause</button><button id="stronghold-restart" type="button">New game</button>
         <button id="stronghold-computers" type="button" aria-pressed="false">Stop computers</button>
       </nav>
-      <div class="stronghold-tier-mount"><button id="stronghold-ready" class="stronghold-tier" type="button"><span id="stronghold-tier-label">Tier 0</span><strong id="stronghold-tier-action">Tier Up</strong>${costMarkup(300, 'stronghold-tier-cost')}</button></div>
+      <div class="stronghold-tier-mount"><button id="stronghold-ready" class="stronghold-tier" type="button" aria-pressed="false"><span id="stronghold-tier-label">Tier 0</span>${costMarkup(300, 'stronghold-tier-cost')}</button><span id="stronghold-tier-blocker" class="stronghold-tier-blocker is-hidden"></span></div>
       <aside class="stronghold-hud" aria-label="Kingdom status">
         <div class="stronghold-populations">
           <span class="stronghold-supplies" title="Shared supplies"><span class="sr-only">Shared supplies: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--resource"></i><b id="stronghold-resources">50</b></span>
@@ -102,6 +103,7 @@ export function strongholdWorkspaceMarkup(): string {
         <p>Gatherers and builders resume nearest work after two idle seconds at their destination. Builders and walls cost no supplies, only typing work.</p>
         <p>Supplies, Gatherers, Barracks, Builders, Walls and Towers need typing, not supplies. Each typing option has a small progress bar; select it to show its progress in the main player-colored bar. More expensive buildings fill more slowly. Excess progress from a completed entry carries into the next bar. Once construction is ready, further entries do not bank more completions. Troops, upgrades and relays cost supplies without typing.</p>
         <p>Matches normally start at Tier 0, with T1 starting units and buildings. Complete the first shared tier challenge to unlock Army typing, T1 Barracks and towers. Army's work bar is locked at Tier 0; neither human nor computer Army players can type until Tier 1, except during shared tier challenges. Fill the work bar, then click the map to place. Each player chooses tasks independently; matching tasks share work, and prepared work survives tier challenges. Unit Control can type for supplies while issuing orders.</p>
+        <p>Unavailable actions show their blocker: Needs Tier #, a supply shortage, missing or unfinished barracks, unit/building limits, missing builders, paused gameplay or computer-only controls. Upgrade limits name the next required tier, or Max level. Construction can be prepared without builders, but placement needs a living builder and an available building slot. Ready tiles say Place and are highlighted. The tier button shows only the current Tier # and cost; its blocker or waiting status appears underneath.</p>
         <p>Each typing task keeps its progress when you switch tasks or roles. Building tiers keep separate progress. Dev options automatically saves defaults in this browser for new matches and refreshes.</p>
         <p>Use the resource circle, sword, hollow cursor and castle buttons, or Ctrl+Tab / Ctrl+Shift+Tab, to switch roles. Tab selects the next unlocked task; Shift+Tab selects the previous one. There is no default rally point. Select a friendly castle or barracks and right-click to set its rally. Unit Control can set a shared rally for production buildings. Towers, walls and relays never have rally points.</p>
         <p>The command bar timer shows battle time, stopping during pauses, tier challenges and the match outcome. Build again and New game reset the battlefield, timer, typing, selections and camera using your saved new-match defaults.</p>
@@ -137,6 +139,7 @@ export function strongholdWorkspaceMarkup(): string {
           <label>Time <select id="stronghold-dev-period"><option value="day">Day</option><option value="night">Night</option></select></label>
           <button type="submit">Apply &amp; new game</button>
           <h3>Current match</h3>
+          <p id="stronghold-dev-status" class="stronghold-control-blocker is-hidden"></p>
           <label>Season <select id="stronghold-dev-season">${SEASONS.map(season => `<option value="${season}">${SEASON_LABELS[season]}</option>`).join('')}</select></label>
           <div class="stronghold-dev-time"><button id="stronghold-next-night" type="button">Skip to Night</button><button id="stronghold-next-day" type="button">Skip to Day</button></div>
           <button id="stronghold-next-wave" type="button">Next Wave</button>
@@ -161,7 +164,7 @@ export function strongholdWorkspaceMarkup(): string {
       <div id="stronghold-private-slot">
         <section id="stronghold-private" class="stronghold-private" aria-label="Your private typing area">
           <div class="stronghold-length-panel"><span id="stronghold-length-label" class="sr-only">Text length</span>
-            <div id="stronghold-length" class="stronghold-length-wheel" role="listbox" aria-labelledby="stronghold-length-label" aria-activedescendant="stronghold-length-medium" aria-keyshortcuts="PageUp PageDown" title="Click a text length. Page Up selects longer text; Page Down selects shorter text." tabindex="0">
+            <div id="stronghold-length" class="stronghold-length-wheel" role="listbox" aria-labelledby="stronghold-length-label" aria-activedescendant="stronghold-length-medium" aria-keyshortcuts="PageUp PageDown" title="${LENGTH_CONTROL_HELP}" tabindex="0">
               ${PHRASE_LENGTHS.map(length => `<button id="stronghold-length-${length}" type="button" role="option" data-length="${length}" value="${length}" aria-selected="${length === 'medium'}" tabindex="-1">${LENGTH_LABELS[length]} <small class="stronghold-length-bonus">${TEXT_LENGTH_BONUSES[length]}x</small></button>`).join('')}
             </div>
           </div>
@@ -171,7 +174,7 @@ export function strongholdWorkspaceMarkup(): string {
           </div>
           <section id="stronghold-typing" class="stronghold-typing">
             <div id="stronghold-phrase" class="text-display" data-horizontal-scroll="true" tabindex="0" aria-label="Your private text to type"></div>
-            <div id="stronghold-typing-lock" class="stronghold-typing-lock is-hidden">${lockIcon('data-typing-lock')}<span>Army unlocks at Tier 1</span></div>
+            <div id="stronghold-typing-lock" class="stronghold-typing-lock is-hidden">${lockIcon('data-typing-lock')}<span id="stronghold-typing-lock-label">Needs Tier 1</span></div>
             <div class="progress-track is-hidden" aria-hidden="true"><div id="stronghold-typing-progress"></div></div>
           </section>
         </section>

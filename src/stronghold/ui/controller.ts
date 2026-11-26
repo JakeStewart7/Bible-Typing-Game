@@ -12,7 +12,7 @@ import { actionShortcutKey, arrowPan, nextTaskIndex, typingLengthKey } from './k
 import { createSeasonalMusic } from '../audio/music.ts';
 import { isPlayerColor } from '../domain/options.ts';
 import { createPlayerCursor } from './player-cursor.ts';
-import { supportsRally } from '../domain/training.ts';
+import { isArmyUnit, supportsRally } from '../domain/training.ts';
 
 export function createStrongholdController(connection: StrongholdConnection, developer: {
   defaults: DeveloperOptions; save(options: DeveloperOptions): void;
@@ -142,7 +142,8 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     renderMapPreview();
     setText(elements.selection, selectedBuildings.size
       ? `${selected.size} units, ${selectedBuildings.size} buildings selected` : `${selected.size} selected`);
-    elements.selection.classList.toggle('is-hidden', snapshot.phase !== 'playing' || (!selected.size && !selectedBuildings.size));
+    elements.selection.classList.toggle('is-hidden', snapshot.phase !== 'playing' || (!selected.size && !selectedBuildings.size)
+      || Boolean(kind || wall || rallyPlacement));
     const selecting = drag?.moved && running() && snapshot.phase === 'playing' && !placing() && !rallyPlacement;
     elements.mapControls.selection(selecting ? drag?.start ?? null : null, selecting ? drag?.end ?? null : null);
     const feedback = errorMessage || (paused ? 'Paused' : rallyPlacement ? 'Set rally point' : snapshot.phase === 'tier-up' ? '' : snapshot.message);
@@ -275,7 +276,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     if (kind) void send({ type: 'PLACE', kind, point, rotation: kind === 'wall' ? wallRotation : undefined });
   }
   function armyIds(): number[] {
-    return snapshot?.units.filter(unit => ['warrior', 'archer', 'catapult'].includes(unit.kind)).map(unit => unit.id) ?? [];
+    return snapshot?.units.filter(unit => unit.hp > 0 && isArmyUnit(unit.kind)).map(unit => unit.id) ?? [];
   }
   function move(point: Point, all = false): void {
     const ids = all ? armyIds() : [...selected];
