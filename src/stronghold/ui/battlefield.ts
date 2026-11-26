@@ -76,7 +76,8 @@ function towerMarkup(building: Building): string {
   const outline = building.enemy ? '#ff1726' : '#cf9700';
   const fill = building.enemy ? '#870018' : building.tier === 1 ? '#fff8dc' : building.tier === 2 ? '#d6dce3' : '#677584';
   return `<g data-tower-tier="${building.tier}" transform="scale(${1 + (building.tier - 1) * .15})"><path d="M-13 -18H13V-9H6V19H-6V-9H-13Z" fill="${fill}" stroke="${outline}" stroke-width="2.5" stroke-linejoin="round"/>
-    <path d="M0 -2V8" stroke="#263442" stroke-width="4"/></g>`;
+    <path d="M0 -2V8" stroke="#263442" stroke-width="4"/>
+    <g stroke="${building.enemy ? '#ffd0d4' : building.tier === 3 ? '#eef2f6' : '#263442'}" stroke-width="2">${Array.from({ length: building.tier }, (_, index) => `<path data-tower-band="${index + 1}" d="M-5 ${14 - index * 4}H5"/>`).join('')}</g></g>`;
 }
 export function relayPreviewMarkup(snapshot: Pick<StrongholdSnapshot, 'buildings'>, point: Point, sourceId?: number): string {
   const connected = connectedRelays(snapshot);

@@ -209,27 +209,22 @@ test('Stronghold structures have durable tier-scaled health across sides and con
 test('Stronghold towers deal restrained tier-scaled damage with no hidden enemy wave bonus', () => {
   for (const enemy of [false, true]) {
     for (const tier of [1, 2, 3]) {
-      for (const upgrades of [0, 2]) {
-        const state = createStronghold();
-        state.units = [];
-        state.buildings = [];
-        state.wave = 4;
-        state.technology['tower-1'] = upgrades;
-        state.technology['tower-2'] = upgrades;
-        state.technology['tower-3'] = upgrades;
-        const tower = addBuilding(state, 'tower', { x: 500, y: 400 }, true, enemy, tier);
-        const target = addUnit(state, enemy ? 'worker' : 'invader', { x: 550, y: 400 });
-        const startingHp = target.hp;
-        const damage = 8 + tier * 4 + (enemy ? 0 : upgrades * 2);
-        updateCombat(state, .1);
-        equal(startingHp - target.hp, damage);
-        equal(tower.cooldown, 1);
-        equal(tower.attackTarget, { x: target.x, y: target.y });
-        updateCombat(state, .5);
-        equal(startingHp - target.hp, damage);
-        updateCombat(state, .5);
-        equal(startingHp - target.hp, damage * 2);
-      }
+      const state = createStronghold();
+      state.units = [];
+      state.buildings = [];
+      state.wave = 4;
+      const tower = addBuilding(state, 'tower', { x: 500, y: 400 }, true, enemy, tier);
+      const target = addUnit(state, enemy ? 'worker' : 'invader', { x: 550, y: 400 });
+      const startingHp = target.hp;
+      const damage = 8 + tier * 4;
+      updateCombat(state, .1);
+      equal(startingHp - target.hp, damage);
+      equal(tower.cooldown, 1);
+      equal(tower.attackTarget, { x: target.x, y: target.y });
+      updateCombat(state, .5);
+      equal(startingHp - target.hp, damage);
+      updateCombat(state, .5);
+      equal(startingHp - target.hp, damage * 2);
     }
   }
 });

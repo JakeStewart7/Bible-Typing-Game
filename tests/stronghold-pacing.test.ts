@@ -396,16 +396,16 @@ test('Stronghold role members keep private text and share completed work and pla
   executeCommand(state, you, { type: 'ROLE', role: 'defenses' });
   executeCommand(state, teammate, { type: 'ROLE', role: 'defenses' });
   executeCommand(state, you, { type: 'LENGTH', length: 'medium' });
-  executeCommand(state, you, { type: 'ACTION', action: 'tower', tier: 2 });
-  executeCommand(state, teammate, { type: 'ACTION', action: 'tower', tier: 2 });
+  executeCommand(state, you, { type: 'ACTION', action: 'tower', tier: 1 });
+  executeCommand(state, teammate, { type: 'ACTION', action: 'tower', tier: 1 });
   let towerWork = phraseWork(you);
   executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
   equal(teammate.actionPhrases, 1);
   for (const player of [teammate, you, teammate, you, teammate]) {
-    if (towerWork < 100) towerWork = Math.round((towerWork + phraseWork(player)) * 100) / 100;
+    if (towerWork < 50) towerWork = Math.round((towerWork + phraseWork(player)) * 100) / 100;
     executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
   }
-  while (towerWork < 100) {
+  while (towerWork < 50) {
     towerWork = Math.round((towerWork + phraseWork(you)) * 100) / 100;
     executeCommand(state, you, { type: 'TYPE', phraseId: you.phraseId, text: you.phrase });
   }
@@ -416,7 +416,7 @@ test('Stronghold role members keep private text and share completed work and pla
   executeCommand(state, you, { type: 'TYPE', phraseId: constructionId, text: constructionPhrase.slice(0, 3) });
   executeCommand(state, teammate, { type: 'PLACE', kind: 'tower', point: { x: 450, y: 500 } });
   equal(state.resources, 500);
-  equal(you.work, Math.round((towerWork - 100) * 100) / 100);
+  equal(you.work, Math.round((towerWork - 50) * 100) / 100);
   equal(you.actionPhrases, 0);
   equal(you.typed, constructionPhrase.slice(0, 3));
   equal(you.phraseId, constructionId);

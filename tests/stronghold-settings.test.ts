@@ -138,8 +138,8 @@ test('Stronghold starting tiers persist and restart with unlocked tasks but no c
     equal(engine.snapshot('you').elapsed, 0);
     engine.send('you', { type: 'ROLE', role: 'defenses' });
     if (tier > 0) {
-      engine.send('you', { type: 'ACTION', action: 'tower', tier });
-      equal(engine.snapshot('you').players[0]!.constructionTier, tier);
+      engine.send('you', { type: 'ACTION', action: 'tower' });
+      equal(engine.snapshot('you').players[0]!.constructionTier, 1);
     }
   }
 });
@@ -348,7 +348,7 @@ test('Stronghold restored task work remains shared when teammates select tasks a
   equal(teammate.action, 'worker');
 });
 
-test('Stronghold construction tiers keep independent bars and instant upgrades leave typing progress untouched', () => {
+test('Stronghold tower purchases leave typing untouched while barracks tiers retain independent work bars', () => {
   const state = quietMatch();
   state.tier = 3;
   state.resources = 1000;
@@ -358,34 +358,22 @@ test('Stronghold construction tiers keep independent bars and instant upgrades l
   while (player.work < taskWork(player)) entry(state);
   const tower1Work = player.work;
   equal(tower1Work >= 50, true);
-  send(state, { type: 'ACTION', action: 'tower', tier: 2 });
-  const tower2Work = entry(state);
-  equal(player.work, tower2Work);
+  const tower = addBuilding(state, 'tower', { x: 650, y: 500 }, true);
   const phraseId = player.phraseId;
   const phrase = player.phrase;
   send(state, { type: 'TYPE', phraseId, text: phrase.slice(0, 2) });
-  send(state, { type: 'ACTION', action: 'upgrade', upgrade: 'tower-1' });
-  send(state, { type: 'ACTION', action: 'upgrade', upgrade: 'tower-2' });
-  equal(state.resources, 800);
+  send(state, { type: 'UPGRADE_TOWER', id: tower.id, tier: 2 });
+  send(state, { type: 'UPGRADE_TOWER', id: tower.id, tier: 3 });
+  equal(state.resources, 695);
   equal(player.phraseId, phraseId);
   equal(player.typed, phrase.slice(0, 2));
-  equal(player.work, tower2Work);
-  equal(state.technology['tower-1'], 1);
-  equal(state.technology['tower-2'], 1);
-  equal(state.roleTasks.defenses.progress['upgrade:tower-1'], undefined);
+  equal(player.work, tower1Work);
+  equal(tower.tier, 3);
   send(state, { type: 'ACTION', action: 'tower', tier: 1 });
   equal(player.work, tower1Work);
   send(state, { type: 'PLACE', kind: 'tower', point: { x: 450, y: 500 } });
   equal(player.work, Math.round((tower1Work - 50) * 100) / 100);
-  equal(state.resources, 800);
-  send(state, { type: 'ACTION', action: 'tower', tier: 2 });
-  equal(player.work, tower2Work);
-  send(state, { type: 'ACTION', action: 'upgrade', upgrade: 'tower-1' });
-  equal(player.work, tower2Work);
-  send(state, { type: 'ACTION', action: 'upgrade', upgrade: 'tower-2' });
-  equal(player.work, tower2Work);
-  equal(state.resources, 600);
-  equal(state.technology['tower-2'], 2);
+  equal(state.resources, 695);
   send(state, { type: 'ROLE', role: 'production' });
   send(state, { type: 'ACTION', action: 'barracks', tier: 1 });
   const barracks1Work = entry(state);

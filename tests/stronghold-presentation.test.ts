@@ -143,7 +143,7 @@ test('Stronghold construction can bank work without builders but ready placement
   engine.send('you', { type: 'ACTION', action: 'tower', tier: 1 });
   const snapshot = engine.snapshot('you'), player = snapshot.players[0]!;
   snapshot.units = snapshot.units.filter(unit => unit.kind !== 'builder');
-  const selection = { action: 'tower' as const, constructionTier: 1, upgradeTarget: 'tower-1' as const };
+  const selection = { action: 'tower' as const, constructionTier: 1, upgradeTarget: 'economy' as const };
   equal(taskAvailability(snapshot, player, selection, true).disabled, false);
   equal(taskAvailability(snapshot, player, selection, true).blocker?.label, 'Needs builder');
   player.work = taskWork(player);
@@ -183,7 +183,7 @@ test('Stronghold tier button contains only the tier and price, with an explicit 
   equal(button.includes('id="stronghold-tier-price">300'), true);
   equal(button.includes('aria-pressed="false"'), true);
   equal(markup.includes('id="stronghold-tier-blocker"'), true);
-  equal((markup.match(/data-action-blocker/g) ?? []).length, 84);
+  equal((markup.match(/data-action-blocker/g) ?? []).length, 64);
   const snapshot = new StrongholdEngine({ resources: 50, length: 'short', computersPaused: true }).snapshot('you');
   const player = snapshot.players[0]!;
   equal(tierAvailability(snapshot, player, true).blocker?.label, '250 supplies short');

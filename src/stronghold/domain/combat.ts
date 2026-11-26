@@ -1,7 +1,7 @@
 import { BASE, CATAPULT_WINDUP_SECONDS, distance, UNIT_CAPS, UNIT_RULES } from './rules.ts';
 import { buildingApproach, buildingFootprint, distanceToFootprint, movementDestination, moveUnitToward, wallApproach, wallBetween } from './navigation.ts';
 import { addBuilding, addUnit } from './state.ts';
-import { towerUpgrade, unitUpgrade } from './technology.ts';
+import { unitUpgrade } from './technology.ts';
 import { ENTITY_LABELS, recordEvent } from './events.ts';
 import type { Building, Point, StrongholdState, Unit, VisionSource } from './types.ts';
 import { inVision, visionSources } from './fog.ts';
@@ -127,7 +127,7 @@ export function updateCombat(state: StrongholdState, seconds: number): void {
     const target = closest(tower, state.units.filter(unit => (unit.kind === 'invader') !== tower.enemy
       && inVision(tower.enemy ? enemyVision : friendlyVision, unit)
       && distance(unit, tower) <= 150 + tower.tier * 15));
-    const damage = 8 + tower.tier * 4 + (tower.enemy ? 0 : towerUpgrade(state, tower.tier) * 2);
+    const damage = 8 + tower.tier * 4;
     if (target) attack(tower, target, damage);
   }
   const enemyBase = state.buildings.find(building => building.kind === 'enemy-base');

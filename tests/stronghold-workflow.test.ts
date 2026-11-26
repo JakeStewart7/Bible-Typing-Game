@@ -227,9 +227,9 @@ test('Stronghold task progress names recruits and distinguishes prepared buildin
   const player = createStronghold().players[0]!;
   equal(taskProgress({ ...player, action: 'worker', work: 32 }, 64, 18).label, '50% / +1 gatherer');
   equal(taskProgress({ ...player, action: 'builder', work: 64 }, 64, 18).label, 'Ready / +1 builder');
-  const tower = { ...player, action: 'tower' as const, constructionTier: 3, work: 75 };
-  equal(taskProgress(tower, taskWork(tower), 18).label, '50% / T3 tower');
-  equal(taskProgress({ ...tower, work: 150 }, taskWork(tower), 18).label, 'Place T3 tower');
+  const tower = { ...player, action: 'tower' as const, constructionTier: 1, work: 25 };
+  equal(taskProgress(tower, taskWork(tower), 18).label, '50% / T1 tower');
+  equal(taskProgress({ ...tower, work: 50 }, taskWork(tower), 18).label, 'Place T1 tower');
   const wall = taskProgress({ ...player, action: 'wall', work: 32 }, 32, 18);
   equal(wall.label, 'Place wall');
   equal(wall.description.includes('Click the map to place it; a builder finishes construction.'), true);
@@ -239,7 +239,7 @@ test('Stronghold free construction has proportional requirements, preserves word
   equal(PHRASE_LENGTHS.map(length => TEXT_LENGTH_RANGES[length]), [[1, 5], [6, 11], [12, 24], [25, 40]]);
   equal(PHRASE_LENGTHS.map(length => TEXT_LENGTH_BONUSES[length]), [1, 1.1, 1.25, 1.5]);
   for (const tier of [1, 2, 3]) {
-    equal(taskWork({ action: 'tower', constructionTier: tier }), 50 * tier);
+    equal(taskWork({ action: 'tower', constructionTier: tier }), 50);
     equal(taskWork({ action: 'barracks', constructionTier: tier }), 60 * tier);
   }
   const state = createStronghold();
@@ -274,10 +274,7 @@ test('Stronghold paid troop queues and upgrades never spend or change typing pro
     { role: 'economy', action: 'upgrade', cost: 120, upgrade: 'economy' },
     { role: 'production', action: 'upgrade', cost: 60, upgrade: 'warrior' },
     { role: 'production', action: 'upgrade', cost: 100, upgrade: 'archer' },
-    { role: 'production', action: 'upgrade', cost: 160, upgrade: 'catapult' },
-    { role: 'defenses', action: 'upgrade', cost: 75, upgrade: 'tower-1' },
-    { role: 'defenses', action: 'upgrade', cost: 125, upgrade: 'tower-2' },
-    { role: 'defenses', action: 'upgrade', cost: 180, upgrade: 'tower-3' }
+    { role: 'production', action: 'upgrade', cost: 160, upgrade: 'catapult' }
   ];
   for (const purchase of cases) {
     const state = createStronghold();

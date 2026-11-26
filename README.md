@@ -80,7 +80,7 @@ bar at the base economy level, updated immediately for economy upgrades and
 seasonal resource bonuses. Recruiting bars name the unit they produce, and full
 construction bars say **Place** plus the prepared building. Hover or focus a bar
 for completion and placement details. Bars have the same size: more expensive tasks
-fill more slowly, with barracks and tower requirements proportional to their
+fill more slowly, with barracks requirements proportional to their
 former supplies costs and construction tier. The UI shows percentages, not those
 internal character costs. Each role keeps independent progress for every typing task
 and building tier, even when that role becomes unoccupied.
@@ -125,7 +125,7 @@ the building's required tier.
 color (red, blue, yellow or green), starting
 supplies (0-10,000), starting tier (0-3), and starting counts for Gatherers, Builders,
 Warriors, Towers, Archers and Catapults, from zero up to their normal population
-limits. Starting towers use the selected starting tier (at least T1); starting
+limits. Friendly starting towers are always T1, ready for individual upgrades; starting
 troops may be supplied before their normal recruitment unlock. You can also choose
 the starting season (or Random each game) and day/night. Valid field changes save automatically in this
 browser, even without pressing Apply. **Apply & new game** starts a fresh match.
@@ -154,11 +154,11 @@ Shots have a one-second cooldown; catapults also need their initial 0.8-second
 windup. Siege shots deal 1.5x damage to buildings and half damage to units, so
 siege needs an escort rather than replacing front-line troops.
 Gatherers and builders require 64 typing work each; barracks require 60 per tier
-and towers 50 per tier. Supplies and walls still require 32 work. All troop
+and T1 towers 50 work. Supplies and walls still require 32 work. All troop
 queues take 24 seconds per unit. Troop upgrades add 30 health and 1 damage per
 level, emphasizing survival rather than burst damage.
 T1/T2/T3 towers have 600/800/1,000 health and deal 12/16/20 damage per shot,
-with +2 damage per friendly tower upgrade. Enemy towers use the same base
+through individual tier upgrades. Enemy towers use the same base
 damage, without an escalating wave bonus. Barracks have 320/420/520 health,
 walls 440 and relays 240. Both bases retain 4,000 health.
 Tower attack ranges and one-second firing intervals are unchanged.
@@ -350,7 +350,8 @@ castle itself. A green preview reaches the castle network; amber dashed links
 are disconnected or planned. Radius rings use world units
 and remain accurate while zooming. Unfinished relays can preview potential
 connections but do not deliver resources until construction finishes.
-Towers retain the simple T1 silhouette, growing subtly larger and darker at T2/T3.
+Towers retain the simple T silhouette, growing subtly larger and darker at T2/T3.
+One, two or three horizontal bands identify their tier without relying on color alone.
 Attack impacts retain their explosion without the extra crossing slash lines.
 
 Units prefer routes around all living buildings, including unfinished structures.
@@ -389,8 +390,8 @@ castle health, wave countdown and season/day labels are
 omitted. Weather, day/night lighting and Dev previews still work.
 **Help** contains the map key and instructions. On narrow screens the
 player panels scroll instead of shrinking their text.
-The castle is a clean square; towers progress from a simple T shape to fortified,
-armed silhouettes, while the compact HUD keeps its T-shaped tower icon.
+The castle is a clean square; towers keep their T shape with distinct tier bands,
+while the compact HUD keeps its T-shaped tower icon.
 Friendly and opposing units of the same formation share base health, damage,
 range and speed; enemy waves no longer add hidden health or damage bonuses.
 Movement remains slow, and troop upgrades still improve your units.
@@ -452,10 +453,18 @@ and shortage. The state updates as supplies arrive.
 | Warrior / Archer / Catapult | 60 / 100 / 180 |
 | Economy upgrade | 120 |
 | Warrior / Archer / Catapult upgrade | 60 / 100 / 160 |
-| T1 / T2 / T3 tower upgrade | 75 / 125 / 180 |
+| Selected tower to T2 / T3 | 125 / 180 |
 Separate tiles let you
-build tier 1, 2 or 3 barracks and towers. Higher-tier construction fills more
+build tier 1, 2 or 3 barracks. Higher-tier barracks construction fills more
 slowly; queued troop purchases require only supplies, not typing.
+Defenses has one **Tower T1** construction tile. Build and finish a tower, select
+it on the map, then purchase **Upgrade to T2** (125 supplies) and **Upgrade to T3**
+(180 supplies). Team Tier 2/3 must be unlocked first, and T3 requires that tower
+to be T2. Each purchase affects only the selected tower, never the whole team.
+New towers always start at T1. Upgrading increases health by 200 without erasing
+existing damage or typing progress. Larger upgraded footprints must fit around
+nearby buildings, resource nodes and map edges; buttons explain every blocker.
+Escape cancels ready placement so you can select an existing tower instead.
 The simulated Army teammate builds matching barracks and queues a mixed army.
 **Stop computers** pauses simulated teammates' typing, construction
 choices and army orders, along with training their queued requests.
@@ -464,7 +473,7 @@ can still type. **Resume computers** continues them without catching up missed
 typing time. The toggle is also available during tier challenges.
 Higher-tier barracks and towers have more health, and troop upgrades enlarge
 their map icons as well as improving their combat stats.
-Each troop type and tower tier has its own resource-funded upgrade button and
+Each troop type has its own resource-funded upgrade button and
 once-per-tier limit beginning at its unlock tier. Economy gets two upgrades at
 tier 0 and one additional upgrade per subsequent tier. World events begin at
 **1:00, 3:00, 5:00**, and subsequent odd minutes of active battle time, each

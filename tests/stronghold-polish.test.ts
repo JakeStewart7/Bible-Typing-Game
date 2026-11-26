@@ -139,13 +139,13 @@ test('Stronghold warriors clear nearby towers before a closer enemy castle and r
   equal(castle.hp < castle.maxHp, true);
 });
 
-test('Stronghold every tower and barracks tier consumes exactly one typed placement and builders complete it', () => {
+test('Stronghold T1 towers and every barracks tier consume exactly one typed placement and builders complete it', () => {
   for (const kind of ['tower', 'barracks'] as const) for (const tier of [1, 2, 3]) {
     const state = createStronghold({ resources: 0, length: 'long', computersPaused: true });
     state.tier = tier;
     const player = state.players[0]!;
     executeCommand(state, player, { type: 'ROLE', role: kind === 'tower' ? 'defenses' : 'production' });
-    executeCommand(state, player, { type: 'ACTION', action: kind, tier });
+    executeCommand(state, player, { type: 'ACTION', action: kind, tier: kind === 'tower' ? 1 : tier });
     while (player.work < taskWork(player)) executeCommand(state, player, { type: 'TYPE', phraseId: player.phraseId, text: player.phrase });
     const work = player.work, requirement = taskWork(player);
     rejects(() => executeCommand(state, player, { type: 'PLACE', kind, point: { x: 500, y: 580 } }), 'space');
@@ -154,7 +154,7 @@ test('Stronghold every tower and barracks tier consumes exactly one typed placem
     equal(player.work, Math.round((work - requirement) * 100) / 100);
     equal(state.resources, 0);
     const building = state.buildings.at(-1)!;
-    equal(building.tier, tier);
+    equal(building.tier, kind === 'tower' ? 1 : tier);
     for (let second = 0; second < 30; second++) updateLogistics(state, 1);
     equal(building.progress, 1);
     equal(state.events.some(event => event.text.includes('constructed')), true);
@@ -183,6 +183,7 @@ test('Stronghold every paid upgrade charges once, preserves the active typing ta
 
 test('Stronghold locked construction cannot be selected or receive partial or completed typing work', () => {
   for (const action of ['barracks', 'tower'] as const) for (const tier of [1, 2, 3]) {
+    if (action === 'tower' && tier !== 1) continue;
     const state = createStronghold({ resources: 1000, length: 'medium', computersPaused: true });
     const player = state.players[0]!;
     state.tier = tier - 1;
@@ -612,10 +613,10 @@ test('Stronghold placement identifies buildings but allows units inside tier-sca
   const state = createStronghold(), player = state.players[0]!;
   state.tier = 3;
   executeCommand(state, player, { type: 'ROLE', role: 'defenses' });
-  executeCommand(state, player, { type: 'ACTION', action: 'tower', tier: 3 });
+  executeCommand(state, player, { type: 'ACTION', action: 'tower', tier: 1 });
   player.work = taskWork(player);
   const point = { x: 300, y: 400 };
-  const wall = addBuilding(state, 'wall', { x: 345, y: 400 }, true);
+  const wall = addBuilding(state, 'wall', { x: 335, y: 400 }, true);
   const unit = addUnit(state, 'worker', point);
   const blockers = placementBlockers(state, player, 'tower', point);
   equal(blockers.buildings, [wall.id]);
@@ -624,8 +625,8 @@ test('Stronghold placement identifies buildings but allows units inside tier-sca
   wall.hp = 0;
   equal(placementBlockers(state, player, 'tower', point), { buildings: [], nodes: [], units: [] });
   equal(placementProblem(state, player, 'tower', point), null);
-  const box = buildingFootprint(state, { ...point, kind: 'tower', tier: 3, enemy: false });
-  equal(box.halfY, 20.25 * 1.3 * 1.24);
+  const box = buildingFootprint(state, { ...point, kind: 'tower', tier: 1, enemy: false });
+  equal(box.halfY, 20.25 * 1.08);
   executeCommand(state, player, { type: 'PLACE', kind: 'tower', point });
   const before = { x: unit.x, y: unit.y };
   moveUnitToward(state, unit, { x: 400, y: 450 }, 10);

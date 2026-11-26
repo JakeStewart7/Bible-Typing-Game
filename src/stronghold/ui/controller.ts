@@ -121,7 +121,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   }
   function display(): void {
     if (!snapshot) return;
-    renderStronghold(elements, snapshot, selected, running(), paused, relayPlacement, placementCancelled, rallyPlacement, shown);
+    renderStronghold(elements, snapshot, selected, running(), paused, relayPlacement, placementCancelled, rallyPlacement, shown, selectedBuildings);
     const player = self();
     if (player) playerCursor.update(player.color, running() && snapshot.phase === 'playing' && Boolean(placing() || rallyPlacement), shown);
     music.update(snapshot.season, snapshot.environmentElapsed, running() && snapshot.phase !== 'won' && snapshot.phase !== 'lost');
@@ -342,6 +342,12 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       void send({ type: 'ROLE', role: button.role });
     });
     for (const group of card.groups) {
+      for (const button of group.towerUpgrades) button.element.addEventListener('click', () => {
+        const id = selectedBuildings.size === 1 ? [...selectedBuildings][0] : undefined;
+        if (id === undefined) { errorMessage = 'Select a single friendly tower first.'; display(); return; }
+        editingWall = null; relayPlacement = false; rallyPlacement = false; placementCancelled = true;
+        void send({ type: 'UPGRADE_TOWER', id, tier: button.tier });
+      });
       for (const button of group.buttons) {
         button.element.addEventListener('click', () => {
           editingWall = null;
@@ -571,7 +577,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     }
     if (shortcut && player && snapshot.phase === 'playing') {
       const own = elements.playerCards.find(card => card.id === player.id);
-      const button = own?.groups.find(group => group.role === player.role)?.buttons.find(button => button.element.dataset.shortcut === shortcut)?.element
+      const button = own?.groups.find(group => group.role === player.role)?.element.querySelector<HTMLButtonElement>(`button[data-shortcut="${shortcut}"]`)
         ?? (player.role === 'army' ? elements.orders.querySelector<HTMLButtonElement>(`[data-shortcut="${shortcut}"]`) : null);
       if (button) {
         event.preventDefault();

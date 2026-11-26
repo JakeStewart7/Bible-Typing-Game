@@ -178,7 +178,7 @@ test('Stronghold military panels omit Supplies and every remaining task has a ma
   const markup = strongholdWorkspaceMarkup();
   const player = /<section class="stronghold-player" data-player="you">([\s\S]*?)<\/section>/.exec(markup)?.[1];
   if (!player) throw new Error('Missing Player 1 markup.');
-  const counts = { economy: 4, production: 9, army: 0, defenses: 8 };
+  const counts = { economy: 4, production: 9, army: 0, defenses: 5 };
   for (const [index, role] of ROLES.entries()) {
     const start = player.indexOf(`data-role="${role}"`);
     const next = ROLES[index + 1];

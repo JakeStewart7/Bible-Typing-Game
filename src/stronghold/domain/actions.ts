@@ -1,7 +1,7 @@
 import { assignPhrase, copyRoleTask } from './phrases.ts';
 import { addBuilding, addUnit } from './state.ts';
 import { ACTION_LABELS, BASE, BUILDING_CAPS, isTypingAction, MIN_TIER, ROLE_ACTIONS, ROLE_LABELS, TIER_COSTS, TIER_MAX, UNIT_CAPS, validPoint, WALL_ROTATION_STEP } from './rules.ts';
-import { applyUpgrade, phraseWork, taskCost, taskWork, upgradeLimit, UPGRADE_OPTIONS } from './technology.ts';
+import { applyUpgrade, phraseWork, taskCost, taskWork, towerHealth, TOWER_UPGRADE_COSTS, upgradeLimit, UPGRADE_OPTIONS } from './technology.ts';
 import { ENTITY_LABELS, playerEvent, recordEvent } from './events.ts';
 import { PHRASE_LENGTHS, SEASONS, type Action, type BuildingKind, type Participant, type Point, type StrongholdCommand, type StrongholdState } from './types.ts';
 import { restoreRoleTask, saveRoleTask, taskKey } from './tasks.ts';
@@ -16,7 +16,7 @@ type ActionWorld = Pick<StrongholdState, 'tier' | 'resources' | 'units' | 'techn
 type TaskPlayer = Pick<Participant, 'role' | 'action' | 'constructionTier' | 'upgradeTarget' | 'work'>;
 type UnlockTask = Pick<Participant, 'action' | 'constructionTier' | 'upgradeTarget'> & Partial<Pick<Participant, 'role'>>;
 export type ActionBlocker = {
-  kind: 'tier' | 'role' | 'supplies' | 'limit' | 'space' | 'barracks' | 'builder';
+  kind: 'tier' | 'role' | 'supplies' | 'limit' | 'space' | 'barracks' | 'builder' | 'selection' | 'construction';
   label: string; description: string; tier?: number;
 };
 export function actionRequiredTier(task: UnlockTask): number {
@@ -82,10 +82,30 @@ export function constructionBlocker(state: ActionWorld, kind: Extract<BuildingKi
   return count >= BUILDING_CAPS[kind] ? { kind: 'limit', label: `Limit ${count}/${BUILDING_CAPS[kind]}`, description: 'Building limit reached.' } : null;
 }
 
+export function towerUpgradeBlocker(state: ActionWorld, player: Pick<Participant, 'role'>, id: number | null, tier: 2 | 3): ActionBlocker | null {
+  if (player.role !== 'defenses') return { kind: 'role', label: 'Needs Defenses', description: 'Switch to Defenses to upgrade a selected tower.' };
+  if (state.tier < tier) return { kind: 'tier', tier, label: `Needs Tier ${tier}`, description: `Unlock team Tier ${tier} before buying this tower upgrade.` };
+  const tower = state.buildings.find(building => building.id === id && building.kind === 'tower' && !building.enemy && building.hp > 0);
+  if (!tower) return { kind: 'selection', label: 'Select one tower', description: 'Select a single friendly tower on the map. This purchase upgrades only that tower.' };
+  if (tower.tier >= tier) return { kind: 'limit', label: tower.tier === 3 ? 'Max tier' : `Already T${tier}`, description: `The selected tower is already T${tower.tier}.` };
+  if (tower.tier !== tier - 1) return { kind: 'tier', label: 'Upgrade to T2 first', description: 'Upgrade this tower to T2 before purchasing T3.' };
+  if (tower.progress !== 1) return { kind: 'construction', label: 'Finish building', description: 'Wait for a builder to finish this tower before upgrading it.' };
+  const footprint = buildingFootprint(state, { ...tower, tier });
+  if (footprintCorners(footprint).some(corner => !validPoint(corner) || corner.y < 130)
+    || state.buildings.some(building => building.id !== id && building.hp > 0 && footprintsOverlap(footprint, buildingFootprint(state, building)))
+    || state.nodes.some(node => nodeOverlapsFootprint(node, footprint))) {
+    return { kind: 'space', label: 'Needs more space', description: 'The upgraded tower is larger. Leave room around buildings, resource nodes and map edges.' };
+  }
+  const cost = TOWER_UPGRADE_COSTS[tier];
+  if (state.resources < cost) return { kind: 'supplies', label: `${Math.ceil(cost - state.resources)} supplies short`, description: `Need ${cost} shared supplies to upgrade this tower.` };
+  return null;
+}
+
 export function placementProblem(
   state: ActionWorld & Pick<StrongholdState, 'buildings'>,
   player: TaskPlayer, kind: Extract<BuildingKind, 'relay' | 'barracks' | 'tower' | 'wall'>, point: Point, rotation = 0, excludeBuildingId?: number
 ): string | null {
+  if (kind === 'tower' && player.constructionTier !== 1) return 'Build a T1 tower, then purchase its T2 and T3 upgrades.';
   if (!validPoint(point)) return 'Choose a location inside the battlefield.';
   if (!Number.isFinite(rotation) || rotation < 0 || rotation >= 360 || rotation % WALL_ROTATION_STEP !== 0) return 'Choose one of the 16 wall angles, 22.5 degrees apart.';
   const footprint = buildingFootprint(state, { ...point, kind, rotation, tier: player.constructionTier, enemy: false });
@@ -273,6 +293,21 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     return;
   }
   if (state.phase !== 'playing') throw new Error('Battlefield orders are paused during tier-up.');
+  if (command.type === 'UPGRADE_TOWER') {
+    if (!Number.isInteger(command.id) || (command.tier !== 2 && command.tier !== 3)) throw new Error('Choose a tower and upgrade tier 2 or 3.');
+    const problem = towerUpgradeBlocker(state, player, command.id, command.tier);
+    if (problem) throw new Error(problem.description);
+    const tower = state.buildings.find(building => building.id === command.id);
+    if (!tower) throw new Error('The selected tower is no longer available.');
+    const maxHp = towerHealth(command.tier);
+    state.resources -= TOWER_UPGRADE_COSTS[command.tier];
+    tower.hp += maxHp - tower.maxHp;
+    tower.maxHp = maxHp;
+    tower.tier = command.tier;
+    state.message = '';
+    playerEvent(state, player, `upgraded Tower to T${tower.tier}`);
+    return;
+  }
   if (command.type === 'ROTATE_WALL') {
     const wall = state.buildings.find(building => building.id === command.id && building.kind === 'wall' && !building.enemy && building.hp > 0);
     if (!wall) throw new Error('Choose a friendly wall.');
@@ -289,9 +324,10 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
   }
   if (command.type === 'ACTION') {
     if (!ROLE_ACTIONS[player.role].includes(command.action)) throw new Error('This action belongs to another role.');
-    const tier = command.tier ?? Math.max(1, state.tier);
+    const tier = command.tier ?? (command.action === 'tower' ? 1 : Math.max(1, state.tier));
     if (!Number.isInteger(tier) || tier < 1 || tier > 3) throw new Error('Choose building tier 1, 2 or 3.');
-    const upgrade = command.upgrade ?? (player.role === 'production' ? 'warrior' : player.role === 'defenses' ? 'tower-1' : 'economy');
+    if (command.action === 'tower' && tier !== 1) throw new Error('Build a T1 tower, then purchase its T2 and T3 upgrades.');
+    const upgrade = command.upgrade ?? (player.role === 'production' ? 'warrior' : 'economy');
     if (!Object.prototype.hasOwnProperty.call(UPGRADE_OPTIONS, upgrade)
       || ((command.action === 'upgrade' || command.upgrade !== undefined) && UPGRADE_OPTIONS[upgrade].role !== player.role)) throw new Error('This upgrade belongs to another role.');
     const selection = { action: command.action, constructionTier: tier, upgradeTarget: upgrade };

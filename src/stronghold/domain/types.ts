@@ -15,7 +15,7 @@ export type StrongholdMatchOptions = {
 export type Point = { x: number; y: number };
 export type UnitKind = 'worker' | 'builder' | 'warrior' | 'archer' | 'catapult' | 'invader';
 export type ArmyUnitKind = 'warrior' | 'archer' | 'catapult';
-export const UPGRADE_TARGETS = ['economy', 'warrior', 'archer', 'catapult', 'tower-1', 'tower-2', 'tower-3'] as const;
+export const UPGRADE_TARGETS = ['economy', 'warrior', 'archer', 'catapult'] as const;
 export type UpgradeTarget = typeof UPGRADE_TARGETS[number];
 export type BuildingKind = 'castle' | 'enemy-base' | 'relay' | 'barracks' | 'tower' | 'wall';
 export type Phase = 'playing' | 'tier-up' | 'won' | 'lost';
@@ -78,6 +78,7 @@ export type StrongholdCommand =
   | { type: 'READY'; ready: boolean }
   | { type: 'PLACE'; kind: 'relay' | 'barracks' | 'tower' | 'wall'; point: Point; rotation?: number }
   | { type: 'ROTATE_WALL'; id: number; direction?: 1 | -1 }
+  | { type: 'UPGRADE_TOWER'; id: number; tier: 2 | 3 }
   | { type: 'MOVE'; ids: number[]; point: Point }
   | { type: 'RALLY'; point: Point; ids?: number[] };
 export interface StrongholdConnection {

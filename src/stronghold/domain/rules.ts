@@ -7,7 +7,7 @@ export const ROLE_ACTIONS: Record<Role, readonly Action[]> = {
   economy: ['resources', 'worker', 'relay', 'upgrade'],
   production: ['resources', 'barracks', 'warrior', 'archer', 'catapult', 'upgrade'],
   army: ['resources'],
-  defenses: ['builder', 'tower', 'wall', 'upgrade']
+  defenses: ['builder', 'tower', 'wall']
 };
 export const ACTION_LABELS: Record<Action, string> = {
   resources: 'Gather supplies', worker: 'Recruit gatherer', relay: 'Place relay',

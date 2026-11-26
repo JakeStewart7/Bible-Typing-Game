@@ -1,6 +1,6 @@
 import { menuNavigationMarkup } from '../../ui/menu-navigation.ts';
 import { ACTION_LABELS, COSTS, isTypingAction, LENGTH_LABELS, MIN_TIER, ROLE_LABELS, TEXT_LENGTH_BONUSES } from '../domain/rules.ts';
-import { UPGRADE_OPTIONS } from '../domain/technology.ts';
+import { TOWER_UPGRADE_COSTS, UPGRADE_OPTIONS } from '../domain/technology.ts';
 import { PHRASE_LENGTHS, PLAYER_COLORS, ROLES, SEASONS, STARTING_ENTITIES, type Action, type Role, type UpgradeTarget } from '../domain/types.ts';
 import { STARTING_LIMITS } from '../domain/options.ts';
 import { SEASON_LABELS } from '../domain/environment.ts';
@@ -36,6 +36,10 @@ function upgrade(target: UpgradeTarget, shortcut: string): string {
   return `<button type="button" class="stronghold-upgrade-tile has-cost" data-action="upgrade" data-stronghold-upgrade="${target}" data-min-tier="${option.tier}" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}">
     ${lockIcon()}<span class="stronghold-action-label">Upgrade <span class="stronghold-upgrade-kind">${option.label}</span></span>${costMarkup(option.cost)}<small data-upgrade-level="${target}">Level 0</small><small data-action-blocker class="stronghold-action-blocker is-hidden"></small></button>`;
 }
+function towerUpgrade(tier: 2 | 3, shortcut: string): string {
+  return `<button type="button" class="stronghold-upgrade-tile has-cost" data-tower-upgrade="${tier}" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}">
+    ${lockIcon()}<span class="stronghold-action-label">Upgrade to T${tier}</span>${costMarkup(TOWER_UPGRADE_COSTS[tier])}<small data-tower-blocker class="stronghold-action-blocker">Select one tower</small></button>`;
+}
 function roleActions(role: Role): string {
   let index = 0;
   const task = (action: Action, label = ACTION_LABELS[action], tier?: number) => tile(action, label, tier, taskShortcut(index++));
@@ -47,8 +51,9 @@ function roleActions(role: Role): string {
     <div class="stronghold-build-row">${task('warrior', 'Warrior')}${task('archer', 'Archer')}${task('catapult', 'Catapult')}</div>
     <div class="stronghold-build-row">${improvement('warrior')}${improvement('archer')}${improvement('catapult')}</div>`;
   if (role === 'defenses') return `<div class="stronghold-build-row">${task('builder', 'Builder')}${task('wall', 'Wall')}</div>
-    <div class="stronghold-build-row">${[1, 2, 3].map(tier => task('tower', `Tower T${tier}`, tier)).join('')}</div>
-    <div class="stronghold-build-row">${improvement('tower-1')}${improvement('tower-2')}${improvement('tower-3')}</div>`;
+    <div class="stronghold-build-row">${task('tower', 'Tower T1', 1)}</div>
+    <small data-tower-status class="stronghold-player-status is-hidden"></small>
+    <div class="stronghold-build-row">${towerUpgrade(2, taskShortcut(index++))}${towerUpgrade(3, taskShortcut(index++))}</div>`;
   return '<span class="stronghold-action-label">Supplies</span>';
 }
 function playerCard(id: string, index: number): string {
@@ -102,9 +107,10 @@ export function strongholdWorkspaceMarkup(): string {
         <p>In any role, left-click or drag to select friendly units, right-click to move, and left-click empty ground to deselect. Shift adds units. Switching roles keeps your selection. Manual move orders take priority over combat and automatic rally orders until arrival; units then resume fighting. Right-click cancels placement or rally targeting; left-click places the building or rally point. A plus badge on the cursor shows targeting mode.</p>
         <p>Gatherers and builders resume nearest work after two idle seconds at their destination. Builders and walls cost no supplies, only typing work.</p>
         <p>Supplies, Gatherers, Barracks, Builders, Walls and Towers need typing, not supplies. Each typing option has a small progress bar; select it to show its progress in the main player-colored bar. More expensive buildings fill more slowly. Excess progress from a completed entry carries into the next bar. Once construction is ready, further entries do not bank more completions. Troops, upgrades and relays cost supplies without typing.</p>
+        <p>Defenses builds only T1 towers, using 50 typing work. Finish and select a tower, then buy Upgrade to T2 for 125 supplies and Upgrade to T3 for 180. Team Tier 2/3 must be unlocked; T3 needs a T2 tower first. Purchases affect only that tower, preserve existing damage and typing progress, and need room for the larger footprint. New towers remain T1. Escape cancels ready placement so you can select an existing tower. Towers gain one band per tier and become larger and darker; upgraded combat units gain one chevron per upgrade.</p>
         <p>Matches normally start at Tier 0, with T1 starting units and buildings. Complete the first shared tier challenge to unlock Army typing, T1 Barracks and towers. Army's work bar is locked at Tier 0; neither human nor computer Army players can type until Tier 1, except during shared tier challenges. Fill the work bar, then click the map to place. Each player chooses tasks independently; matching tasks share work, and prepared work survives tier challenges. Unit Control can type for supplies while issuing orders.</p>
         <p>Unavailable actions show their blocker: Needs Tier #, a supply shortage, missing or unfinished barracks, unit/building limits, missing builders, paused gameplay or computer-only controls. Upgrade limits name the next required tier, or Max level. Construction can be prepared without builders, but placement needs a living builder and an available building slot. Ready tiles say Place and are highlighted. The tier button shows only the current Tier # and cost; its blocker or waiting status appears underneath.</p>
-        <p>Each typing task keeps its progress when you switch tasks or roles. Building tiers keep separate progress. Dev options automatically saves defaults in this browser for new matches and refreshes.</p>
+        <p>Each typing task keeps its progress when you switch tasks or roles. Barracks tiers keep separate progress. Dev options automatically saves defaults in this browser for new matches and refreshes.</p>
         <p>Use the resource circle, sword, hollow cursor and castle buttons, or Ctrl+Tab / Ctrl+Shift+Tab, to switch roles. Tab selects the next unlocked task; Shift+Tab selects the previous one. There is no default rally point. Select a friendly castle or barracks and right-click to set its rally. Unit Control can set a shared rally for production buildings. Towers, walls and relays never have rally points.</p>
         <p>The command bar timer shows battle time, stopping during pauses, tier challenges and the match outcome. Build again and New game reset the battlefield, timer, typing, selections and camera using your saved new-match defaults.</p>
         <p>Arrow keys pan the map. Page Up selects longer text and Page Down shorter text, or click a length option. Shift+arrows still selects typed text. Alt+number chooses the matching displayed option in your current role.</p>
@@ -113,7 +119,7 @@ export function strongholdWorkspaceMarkup(): string {
         <p>World events begin at 1, 3, 5 and subsequent odd minutes of battle time, last 35 seconds, and leave normal typing between events.</p>
         <p>Tier Up costs 300, 600, then 1500 shared supplies, paid once when each challenge starts. It is unavailable until the team can afford it. Complete correct phrases to fill the shared bar; partial or incorrect entries do not count. The first challenge uses letters, the next letters and numbers, and the last adds symbols and punctuation. Anyone can contribute, even with computers stopped. Pause challenge keeps your progress; Resume challenge continues it.</p>
         <p>Summer makes all friendly and enemy units 15% faster. Winter makes all units 15% slower and both gathered and typed supplies worth 20% less. Spring makes both resource sources worth 20% more. Fall adds 15% to every completed typing task, including world events and Tier Up. Bonuses apply immediately; partial phrases still add no work.</p>
-        <p>Queue Warriors (60 supplies) at completed T1 Barracks, Archers (100) at T2 and Catapults (180) at T3. Supplies are paid when queued; each unit trains for 24 seconds, then stays nearby unless a rally is set. Gatherers and builders need 64 typing work; Barracks need 60 per tier and Towers 50 per tier. Units have tougher health and lower damage: melee is faster than archers, and siege is slowest. Enemies use the same formation stats. Waves grow every two waves, up to 12 invaders, with at least 65 seconds between waves. Empty barracks do not train automatically. Queues count toward population caps. Destroy the enemy base to win.</p>
+        <p>Queue Warriors (60 supplies) at completed T1 Barracks, Archers (100) at T2 and Catapults (180) at T3. Supplies are paid when queued; each unit trains for 24 seconds, then stays nearby unless a rally is set. Gatherers and builders need 64 typing work; Barracks need 60 per tier and T1 Towers 50 work. Units have tougher health and lower damage: melee is faster than archers, and siege is slowest. Enemies use the same formation stats. Waves grow every two waves, up to 12 invaders, with at least 65 seconds between waves. Empty barracks do not train automatically. Queues count toward population caps. Destroy the enemy base to win.</p>
         </div>
       </details>
       <details id="stronghold-dev-options" class="stronghold-dev-options">

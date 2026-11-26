@@ -1,8 +1,8 @@
 import { requireElement } from '../../shared/dom.ts';
 import { ACTION_LABELS, BUILDING_CAPS, EVENT_LABELS, isTypingAction, ROLE_ACTIONS, TIER_COSTS, TIER_MAX, UNIT_CAPS } from '../domain/rules.ts';
 import { tierProgress } from '../domain/tier-progress.ts';
-import { taskCost, taskWork } from '../domain/technology.ts';
-import { actionBlocker, actionRequiredTier, actionUnlockProblem, constructionBlocker, type ActionBlocker } from '../domain/actions.ts';
+import { taskCost, taskWork, TOWER_UPGRADE_COSTS } from '../domain/technology.ts';
+import { actionBlocker, actionRequiredTier, actionUnlockProblem, constructionBlocker, towerUpgradeBlocker, type ActionBlocker } from '../domain/actions.ts';
 import { taskKey } from '../domain/tasks.ts';
 import { PHRASE_LENGTHS, ROLES, UPGRADE_TARGETS, type StrongholdSnapshot, type TaskSelection } from '../domain/types.ts';
 import { createMapCamera } from './map-camera.ts';
@@ -39,7 +39,17 @@ export function strongholdElements() {
           tier: button.dataset.tier ? Number(button.dataset.tier) : undefined,
           upgrade: UPGRADE_TARGETS.find(target => target === button.dataset.strongholdUpgrade), minimumTier: Number(button.dataset.minTier) };
       });
-      return { role, element, buttons };
+      const towerUpgrades = [...element.querySelectorAll<HTMLButtonElement>('[data-tower-upgrade]')].map((button): {
+        element: HTMLButtonElement; tier: 2 | 3; blocker: HTMLElement;
+      } => {
+        const tier = Number(button.dataset.towerUpgrade);
+        const blocker = button.querySelector<HTMLElement>('[data-tower-blocker]');
+        if ((tier !== 2 && tier !== 3) || !blocker) throw new Error('Invalid Stronghold tower upgrade control.');
+        return { element: button, tier, blocker };
+      });
+      const towerStatus = element.querySelector<HTMLElement>('[data-tower-status]');
+      if (role === 'defenses' && !towerStatus) throw new Error('Missing Stronghold tower selection status.');
+      return { role, element, buttons, towerUpgrades, towerStatus };
     });
     return { id, card, groups, roleButtons: ROLES.map(role => {
       const element = requireElement(`stronghold-role-${id}-${role}`, HTMLButtonElement);
@@ -125,6 +135,14 @@ export function tierAvailability(snapshot: StrongholdSnapshot, player: Stronghol
     : `Unlock Tier ${snapshot.tier + 1} for ${cost} shared supplies when the team is ready.`;
   return { cost, disabled: Boolean(blocker), blocker, description: `${blocker ? blocker.description + ' ' : ''}${action}` };
 }
+export function selectedTowerAvailability(snapshot: StrongholdSnapshot, player: StrongholdSnapshot['players'][number],
+  selectedBuildings: ReadonlySet<number>, tier: 2 | 3, running: boolean) {
+  const tower = selectedBuildings.size === 1 ? snapshot.buildings.find(building => selectedBuildings.has(building.id)
+    && building.kind === 'tower' && !building.enemy && building.hp > 0) : undefined;
+  const blocker = controlBlocker(snapshot, player, running) ?? towerUpgradeBlocker(snapshot, player, tower?.id ?? null, tier);
+  return { tower, blocker, disabled: Boolean(blocker),
+    description: `${blocker ? blocker.description + ' ' : ''}Upgrade only the selected tower to T${tier} for ${TOWER_UPGRADE_COSTS[tier]} shared supplies.` };
+}
 const textElements = new Map<string, HTMLElement>();
 export function formatBattleTime(elapsed: number): string {
   const seconds = Math.floor(elapsed);
@@ -137,7 +155,7 @@ function text(id: string, value: string): void {
 }
 export function renderStronghold(
   elements: StrongholdElements, snapshot: StrongholdSnapshot, selected: ReadonlySet<number>, running: boolean, paused: boolean,
-  relayPlacement = false, placementCancelled = false, rallyPlacement = false, shown = true
+  relayPlacement = false, placementCancelled = false, rallyPlacement = false, shown = true, selectedBuildings: ReadonlySet<number> = new Set()
 ): void {
   const self = snapshot.players.find(player => player.id === snapshot.selfId);
   const ownCard = elements.playerCards.find(card => card.id === snapshot.selfId);
@@ -306,6 +324,23 @@ export function renderStronghold(
     }
     for (const group of entry.groups) {
       group.element.classList.toggle('is-hidden', group.role !== player.role);
+      for (const button of group.towerUpgrades) {
+        const availability = selectedTowerAvailability(snapshot, player, selectedBuildings, button.tier, running);
+        button.element.disabled = availability.disabled;
+        button.element.classList.toggle('is-unavailable', availability.disabled);
+        button.element.classList.toggle('is-unaffordable', snapshot.resources < TOWER_UPGRADE_COSTS[button.tier]);
+        button.element.classList.toggle('is-tier-locked', availability.blocker?.kind === 'tier');
+        button.element.querySelector('[data-tier-lock]')?.classList.toggle('is-hidden', availability.blocker?.kind !== 'tier');
+        setAttribute(button.element, 'data-blocker', availability.blocker?.kind ?? '');
+        setText(button.blocker, availability.blocker?.label ?? '');
+        button.blocker.classList.toggle('is-hidden', !availability.blocker);
+        setAttribute(button.element, 'data-tooltip', `${availability.description} (Alt+${button.element.dataset.shortcut})`);
+        setAttribute(button.element, 'aria-description', availability.description);
+        if (group.towerStatus) {
+          setText(group.towerStatus, own && availability.tower ? `Selected T${availability.tower.tier} tower` : '');
+          group.towerStatus.classList.toggle('is-hidden', !own || !availability.tower);
+        }
+      }
       for (const button of group.buttons) {
         const selection = { action: button.action, constructionTier: button.tier ?? 1, upgradeTarget: button.upgrade ?? player.upgradeTarget };
         const availability = taskAvailability(snapshot, player, selection, running);
