@@ -1,7 +1,7 @@
 import { menuNavigationMarkup } from '../../ui/menu-navigation.ts';
-import { ACTION_LABELS, COSTS, isTypingAction, LENGTH_LABELS, MIN_TIER, ROLE_LABELS, TEXT_LENGTH_BONUSES } from '../domain/rules.ts';
+import { ACTION_LABELS, COSTS, isTypingAction, LENGTH_LABELS, MIN_TIER, ROLE_LABELS, TEXT_LENGTH_BONUSES, TEXT_LENGTH_RANGES } from '../domain/rules.ts';
 import { TOWER_UPGRADE_COSTS, UPGRADE_OPTIONS } from '../domain/technology.ts';
-import { PHRASE_LENGTHS, PLAYER_COLORS, ROLES, SEASONS, STARTING_ENTITIES, type Action, type Role, type UpgradeTarget } from '../domain/types.ts';
+import { PHRASE_LENGTHS, PLAYER_COLORS, ROLES, SEASONS, STARTING_ENTITIES, type Action, type PhraseLength, type Role, type UpgradeTarget } from '../domain/types.ts';
 import { STARTING_LIMITS } from '../domain/options.ts';
 import { SEASON_LABELS } from '../domain/environment.ts';
 import { taskShortcut } from './keyboard.ts';
@@ -12,7 +12,18 @@ import { UNIT_CONTROL_ICON } from './player-theme.ts';
 
 export const PLAYER_IDS = ['you', 'bot-1', 'bot-2', 'bot-3'] as const;
 export const LENGTH_CONTROL_HELP = 'Click a text length. Page Up selects longer text; Page Down selects shorter text.';
-const UNIT_CONTROL_HELP = 'Typing produces shared supplies. Click or drag to select. Right-click to move. Shift adds units.';
+const UNIT_CONTROL_HELP = 'Typing produces shared supplies. Issue army orders or set a shared rally. Units can be selected and moved in any role.';
+export function lengthTooltip(length: PhraseLength): string {
+  const [minimum, maximum] = TEXT_LENGTH_RANGES[length];
+  return `${LENGTH_LABELS[length]} text: ${minimum}-${maximum} characters. Correct entries earn ${TEXT_LENGTH_BONUSES[length]}x typing work.`;
+}
+export function orderTooltip(id: string): string {
+  if (id === 'stronghold-select-army') return 'Select all friendly combat troops. Gatherers and builders are not included.';
+  if (id === 'stronghold-defend') return 'Gather all friendly combat troops in front of your castle to defend the approach.';
+  if (id === 'stronghold-assault') return 'Send all friendly combat troops toward the enemy base.';
+  if (id === 'stronghold-rally') return 'Choose a destination for newly trained troops. Updates the rally points of all castles and barracks.';
+  throw new Error(`Unknown Stronghold order: ${id}`);
+}
 const ROLE_HELP: Record<Role, string> = {
   economy: 'Recruit gatherers, earn shared supplies and connect relays.',
   production: 'Build barracks, train combat units and upgrade them.',
@@ -31,7 +42,7 @@ function costMarkup(value: number, id?: string): string {
   return `<span class="stronghold-cost"${id ? ` id="${id}"` : ''}><i class="stronghold-symbol stronghold-symbol--resource" aria-hidden="true"></i><span${id ? ' id="stronghold-tier-price"' : ''}>${value}</span><span class="sr-only"> supplies</span></span>`;
 }
 function orderButton(id: string, label: string, shortcut: number, icon: string): string {
-  return `<button id="stronghold-${id}" type="button" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}" data-tooltip="${label} (Alt+${shortcut})"${id === 'rally' ? ' aria-pressed="false"' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true">${icon}</svg><span>${label}</span><small data-order-blocker class="stronghold-action-blocker is-hidden"></small><kbd aria-hidden="true">${shortcut}</kbd></button>`;
+  return `<button id="stronghold-${id}" type="button" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}" data-tooltip="${orderTooltip(`stronghold-${id}`)} (Alt+${shortcut})"${id === 'rally' ? ' aria-pressed="false"' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true">${icon}</svg><span>${label}</span><small data-order-blocker class="stronghold-action-blocker is-hidden"></small><kbd aria-hidden="true">${shortcut}</kbd></button>`;
 }
 function tile(action: Action, label: string, tier: number | undefined, shortcut: string): string {
   return `<button type="button" class="stronghold-build-tile${COSTS[action] > 0 ? ' has-cost' : ''}" data-action="${action}"${tier ? ` data-tier="${tier}"` : ''} data-min-tier="${tier ?? MIN_TIER[action]}" data-shortcut="${shortcut}" aria-keyshortcuts="Alt+${shortcut}">
@@ -60,7 +71,7 @@ function roleActions(role: Role): string {
     <div class="stronghold-build-row">${task('tower', 'Tower T1', 1)}</div>
     <small data-tower-status class="stronghold-player-status is-hidden"></small>
     <div class="stronghold-build-row">${towerUpgrade(2, taskShortcut(index++))}${towerUpgrade(3, taskShortcut(index++))}</div>`;
-  return '<span class="stronghold-action-label" data-supply-output>+18 Supplies</span>';
+  return '<div class="stronghold-supply-summary"><span class="stronghold-action-label" data-supply-output>+18 Supplies</span></div>';
 }
 function playerCard(id: string, index: number): string {
   return `<section class="stronghold-player" data-player="${id}">
@@ -79,29 +90,29 @@ export function strongholdWorkspaceMarkup(): string {
       ${weatherMarkup()}
       <div class="stronghold-battlefield">
         <svg id="stronghold-map" viewBox="0 0 1000 650" role="img" aria-label="Stronghold battlefield: left-click or drag to select friendly units, right-click to move, or left-click to place a prepared building." tabindex="0"></svg>
-        <div id="stronghold-outcome" class="stronghold-outcome is-hidden"><h3 id="stronghold-outcome-title"></h3><p id="stronghold-outcome-copy"></p><button id="stronghold-play-again" class="primary-btn" type="button">Build again</button></div>
+        <div id="stronghold-outcome" class="stronghold-outcome is-hidden"><h3 id="stronghold-outcome-title"></h3><p id="stronghold-outcome-copy"></p><button id="stronghold-play-again" class="primary-btn" type="button" title="Start a fresh match using your saved defaults.">Build again</button></div>
       </div>
       <header class="stronghold-command-bar" aria-label="Kingdom command bar">
       <nav class="stronghold-map-toolbar" aria-label="Stronghold controls">${menuNavigationMarkup()}
-        <button id="stronghold-pause" type="button">Pause</button><button id="stronghold-restart" type="button">New game</button>
+        <button id="stronghold-pause" type="button" title="Pause the battle and typing without losing progress.">Pause</button><button id="stronghold-restart" type="button" title="Start a new match using your saved defaults. Resets the battlefield and typing progress.">New game</button>
         <button id="stronghold-computers" type="button" aria-pressed="false">Stop computers</button>
       </nav>
       <div class="stronghold-tier-mount"><button id="stronghold-ready" class="stronghold-tier" type="button" aria-pressed="false"><span id="stronghold-tier-label">Tier 0</span>${costMarkup(300, 'stronghold-tier-cost')}</button></div>
       <aside class="stronghold-hud" aria-label="Kingdom status">
         <div class="stronghold-populations">
-          <span class="stronghold-supplies" title="Shared supplies"><span class="sr-only">Shared supplies: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--resource"></i><b id="stronghold-resources">50</b></span>
-          <span title="Towers"><span class="sr-only">Towers: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--tower"></i><b id="stronghold-tower-count">0/8</b></span>
-          <span title="Warriors"><span class="sr-only">Warriors: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--warrior"></i><b id="stronghold-warrior-count">2/18</b></span>
-          <span title="Archers"><span class="sr-only">Archers: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--archer"></i><b id="stronghold-archer-count">0/12</b></span>
-          <span title="Catapults"><span class="sr-only">Catapults: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--catapult"></i><b id="stronghold-catapult-count">0/6</b></span>
-          <span title="Builders"><span class="sr-only">Builders: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--builder"></i><b id="stronghold-builder-count">1/4</b></span>
-          <span title="Gatherers"><span class="sr-only">Gatherers: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--worker"></i><b id="stronghold-worker-count">2/12</b></span>
+          <span class="stronghold-supplies" title="Shared team supplies. Spend them on troops, relays, upgrades and tier challenges."><span class="sr-only">Shared supplies: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--resource"></i><b id="stronghold-resources">50</b></span>
+          <span title="Towers on the map / tower limit. Towers defend automatically once constructed."><span class="sr-only">Towers: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--tower"></i><b id="stronghold-tower-count">0/8</b></span>
+          <span title="Living Warriors / population limit. Melee troops for close combat."><span class="sr-only">Warriors: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--warrior"></i><b id="stronghold-warrior-count">2/18</b></span>
+          <span title="Living Archers / population limit. Ranged troops that attack from a distance."><span class="sr-only">Archers: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--archer"></i><b id="stronghold-archer-count">0/12</b></span>
+          <span title="Living Catapults / population limit. Siege units that specialize in destroying buildings."><span class="sr-only">Catapults: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--catapult"></i><b id="stronghold-catapult-count">0/6</b></span>
+          <span title="Living Builders / population limit. Automatically construct and repair your buildings."><span class="sr-only">Builders: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--builder"></i><b id="stronghold-builder-count">1/4</b></span>
+          <span title="Living Gatherers / population limit. Automatically collect and deliver supplies."><span class="sr-only">Gatherers: </span><i aria-hidden="true" class="stronghold-symbol stronghold-symbol--worker"></i><b id="stronghold-worker-count">2/12</b></span>
         </div>
         <span id="stronghold-season" class="stronghold-season" aria-label="Seasonal effects" aria-live="polite" tabindex="0"></span>
       </aside>
       <div class="stronghold-utilities">
-      <span class="stronghold-match-clock" title="Battle time; pauses during tier challenges"><span class="sr-only">Battle time: </span><time id="stronghold-timer" datetime="PT0S">0:00</time></span>
-      <details class="stronghold-guide"><summary>Help</summary>
+      <span class="stronghold-match-clock" title="Elapsed battle time. Stops during pauses and shared tier challenges."><span class="sr-only">Battle time: </span><time id="stronghold-timer" datetime="PT0S">0:00</time></span>
+      <details class="stronghold-guide"><summary title="View game rules, controls and unit abilities.">Help</summary>
         <div class="stronghold-guide-content">
         <div class="stronghold-legend"><span>Dark red: enemies</span><span>□ Warrior</span><span>◇ Archer</span><span>▲ Catapult</span><span>△ Builder</span><span>○ Gatherer</span></div>
         <p>Completed characters, including spaces, advance your selected free task. Short is 1-5 characters at 1x, Medium 6-11 at 1.1x, Long 12-24 at 1.25x, and Extra Long 25-40 at 1.5x. All lengths use normal words or word groups.</p>
@@ -110,13 +121,13 @@ export function strongholdWorkspaceMarkup(): string {
         <p>Fog of war is shared by the whole team. Move units to explore; completed friendly buildings also reveal nearby ground. All sight and fog edges follow a 5-unit grid, sixteen times denser without changing sight ranges. Resource circles stay whole underneath fog shading instead of being clipped by terrain masks. Unexplored ground is darkened, not black; explored ground has a lighter shadow. Non-interactive last-seen silhouettes of resources, enemy buildings and troops have no health bars and do not track hidden movement or damage. Revisit to update them. Build only in current vision; gatherers use discovered nodes.</p>
         <p>Each node starts with 600 supplies and allows one harvest every 0.8 seconds, shared by nearby gatherers. Blue packs start at 3 supplies and purple packs at 6; economy upgrades add 2 per pack, and seasonal bonuses apply on delivery. Gatherers collect on contact and unload at a completed relay or castle, including during manual movement. Castle contact credits supplies immediately. Neutral glowing chunks travel through completed relay links. Hover a relay or castle, or place a relay, to see the 155-unit ranges of nearby completed and unfinished relays. Green previews reach the castle network; amber previews are disconnected or planned. Unfinished relays never transport supplies. Broken connections stop relay deliveries.</p>
         <p>In any role, left-click or drag to select friendly units, right-click to move, and left-click empty ground to deselect. Shift adds units. Switching roles keeps your selection. Manual move orders take priority over combat and automatic rally orders until arrival; units then resume fighting. Right-click cancels placement or rally targeting; left-click places the building or rally point. A plus badge on the cursor shows targeting mode.</p>
-        <p>Gatherers and builders resume nearest work after two idle seconds at their destination. Builders and walls cost no supplies, only typing work.</p>
+        <p>Gatherers and builders resume nearest work after two idle seconds at their destination. Builders and walls cost no supplies, only typing work. Unfinished buildings show how much actual construction is left. Select an assigned builder to follow that job bar beside the worker instead; it disappears when the building is finished.</p>
         <p>Supplies, Gatherers, Barracks, Builders, Walls and Towers need typing, not supplies. Bars show only the completion percentage; buttons show the output, such as +1 Gatherer or +18 Supplies. Supply outputs include current economy and seasonal bonuses. Ready building buttons say Place. Each typing option has a small progress bar; select it to show its progress in the main player-colored bar. More expensive buildings fill more slowly. Excess progress from a completed entry carries into the next bar. Once construction is ready, further entries do not bank more completions. Troops, upgrades and relays cost supplies without typing.</p>
         <p>Defenses builds only T1 towers, using 50 typing work. Finish and select a tower, then buy Upgrade to T2 for 125 supplies and Upgrade to T3 for 180. Team Tier 2/3 must be unlocked; T3 needs a T2 tower first. Purchases affect only that tower, preserve existing damage and typing progress, and need room for the larger footprint. New towers remain T1. Escape cancels ready placement so you can select an existing tower. Towers gain one band per tier and become larger and darker; upgraded combat units gain one chevron per upgrade.</p>
         <p>Matches normally start at Tier 0, with T1 starting units and buildings. Complete the first shared tier challenge to unlock Army typing, T1 Barracks and towers. Army's work bar is locked at Tier 0; neither human nor computer Army players can type until Tier 1, except during shared tier challenges. Fill the work bar, then click the map to place. Each player chooses tasks independently; matching tasks share work, and prepared work survives tier challenges. Unit Control can type for supplies while issuing orders.</p>
         <p>Unavailable actions show their blocker: Needs Tier #, a supply shortage, missing or unfinished barracks, unit/building limits, missing builders or paused gameplay. Read-only teammate controls explain ownership on hover. Upgrade limits name the next required tier, or Max level. Construction can be prepared without builders, but placement needs a living builder and an available building slot. Ready tiles say Place and are highlighted. The tier button shows only the current Tier # and cost; hover or focus it for availability and ready-state details.</p>
         <p>Each typing task keeps its progress when you switch tasks or roles. Barracks tiers keep separate progress. Dev options automatically saves defaults in this browser for new matches and refreshes.</p>
-        <p>Your role buttons show captions on wider screens; hover or focus an icon for its purpose. Use these buttons, or Ctrl+Tab / Ctrl+Shift+Tab, to switch roles. Selection feedback describes the next move, rally or tower-upgrade action, including upgrade blockers. Placement prompts name the building and the next click, with wall rotation shown only when relevant. Tab selects the next unlocked task; Shift+Tab selects the previous one. There is no default rally point. Select a friendly castle or barracks and right-click to set its rally. Unit Control can set a shared rally for production buildings. Towers, walls and relays never have rally points.</p>
+        <p>Role buttons show captions on wider screens; hover or focus a control for its purpose, costs and requirements. Player headers, work bars and action rows use aligned slots. Use the role buttons, or Ctrl+Tab / Ctrl+Shift+Tab, to switch roles. Selection feedback describes the next move, rally or tower-upgrade action, including upgrade blockers. Placement prompts name the building and the next click, with wall rotation shown only when relevant. Tab selects the next unlocked task; Shift+Tab selects the previous one. There is no default rally point. Select a friendly castle or barracks and right-click to set its rally. Unit Control can set a shared rally for production buildings. Towers, walls and relays never have rally points.</p>
         <p>The command bar timer shows battle time, stopping during pauses, tier challenges and the match outcome. Build again and New game reset the battlefield, timer, typing, selections and camera using your saved new-match defaults.</p>
         <p>Arrow keys pan the map. Page Up selects longer text and Page Down shorter text, or click a length option. Shift+arrows still selects typed text. Alt+number chooses the matching displayed option in your current role.</p>
         <p>The map starts at 200% zoom toward the home base. Scroll through 175%, 200%, 225% and 250%; Alt-drag, middle-drag or arrow keys pan. Leaves and other weather move with the map as you pan. Moving the pointer to a map edge does not scroll. Right-click moves units or cancels placement, never pans. Shift-drag still adds troops to your selection.</p>
@@ -128,27 +139,27 @@ export function strongholdWorkspaceMarkup(): string {
         </div>
       </details>
       <details id="stronghold-dev-options" class="stronghold-dev-options">
-        <summary>Dev options</summary>
+        <summary title="Set saved defaults for new matches or preview the current season, time and next wave.">Dev options</summary>
         <form id="stronghold-dev-form" class="stronghold-dev-panel">
           <h3>New game</h3>
           <label>Computers
-            <select id="stronghold-dev-computers"><option value="started">Started</option><option value="stopped">Stopped</option></select>
+            <select id="stronghold-dev-computers" title="Choose whether computer teammates begin new matches active or paused."><option value="started">Started</option><option value="stopped">Stopped</option></select>
           </label>
           <label>Text length
-            <select id="stronghold-dev-length">${PHRASE_LENGTHS.map(length => `<option value="${length}">${LENGTH_LABELS[length]}</option>`).join('')}</select>
+            <select id="stronghold-dev-length" title="Default typing length for new matches. Longer text earns more work per character.">${PHRASE_LENGTHS.map(length => `<option value="${length}">${LENGTH_LABELS[length]}</option>`).join('')}</select>
           </label>
           <label>Player color
-            <select id="stronghold-dev-color">${Object.entries(PLAYER_COLORS).map(([name, color]) => `<option value="${color}">${name}</option>`).join('')}</select>
+            <select id="stronghold-dev-color" title="Your player, selection and cursor color in new matches.">${Object.entries(PLAYER_COLORS).map(([name, color]) => `<option value="${color}">${name}</option>`).join('')}</select>
           </label>
-          <label>Supplies <input id="stronghold-dev-resources" type="number" min="0" max="10000" step="1" required></label>
-          <label>Tier <select id="stronghold-dev-tier">${[0, 1, 2, 3].map(tier => `<option value="${tier}">Tier ${tier}</option>`).join('')}</select></label>
+          <label>Supplies <input id="stronghold-dev-resources" title="Shared supplies available at the start of new matches." type="number" min="0" max="10000" step="1" required></label>
+          <label>Tier <select id="stronghold-dev-tier" title="Team tier unlocked at the start of new matches.">${[0, 1, 2, 3].map(tier => `<option value="${tier}">Tier ${tier}</option>`).join('')}</select></label>
           <fieldset class="stronghold-dev-counts"><legend class="sr-only">Starting forces</legend>${STARTING_ENTITIES.map(kind => {
             const labels = { worker: 'Gatherers', builder: 'Builders', warrior: 'Warriors', tower: 'Towers', archer: 'Archers', catapult: 'Catapults' };
-            return `<label>${labels[kind]} <input id="stronghold-dev-${kind}" type="number" min="0" max="${STARTING_LIMITS[kind]}" step="1" required></label>`;
+            return `<label>${labels[kind]} <input id="stronghold-dev-${kind}" title="${labels[kind]} available at the start of new matches. Maximum ${STARTING_LIMITS[kind]}." type="number" min="0" max="${STARTING_LIMITS[kind]}" step="1" required></label>`;
           }).join('')}</fieldset>
-          <label>Season <select id="stronghold-dev-starting-season"><option value="random">Random each game</option>${SEASONS.map(season => `<option value="${season}">${SEASON_LABELS[season]}</option>`).join('')}</select></label>
-          <label>Time <select id="stronghold-dev-period"><option value="day">Day</option><option value="night">Night</option></select></label>
-          <button type="submit">Apply &amp; new game</button>
+          <label>Season <select id="stronghold-dev-starting-season" title="Starting season for new matches. Random chooses a new season each game."><option value="random">Random each game</option>${SEASONS.map(season => `<option value="${season}">${SEASON_LABELS[season]}</option>`).join('')}</select></label>
+          <label>Time <select id="stronghold-dev-period" title="Choose whether new matches begin during the day or at night."><option value="day">Day</option><option value="night">Night</option></select></label>
+          <button type="submit" title="Save these defaults and start a fresh match.">Apply &amp; new game</button>
           <h3>Current match</h3>
           <p id="stronghold-dev-status" class="stronghold-control-blocker is-hidden"></p>
           <label>Season <select id="stronghold-dev-season">${SEASONS.map(season => `<option value="${season}">${SEASON_LABELS[season]}</option>`).join('')}</select></label>
@@ -157,10 +168,10 @@ export function strongholdWorkspaceMarkup(): string {
         </form>
       </details>
       <div class="stronghold-atmosphere-controls" role="group" aria-label="Soundtrack and credits">
-        <button id="stronghold-music" type="button" aria-pressed="true">Music on</button>
+        <button id="stronghold-music" type="button" aria-pressed="true" title="Mute or enable the seasonal soundtrack.">Music on</button>
         <label class="sr-only" for="stronghold-volume">Stronghold music volume</label>
-        <input id="stronghold-volume" type="range" min="0" max="0.5" step="0.01" value="0.18">
-        <button id="stronghold-open-credits" type="button">Credits</button>
+        <input id="stronghold-volume" title="Adjust the seasonal soundtrack volume." type="range" min="0" max="0.5" step="0.01" value="0.18">
+        <button id="stronghold-open-credits" type="button" title="View soundtrack artists, tracks and license information.">Credits</button>
         <output id="stronghold-music-status" class="stronghold-music-status is-hidden" role="status"></output>
       </div>
       </div>
@@ -176,7 +187,7 @@ export function strongholdWorkspaceMarkup(): string {
         <section id="stronghold-private" class="stronghold-private" aria-label="Your private typing area">
           <div class="stronghold-length-panel"><span id="stronghold-length-label" class="sr-only">Text length</span>
             <div id="stronghold-length" class="stronghold-length-wheel" role="listbox" aria-labelledby="stronghold-length-label" aria-activedescendant="stronghold-length-medium" aria-keyshortcuts="PageUp PageDown" title="${LENGTH_CONTROL_HELP}" tabindex="0">
-              ${PHRASE_LENGTHS.map(length => `<button id="stronghold-length-${length}" type="button" role="option" data-length="${length}" value="${length}" aria-selected="${length === 'medium'}" tabindex="-1">${LENGTH_LABELS[length]} <small class="stronghold-length-bonus">${TEXT_LENGTH_BONUSES[length]}x</small></button>`).join('')}
+              ${PHRASE_LENGTHS.map(length => `<button id="stronghold-length-${length}" title="${lengthTooltip(length)}" type="button" role="option" data-length="${length}" value="${length}" aria-selected="${length === 'medium'}" tabindex="-1">${LENGTH_LABELS[length]} <small class="stronghold-length-bonus">${TEXT_LENGTH_BONUSES[length]}x</small></button>`).join('')}
             </div>
           </div>
           <div id="stronghold-typed-area" class="typed-area stronghold-typed-area">
@@ -184,7 +195,7 @@ export function strongholdWorkspaceMarkup(): string {
             <div id="stronghold-typed-bar" class="typed-bar" aria-hidden="true"></div><input id="stronghold-input" class="typing-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type here">
           </div>
           <section id="stronghold-typing" class="stronghold-typing">
-            <div id="stronghold-phrase" class="text-display" data-horizontal-scroll="true" tabindex="0" aria-label="Your private text to type"></div>
+            <div id="stronghold-phrase" class="text-display" data-horizontal-scroll="true" tabindex="0" aria-label="Your private text to type" title="Type this text exactly. Correct entries advance your selected task or the shared tier challenge."></div>
             <div id="stronghold-typing-lock" class="stronghold-typing-lock is-hidden">${lockIcon('data-typing-lock')}<span id="stronghold-typing-lock-label">Needs Tier 1</span></div>
             <div class="progress-track is-hidden" aria-hidden="true"><div id="stronghold-typing-progress"></div></div>
           </section>

@@ -36,7 +36,7 @@ export function renderTierChallenge(elements: StrongholdElements, snapshot: Stro
     applyPlayerTheme(entry.card, player.color);
     entry.segment.style.backgroundColor = playerTheme(player.color).light;
     entry.segment.style.width = `${player.contribution / goal * 100}%`;
-    setAttribute(entry.segment, 'data-tooltip', `Player ${index + 1}: ${contribution}%`);
+    setAttribute(entry.segment, 'data-tooltip', `Player ${index + 1} has supplied ${contribution}% of the shared tier goal. Complete phrases to increase this contribution.`);
     setText(entry.name, `Player ${index + 1}`);
     setText(entry.typed, player.typed);
   });

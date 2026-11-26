@@ -27,31 +27,39 @@ export function taskProgress(player: Pick<Participant, 'action' | 'constructionT
     ...progress,
     label: `${Math.round(progress.percent)}%`,
     output,
-    description: `${progress.description}. Complete correct phrases to fill this bar. ${result}`
+    description: `${progress.description}. ${result}`
   };
 }
 
-export function taskButtonPresentation(task: Pick<Participant, 'action'>, name: string, supplies: number, ready = false) {
+export function taskButtonPresentation(task: Pick<Participant, 'action' | 'constructionTier' | 'upgradeTarget'>, name: string, supplies: number, ready = false) {
   if (task.action === 'resources') return {
     label: `+${supplies} Supplies`,
-    description: `Each full typing bar adds ${supplies} shared supplies to the team.`
+    description: `Each full typing bar adds ${supplies} shared supplies. Used for troops, relays and upgrades.`
   };
   if (task.action === 'tower' || task.action === 'barracks' || task.action === 'wall') return {
     label: ready ? `Place ${name}` : `+1 ${name}`,
-    description: ready ? 'Ready to place. Select this task, then click the map; a builder finishes construction.'
-      : 'Fill the typing bar, then click the map to place one building. A builder finishes construction.'
+    description: `${task.action === 'tower' ? 'Automatically fires at nearby enemies. Select a completed tower to upgrade it.'
+      : task.action === 'wall' ? 'Blocks enemy movement and protects your base. Scroll to rotate during placement.'
+      : `Trains ${task.constructionTier === 1 ? 'Warriors' : task.constructionTier === 2 ? 'Archers' : 'Catapults'}. Each barracks tier trains its own troop type.`} ${ready
+      ? 'Ready: click the map to place it. A builder finishes construction.'
+      : 'Type to prepare it, then click the map to place it. A builder finishes construction.'}`
   };
   if (task.action === 'worker' || task.action === 'builder') return {
     label: `+1 ${name}`,
-    description: 'Each full typing bar recruits one unit for the team, without spending supplies.'
+    description: `${task.action === 'worker' ? 'Automatically collects supplies and delivers them to a castle or relay.'
+      : 'Automatically constructs placed buildings and repairs damaged defenses.'} Each full typing bar recruits one.`
   };
   if (task.action === 'warrior' || task.action === 'archer' || task.action === 'catapult') return {
     label: `+1 ${name}`,
-    description: 'Purchase one training order at a matching completed barracks. No typing required.'
+    description: `${task.action === 'warrior' ? 'Melee troop for close-range combat.'
+      : task.action === 'archer' ? 'Ranged troop that attacks from a distance.'
+      : 'Slow siege unit. Deals extra damage to buildings and reduced damage to troops.'} Purchase one training order at a completed T${task.action === 'warrior' ? 1 : task.action === 'archer' ? 2 : 3} Barracks.`
   };
   if (task.action === 'relay') return {
     label: 'Place Relay',
-    description: 'Select this button, then click the map to place a relay. No typing required.'
+    description: 'Extends your supply delivery network. Connect it to the castle through nearby relays. Click the map to place it; no typing required.'
   };
-  return { label: name, description: 'Purchase a team-wide upgrade. No typing required.' };
+  return { label: name, description: task.upgradeTarget === 'economy'
+    ? 'Adds 2 base supplies to each gathered pack and 6 to each completed supply bar. Seasonal bonuses still apply.'
+    : `Improves all ${task.upgradeTarget === 'warrior' ? 'Warriors' : task.upgradeTarget === 'archer' ? 'Archers' : 'Catapults'}, including future recruits, with more health and attack damage.` };
 }

@@ -1,5 +1,5 @@
-import { connectedRelays, relayNeighbors } from '../domain/logistics.ts';
-import { distance, RELAY_RANGE } from '../domain/rules.ts';
+import { connectedRelays, relayNeighbors, resourcePackAmount } from '../domain/logistics.ts';
+import { distance, RELAY_RANGE, RESOURCE_GATHER_COOLDOWN } from '../domain/rules.ts';
 import { buildingScale, unitUpgrade } from '../domain/technology.ts';
 import type { Building, Point, ResourceChunk, ResourceNode, StrongholdSnapshot, Unit } from '../domain/types.ts';
 import { createSvgLayer, setAttribute, setText } from './dom-updates.ts';
@@ -8,6 +8,63 @@ import { TRAINING_SECONDS } from '../domain/training.ts';
 import { WALL_HALF_WIDTH } from '../domain/navigation.ts';
 import { exploredPath, visibleCells } from '../domain/fog.ts';
 
+export function constructionProgress(building: Pick<Building, 'progress'>) {
+  const percent = Math.min(100, Math.max(0, building.progress * 100));
+  const remaining = Math.ceil(100 - percent);
+  return { percent, remaining, label: `${remaining}% left`, description: `${remaining}% construction remaining. A builder must reach the site to finish it.` };
+}
+function buildingName(building: Pick<Building, 'kind' | 'tier' | 'enemy'>): string {
+  const names = { castle: 'Castle', 'enemy-base': 'Enemy base', relay: 'Relay', wall: 'Wall',
+    tower: `Tower T${building.tier}`, barracks: `Barracks T${building.tier}` };
+  return `${building.enemy && building.kind !== 'enemy-base' ? 'Enemy ' : ''}${names[building.kind]}`;
+}
+export function buildingDescription(building: Building): string {
+  const purpose = building.kind === 'castle' ? 'Your base receives delivered supplies. Protect it to stay in the battle.'
+    : building.kind === 'enemy-base' ? 'Destroy this stronghold to win.'
+    : building.kind === 'tower' ? 'Automatically attacks nearby opposing troops.'
+    : building.kind === 'wall' ? building.enemy ? 'Blocks your troops. Destroy it or find a route around it.' : 'Blocks enemy movement. Select and scroll to rotate.'
+    : building.kind === 'relay' ? 'Forwards delivered supplies through connected relays to the castle.'
+    : `Trains ${building.tier === 1 ? 'Warriors' : building.tier === 2 ? 'Archers' : 'Catapults'} from purchased orders.${building.enemy ? '' : ' Right-click while selected to set its rally.'}`;
+  const progress = building.progress < 1 ? ` ${constructionProgress(building).label} to build.` : '';
+  const order = building.trainingQueue[0];
+  const training = order ? ` Training ${order.kind}: ${Math.ceil(building.cooldown)}s left; ${building.trainingQueue.length} queued.` : '';
+  return `${buildingName(building)}. ${purpose} ${Math.ceil(building.hp)}/${building.maxHp} HP.${progress}${training}`;
+}
+export function unitDescription(unit: Unit, upgradeLevel = 0, project?: Building): string {
+  const names = { worker: 'Gatherer', builder: 'Builder', warrior: 'Warrior', archer: 'Archer', catapult: 'Catapult', invader: 'Invader' };
+  const kind = unit.formation ?? unit.kind;
+  const purposes = {
+    worker: 'Automatically harvests supplies and delivers them to a castle or relay.',
+    builder: 'Automatically constructs placed buildings and repairs damaged defenses.',
+    warrior: 'Melee troop for close-range combat.',
+    archer: 'Ranged troop that attacks from a distance.',
+    catapult: 'Slow siege unit. Strong against buildings, weaker against troops.',
+    invader: 'Enemy melee troop advancing on your castle.'
+  };
+  const job = unit.kind === 'builder' && project ? ` Assigned to ${project.progress < 1 ? 'build' : 'repair'} ${buildingName(project)}.${project.progress < 1 ? ` ${constructionProgress(project).label}.` : ''}` : '';
+  return `${unit.kind === 'invader' && unit.formation ? 'Enemy ' : ''}${names[kind]}. ${purposes[kind]} ${Math.ceil(unit.hp)}/${unit.maxHp} HP.${upgradeLevel ? ` Upgrade ${upgradeLevel}.` : ''}${job}`;
+}
+export function resourceNodeDescription(state: Pick<StrongholdSnapshot, 'upgrades'>, node: ResourceNode): string {
+  if (node.remaining <= 0) return 'Depleted resource node. Gatherers must find another source.';
+  return `${node.rich ? 'Rich' : 'Standard'} resource node. ${Math.ceil(node.remaining)} base supplies remaining. Packs yield ${resourcePackAmount(state, node)} before seasonal bonuses. One harvest every ${RESOURCE_GATHER_COOLDOWN}s per node.`;
+}
+function constructionBarMarkup(y: number, width: number): string {
+  return `<g data-construction data-width="${width}" visibility="hidden" role="progressbar" aria-label="Building construction" aria-valuemin="0" aria-valuemax="100">
+    <rect x="${-width / 2}" y="${y}" width="${width}" height="5" fill="#23372e"/>
+    <rect data-construction-fill x="${-width / 2}" y="${y}" width="0" height="5" fill="#a6ed89"/>
+    <text data-construction-left y="${y + 15}" text-anchor="middle" fill="#111" stroke="white" stroke-width="2" paint-order="stroke" font-size="9"></text><desc></desc></g>`;
+}
+function renderConstructionProgress(element: Element, project?: Building): void {
+  const bar = child(element, '[data-construction]');
+  setAttribute(bar, 'visibility', project && project.progress < 1 ? 'visible' : 'hidden');
+  if (!project || project.progress === 1) return;
+  const progress = constructionProgress(project);
+  setAttribute(child(bar, '[data-construction-fill]'), 'width', String(Number(bar.getAttribute('data-width')) * progress.percent / 100));
+  setAttribute(bar, 'aria-valuenow', String(100 - progress.remaining));
+  setAttribute(bar, 'aria-valuetext', progress.description);
+  setText(child(bar, '[data-construction-left]'), progress.label);
+  describe(bar, `${buildingName(project)}. ${progress.description}`);
+}
 function health(hp: number, max: number, y: number, width = 26): string {
   return `<rect x="${-width / 2}" y="${y}" width="${width}" height="3" fill="#1d3029"/><rect data-health x="${-width / 2}" y="${y}" width="${width * Math.max(0, hp / max)}" height="3" fill="#a6ed89"/>`;
 }
@@ -61,7 +118,7 @@ export function unitMarkup(unit: Unit, selected: boolean, showHealth = true, upg
     : unit.kind === 'archer' ? '<path d="M0 -10 L8 0 L0 10 L-8 0 Z" fill="#9ed7e6" stroke="#00aeef" stroke-width="2"/>'
     : unit.formation === 'archer' ? '<path d="M0 -10 L8 0 L0 10 L-8 0 Z" fill="#870018" stroke="#ff1726" stroke-width="2"/>'
     : '<rect x="-8" y="-8" width="16" height="16" fill="#870018" stroke="#ff1726" stroke-width="2"/>';
-  return `${actionEffectMarkup(unit.kind === 'worker' || unit.kind === 'builder', unit.kind === 'invader')}<circle data-selected r="${siege ? 27 : 16}" fill="none" stroke="#fff" stroke-width="2" visibility="${selected ? 'visible' : 'hidden'}"/><g data-visual>${shape}${level ? upgradeMarks(level, siege ? 7 : 0) : ''}</g>${showHealth ? health(unit.hp, unit.maxHp, siege ? 23 : 13, siege ? 34 : 20) : ''}<desc>${unit.kind}${unit.formation ? ' ' + unit.formation : ''}${showHealth ? `: ${Math.ceil(unit.hp)} HP` : ', last seen'}</desc>`;
+  return `${actionEffectMarkup(unit.kind === 'worker' || unit.kind === 'builder', unit.kind === 'invader')}<circle data-selected r="${siege ? 27 : 16}" fill="none" stroke="#fff" stroke-width="2" visibility="${selected ? 'visible' : 'hidden'}"/><g data-visual>${shape}${level ? upgradeMarks(level, siege ? 7 : 0) : ''}</g>${showHealth ? health(unit.hp, unit.maxHp, siege ? 23 : 13, siege ? 34 : 20) : ''}${showHealth && unit.kind === 'builder' ? constructionBarMarkup(23, 28) : ''}<desc>${showHealth ? unitDescription(unit, level) : `${unit.kind}, last seen`}</desc>`;
 }
 export function buildingMarkup(building: Building, showHealth = true): string {
   const color = building.enemy ? '#870018' : building.kind === 'relay' ? '#b0b0b0' : '#c3c3c3';
@@ -70,7 +127,7 @@ export function buildingMarkup(building: Building, showHealth = true): string {
     : building.kind === 'relay' ? `<path d="M-4 16 L-4 -7 L-9 -12 L0 -18 L9 -12 L4 -7 L4 16 Z" fill="${color}" stroke="#7f7f7f" stroke-width="2"/>`
     : building.kind === 'wall' ? `<rect data-wall-shape transform="rotate(${building.rotation ?? 0})" x="-23" y="${-WALL_HALF_WIDTH + 1.5}" width="46" height="${WALL_HALF_WIDTH * 2 - 3}" fill="${building.enemy ? color : '#ffdb58'}" stroke="${building.enemy ? '#ff1726' : '#e8ad23'}" stroke-width="3"/>`
     : `<rect x="${-size}" y="${-size}" width="${size * 2}" height="${size * 2}" fill="${color}" stroke="${building.enemy ? '#ff1726' : '#7f7f7f'}" stroke-width="4"/>`;
-  return `${actionEffectMarkup(false, building.enemy)}${shape}${showHealth ? health(building.hp, building.maxHp, building.kind === 'tower' ? 26 : size + 6, size * 2) : ''}<desc></desc>${building.kind === 'barracks' ? `<text data-tier y="5" text-anchor="middle" fill="#111" font-size="16">T${building.tier}</text>${showHealth ? `<g data-training><rect x="-17" y="26" width="34" height="8" fill="#23372e"/><rect x="-16" y="27" width="32" height="6" fill="#333"/><rect data-training-fill x="-16" y="27" width="0" height="6" fill="#a6ed89"/><text data-training-count y="43" text-anchor="middle" fill="#111" stroke="white" stroke-width="2" paint-order="stroke" font-size="12"></text></g>` : ''}` : ''}`;
+  return `${actionEffectMarkup(false, building.enemy)}${shape}${showHealth ? health(building.hp, building.maxHp, building.kind === 'tower' ? 26 : size + 6, size * 2) : ''}<desc>${showHealth ? buildingDescription(building) : `${buildingName(building)}, last seen`}</desc>${showHealth ? constructionBarMarkup(size + 16, Math.max(34, size * 2)) : ''}${building.kind === 'barracks' ? `<text data-tier y="5" text-anchor="middle" fill="#111" font-size="16">T${building.tier}</text>${showHealth ? `<g data-training><rect x="-17" y="26" width="34" height="8" fill="#23372e"/><rect x="-16" y="27" width="32" height="6" fill="#333"/><rect data-training-fill x="-16" y="27" width="0" height="6" fill="#a6ed89"/><text data-training-count y="43" text-anchor="middle" fill="#111" stroke="white" stroke-width="2" paint-order="stroke" font-size="12"></text></g>` : ''}` : ''}`;
 }
 function towerMarkup(building: Building): string {
   const outline = building.enemy ? '#ff1726' : '#cf9700';
@@ -124,8 +181,9 @@ function child(element: Element, selector: string): Element {
   return found;
 }
 function describe(element: Element, description: string): void {
-  setText(child(element, 'desc'), description);
+  setText(child(element, ':scope > desc'), description);
   setAttribute(element, 'data-tooltip', description);
+  setAttribute(element, 'aria-description', description);
 }
 function position(element: Element, point: { x: number; y: number }, scale = 1): void {
   setAttribute(element, 'transform', `translate(${point.x} ${point.y}) scale(${scale})`);
@@ -182,7 +240,7 @@ export function battlefieldMarkup(): string {
       <rect width="1000" height="650" fill="#14231b" fill-opacity=".3" mask="url(#stronghold-fog-shadow)"/>
       <rect width="1000" height="650" fill="#14231b" fill-opacity=".5" mask="url(#stronghold-fog-unexplored)"/>
     </g>
-    <g data-layer="rally" data-tooltip="Production rally point"><path d="M0 14V-15l20 7-20 7" fill="#e7d98b" stroke="#e7d98b" opacity=".6"/><desc>Production rally point</desc></g>`;
+    <g data-layer="rally" data-tooltip="Shared rally point. Newly trained troops move here unless their barracks has its own rally."><path d="M0 14V-15l20 7-20 7" fill="#e7d98b" stroke="#e7d98b" opacity=".6"/><desc>Shared rally point for newly trained troops</desc></g>`;
 }
 export function createBattlefieldRenderer(map: SVGSVGElement) {
   map.innerHTML = battlefieldMarkup();
@@ -192,12 +250,14 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     return found;
   }
   let selection: ReadonlySet<number> = new Set();
-  let technology: Pick<StrongholdSnapshot, 'technology'> | null = null;
+  let technology: Pick<StrongholdSnapshot, 'technology' | 'upgrades'> | null = null;
   let elapsed = 0;
   let selectionColor = '#ffb3c9';
   const previousUnits = new Map<number, Point>();
   const unitDirections = new Map<number, Point>();
   let connectedRelayIds = new Set<number>();
+  let projects = new Map<number, Building>();
+  let selectedProjects = new Set<number>();
   const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
   const visible = child(map, '[data-visible]');
   const renderRememberedUnits = createSvgLayer<Unit>(layer('remembered-units'), unit => unitMarkup(unit, false, false),
@@ -238,7 +298,9 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     setAttribute(child(element, '[data-health]'), 'width', String(((unit.formation ?? unit.kind) === 'catapult' ? 34 : 20) * Math.max(0, unit.hp / unit.maxHp)));
     const arm = element.querySelector('[data-catapult-arm]');
     if (arm) setAttribute(arm, 'transform', `rotate(${-unit.attackWindup * 12})`);
-    describe(element, `${unit.kind}${unit.formation ? ' ' + unit.formation : ''}: ${Math.ceil(unit.hp)} HP / upgrade ${level}`);
+    const project = unit.kind === 'builder' && unit.task !== null ? projects.get(unit.task) : undefined;
+    describe(element, unitDescription(unit, level, project));
+    if (unit.kind === 'builder') renderConstructionProgress(element, selection.has(unit.id) ? project : undefined);
   }, unit => {
     if (!technology) throw new Error('Missing Stronghold technology snapshot.');
     return `${unit.kind}/${unit.formation}/${unitUpgrade(technology, unit)}`;
@@ -254,7 +316,8 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
     setAttribute(element, 'opacity', building.progress < 1 ? String(.3 + building.progress * .7) : '1');
     const width = building.kind === 'castle' || building.kind === 'enemy-base' ? 68 : 28;
     setAttribute(child(element, '[data-health]'), 'width', String(width * Math.max(0, building.hp / building.maxHp)));
-    describe(element, `${building.kind} / T${building.tier}: ${Math.ceil(building.hp)} HP, ${Math.round(building.progress * 100)}% built${building.kind === 'wall' && !building.enemy ? '. Defenses: click to select; Rotate or Alt+R turns the wall. Shift-click rotates immediately.' : ''}`);
+    describe(element, buildingDescription(building));
+    renderConstructionProgress(element, selectedProjects.has(building.id) ? undefined : building);
     const tier = element.querySelector('[data-tier]');
     if (tier) setText(tier, `T${building.tier}`);
     const training = element.querySelector('[data-training]');
@@ -263,14 +326,14 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
       setAttribute(training, 'visibility', order ? 'visible' : 'hidden');
       setAttribute(child(training, '[data-training-fill]'), 'width', String(order ? 32 * Math.max(0, 1 - building.cooldown / TRAINING_SECONDS) : 0));
       setText(child(training, '[data-training-count]'), order ? `${order.kind}: ${building.trainingQueue.length} queued` : '');
-      if (order) describe(element, `T${building.tier} Barracks: ${order.kind}, ${Math.ceil(building.cooldown)}s remaining; ${building.trainingQueue.length} queued`);
     }
   }, building => `${building.kind}/${building.enemy}/${building.tier}`);
   const renderNodes = createSvgLayer<ResourceNode>(layer('nodes'), node =>
     `<circle r="${node.rich ? 27 : 24}" stroke="${node.rich ? '#a64caf' : '#00aeef'}" stroke-width="3"/><desc></desc>`, (element, node) => {
     position(element, node);
     setAttribute(child(element, 'circle'), 'fill', node.remaining <= 0 ? '#aaa' : node.rich ? '#ccc0e0' : '#9ed7e6');
-    describe(element, `${node.rich ? 'Rich' : 'Standard'} resource node: ${Math.ceil(node.remaining)} remaining`);
+    if (!technology) throw new Error('Missing Stronghold technology snapshot.');
+    describe(element, resourceNodeDescription(technology, node));
   }, node => String(node.rich));
   const transporting = (chunk: ResourceChunk) => chunk.carrier === null && chunk.target !== null && connectedRelayIds.has(chunk.target);
   const renderChunks = createSvgLayer<ResourceChunk>(layer('chunks'), chunk => resourceChunkMarkup(chunk, transporting(chunk)), (element, chunk) => {
@@ -285,6 +348,10 @@ export function createBattlefieldRenderer(map: SVGSVGElement) {
   const render = (snapshot: StrongholdSnapshot, selected: ReadonlySet<number>): void => {
     selection = selected;
     technology = snapshot;
+    projects = new Map(snapshot.buildings.filter(building => !building.enemy && building.hp > 0
+      && (building.progress < 1 || building.hp < building.maxHp)).map(building => [building.id, building]));
+    selectedProjects = new Set(snapshot.units.flatMap(unit => unit.kind === 'builder' && unit.hp > 0
+      && selection.has(unit.id) && unit.task !== null ? [unit.task] : []));
     elapsed = snapshot.elapsed;
     setAttribute(visible, 'd', exploredPath(visibleCells(snapshot.fog.sources)));
     if (exploredCount !== snapshot.fog.explored.length) {

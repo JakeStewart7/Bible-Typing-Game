@@ -45,7 +45,7 @@ test('Stronghold places input before the prompt and replaces tier labels with ac
   equal(markup.includes('Place at T1'), false);
   equal(markup.includes('data-tier-lock'), true);
   equal(markup.includes('<span>PgUp</span><span>PgDn</span>'), false);
-  equal(markup.includes('data-tooltip="Defend (Alt+2)"'), true);
+  equal(markup.includes('data-tooltip="Gather all friendly combat troops in front of your castle to defend the approach. (Alt+2)"'), true);
 });
 
 test('Stronghold role icon buttons replace dropdowns and expose selected-state semantics for every player', () => {

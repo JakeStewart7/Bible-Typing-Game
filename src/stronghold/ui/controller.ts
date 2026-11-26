@@ -18,6 +18,11 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   defaults: DeveloperOptions; save(options: DeveloperOptions): void;
 }) {
   const elements = strongholdElements();
+  const menuButton = elements.screen.querySelector('.back-to-menu');
+  if (!menuButton) throw new Error('Missing Stronghold menu button.');
+  const menuHelp = 'Return to the main menu. Stronghold pauses while you are away.';
+  setAttribute(menuButton, 'data-tooltip', menuHelp);
+  setAttribute(menuButton, 'aria-description', menuHelp);
   const playerCursor = createPlayerCursor();
   const credits = requireElement('stronghold-credits', HTMLDialogElement);
   const musicButton = requireElement('stronghold-music', HTMLButtonElement);
@@ -27,7 +32,9 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   const music = createSeasonalMusic(new Audio(), status => {
     setText(musicButton, status.enabled ? 'Music on' : 'Music off');
     musicButton.setAttribute('aria-pressed', String(status.enabled));
-    musicButton.title = status.track ? `${status.track.title} - Kevin MacLeod` : 'Seasonal soundtrack';
+    const description = `${status.enabled ? 'Mute' : 'Enable'} the seasonal soundtrack.${status.track ? ` Playing ${status.track.title} by Kevin MacLeod.` : ''}`;
+    setAttribute(musicButton, 'data-tooltip', description);
+    setAttribute(musicButton, 'aria-description', description);
     setText(currentTrack, status.track?.title ?? '');
     setText(musicStatus, status.message);
     musicStatus.classList.toggle('is-hidden', !status.message);
@@ -140,7 +147,10 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     setAttribute(cancelPlacementButton, 'aria-description', cancelHelp);
     if (wall && running()) elements.placement.classList.remove('is-hidden');
     renderMapPreview();
-    setText(elements.selection, selectionGuidance(snapshot, selected, selectedBuildings, running()));
+    const selectionHelp = selectionGuidance(snapshot, selected, selectedBuildings, running());
+    setText(elements.selection, selectionHelp);
+    setAttribute(elements.selection, 'data-tooltip', selectionHelp);
+    setAttribute(elements.selection, 'aria-description', selectionHelp);
     elements.selection.classList.toggle('is-hidden', snapshot.phase !== 'playing' || (!selected.size && !selectedBuildings.size)
       || Boolean(errorMessage || kind || wall || rallyPlacement));
     const selecting = drag?.moved && running() && snapshot.phase === 'playing' && !placing() && !rallyPlacement;

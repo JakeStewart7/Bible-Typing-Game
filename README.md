@@ -321,8 +321,11 @@ available, but ready placement waits for one. Ready construction tiles say
 **Place** and use a stronger player-colored highlight.
 Player panels show their names once, without extra ownership, computer or stopped
 captions. The local panel uses **Player 1** instead of a repeated **You** subtitle.
-The local role buttons have visible captions on wider screens and purpose-specific
-hover/focus help; narrow layouts retain the compact icons so actions stay reachable.
+Player headers, role controls, main progress bars and action rows share aligned grid
+slots. Role buttons have visible captions on wider screens; narrow layouts retain
+compact icons and reserve space for usable action rows.
+Tooltips explain each unit, building, order and upgrade rather than only repeating
+its label. They include relevant costs, training times and live blockers.
 Map selections explain the next move, rally or individual tower-upgrade action,
 using the same upgrade blockers as the purchase buttons. These hints yield to errors
 and placement controls. Placement prompts name the building and the next click;
@@ -363,6 +366,10 @@ connections but do not deliver resources until construction finishes.
 Towers retain the simple T silhouette, growing subtly larger and darker at T2/T3.
 One, two or three horizontal bands identify their tier without relying on color alone.
 Attack impacts retain their explosion without the extra crossing slash lines.
+Unfinished buildings show construction bars labeled with the percentage **left**.
+Selecting an assigned builder moves that job bar beside the worker instead of
+duplicating it on the site. These track actual building work, not the health bar or
+the typing work used to prepare the blueprint, and disappear when construction finishes.
 
 Units prefer routes around all living buildings, including unfinished structures.
 Buildings may be placed over units; those units can move out, and units may pass

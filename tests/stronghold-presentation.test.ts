@@ -1,6 +1,6 @@
 import { addBuilding, addUnit, createStronghold } from './stronghold-fixtures.ts';
-import { unitMarkup } from '../src/stronghold/ui/battlefield.ts';
-import { strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
+import { buildingDescription, buildingMarkup, constructionProgress, resourceNodeDescription, unitDescription, unitMarkup } from '../src/stronghold/ui/battlefield.ts';
+import { lengthTooltip, orderTooltip, strongholdWorkspaceMarkup } from '../src/stronghold/ui/workspace.ts';
 import { equal, test } from './harness.ts';
 import { PLAYER_COLORS } from '../src/stronghold/domain/types.ts';
 import { StrongholdEngine } from '../src/stronghold/domain/engine.ts';
@@ -221,14 +221,76 @@ test('Stronghold work bars contain only percentages while buttons explain output
       equal(/^\d+%$/.test(taskProgress({ ...player, action, work }, 64, 21.6).label), true);
     }
   }
-  equal(taskButtonPresentation({ action: 'worker' }, 'Gatherer', 18).label, '+1 Gatherer');
-  equal(taskButtonPresentation({ action: 'builder' }, 'Builder', 18).label, '+1 Builder');
-  equal(taskButtonPresentation({ action: 'resources' }, 'Supplies', 21.6).label, '+21.6 Supplies');
-  equal(taskButtonPresentation({ action: 'tower' }, 'Tower T1', 18).label, '+1 Tower T1');
-  equal(taskButtonPresentation({ action: 'tower' }, 'Tower T1', 18, true).label, 'Place Tower T1');
-  equal(taskButtonPresentation({ action: 'barracks' }, 'Barracks T3', 18, true).label, 'Place Barracks T3');
-  equal(taskButtonPresentation({ action: 'warrior' }, 'Warrior', 18).label, '+1 Warrior');
-  equal(taskButtonPresentation({ action: 'warrior' }, 'Warrior', 18).description.includes('training order'), true);
-  equal(taskButtonPresentation({ action: 'relay' }, 'Relay', 18).label, 'Place Relay');
-  equal(taskButtonPresentation({ action: 'upgrade' }, 'Upgrade Economy', 18).label, 'Upgrade Economy');
+  equal(taskButtonPresentation({ ...player, action: 'worker' }, 'Gatherer', 18).label, '+1 Gatherer');
+  equal(taskButtonPresentation({ ...player, action: 'builder' }, 'Builder', 18).label, '+1 Builder');
+  equal(taskButtonPresentation({ ...player, action: 'resources' }, 'Supplies', 21.6).label, '+21.6 Supplies');
+  equal(taskButtonPresentation({ ...player, action: 'tower' }, 'Tower T1', 18).label, '+1 Tower T1');
+  equal(taskButtonPresentation({ ...player, action: 'tower' }, 'Tower T1', 18, true).label, 'Place Tower T1');
+  equal(taskButtonPresentation({ ...player, action: 'barracks', constructionTier: 3 }, 'Barracks T3', 18, true).label, 'Place Barracks T3');
+  equal(taskButtonPresentation({ ...player, action: 'warrior' }, 'Warrior', 18).label, '+1 Warrior');
+  equal(taskButtonPresentation({ ...player, action: 'warrior' }, 'Warrior', 18).description.includes('training order'), true);
+  equal(taskButtonPresentation({ ...player, action: 'relay' }, 'Relay', 18).label, 'Place Relay');
+  equal(taskButtonPresentation({ ...player, action: 'upgrade' }, 'Upgrade Economy', 18).label, 'Upgrade Economy');
+});
+
+test('Stronghold task tooltips describe distinct abilities, barracks specializations and upgrade effects', () => {
+  const player = createStronghold().players[0]!;
+  const descriptions = (['worker', 'builder', 'resources', 'tower', 'wall', 'relay', 'warrior', 'archer', 'catapult'] as const)
+    .map(action => taskButtonPresentation({ ...player, action }, action, 18).description);
+  equal(new Set(descriptions).size, descriptions.length);
+  equal(descriptions[0]?.includes('delivers them'), true);
+  equal(descriptions[1]?.includes('repairs'), true);
+  equal(descriptions[3]?.includes('Automatically fires'), true);
+  equal(descriptions[4]?.includes('Scroll to rotate'), true);
+  equal(descriptions[8]?.includes('extra damage to buildings'), true);
+  for (const [index, troop] of ['Warriors', 'Archers', 'Catapults'].entries()) {
+    equal(taskButtonPresentation({ ...player, action: 'barracks', constructionTier: index + 1 }, 'Barracks', 18).description.includes(`Trains ${troop}`), true);
+  }
+  equal(taskButtonPresentation({ ...player, action: 'upgrade', upgradeTarget: 'economy' }, 'Economy', 18).description.includes('2 base supplies'), true);
+  for (const upgradeTarget of ['warrior', 'archer', 'catapult'] as const) {
+    equal(taskButtonPresentation({ ...player, action: 'upgrade', upgradeTarget }, upgradeTarget, 18).description.includes('future recruits'), true);
+  }
+});
+
+test('Stronghold construction bars and builder descriptions show the remaining job rather than full health', () => {
+  const state = createStronghold();
+  const project = addBuilding(state, 'wall', { x: 500, y: 400 });
+  const builder = addUnit(state, 'builder', { x: 480, y: 400 });
+  for (const [progress, remaining] of [[0, 100], [.25, 75], [.5, 50], [.999, 1], [1, 0]]) {
+    project.progress = progress!;
+    equal(constructionProgress(project).remaining, remaining);
+    equal(constructionProgress(project).label, `${remaining}% left`);
+  }
+  project.progress = .25;
+  equal(unitDescription(builder, 0, project).includes('75% left'), true);
+  equal(buildingDescription(project).includes('75% left'), true);
+  equal(buildingMarkup(project).includes('data-construction-fill'), true);
+  equal(unitMarkup(builder, false).includes('data-construction-left'), true);
+  equal(buildingMarkup(project, false).includes('data-construction'), false);
+  equal(unitMarkup(builder, false, false).includes('data-construction'), false);
+});
+
+test('Stronghold map and control tooltips explain gameplay instead of repeating labels', () => {
+  const state = createStronghold();
+  const purposes = { worker: 'harvests supplies', builder: 'constructs placed buildings', warrior: 'close-range combat',
+    archer: 'attacks from a distance', catapult: 'Strong against buildings', invader: 'advancing on your castle' };
+  for (const kind of ['worker', 'builder', 'warrior', 'archer', 'catapult', 'invader'] as const) {
+    const unit = addUnit(state, kind, { x: 500, y: 400 });
+    equal(unitDescription(unit).includes(purposes[kind]), true);
+    equal(unitDescription(unit).includes('/'), true);
+  }
+  const node = { id: 900, x: 500, y: 400, remaining: 600, rich: false, cooldown: 0 };
+  equal(resourceNodeDescription(state, node).includes('600 base supplies'), true);
+  equal(resourceNodeDescription(state, node).includes('yield 3 before seasonal bonuses'), true);
+  equal(resourceNodeDescription(state, node).includes('0.8s per node'), true);
+  equal(resourceNodeDescription(state, { ...node, rich: true }).includes('yield 6'), true);
+  equal(resourceNodeDescription(state, { ...node, remaining: 0 }).includes('find another source'), true);
+  equal(orderTooltip('stronghold-defend').includes('in front of your castle'), true);
+  equal(orderTooltip('stronghold-assault').includes('enemy base'), true);
+  equal(lengthTooltip('extra-long'), 'Extra Long text: 25-40 characters. Correct entries earn 1.5x typing work.');
+  const markup = strongholdWorkspaceMarkup();
+  for (const id of ['stronghold-pause', 'stronghold-restart', 'stronghold-volume', 'stronghold-open-credits', 'stronghold-dev-resources']) {
+    const control = new RegExp(`id="${id}"[^>]*>`).exec(markup)?.[0];
+    equal(control?.includes('title='), true);
+  }
 });
