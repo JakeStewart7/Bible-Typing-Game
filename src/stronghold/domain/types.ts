@@ -33,7 +33,7 @@ export type Building = Point & {
   trainingQueue: { kind: ArmyUnitKind; playerId: string }[];
   rally: Point | null;
 };
-export type ResourceNode = Point & { id: number; rich: boolean; remaining: number };
+export type ResourceNode = Point & { id: number; rich: boolean; remaining: number; cooldown: number };
 export type ResourceChunk = Point & { id: number; amount: number; rich: boolean; target: number | null; carrier: number | null };
 export type VisionSource = Point & { id: string; radius: number };
 export type FogOfWar = {

@@ -250,7 +250,7 @@ test('Stronghold rich nodes yield twice the resources and depleted nodes stop mi
   function mine(rich: boolean): number {
     const state = createStronghold();
     state.units = [];
-    state.nodes = [{ id: 50, x: 500, y: 540, rich, remaining: 100 }];
+    state.nodes = [{ id: 50, x: 500, y: 540, rich, remaining: 100, cooldown: 0 }];
     addUnit(state, 'worker', { x: 500, y: 540 });
     updateLogistics(state, .1);
     return state.chunks[0]?.amount ?? 0;

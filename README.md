@@ -368,8 +368,12 @@ Units prefer routes around all living buildings, including unfinished structures
 Buildings may be placed over units; those units can move out, and units may pass
 through ordinary buildings when no route around exists rather than becoming trapped.
 Resource circles (including depleted nodes) and both castles are always solid.
-Gatherers harvest immediately on touching a node's visible border, without a
-harvest cooldown, and touching a completed castle credits supplies immediately.
+Each resource node starts with **600 base supplies** and permits one harvest every
+**0.8 seconds**, shared by all gatherers touching that node. Standard packs start
+at **3 supplies**, rich packs at **6**; economy upgrades add 2 per pack, and seasonal
+resource bonuses apply on delivery. The final pack cannot exceed the node's remaining supplies.
+Gatherers harvest on touching an available node's visible border, and
+touching a completed castle credits supplies immediately.
 Contact pickup/delivery also works during manual orders and idle waiting.
 They stay outside the solid borders; builders repair
 castles from outside, and melee troops attack their outer edges.

@@ -3,6 +3,7 @@ import { SEASONS, type ResourceNode, type Season, type StrongholdState } from '.
 export const DAY_SECONDS = 180;
 export const NIGHT_SECONDS = 180;
 export const TWILIGHT_SECONDS = 15;
+export const RESOURCE_NODE_CAPACITY = 600;
 export const SEASON_LABELS: Record<Season, string> = {
   spring: 'Spring', summer: 'Summer', fall: 'Fall', winter: 'Winter'
 };
@@ -43,7 +44,7 @@ export function randomSeason(random: () => number = seasonSample): Season {
 export function seasonalNodes(season: Season): ResourceNode[] {
   return LAYOUTS[season].map(([x, y], index) => {
     const rich = index === 5 || index === 6;
-    return { id: 100 + x, x, y, rich, remaining: rich ? 1200 : 800 };
+    return { id: 100 + x, x, y, rich, remaining: RESOURCE_NODE_CAPACITY, cooldown: 0 };
   });
 }
 

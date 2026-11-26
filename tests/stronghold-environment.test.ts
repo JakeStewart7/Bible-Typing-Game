@@ -86,7 +86,7 @@ test('Stronghold seasonal layouts only move resource nodes and keep their counts
     equal(state.season, season);
     equal(state.nodes.length, 8);
     equal(state.nodes.filter(node => node.rich).length, 2);
-    equal(state.nodes.reduce((sum, node) => sum + node.remaining, 0), 7200);
+    equal(state.nodes.reduce((sum, node) => sum + node.remaining, 0), 4800);
     equal(new Set(state.nodes.map(node => node.id)).size, 8);
     equal(state.units, original.units);
     equal(state.buildings, original.buildings);
@@ -101,7 +101,7 @@ test('Stronghold seasonal layouts only move resource nodes and keep their counts
     }
     layouts.add(JSON.stringify(state.nodes.map(node => [node.x, node.y])));
     state.nodes[0]!.remaining = 0;
-    equal(seasonalNodes(season)[0]?.remaining, 800);
+    equal(seasonalNodes(season)[0]?.remaining, 600);
   }
   equal(layouts.size, 4);
 });

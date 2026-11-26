@@ -824,13 +824,13 @@ test('Stronghold cargo retains its blue or purple origin independently of yield 
   for (const rich of [false, true]) {
     const state = createStronghold();
     state.units = [];
-    state.nodes = [{ id: 500, x: 500, y: 540, rich, remaining: 100 }];
+    state.nodes = [{ id: 500, x: 500, y: 540, rich, remaining: 6, cooldown: 0 }];
     state.upgrades.economy = rich ? 0 : 2;
     const worker = addUnit(state, 'worker', { x: 500, y: 540 });
     updateLogistics(state, .1);
     const chunk = state.chunks[0];
     if (!chunk) throw new Error('Missing harvested cargo.');
-    equal(chunk.amount, 8);
+    equal(chunk.amount, 6);
     equal(chunk.rich, rich);
     equal(chunk.carrier, worker.id);
     const carried = resourceChunkMarkup(chunk, false);

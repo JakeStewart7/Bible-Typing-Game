@@ -202,7 +202,7 @@ test('Stronghold tower upgrade geometry reserves the larger footprint without re
   executeCommand(state, player, { type: 'UPGRADE_TOWER', id: tower.id, tier: 2 });
   equal(tower.tier, 2);
   equal(state.buildings.filter(building => building.kind === 'tower' && !building.enemy).length, 8);
-  state.nodes = [{ id: 900, x: tower.x + 46, y: tower.y, rich: false, remaining: 10 }];
+  state.nodes = [{ id: 900, x: tower.x + 46, y: tower.y, rich: false, remaining: 10, cooldown: 0 }];
   equal(towerUpgradeBlocker(state, player, tower.id, 3)?.label, 'Needs more space');
 });
 

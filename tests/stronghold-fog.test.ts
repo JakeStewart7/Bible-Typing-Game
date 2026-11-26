@@ -127,7 +127,7 @@ test('Stronghold fog freezes last-seen positions and health and clears stale mem
   const scout = addUnit(state, 'warrior', { x: 400, y: 300 });
   const enemy = addUnit(state, 'invader', { x: 450, y: 300 });
   const tower = addBuilding(state, 'tower', { x: 460, y: 350 }, true, true);
-  const node = { id: 900, x: 440, y: 400, rich: false, remaining: 100 };
+  const node = { id: 900, x: 440, y: 400, rich: false, remaining: 100, cooldown: 0 };
   state.nodes = [node];
   updateFog(state);
   const cells = [...state.fog.explored], hp = tower.hp;
@@ -160,7 +160,7 @@ test('Stronghold gatherers select discovered resources without reading hidden de
   const state = createStronghold();
   state.units = []; state.buildings = []; state.fog = createFog();
   const worker = addUnit(state, 'worker', { x: 100, y: 300 });
-  const node = { id: 900, x: 500, y: 300, rich: false, remaining: 100 };
+  const node = { id: 900, x: 500, y: 300, rich: false, remaining: 100, cooldown: 0 };
   state.nodes = [node];
   updateLogistics(state, .1);
   equal(worker.task, null);
@@ -178,7 +178,7 @@ test('Stronghold construction requires current vision before revealing hidden pl
   const state = createStronghold();
   state.units = []; state.buildings = [];
   addUnit(state, 'builder', { x: 100, y: 300 });
-  state.nodes = [{ id: 900, x: 800, y: 300, rich: false, remaining: 100 }];
+  state.nodes = [{ id: 900, x: 800, y: 300, rich: false, remaining: 100, cooldown: 0 }];
   const player = { ...state.players[0]!, role: 'defenses' as const, action: 'wall' as const, work: 32 };
   equal(placementProblem(state, player, 'wall', { x: 800, y: 300 })?.includes('Explore'), true);
   addUnit(state, 'warrior', { x: 750, y: 300 });

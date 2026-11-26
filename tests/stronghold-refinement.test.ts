@@ -12,7 +12,7 @@ test('Stronghold gatherers harvest and deposit on exact visible contact, even du
   for (const manual of [false, true]) {
     const state = createStronghold(undefined, 'fall');
     state.units = [];
-    const node = { id: 900, x: 500, y: 450, rich: false, remaining: 100 };
+    const node = { id: 900, x: 500, y: 450, rich: false, remaining: 100, cooldown: 0 };
     state.nodes = [node];
     const worker = addUnit(state, 'worker', { x: node.x + resourceNodeRadius(node) + 9 + .2, y: node.y });
     equal(unitRadius(worker), 9);
@@ -22,7 +22,7 @@ test('Stronghold gatherers harvest and deposit on exact visible contact, even du
     equal(state.chunks.length, 0);
     worker.x = node.x + resourceNodeRadius(node) + unitRadius(worker);
     updateLogistics(state, 1 / 60);
-    equal(state.nodes[0]!.remaining, 96);
+    equal(state.nodes[0]!.remaining, 97);
     equal(state.chunks.length, 1);
     equal(state.chunks[0]!.carrier, worker.id);
     equal(state.resources, 50);
@@ -34,10 +34,78 @@ test('Stronghold gatherers harvest and deposit on exact visible contact, even du
     equal(state.resources, 50);
     worker.y = castle.y - buildingFootprint(state, castle).halfY - unitRadius(worker);
     updateLogistics(state, .001);
-    equal(state.resources, 54);
+    equal(state.resources, 53);
     equal(state.chunks.length, 0);
-    equal(state.nodes[0]!.remaining, 96);
+    equal(state.nodes[0]!.remaining, 97);
   }
+});
+
+test('Stronghold resource nodes share an exact 0.8-second harvest cooldown across gatherers', () => {
+  const state = createStronghold();
+  state.units = []; state.buildings = [];
+  const node = { id: 900, x: 500, y: 300, rich: false, remaining: 600, cooldown: 0 };
+  state.nodes = [node];
+  const first = addUnit(state, 'worker', node);
+  const second = addUnit(state, 'worker', node);
+  updateLogistics(state, 0);
+  equal(state.chunks.map(chunk => [chunk.carrier, chunk.amount]), [[first.id, 3]]);
+  equal(node.remaining, 597);
+  equal(node.cooldown, .8);
+  updateLogistics(state, .7999);
+  equal(state.chunks.length, 1);
+  equal(node.remaining, 597);
+  updateLogistics(state, .0001);
+  equal(state.chunks.map(chunk => [chunk.carrier, chunk.amount]), [[first.id, 3], [second.id, 3]]);
+  equal(node.remaining, 594);
+  equal(node.cooldown, .8);
+});
+
+test('Stronghold independent nodes can be harvested together and every seasonal node starts with 600 supplies', () => {
+  for (const season of SEASONS) {
+    const state = createStronghold(undefined, season);
+    equal(state.nodes.length, 8);
+    equal(state.nodes.every(node => node.remaining === 600 && node.cooldown === 0), true);
+  }
+  const state = createStronghold();
+  state.units = []; state.buildings = [];
+  state.nodes = [{ id: 900, x: 500, y: 300, rich: false, remaining: 600, cooldown: 0 },
+    { id: 901, x: 650, y: 300, rich: true, remaining: 600, cooldown: 0 }];
+  state.nodes.forEach(node => addUnit(state, 'worker', node));
+  updateLogistics(state, 0);
+  equal(state.chunks.map(chunk => chunk.amount), [3, 6]);
+  equal(state.nodes.map(node => node.remaining), [597, 594]);
+  state.phase = 'tier-up';
+  advanceStronghold(state, .5);
+  equal(state.nodes.map(node => node.cooldown), [.8, .8]);
+});
+
+test('Stronghold gathering preserves economy and seasonal bonuses and never overdraws a depleted node', () => {
+  for (const rich of [false, true]) for (const season of ['spring', 'winter'] as const) {
+    const state = createStronghold(undefined, season);
+    state.units = [];
+    state.upgrades.economy = 1;
+    const node = { id: 900, x: 500, y: 450, rich, remaining: 600, cooldown: 0 };
+    state.nodes = [node];
+    const worker = addUnit(state, 'worker', node);
+    updateLogistics(state, 0);
+    const amount = rich ? 8 : 5;
+    equal(state.chunks[0]?.amount, amount);
+    const castle = state.buildings.find(building => building.kind === 'castle')!;
+    worker.x = castle.x;
+    worker.y = castle.y - buildingFootprint(state, castle).halfY - unitRadius(worker);
+    updateLogistics(state, 0);
+    equal(state.resources, 50 + amount * (season === 'spring' ? 1.2 : .8));
+  }
+  const state = createStronghold();
+  state.units = []; state.buildings = [];
+  const node = { id: 900, x: 500, y: 300, rich: false, remaining: 2, cooldown: 0 };
+  state.nodes = [node]; addUnit(state, 'worker', node);
+  updateLogistics(state, 0);
+  equal(state.chunks[0]?.amount, 2);
+  equal(node.remaining, 0);
+  addUnit(state, 'worker', node); updateLogistics(state, .8);
+  equal(state.chunks.length, 1);
+  equal(node.remaining, 0);
 });
 
 test('Stronghold Army typing is locked at Tier 0, including hidden legacy Supplies tasks, but challenges remain available', () => {

@@ -25,7 +25,7 @@ test('Stronghold resource circles block construction and every unit size routes 
   for (const kind of ['warrior', 'catapult'] as const) {
     const state = createStronghold(undefined, 'fall');
     state.units = []; state.buildings = [];
-    const node = { id: 900, x: 400, y: 300, rich: false, remaining: 0 };
+    const node = { id: 900, x: 400, y: 300, rich: false, remaining: 0, cooldown: 0 };
     state.nodes = [node];
     const base = addBuilding(state, 'castle', { x: 550, y: 300 }, true);
     equal(placementBlockers(state, state.players[0]!, 'wall', node).nodes, [node.id]);
@@ -46,7 +46,7 @@ test('Stronghold gatherers complete repeated deliveries without entering resourc
     const state = createStronghold(undefined, 'fall');
     state.units = [];
     const castle = state.buildings.find(building => building.kind === 'castle')!;
-    const node = { id: 900, x, y: 450, rich: false, remaining: 100 };
+    const node = { id: 900, x, y: 450, rich: false, remaining: 100, cooldown: 0 };
     state.nodes = [node];
     const worker = addUnit(state, 'worker', { x, y: 490 });
     for (let step = 0; step < 900; step++) {
@@ -83,7 +83,7 @@ test('Stronghold blocked depot approaches choose another unloading edge without 
     const state = createStronghold(undefined, 'fall');
     state.units = []; state.buildings = [];
     const depot = addBuilding(state, kind, { x: 500, y: 350 }, true);
-    const node = { id: 900, x: 560, y: 280, rich: false, remaining: 0 };
+    const node = { id: 900, x: 560, y: 280, rich: false, remaining: 0, cooldown: 0 };
     state.nodes = [node];
     const worker = addUnit(state, 'worker', { x: 650, y: 200 });
     const target = buildingApproach(state, worker, depot);

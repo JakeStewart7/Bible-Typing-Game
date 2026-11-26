@@ -86,7 +86,7 @@ test('Stronghold durable units use formation-specific fair movement speeds on bo
     archer: [16, 210], catapult: [8, 360], invader: [19, 300] } as const;
   const state = createStronghold(undefined, 'fall');
   state.units = [];
-  state.nodes = [{ id: 100, x: 100, y: 500, remaining: 100, rich: false }];
+  state.nodes = [{ id: 100, x: 100, y: 500, remaining: 100, rich: false, cooldown: 0 }];
   addBuilding(state, 'barracks', { x: 200, y: 500 });
   for (const kind of ['worker', 'builder', 'warrior', 'archer', 'catapult', 'invader'] as const) {
     equal(UNIT_RULES[kind].speed, balanced[kind][0]);
@@ -161,7 +161,7 @@ test('Stronghold gatherers and builders follow move orders then resume nearest w
     executeCommand(state, player, { type: 'ROLE', role: 'army' });
     state.units = [];
     const unit = addUnit(state, kind, { x: 500, y: 300 });
-    state.nodes = [{ id: 100, x: 560, y: 300, rich: false, remaining: 100 }];
+    state.nodes = [{ id: 100, x: 560, y: 300, rich: false, remaining: 100, cooldown: 0 }];
     const project = addBuilding(state, 'barracks', { x: 530, y: 300 });
     const point = { x: 500, y: 300 + UNIT_RULES[kind].speed };
     executeCommand(state, player, { type: 'MOVE', ids: [unit.id], point });
@@ -197,7 +197,7 @@ test('Stronghold manual gatherer movement keeps carried supplies attached and re
   if (!player) throw new Error('Missing player.');
   state.units = [];
   const worker = addUnit(state, 'worker', { x: 500, y: 500 });
-  state.nodes = [{ id: 100, x: 500, y: 464, rich: false, remaining: 100 }];
+  state.nodes = [{ id: 100, x: 500, y: 464, rich: false, remaining: 100, cooldown: 0 }];
   updateLogistics(state, .1);
   executeCommand(state, player, { type: 'ROLE', role: 'army' });
   executeCommand(state, player, { type: 'MOVE', ids: [worker.id], point: { x: 450, y: 500 } });
@@ -289,28 +289,28 @@ test('Stronghold builders release completed or destroyed jobs before the next ne
 test('Stronghold gatherers carry a single harvested chunk before returning to a resource node', () => {
   const state = createStronghold();
   state.units = [];
-  state.nodes = [{ id: 100, x: 500, y: 500, remaining: 100, rich: false }];
+  state.nodes = [{ id: 100, x: 500, y: 500, remaining: 100, rich: false, cooldown: 0 }];
   const worker = addUnit(state, 'worker', { x: 500, y: 500 });
   updateLogistics(state, .1);
   equal(state.resources, 50);
-  equal(state.nodes[0]?.remaining, 96);
+  equal(state.nodes[0]?.remaining, 97);
   equal(state.chunks[0]?.carrier, worker.id);
   equal(worker.attackTarget, { x: 500, y: 500 });
   updateLogistics(state, 1);
   equal(state.chunks.length, 1);
   equal(state.chunks[0]?.y, worker.y);
-  equal(state.nodes[0]?.remaining, 96);
+  equal(state.nodes[0]?.remaining, 97);
   equal(state.resources, 50);
   for (let step = 0; step < 300 && state.resources === 50; step++) updateLogistics(state, .1);
-  equal(state.resources, 54);
+  equal(state.resources, 53);
   equal(state.chunks.length, 0);
-  equal(state.nodes[0]?.remaining, 96);
+  equal(state.nodes[0]?.remaining, 97);
 });
 
 test('Stronghold gatherers choose the nearest completed depot and reroute when it is destroyed', () => {
   const state = createStronghold();
   state.units = [];
-  state.nodes = [{ id: 100, x: 500, y: 300, remaining: 100, rich: false }];
+  state.nodes = [{ id: 100, x: 500, y: 300, remaining: 100, rich: false, cooldown: 0 }];
   const relay = addBuilding(state, 'relay', { x: 500, y: 350 }, true);
   addBuilding(state, 'relay', { x: 500, y: 301 });
   const worker = addUnit(state, 'worker', { x: 500, y: 300 });
@@ -334,15 +334,15 @@ test('Stronghold gatherers choose the nearest completed depot and reroute when i
 test('Stronghold dropped cargo survives a gatherer death and routes without duplicate supplies', () => {
   const state = createStronghold();
   state.units = [];
-  state.nodes = [{ id: 100, x: 500, y: 540, remaining: 100, rich: false }];
+  state.nodes = [{ id: 100, x: 500, y: 540, remaining: 100, rich: false, cooldown: 0 }];
   const worker = addUnit(state, 'worker', { x: 500, y: 540 });
   updateLogistics(state, .1);
   worker.hp = 0;
   for (let step = 0; step < 20; step++) updateLogistics(state, .1);
   equal(state.chunks.length, 0);
-  equal(state.resources, 54);
+  equal(state.resources, 53);
   updateLogistics(state, 1);
-  equal(state.resources, 54);
+  equal(state.resources, 53);
 });
 
 test('Stronghold role members keep private text and share completed work and placement without duplicate costs', () => {
