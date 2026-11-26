@@ -317,5 +317,4 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
       unit.attackTarget = null;
     }
   }
-  if (command.ids.length > 0) playerEvent(state, player, 'ordered units');
 }

@@ -295,6 +295,22 @@ test('Stronghold only army role orders friendly troops and rejects nonfinite map
   rejects(() => executeCommand(state, self(state), { type: 'MOVE', ids: [99999], point: { x: 500, y: 100 } }), 'friendly');
 });
 
+test('Stronghold movement orders update selected units without adding event log entries', () => {
+  const state = createStronghold();
+  executeCommand(state, self(state), { type: 'ROLE', role: 'army' });
+  const events = structuredClone(state.events);
+  const point = { x: 650, y: 450 };
+  const ids = state.units.map(unit => unit.id);
+  executeCommand(state, self(state), { type: 'MOVE', ids, point });
+  for (const unit of state.units) {
+    equal(unit.destination, point);
+    equal(unit.manualMove, true);
+  }
+  equal(state.events, events);
+  executeCommand(state, self(state), { type: 'MOVE', ids: [], point });
+  equal(state.events, events);
+});
+
 test('Stronghold barracks require explicit paid queues and completed matching construction', () => {
   const state = createStronghold();
   noBots(state); state.tier = 2;

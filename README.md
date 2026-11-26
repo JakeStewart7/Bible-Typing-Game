@@ -245,7 +245,7 @@ Hovering near a map edge does not scroll.
 Hold the **arrow keys** to pan; diagonal combinations work and opposite keys cancel.
 Right-click issues movement orders or cancels placement; it never pans.
 Successful movement orders briefly mark their destination with a player-colored
-click pulse; reduced-motion mode uses only a fade.
+click pulse instead of adding an event-log entry; reduced-motion mode uses only a fade.
 The three farthest-out views are removed; pan to reach distant ground.
 Zoom and pan do not change world coordinates or speed.
 Shift-drag retains additive army selection.
