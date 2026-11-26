@@ -60,6 +60,15 @@ test('Stronghold role icon buttons replace dropdowns and expose selected-state s
   equal(markup.includes('id="stronghold-timer" datetime="PT0S">0:00</time>'), true);
 });
 
+test('Stronghold selection feedback is visible independently of the Unit Control panel', () => {
+  const markup = strongholdWorkspaceMarkup();
+  const orders = /<section id="stronghold-army-orders"[\s\S]*?<\/section>/.exec(markup)?.[0];
+  if (!orders) throw new Error('Missing Unit Control orders.');
+  equal(orders.includes('id="stronghold-selection"'), false);
+  equal(markup.includes('id="stronghold-selection" class="stronghold-selection is-hidden"'), true);
+  equal(markup.includes('In any role, left-click or drag to select friendly units'), true);
+});
+
 test('Stronghold map entities retain accessible descriptions without delayed native SVG tooltips', () => {
   const state = createStronghold();
   const unit = unitMarkup(addUnit(state, 'warrior', { x: 500, y: 500 }), false);

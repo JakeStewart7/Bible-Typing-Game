@@ -65,6 +65,7 @@ export function strongholdElements() {
     nextNight: requireElement('stronghold-next-night', HTMLButtonElement),
     nextDay: requireElement('stronghold-next-day', HTMLButtonElement),
     orders: requireElement('stronghold-army-orders', HTMLElement), placement: requireElement('stronghold-placement', HTMLElement),
+    selection: requireElement('stronghold-selection', HTMLElement),
     dialog: requireElement('stronghold-tier-dialog', HTMLDialogElement), tierSlot: requireElement('stronghold-tier-typing-slot', HTMLElement),
     feedback: requireElement('stronghold-feedback', HTMLElement)
   };
@@ -157,7 +158,6 @@ export function renderStronghold(
     setAttribute(option.element, 'aria-selected', String(option.length === self.length));
     option.element.disabled = !running || terminal;
   }
-  text('stronghold-selection', `${selected.size} selected`);
   for (const entry of elements.playerCards) {
     const player = snapshot.players.find(candidate => candidate.id === entry.id);
     if (!player) continue;

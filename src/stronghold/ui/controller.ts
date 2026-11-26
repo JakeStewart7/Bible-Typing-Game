@@ -95,7 +95,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     if (kind) setText(placementLabel, problem ?? `${ACTION_LABELS[kind]}${kind === 'wall' ? `: ${wallRotation} deg` : ''}`);
     elements.placement.classList.toggle('is-invalid', Boolean(problem));
     elements.mapControls.wallSelection(running() ? selectedWall() ?? null : null);
-    if (!running() || snapshot.phase !== 'playing' || self()?.role !== 'army') elements.mapControls.moveIndicator(null);
+    if (!running() || snapshot.phase !== 'playing') elements.mapControls.moveIndicator(null);
     const relay = snapshot.buildings.find(building => building.id === hoveredRelay
       && (building.kind === 'relay' || building.kind === 'castle') && !building.enemy && building.hp > 0);
     elements.mapControls.relayPreview(snapshot, running() ? kind === 'relay' ? cursor : relay ?? null : null, kind === 'relay' ? undefined : relay?.id);
@@ -140,8 +140,10 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     setAttribute(cancelPlacementButton, 'aria-description', cancelHelp);
     if (wall && running()) elements.placement.classList.remove('is-hidden');
     renderMapPreview();
-    if (selectedBuildings.size) setText(requireElement('stronghold-selection', HTMLElement), `${selected.size} units, ${selectedBuildings.size} buildings selected`);
-    const selecting = drag?.moved && self()?.role === 'army' && !placing() && !rallyPlacement;
+    setText(elements.selection, selectedBuildings.size
+      ? `${selected.size} units, ${selectedBuildings.size} buildings selected` : `${selected.size} selected`);
+    elements.selection.classList.toggle('is-hidden', snapshot.phase !== 'playing' || (!selected.size && !selectedBuildings.size));
+    const selecting = drag?.moved && running() && snapshot.phase === 'playing' && !placing() && !rallyPlacement;
     elements.mapControls.selection(selecting ? drag?.start ?? null : null, selecting ? drag?.end ?? null : null);
     const feedback = errorMessage || (paused ? 'Paused' : rallyPlacement ? 'Set rally point' : snapshot.phase === 'tier-up' ? '' : snapshot.message);
     const feedbackHelp = !errorMessage && rallyPlacement && !paused ? 'Click the map to set the rally point. Escape or right-click cancels.' : '';
@@ -210,7 +212,6 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     const player = self();
     if (!player) throw new Error('Stronghold snapshot has no local player.');
     if (previousRole !== player.role) {
-      selectedBuildings.clear();
       relayPlacement = false; placementCancelled = false; rallyPlacement = false; clearDrag();
       editingWall = null;
     }
@@ -280,7 +281,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     const ids = all ? armyIds() : [...selected];
     if (ids.length === 0) { errorMessage = 'Select friendly units first, or use Select all troops.'; display(); focusTyping(); return; }
     void send({ type: 'MOVE', ids, point }).then(sent => {
-      if (sent && running() && snapshot?.phase === 'playing' && self()?.role === 'army') elements.mapControls.moveIndicator(point);
+      if (sent && running() && snapshot?.phase === 'playing') elements.mapControls.moveIndicator(point);
     });
   }
   elements.input.addEventListener('input', () => {
@@ -337,7 +338,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
   }
   for (const card of elements.playerCards) {
     for (const button of card.roleButtons) button.element.addEventListener('click', () => {
-      selected.clear(); selectedBuildings.clear(); void send({ type: 'ROLE', role: button.role });
+      void send({ type: 'ROLE', role: button.role });
     });
     for (const group of card.groups) {
       for (const button of group.buttons) {
@@ -359,12 +360,12 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       const point = mapPoint(elements.map, event.clientX, event.clientY);
       if (point && selectedBuildings.size && !placing() && !rallyPlacement) {
         const rallyIds = snapshot.buildings.filter(building => selectedBuildings.has(building.id) && supportsRally(building)).map(building => building.id);
-        const moveSelected = self()?.role === 'army' && selected.size > 0;
+        const moveSelected = selected.size > 0;
         if (rallyIds.length) void send({ type: 'RALLY', ids: rallyIds, point }).then(sent => { if (sent && moveSelected) move(point); });
         else if (moveSelected) move(point);
         else { errorMessage = 'Only castles and barracks have rally points.'; display(); }
       } else if (placing() || rallyPlacement || editingWall !== null) cancelPlacement();
-      else if (point && self()?.role === 'army') move(point);
+      else if (point) move(point);
       focusTyping();
       return;
     }
@@ -413,7 +414,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
     }
     if (snapshot) {
       renderMapPreview();
-      const selecting = drag?.moved && self()?.role === 'army' && !placing() && !rallyPlacement;
+      const selecting = drag?.moved && running() && snapshot.phase === 'playing' && !placing() && !rallyPlacement;
       elements.mapControls.selection(selecting ? drag?.start ?? null : null, selecting ? drag?.end ?? null : null);
     }
   });
@@ -442,7 +443,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
         ? gesture.buildingId : null;
       errorMessage = ''; display();
     }
-    else if (self()?.role === 'army') {
+    else {
       if (gesture.moved) {
         if (!gesture.additive) { selected.clear(); selectedBuildings.clear(); }
         troopsInRectangle(snapshot.units, gesture.start, point).forEach(id => selected.add(id));
@@ -460,8 +461,6 @@ export function createStrongholdController(connection: StrongholdConnection, dev
         selectedBuildings.clear();
         display();
       }
-    } else {
-      selectedBuildings.clear(); display();
     }
     focusTyping();
   });
@@ -533,7 +532,7 @@ export function createStrongholdController(connection: StrongholdConnection, dev
       const player = self();
       if (player && !event.repeat) {
         const role = ROLES[(ROLES.indexOf(player.role) + (event.shiftKey ? -1 : 1) + ROLES.length) % ROLES.length];
-        if (role) { selected.clear(); selectedBuildings.clear(); void send({ type: 'ROLE', role }); }
+        if (role) void send({ type: 'ROLE', role });
       }
       return;
     }

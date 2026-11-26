@@ -7,7 +7,7 @@ import { advanceStronghold } from '../src/stronghold/domain/simulation.ts';
 import { TEXT_LENGTH_RANGES, TIER_CHARACTER_GOAL, TIER_COSTS } from '../src/stronghold/domain/rules.ts';
 import { LocalStrongholdConnection } from '../src/stronghold/infrastructure/local-connection.ts';
 import { themeForWorkspace } from '../src/ui/page-theme.ts';
-import type { Participant, StrongholdState } from '../src/stronghold/domain/types.ts';
+import { ROLES, type Participant, type StrongholdState } from '../src/stronghold/domain/types.ts';
 import { equal, test } from './harness.ts';
 import { phraseWork, taskWork } from '../src/stronghold/domain/technology.ts';
 import { EVENT_WORD_POOLS } from '../src/stronghold/domain/event-phrases.ts';
@@ -283,16 +283,54 @@ test('Stronghold invaders aggro warriors before workers and towers defend their 
   equal(tower.hp > 0, true);
 });
 
-test('Stronghold only army role orders friendly troops and rejects nonfinite map coordinates', () => {
-  const state = createStronghold();
-  const warrior = state.units.find(unit => unit.kind === 'warrior');
-  if (!warrior) throw new Error('Missing warrior.');
-  rejects(() => executeCommand(state, self(state), { type: 'MOVE', ids: [warrior.id], point: { x: 500, y: 100 } }), 'Unit Control');
-  executeCommand(state, self(state), { type: 'ROLE', role: 'army' });
-  executeCommand(state, self(state), { type: 'MOVE', ids: [warrior.id], point: { x: 500, y: 100 } });
-  equal(warrior.destination, { x: 500, y: 100 });
-  rejects(() => executeCommand(state, self(state), { type: 'RALLY', point: { x: Infinity, y: 100 } }), 'inside');
-  rejects(() => executeCommand(state, self(state), { type: 'MOVE', ids: [99999], point: { x: 500, y: 100 } }), 'friendly');
+test('Stronghold every role can move all friendly unit types without changing its typing task or logging orders', () => {
+  for (const role of ROLES) {
+    for (const tier of [0, 3]) {
+      const state = createStronghold({ resources: 50, length: 'short', computersPaused: true, tier });
+      const player = self(state);
+      executeCommand(state, player, { type: 'ROLE', role });
+      addUnit(state, 'archer', { x: 450, y: 500 });
+      addUnit(state, 'catapult', { x: 550, y: 500 });
+      const ids = state.units.map(unit => unit.id);
+      const task = structuredClone(player), events = structuredClone(state.events);
+      const point = { x: 500, y: 100 };
+      executeCommand(state, player, { type: 'MOVE', ids, point });
+      for (const unit of state.units) {
+        equal(unit.destination, point);
+        equal(unit.manualMove, true);
+        equal(unit.attackTarget, null);
+        if (unit.kind === 'worker' || unit.kind === 'builder') {
+          equal(unit.task, null);
+          equal(unit.idleTime, 0);
+        }
+      }
+      equal(player, task);
+      equal(state.events, events);
+      rejects(() => executeCommand(state, player, { type: 'MOVE', ids, point: { x: Infinity, y: 100 } }), 'inside');
+      rejects(() => executeCommand(state, player, { type: 'MOVE', ids: [99999], point }), 'friendly');
+      const enemy = addUnit(state, 'invader', { x: 300, y: 300 });
+      const before = structuredClone(state);
+      rejects(() => executeCommand(state, player, { type: 'MOVE', ids: [ids[0]!, enemy.id], point: { x: 650, y: 400 } }), 'friendly');
+      equal(state, before);
+    }
+  }
+});
+
+test('Stronghold all roles can set individual building rallies while shared rally remains a Unit Control action', () => {
+  for (const role of ROLES) {
+    const state = createStronghold();
+    const player = self(state), castle = state.buildings.find(building => building.kind === 'castle')!;
+    executeCommand(state, player, { type: 'ROLE', role });
+    const point = { x: 450, y: 450 };
+    executeCommand(state, player, { type: 'RALLY', ids: [castle.id], point });
+    equal(castle.rally, point);
+    if (role !== 'army') rejects(() => executeCommand(state, player, { type: 'RALLY', point }), 'Unit Control');
+    else {
+      executeCommand(state, player, { type: 'RALLY', point });
+      equal(state.rally, point);
+      rejects(() => executeCommand(state, player, { type: 'RALLY', point: { x: Infinity, y: 100 } }), 'inside');
+    }
+  }
 });
 
 test('Stronghold movement orders update selected units without adding event log entries', () => {

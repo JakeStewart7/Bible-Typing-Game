@@ -39,8 +39,10 @@ on screen; **Help** retains the full controls and rules.
 Mistyped letters in both the prompt and input have vibrant player-colored
 highlighting and an underline, without a strike-through obscuring the letters;
 correct letters remain unmarked in the input.
-Unit Control can select and move gatherers and builders as well as troops.
-Its four outlined command tiles show selection, defense, assault and building-rally
+Every role can click, Shift-click or drag to select and right-click to move
+gatherers, builders and troops. Switching typing roles keeps your selection, and
+the map shows selection counts in every role.
+Unit Control's four outlined command tiles show selection, defense, assault and building-rally
 icons, with numbered shortcuts and a highlighted rally-targeting state.
 Economy starts with **Gatherer** selected. Recruitment tiles show living units
 on the field separately from troop queues; the HUD includes all five friendly

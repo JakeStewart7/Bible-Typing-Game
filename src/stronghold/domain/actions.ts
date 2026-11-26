@@ -294,7 +294,7 @@ export function executeCommand(state: StrongholdState, player: Participant, comm
     playerEvent(state, player, 'set building Rally points');
     return;
   }
-  if (player.role !== 'army') throw new Error('Switch to Unit Control to issue orders.');
+  if (command.type === 'RALLY' && player.role !== 'army') throw new Error('Switch to Unit Control to set the shared rally.');
   if (!validPoint(command.point)) throw new Error('Choose a location inside the battlefield.');
   if (command.type === 'RALLY') {
     state.rally = { ...command.point };
